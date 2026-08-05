@@ -7,11 +7,10 @@
       if (!data?.length) return [];
       const [rawHeader, ...dataBody] = data;
       // 値取得ヘルパー
-      const getValue = (source, colIdx) => colIdx !== -1 ? (source?.[colIdx] ?? "") : "";
-      // indexArrで再配列
-      const remapBody = dataBody.map(row => indexArr.map(colIdx => getValue(row, colIdx)));
-      // ヘッダー交換判定
-      const outHeader = newHeader ?? indexArr.map(colIdx => getValue(rawHeader, colIdx));
+      const getValue = (source, idx) => idx !== -1 ? (source?.[idx] ?? "") : "";
+      // 再配列とヘッダ指定
+      const remapBody = dataBody.map(row => indexArr.map(idx => getValue(row, idx)));
+      const outHeader = newHeader ?? indexArr.map(idx => getValue(rawHeader, idx));
       return [outHeader, ...remapBody];
     }
 
@@ -33,9 +32,8 @@
 
   // --- ファイルリスト検証ロジック ---
   class FileValidator {
-    // --- インデックス ---
+    // --- インデックスと計測ID生成 ---
     static #COL = { FILE: 0, MODE: 1, ID: 2, SUB_ID: 3, INFO: 4 };
-    // --- 計測ID生成 ---
     static #getScanID = (id, sub_id) => sub_id ? `${id}_${sub_id}` : `${id}`;
     // --- 事前集計 ---
     static #analyzeData(body) {
@@ -107,9 +105,9 @@
       }, new Map());
     }
     // --- ソート処理 ---
-    static #getSortedKeysList(global) {
-      const getKeys = idxObj => Object.keys(idxObj).sort((a, b) => idxObj[a] - idxObj[b]);
-      return {obKeys: getKeys(global.obsidianIndex),　mdKeys: getKeys(global.mudrockIndex)};
+    static #getSortedKeysList({ obsidianIndex, mudrockIndex }) {
+      const sortKeys = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
+      return { obKeys: sortKeys(obsidianIndex), mdKeys: sortKeys(mudrockIndex) };
     }
     // --- 固定ヘッダー構築 ---
     static #buildHeader(obKeys, mdKeys) {
@@ -128,17 +126,18 @@
         return [scanId, id, dataset, item, date,...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
       });
     }
-    // --- 元素値とErr抽出ー ---
+    // --- 元素値抽出 ---
     static #extractValues(resultMap, fileName, keys, idxObj) {
       const row = resultMap.get(String(fileName ?? ""));
       return keys.reduce((acc, k) => {
-        acc.vals.push(row?.[idxObj[k]] ?? "");
-        acc.errs.push(row?.[idxObj[k] + 1] ?? "");
+        const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
+        acc.vals.push(idx !== null ? (row?.[idx] ?? "") : "");
+        acc.errs.push(idx !== null ? (row?.[idx + 1] ?? "") : "");
         return acc;
       }, { vals: [], errs: [] });
     }
   }
-
+  
   // --- PXRF重複検証・統合ロジック ---
   class PxrfValidator {
     static #COL = { DATASET: 2, ID: 1 };

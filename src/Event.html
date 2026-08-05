@@ -81,26 +81,31 @@
         });
       });
 
-      // UI監視初期化
+      // UI監視初期化（switch文による処理分岐）
       document.addEventListener("change", (e) => {
         const target = e.target;
         if (!target) return;
         const fieldKey = target.getAttribute("data-field");
         if (!fieldKey) return;
-        // 変更箇所特定
+        // 変更箇所の特定
         const isConfig = target.closest(`#${Tab1UI.configArea}`);
         const isFile = target.closest(`#${Tab1UI.fileArea}`);
-
-        // 設定エリア処理
-        if (isConfig && (fieldKey === "configExacMode" || target.classList.contains("input-text"))) {
-          this.processConfigArea();
-        }
-        // Fileエリア処理
-        if (isFile && target.classList.contains("input-select")) {
-          const fileMap = { ...State.get("Tab1ST.fileMap") };
-          fileMap[fieldKey] = target.value;
-          State.set("Tab1ST.fileMap", fileMap);
-          this.processFileArea();
+        switch (true) {
+          // 設定エリア
+          case !!isConfig:
+            if (fieldKey === "configExacMode" || target.classList.contains("input-text")) {
+              this.processConfigArea();
+            }
+            break;
+          // ファイルエリア
+          case !!isFile:
+            if (target.classList.contains("input-select")) {
+              const fileMap = { ...State.get("Tab1ST.fileMap") };
+              fileMap[fieldKey] = target.value;
+              State.set("Tab1ST.fileMap", fileMap);
+              this.processFileArea();
+            }
+            break;
         }
       });
     }
