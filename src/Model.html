@@ -13,7 +13,14 @@
       fileMakeBtn: "fileMakeBtn", // リスト生成ボタン
       fileValdBtn: "fileValdBtn", // 検証ボタン
       exacBar: "exacStasBar", // 抽出コンソール
-      exacBtn: "exacBtn" // 抽出ボタン
+      exacBtn: "exacBtn", // 抽出ボタン
+      exacPushBtn: "exacPushBtn" // PXRFに格納ボタン
+  }
+
+  const Tab2UI = {
+    tabSet: "tab2Fieldset", // タブ全体UI
+    reportBtn: "reportOpenBtn", // 展開ボタン
+    reportBar: "reportStasBar" // 状態表示
   }
 
   // --- 状態管理クラス定義 ---
@@ -54,7 +61,7 @@
           exacStasCached: []
         },
         Tab2ST: {
-          // 今後追加するプロパティ
+          reportStas: [] // ステータス
         }
       };
       this.#listeners = {};
@@ -149,6 +156,8 @@
     static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }
     // --- プロパティ消去 ---
     static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
+    // --- Reportテンプレート取得 ---
+    static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
   }
 
   // --- 初期化と短縮 ---

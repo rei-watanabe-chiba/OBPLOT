@@ -143,6 +143,46 @@
         State.set({"Tab1ST.isFileEdited": false, "Tab1ST.exacStas": ["success", `抽出: ${outData.length - 1} 件`]});
       });
     }
+
+    // --- 抽出データのPXRF格納処理 ---
+    static async pushExacData() {
+      const global = State.get("GLB.cachedGlobal");
+      if (!await UI.confirm("確認", "「抽出データ」をPXRFシートに格納しますか？", Tab1UI.exacBar)) return;
+
+      await this.withAsyncLock("exac", async () => {
+        // 抽出データ取得
+        const { data: extractData } = await API.fetchData(global.extractSheetName);
+        // PXRFデータ取得
+        const { data: pxrfData } = await API.fetchData(global.pxrfSheetName);
+        // 重複検証
+        const dup = Mtd.PxrfValidator.checkDuplicate(pxrfData , extractData);
+        if (dup) {
+          const isOk = await UI.confirm("確認", "重複dataset・IDが存在します。上書きしますか？", Tab1UI.exacBar);
+          if (!isOk) return;
+        }
+        // 追記書き込み
+        await API.writeData(global.pxrfSheetName, extractData.slice(1), ["append"]);
+        State.set("Tab1ST.exacStas", ["success", `PXRF格納完了: ${extractData.length - 1} 件`]);
+      });
+    }
+
+    // --- レポート画面展開 ---
+    static async openReport() {
+      await this.withAsyncLock("report", async () => {
+        State.set("Tab2ST.reportStas", ["loading", "テンプレート取得中..."]);
+        
+        // テンプレート取得
+        const htmlContent = await API.getReportTemplate();
+        if (!htmlContent) throw new Error("テンプレート取得失敗");
+        
+        // Blob生成と別タブ展開
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        
+        State.set("Tab2ST.reportStas", ["success", "別タブで展開しました"]);
+      });
+    }
   }
   // 他層からの呼び出し
   const Ctrl = AppController;

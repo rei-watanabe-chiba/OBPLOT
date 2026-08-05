@@ -138,10 +138,40 @@
       }, { vals: [], errs: [] });
     }
   }
+
+  // --- PXRF重複検証ロジック ---
+  class PxrfValidator {
+    // --- 重複チェック実行 ---
+    static checkDuplicate(existingDT, newDT) {
+      if (!existingDT?.length || !newDT?.length) return null;
+      const [exHeader, ...exRows] = existingDT;
+      const [newHeader, ...newRows] = newDT;
+      
+      const dsIdxEx = exHeader.indexOf("dataset");
+      const idIdxEx = exHeader.indexOf("ID");
+      const dsIdxNew = newHeader.indexOf("dataset");
+      const idIdxNew = newHeader.indexOf("ID");
+      
+      if (dsIdxEx === -1 || idIdxEx === -1 || dsIdxNew === -1 || idIdxNew === -1) return null;
+      
+      // 既存キーのSet構築
+      const existingKeys = new Set(exRows.map(row => `${row[dsIdxEx]}_${row[idIdxEx]}`));
+      
+      // 新規データとの突合
+      for (const row of newRows) {
+        const key = `${row[dsIdxNew]}_${row[idIdxNew]}`;
+        if (existingKeys.has(key)) {
+          return { dataset: row[dsIdxNew], id: row[idIdxNew] };
+        }
+      }
+      return null;
+    }
+  }
   // 他層からの呼び出し
   const Mtd = {
     Utils: DataUtils,
     FileValidator: FileValidator,
-    DataExtractor: DataExtractor
+    DataExtractor: DataExtractor,
+    PxrfValidator: PxrfValidator
   };
 </script>

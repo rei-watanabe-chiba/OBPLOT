@@ -65,13 +65,23 @@
             <button id="exacBtn" class="action-btn" title="Resultsからファイルを抽出" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
             <span class="txt-btninfo">読込シート「Results」</span>
             <div id="exacStasBar" class="status-bar"></div>
+            <div id="fileBtnArea" class="action-btn-container">
+              <button id="exacPushBtn" class="action-btn --sub" title="抽出データをPXRFに格納" onclick="Ctrl.pushExacData()">PXRFに格納</button>
+            </div>
           </div>
 
         </fieldset>
       </div>
 
       <!-- チャート表示 -->
-      <div id="tab2" class="tab-content">Chart Content</div>
+      <div id="tab2" class="tab-content">
+        <fieldset id="tab2Fieldset" style="border: none; padding: 0; margin: 0;">
+          <div class="action-btn-container">
+            <button id="reportOpenBtn" class="action-btn" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
+          </div>
+          <div id="reportStasBar" class="status-bar"></div>
+        </fieldset>
+      </div>
     </main>
 
     <!-- 各層の読込 -->

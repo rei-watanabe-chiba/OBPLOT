@@ -5,6 +5,7 @@ const RESULTS_SHEET_NAME = "Results";
 const FILELIST_SHEET_NAME = "ファイルリスト";
 const FILELIST_HEADER = ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'];
 const EXTRACT_SHEET_NAME = "抽出データ";
+const PXRF_SHEET_NAME = "PXRF";
 const VALID_MODES = ["mudrock", "obsidian"];
 const OBSIDIAN_INDEX_MAP = {
   "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32};
@@ -37,6 +38,7 @@ function getGlobal() {
       filelistSheetName: FILELIST_SHEET_NAME,
       filelistHeader: FILELIST_HEADER,
       extractSheetName: EXTRACT_SHEET_NAME,
+      pxrfSheetName: PXRF_SHEET_NAME,
       validModes: VALID_MODES,
       propFileEdited: "isFileListEdited",
       fileFields: [
@@ -91,20 +93,25 @@ function writeData(sheetName, data, options = "clear") {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(sheetName);
-    const optList = Array.isArray(options) ? options : [options];
-    if (!sheet) return ApiResponse.error("SHEET_ERR", `シート「${sheetName}」不在`);
-    if (optList.includes("clear")) sheet.clearContents();
-    
-    // エラー回避で出力
     const numRows = data.length;
     const numCols = data[0].length;
-    sheet.getRange(1, 1, numRows, numCols).setValues(data);
+    const optList = Array.isArray(options) ? options : [options];
+    if (!sheet) return ApiResponse.error("SHEET_ERR", `シート「${sheetName}」不在`);
+    // オプション判定と処理
+    if (optList.includes("clear")) sheet.clearContents();
+    if (optList.includes("append")) {
+      const lastRow = sheet.getLastRow();
+      const startRow = lastRow === 0 ? 1 : lastRow + 1;
+      sheet.getRange(startRow, 1, numRows, numCols).setValues(data);
+    } else {
+      sheet.getRange(1, 1, numRows, numCols).setValues(data);
+    }
     // 条件付き書式の範囲拡張
     if (optList.includes("rule")) {
       const rules = sheet.getConditionalFormatRules();
       if (rules.length > 0) {
         const currentRule = rules[0];
-        const newRange = sheet.getRange(1, 1, numRows, numCols);
+        const newRange = sheet.getRange(1, 1, sheet.getLastRow(), numCols);
         const updatedRule = currentRule.copy().setRanges([newRange]).build();
         rules[0] = updatedRule;
         sheet.setConditionalFormatRules(rules);
@@ -140,6 +147,16 @@ function clearUserProperty(id) {
   try {
     PropertiesService.getUserProperties().deleteProperty(id);
     return ApiResponse.success(true);
+  } catch (err) {
+    return ApiResponse.error("SYSTEM_ERR", err.message);
+  }
+}
+
+// --- Reportテンプレート文字列取得 ---
+function getReportTemplate() {
+  try {
+    const html = HtmlService.createHtmlOutputFromFile("Report").getContent();
+    return ApiResponse.success(html);
   } catch (err) {
     return ApiResponse.error("SYSTEM_ERR", err.message);
   }

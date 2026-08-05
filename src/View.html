@@ -102,6 +102,10 @@
     handle_Tab1ST_exacStas(stasValue) {
       DOM.setDOM(Tab1UI.exacBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
     }
+    // --- チャート層ハンドラ ---
+    handle_Tab2ST_reportStas(stasValue) {
+      DOM.setDOM(Tab2UI.reportBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+    }
   }
 
   // --- UI更新・生成処理群 ---
