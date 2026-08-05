@@ -1,6 +1,5 @@
 # for gemini
 ### セーブポイント：OBPLOT1.0
-
 ## 1. 現在の設計要約・アーキテクチャ
 - **実行環境**: Google Apps Script v8エンジン
 - **フロントエンド**: HTML Service / サイドバーおよび別タブ（Blob URL展開）
@@ -10,7 +9,6 @@
 - **UI思想**: Google Material Design準拠、CSS Gridレイアウト。
 - **通信方式**: `google.script.run` を Promise 化してラップ。async/await による厳密な非同期制御。
 - **レポート展開方式**: `Report.html` をGASバックエンド経由で取得し、Blob URLを生成してデプロイ不要で別タブに描画する方式を採用。
-
 ## 2. ディレクトリ構造・ファイル一覧
 - `Code.gs`: バックエンドデータ入出力・設定管理・テンプレート取得API
 - `Sidebar.html`: サイドバーのHTML構造
