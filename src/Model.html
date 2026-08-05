@@ -1,0 +1,157 @@
+<!-- Model.html *必ず先頭include -->
+<script>
+  // --- htmlID群 ---
+  const Tab1UI = {
+      tabSet: "tab1Fieldset", // タブ全体UI
+      configArea: "configMapArea", // 設定エリア
+      configBar: "configStasBar", // 設定コンソール
+      configBox: "configMapBox", // 設定入力BOX
+      fileArea: "fileMapArea", // ファイルエリア
+      fileBar: "fileStasBar", // ファイルコンソール
+      fileBox: "fileMapBox", // ファイル入力BOX
+      fileLoadBtn: "fileLoadBtn", // 読込ボタン
+      fileMakeBtn: "fileMakeBtn", // リスト生成ボタン
+      fileValdBtn: "fileValdBtn", // 検証ボタン
+      exacBar: "exacStasBar", // 抽出コンソール
+      exacBtn: "exacBtn" // 抽出ボタン
+  }
+
+  // --- 状態管理クラス定義 ---
+  class AppState {
+    #state; // 内部状態
+    #listeners; // 登録されたコールバック群
+    #resolvePath(path) {// ネスト結合
+      if (typeof path === 'string') {
+        return path.split('.');
+      }
+      return path;
+    }
+
+    constructor() {
+      this.#state = {
+        GLB: {
+          activeTab: "tab1",
+          isLocked: false,
+          cachedGlobal: null,
+        },
+        Tab1ST: {
+          // 設定層
+          configStas: [],
+          configExacMode: "Dual",
+          configMap: { dataset: "", item: "", date: "" },
+          isConfigMapError: [true, false, false],
+          // ファイル層
+          cachedFileData: null,
+          fileStas: [],
+          fileStasCached: [],
+          fileMap: {},
+          isFileMapError: [],
+          isFileLoadError: true, 
+          isFileValidateError: true,
+          isFileEdited: false,
+          // 抽出層
+          exacStas: [],
+          exacStasCached: []
+        },
+        Tab2ST: {
+          // 今後追加するプロパティ
+        }
+      };
+      this.#listeners = {};
+    }
+
+    // --- 状態取得 ---
+    get(pathOrPaths) {
+      //配列対応
+      if (Array.isArray(pathOrPaths)) {
+        return pathOrPaths.map(path => {
+          const keys = this.#resolvePath(path);
+          return keys.reduce((obj, key) => obj?.[key], this.#state);
+        });
+      }
+      //文字列対応
+      const keys = this.#resolvePath(pathOrPaths);
+      return keys.reduce((obj, key) => obj?.[key], this.#state);
+    }
+
+    // --- 状態更新 ---
+    set(pathOrUpdates, value) {
+      //配列対応
+      if (typeof pathOrUpdates === 'object' && pathOrUpdates !== null && !Array.isArray(pathOrUpdates)) {
+        Object.entries(pathOrUpdates).forEach(([path, val]) => {
+          this.set(path, val);
+        });
+        return;
+      }
+      //共通処理
+      const keys = this.#resolvePath(pathOrUpdates);
+      const lastKey = keys.pop();
+      let target = this.#state;
+      for (const key of keys) {
+        if (!target[key]) target[key] = {};
+        target = target[key];
+      }
+      if (target[lastKey] !== value) {
+        target[lastKey] = value;
+        this.#notify(keys.concat(lastKey).join('.'), value);
+      }
+    }
+
+    // --- 変更の監視登録 ---
+    subscribe(path, callback) {
+      const keyStr = typeof path === 'string' ? path : path.join('.');
+      if (!this.#listeners[keyStr]) {
+        this.#listeners[keyStr] = [];
+      }
+      this.#listeners[keyStr].push(callback);
+    }
+    // --- 変更の反映 ---
+    #notify(keyStr, value) {
+      if (this.#listeners[keyStr]) {
+        this.#listeners[keyStr].forEach(callback => callback(value));
+      }
+    }
+  }
+
+  // --- GAS通信(API)クラス ---
+  class GasService {
+    // --- GAS通信ラップ ---
+    static #serverCall(funcName, ...args) {
+      return new Promise((resolve, reject) => {
+        // 非同期処理のPromise化
+        google.script.run
+          .withSuccessHandler(res => {
+            // DTO解析
+            if (res && typeof res === 'object' && 'success' in res) {
+              if (res.success) resolve(res.payload);
+              else reject(new Error(`[${res.errorType}] ${res.message}`));
+            } else {
+              // 後方互換
+              resolve(res);
+            }
+          })
+          .withFailureHandler(err => reject(new Error(`[NET_ERR] ${err.message}`)))
+          [funcName](...args);
+      });
+    }
+
+    // --- 構成設定取得 ---
+    static getGlobal() { return this.#serverCall("getGlobal"); }
+    // --- データ取得 ---
+    static fetchData(sheetName, quotaCol = null, loadCol = null) {
+      return this.#serverCall("fetchData", sheetName, quotaCol, loadCol);
+    }
+    // --- データ出力 ---
+    static writeData(sheetName, data, options = "clear") {
+      return this.#serverCall("writeData", sheetName, data, options);
+    }
+    // --- プロパティ確認 ---
+    static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }
+    // --- プロパティ消去 ---
+    static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
+  }
+
+  // --- 初期化と短縮 ---
+  const API = GasService;
+  const State = new AppState();
+</script>

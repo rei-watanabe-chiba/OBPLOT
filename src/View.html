@@ -1,0 +1,208 @@
+<!-- View.html -->
+<script>
+  // --- UIユーティリティ群 ---
+  class DOM {
+    // --- 共通：DOM取得 ---
+    static get(id) {
+      return document.getElementById(id);
+    }
+    // --- 共通：DOMテキスト ---
+    static setText(id, text, className) {
+      const el = this.get(id);
+      if (el && text !== undefined) el.innerText = text;
+      if (el && className !== undefined) el.className = className;
+    }
+    // --- 共通：DOM表示切替 ---
+    static toggle(id, isShow) {
+      const el = this.get(id);
+      el?.style.setProperty('display', isShow ? "" : "none");
+    }
+    // --- 共通：コンテナ開閉 ---
+    static open(id, isOpen) {
+      const el = this.get(id);
+      if (el?.tagName === "DETAILS") el.open = isOpen;
+    }
+    // --- 共通：無効/有効切替 ---
+    static setDisabled(id, isDisabled) {
+      const el = this.get(id);
+      if (el) el.disabled = isDisabled;
+    }
+  }
+
+  // --- UI更新 - state同期 ---
+  class UIStateUpdater {
+    // --- 状態更新の動的接続 ---
+    constructor() {
+      // プロトタイプからメソッドを抽出
+      const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(this));
+      methods.forEach(method => {
+        // 命名規則 "handle_グループ名_キー名" 判定
+        const match = method.match(/^handle_([^_]+)_(.+)$/);
+        if (match) {
+          const [, group, key] = match;
+          // Stateのパス（例: GLB.isLocked）を動的生成して接続
+          State.subscribe(`${group}.${key}`, this[method].bind(this));
+        }
+      });
+    }
+
+    // --- 共通ハンドラ ---
+    handle_GLB_isLocked(isLocked) {
+      const fieldset = DOM.get(Tab1UI.tabSet);
+      if (fieldset) fieldset.disabled = isLocked;
+    }
+    // --- 設定層ハンドラ ---
+    handle_Tab1ST_configStas(stasValue) {
+      DOM.setText(Tab1UI.configBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+      const isError = stasValue?.[0] === "error";
+      UIController.updateFileArea("update", isError);
+    }
+    handle_Tab1ST_isConfigMapError(errorFlags) {
+      UIController.updateInputs(Tab1UI.configBox, "text", errorFlags);
+    }
+    handle_Tab1ST_configExacMode(mode) {
+      const [data, isError] = State.get(["Tab1ST.cachedFileData", "Tab1ST.isFileValidateError"]);
+      if (!data || isError) return;
+      State.set({"Tab1ST.fileStas": ["error", "モード変更検知: 再検証"], "Tab1ST.isFileValidateError": true});
+    }
+    // --- ファイル層ハンドラ ---
+    handle_Tab1ST_fileStas(stasValue) {
+      const [stas, text] = stasValue;
+      let cacheStas = (stas !== "" && stas !== "loading");
+      DOM.setText(Tab1UI.fileBar, text, `status-bar ${stas}`);
+      if(State.get("Tab1ST.isFileMapError")) {
+        DOM.open(Tab1UI.fileArea, true);
+        cacheStas = false
+      }
+      if (cacheStas) State.set("Tab1ST.fileStasCached", stasValue);
+    }
+    handle_Tab1ST_isFileLoadError(isError) {
+      UIController.updateFileArea("load", isError);
+      !isError && DOM.open(Tab1UI.configBox, false);
+    }
+    handle_Tab1ST_isFileMapError(errorFlags) {
+      UIController.updateInputs(Tab1UI.fileBox, "select", errorFlags);
+    }
+    handle_Tab1ST_isFileValidateError(isError) {
+      if (State.get("Tab1ST.cachedFileData")) {
+        DOM.open(Tab1UI.configBox, false)
+        UIController.updateFileArea("list");
+      }
+      UIController.updateExacArea("update", isError);
+    }
+    handle_Tab1ST_isFileEdited(isEdited) {
+      if(isEdited){
+        State.set("Tab1ST.fileStas", ["error", "シート編集検知: 再検証"]);
+        UIController.updateExacArea("edited");
+      }
+    }
+    // --- 抽出層ハンドラ ---
+    handle_Tab1ST_exacStas(stasValue) {
+      DOM.setText(Tab1UI.exacBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+    }
+  }
+
+  // --- UI更新・生成処理群 ---
+  class UIController {
+    // --- 共通：処理中ステータス ---
+    static loadingStatsBar(id, mode = null) {
+      let className = "", text = "";
+      if (mode === "reset") {
+        const prefix = String(id).split("StasBar")[0];
+        const save = State.get(`Tab1ST.${prefix}StasCached`);
+        className = save?.[0] ?? "";
+        text = save?.[1] ?? "";
+      } else if (!mode){
+        text = "処理中...";
+        className = "loading";
+      } 
+      DOM.setText(id, text, `status-bar ${className}`);
+    }
+
+    // --- 共通：確認ダイアログ生成 ---
+    static confirm(title, msg, barObj = null) {
+      // --- コンソールバー処理 ---
+      if(barObj) this.loadingStatsBar(barObj);
+      // --- 本体処理 ---
+      return new Promise((resolve) => {
+        const dialog = DOM.get("universalConfirm");
+        DOM.setText("uDialogTitle", title);
+        DOM.setText("uDialogMessage", msg);
+        dialog?.showModal();
+        const confirmBtn = DOM.get("uDialogConfirmBtn");
+        const cancelBtn = DOM.get("uDialogCancelBtn");
+        // ボタン処理の紐付け
+        if (confirmBtn) confirmBtn.onclick = () => { dialog?.close(); resolve(true); };
+        if (cancelBtn) cancelBtn.onclick = () => {
+          dialog?.close();
+          if(barObj) this.loadingStatsBar(barObj, "reset");
+          resolve(false);
+        };
+      });
+    }
+
+    // --- 共通：列選択動的生成 ---
+    static renderSelectors(arr, objID, fields) {
+      const mapBox = DOM.get(objID);
+      if (!mapBox || !arr || !fields) return;
+      mapBox.innerHTML = fields.map(field => `
+        <div class="field-row">
+          <label class="input-label">${field.label}</label>
+          <div class="select-wrapper">
+            <select class="input-select" data-field="${field.key}">
+              <option value="" selected>---未選択---</option>
+              ${arr.map(h => `<option value="${h}">${h}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // --- 共通：入力UI更新 ---
+    static updateInputs(mapBoxId, type, errorFlags) {
+      const mapBox = DOM.get(mapBoxId);
+      const selectors = mapBox?.querySelectorAll(`.input-${type}`);
+      selectors?.forEach((s, idx) => s.classList.toggle("error", errorFlags?.[idx] ?? false));
+    }
+
+    // --- 「ファイル処理エリア」UI更新 ---
+    static updateFileArea(mode, isError = false) {
+      switch (mode) {
+        case "update":
+          DOM.setDisabled(Tab1UI.fileLoadBtn, isError);
+          return;
+        case "load":
+          DOM.setText(Tab1UI.fileLoadBtn, "データを再取得");
+          DOM.setDisabled(Tab1UI.fileValdBtn, true);
+          DOM.open(Tab1UI.fileArea, !isError);
+          DOM.toggle(Tab1UI.fileArea, !isError);
+          DOM.toggle(Tab1UI.fileMakeBtn, !isError);
+          DOM.toggle(Tab1UI.fileValdBtn, !isError);
+          DOM.setDisabled(Tab1UI.fileMakeBtn, isError);
+          return;
+        case "list":
+          DOM.open(Tab1UI.fileArea, false);
+          DOM.setDisabled(Tab1UI.fileValdBtn, false);
+          return;
+      }
+    }
+
+    // --- データ抽出エリアUI更新 ---
+    static updateExacArea(mode, isError = false) {
+      switch (mode) {
+        // editedモード：編集検知
+        case "edited":
+          DOM.setDisabled(Tab1UI.exacBtn, true); 
+          return;
+        // updateモード：判定更新
+        case "update":
+          DOM.setDisabled(Tab1UI.exacBtn, isError);
+          return;
+      }
+    }
+  }
+
+  // --- 初期化と短縮 ---
+  const UIState = new UIStateUpdater();
+  const UI = UIController;
+</script>

@@ -1,0 +1,118 @@
+<!-- Event.html -->
+<script>
+  // --- イベント管理・初期化クラス ---
+  class EventManager {
+    // --- タブ切替 ---
+    static switchTab(tabId) {
+      document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
+      const targetBtn = document.querySelector(`[data-target="${tabId}"]`);
+      const targetContent = DOM.get(tabId);
+      if (targetBtn && targetContent) {
+        targetBtn.classList.add("active");
+        targetContent.classList.add("active");
+        State.set("GLB.activeTab", tabId);
+      }
+    }
+
+    // --- 設定エリアイベント ---
+    static processConfigArea() {
+      const configArea = DOM.get(Tab1UI.configArea);
+      const selectMode = configArea.querySelector('[data-field="configExacMode"]')?.value;
+      const inputAttr = configArea.querySelectorAll('.input-text');
+      // 入力値取得
+      const configMap = { ...State.get("Tab1ST.configMap") };
+      inputAttr.forEach(input => {
+        const fieldKey = input.getAttribute("data-field");
+        if (fieldKey) configMap[fieldKey] = input.value;
+      });
+      // 入力値判定
+      const datasetValue = configMap.dataset?.trim() ?? "";
+      const isError = !datasetValue;
+      // ステータス更新
+      const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "単純抽出（モード混在可）";
+      const text = isError ? "エラー: Dataset未入力" : modeText;
+      const className = isError ? "error" : "";
+      constexacStas = isError? ["",""], ["loading", "計測ID（id + sub_id）でソートして抽出"]
+      State.set({
+        "Tab1ST.configMap": configMap,
+        "Tab1ST.isConfigMapError": [isError, false, false],
+        "Tab1ST.configStas": [className, text],
+        "Tab1ST.configExacMode": selectMode,
+        "Tab1ST.exacStas": exacStas
+      });
+    }
+
+    // --- Fileエリアイベント ---
+    static processFileArea() {
+      const container = DOM.get(Tab1UI.fileBox);
+      const selectors = container.querySelectorAll(".input-select");
+      const selectValues = [...selectors].map(s => s.value);
+      // 必須項目３で判定とState更新
+      const errorFlags = Mtd.Utils.validateSelect(selectValues, 3);
+      State.set("Tab1ST.isFileMapError", errorFlags);
+      // ステータス更新
+      const isError = errorFlags.some(Boolean);
+      const text = isError ? "エラー: 選択項目" : State.get("Tab1ST.fileStasCached")[1];
+      const className = isError ? "error" : "success";
+      State.set("Tab1ST.fileStas", [className, text]);
+    }
+
+    // --- 初期化処理 ---
+    static async init() {
+      // 初期タブ設定
+      this.switchTab(State.get("GLB.activeTab"));
+      // UIロックし設定読込
+      State.set({"GLB.isLocked": true, "Tab1ST.configStas": ["alert", "初期設定中..."]});
+      try {
+        const global = await API.getGlobal();
+        State.set("GLB.cachedGlobal", global);
+        // ステータス初期化
+        this.processConfigArea();
+      } catch (err) {
+        State.set("Tab1ST.configStas", ["error", "エラー: GAS通信エラー"]);
+      } finally {
+        State.set("GLB.isLocked", false);
+      }
+
+      // タブ切替設定
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          this.switchTab(btn.getAttribute("data-target"));
+        });
+      });
+
+      // UI監視初期化
+      document.addEventListener("change", (e) => {
+        const target = e.target;
+        if (!target) return;
+        const fieldKey = target.getAttribute("data-field");
+        if (!fieldKey) return;
+        // 変更箇所特定
+        const isConfig = target.closest(`#${Tab1UI.configArea}`);
+        const isFile = target.closest(`#${Tab1UI.fileArea}`);
+
+        // 設定エリア処理
+        if (isConfig && (fieldKey === "configExacMode" || target.classList.contains("input-text"))) {
+          this.processConfigArea();
+        }
+        // Fileエリア処理
+        if (isFile && target.classList.contains("input-select")) {
+          const fileMap = { ...State.get("Tab1ST.fileMap") };
+          fileMap[fieldKey] = target.value;
+          State.set("Tab1ST.fileMap", fileMap);
+          this.processFileArea();
+        }
+      });
+    }
+  }
+
+  // 他層からの呼び出し用互換レイヤー
+  const Evt = {
+    switchTab: EventManager.switchTab.bind(EventManager),
+    configArea: EventManager.processConfigArea.bind(EventManager),
+    fileArea: EventManager.processFileArea.bind(EventManager)
+  };
+
+  // 初期化処理の実行
+  window.addEventListener("DOMContentLoaded", () => EventManager.init());
+</script>

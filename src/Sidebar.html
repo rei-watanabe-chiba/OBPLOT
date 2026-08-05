@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!-- サイドバーbody -->
+<html>
+  <head>
+    <base target="_top">
+    <?!= include("CSS"); ?> <!-- CSS読込 -->
+  </head>
+  <body>
+    <!-- ナビゲーション -->
+    <nav class="nav" id="nav">
+      <button class="tab-btn" data-target="tab1">Data</button>
+      <button class="tab-btn" data-target="tab2">Chart</button>
+    </nav>
+
+    <main class="content-area">
+      <!-- データ処理 -->
+      <div id="tab1" class="tab-content">
+        <fieldset id="tab1Fieldset" style="border: none; padding: 0; margin: 0;">
+          <!-- 第1層: 設定エリア -->
+          <div id="configAreaContainer">
+            <div id="configMapArea">
+              <div class="field-row">
+                <label class="input-label">モード選択</label>
+                <div class="select-wrapper">
+                  <select class="input-select" data-field="configExacMode">
+                    <option value="Dual">Dualモード</option>
+                    <option value="Single">Singleモード</option>
+                  </select>
+                </div>
+              </div>
+              <div id="configStasBar" class="txt-note"></div>
+              <details id="configMapBox" open>
+                <summary class="mapping-title">データ属性</summary>
+                <div class="field-row">
+                  <div class="input-wrapper">
+                    <label class="input-label">dataset *必須</label>
+                    <input type="text" class="input-text" data-field="dataset" placeholder="データセット・遺跡名（必須）">
+                    <label class="input-label">item</label>
+                    <input type="text" class="input-text" data-field="item" placeholder="計測情報（任意）">
+                    <label class="input-label">date</label>
+                    <input type="text" class="input-text" data-field="date" placeholder="date - 計測日（任意）">
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+          <hr class="section-hr">
+          <!-- 第2層: ファイル処理エリア -->
+          <div id="fileAreaContainer">
+            <button id="fileLoadBtn" class="action-btn" title="現在のデータを内部データに格納" onclick="Ctrl.loadFile()" disabled>データを取得</button>
+            <span class="txt-btninfo">読込シート「File」</span>
+            <div id="fileStasBar" class="status-bar"></div>
+            <details id="fileMapArea" style="display:none;" open>
+              <summary class="mapping-title">列を選択する</summary>
+              <div id="fileMapBox"></div>
+            </details>
+            <div id="fileBtnArea" class="action-btn-container">
+              <button id="fileMakeBtn" class="action-btn --sub" style="display: none;" onclick="Ctrl.makeFileList()">リスト生成</button>
+              <button id="fileValdBtn" class="action-btn --sub" style="display: none;" onclick="Ctrl.validateFileList()">検証</button>
+            </div>
+          </div>
+          <hr class="section-hr">
+          <!-- 第3層: 抽出エリア -->
+          <div id="extractAreaContainer">
+            <button id="exacBtn" class="action-btn" title="Resultsからファイルを抽出" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
+            <span class="txt-btninfo">読込シート「Results」</span>
+            <div id="exacStasBar" class="status-bar"></div>
+          </div>
+
+        </fieldset>
+      </div>
+
+      <!-- チャート表示 -->
+      <div id="tab2" class="tab-content">Chart Content</div>
+    </main>
+
+    <!-- 各層の読込 -->
+    <?!= include('Model'); ?>
+    <?!= include('Method'); ?>
+    <?!= include('View'); ?>
+    <?!= include('Controller'); ?>
+    <?!= include('Event'); ?>
+  </body>
+</html>
+
+<!-- 汎用カスタムダイアログ -->
+<dialog id="universalConfirm" class="custom-modal">
+  <h3 id="uDialogTitle" class="modal-title">確認</h3>
+  <p id="uDialogMessage" class="modal-body"></p>
+  <div class="modal-actions">
+    <button id="uDialogConfirmBtn" class="btn-confirm">OK</button>
+    <button id="uDialogCancelBtn" class="btn-cancel">キャンセル</button>
+  </div>
+</dialog>

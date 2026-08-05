@@ -1,0 +1,259 @@
+<!-- CSS.html -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<style>
+  /* --- トークン定義 --- */
+  :root {
+    --primary-blue: #1a73e8;
+    --primary-green: #34a853;
+    --primary-red: #ea4335;
+    --primary-yellow: #fbbc05;
+    --sub-color: #5f6368;
+    --bg-white: #ffffff;
+    --bg-hover: #f8f8f8;
+    --bg-success: color-mix(in srgb, var(--primary-blue) 20%, #fff);
+    --bg-error: color-mix(in srgb, var(--primary-red) 20%, #fff);
+    --bg-alert: color-mix(in srgb, var(--primary-yellow) 20%, #fff);
+    --border-color: #dadce0;
+    --font-family: 'Roboto', 'Arial', sans-serif;
+    --text-color: #202124;
+  }
+
+  /* --- 基本設定 --- */
+  body { 
+    font-family: var(--font-family); 
+    color: var(--text-color);
+    margin: 0; 
+    display: grid; 
+    grid-template-rows: auto 1fr; 
+    height: 100vh; 
+  }
+  
+  /* テキスト・区切り線 */
+  .txt-btninfo {
+    font-size: 11px;
+    color: var(--sub-color);
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+  .txt-note {
+    font-size: 11px;
+    color: var(--sub-color);
+    margin: 5px 0 10px 10px;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  .section-hr {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 12px 0;
+  }
+
+  /* --- ナビゲーション --- */
+  .nav { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    border-bottom: 1px solid var(--border-color); 
+  }
+  .tab-btn { 
+    border: none; 
+    background: var(--bg-white); 
+    padding: 14px; 
+    cursor: pointer; 
+    font-size: 14px; 
+    transition: background 0.2s;
+    
+    /* ホバー時の背景 */
+    &:hover { background: var(--bg-hover); }
+    /* アクティブ時の装飾 */
+    &.active { 
+      border-bottom: 2px solid var(--primary-blue); 
+      color: var(--primary-blue); 
+      font-weight: 500; 
+    }
+  }
+
+  /* --- コンテナ --- */
+  .content-area { padding: 10px; }
+  .tab-content { 
+    display: none; 
+    /* 表示切替 */
+    &.active { display: block; }
+  }
+  
+  /* --- ボタン --- */
+  .action-btn { 
+    display: inline-block;
+    max-width: 50%;
+    flex: 1;
+    padding: 8px;
+    cursor: pointer;
+    background-color: var(--primary-blue); 
+    color: var(--bg-white); 
+    border: none; 
+    border-radius: 4px; 
+    
+    /* カラーバリエーション */
+    &.--green { background-color: var(--primary-green); }
+    &.--red { background-color: var(--primary-red); }
+    &.--yellow { background-color: var(--primary-yellow);}
+
+    &.--sub {
+      background-color: var(--bg-white);
+      border: 1.5px solid;
+      color: var(--primary-blue);
+      font-weight: 400;  
+      border-color: currentColor;
+      &.--green { color: var(--primary-green); }
+      &.--red { color: var(--primary-red); }
+      &.--yellow { color: color-mix(in srgb, var(--primary-yellow) 85%, #000); }
+    }
+
+    /* 状態による変化 */
+    &:disabled { 
+      background-color: #ccc; border-color: #ccc; color: #fff;
+      &.--sub { color: var(--border-color); background-color: var(--bg-white);}
+    }
+    &:hover:not(:disabled) { 
+      &:not(.--sub) { filter: brightness(0.9); }
+      &.--sub { background-color: var(--bg-hover); }
+    }
+  }
+  .action-btn-container {
+    display: flex;
+    gap: 8px;
+  }
+  
+  /* --- 入力フォーム --- */
+  .field-row { display: flex; flex-direction: column; gap: 4px; }
+  .select-wrapper, .input-wrapper { position: relative; width: 100%; }
+  .mapping-title {
+    color: var(--sub-color);
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+    margin: 5px 0;
+    /* ホバー時透過 */
+    &:hover { opacity: 0.8; }
+    .note {
+      color: var(--sub-color);
+      font-size: 0.85em;
+      font-weight: normal;
+      margin-left: 8px;
+    }
+  }
+  
+  .input-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--sub-color);
+    margin-left: 8px;
+  }
+  /* 入力要素の共通スタイル */
+  :is(.input-select, .input-text) {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-white);
+    /* フォーカス時の枠線 */
+    &:focus {
+      border-color: var(--primary-blue);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+    /* エラー時のスタイル */
+    &.error {
+      background-color: var(--bg-error);
+      border-color: var(--primary-red);
+    }
+  }
+  .input-select {
+    padding: 8px 32px 8px 12px;
+    appearance: none;
+    cursor: pointer;
+  }
+  .input-text {
+    padding: 8px 12px;
+  }
+  
+  /* セレクトボックスの矢印 */
+  .select-wrapper::after {
+    content: 'arrow_drop_down';
+    font-family: 'Material Icons';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--sub-color);
+    font-size: 20px;
+  }
+
+  /* --- ステータスバー --- */
+  .status-bar {
+    margin-top: 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    color: var(--sub-color);
+    margin: 5px 10px;
+    /* 状態別の色設定 */
+    &:is(.loading, .success, .error, .alert) {
+      padding: 8px 12px;
+      margin: 10px 0px;
+    }
+    &.loading { background-color: var(--bg-white); color: var(--sub-color); }
+    &.success { background-color: var(--bg-success); color: var(--text-color); }
+    &.error { background-color: var(--bg-error); color: var(--text-color); }
+    &.alert { background-color: var(--bg-alert); color: var(--text-color); }
+  }
+
+  /* --- ダイアログスタイル --- */
+  .custom-modal {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    width: 280px;
+    background-color: var(--bg-white);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+  .modal-title {
+    margin-top: 0;
+    color: var(--text-color);
+    font-size: 16px;
+  }
+  .modal-body {
+    font-size: 13px;
+    color: var(--sub-color);
+    margin: 15px 0;
+  }
+  .modal-actions {
+    text-align: right;
+    margin-top: 20px;
+  }
+  .btn-confirm {
+    padding: 6px 14px;
+    border: none;
+    background-color: var(--primary-blue);
+    color: var(--bg-white);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  .btn-cancel {
+    padding: 6px 14px;
+    margin-right: 8px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--sub-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+</style>
