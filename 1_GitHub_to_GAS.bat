@@ -1,19 +1,18 @@
 @echo off
-chcp 65001 >nul
 echo =========================================
-echo [1] GitHubのデータをGASにアップロードします
+echo Upload GAS to GitHub
 echo =========================================
 
 cd /d "C:\clasp"
 
 echo.
-echo GitHubから最新のコードを取得中...
+echo pull from GitHub...
 git pull origin main
 
 echo.
-echo GASへコードを反映中...
+echo push to GAS...
 clasp push
 
 echo.
-echo 処理が完了しました。
+echo Upload : succes
 pause

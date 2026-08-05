@@ -1,20 +1,20 @@
 @echo off
 echo =========================================
-echo [2] GASのデータをGitHubへバックアップします
+echo BuckUp GAS to GitHub...
 echo =========================================
 
 cd /d "C:\clasp"
 
 echo.
-echo GASから最新のコードを取得中...
+echo pull from GAS...
 call clasp pull
 
 echo.
-echo GitHubへ変更をコミットおよびプッシュ中...
+echo push to GitHub...
 git add .
 git commit -m "Auto-commit: backup from GAS"
 git push origin main
 
 echo.
-echo 処理が完了しました。
+echo BuckUp : succes
 pause
