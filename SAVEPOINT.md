@@ -1,4 +1,4 @@
-#for gemini
+# for gemini
 ### セーブポイント：OBPLOT1.0
 
 ## 1. 現在の設計要約・アーキテクチャ
