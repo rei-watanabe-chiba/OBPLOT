@@ -22,7 +22,7 @@
         fileDT = (await API.fetchData(global.filelistSheetName, 5, 5)).data;
       }
       // モード取得と検証
-      const exacMode = State.get("Tab1ST.config.mode"");
+      const exacMode = State.get("Tab1ST.config.mode");
       const outData = Mtd.FileValidator.run(fileDT, global.filelistHeader, global.validModes, exacMode);
       const isAlert = outData.slice(1).some(row => row.at(-1) !== "");
       // 並列通信処理
