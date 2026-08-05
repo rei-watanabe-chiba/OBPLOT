@@ -42,23 +42,26 @@
           cachedGlobal: null,
         },
         Tab1ST: {
-          // 設定層
-          configStas: [],
-          configExacMode: "Dual",
-          configMap: { dataset: "", item: "", date: "" },
-          isConfigMapError: [true, false, false],
-          // ファイル層
-          cachedFileData: null,
-          fileStas: [],
-          fileStasCached: [],
-          fileMap: {},
-          isFileMapError: true,
-          isFileLoadError: true, 
-          isFileValidateError: true,
-          isFileEdited: false,
-          // 抽出層
-          exacStas: [],
-          exacStasCached: []
+          config: {
+            status: [],
+            mode: "Dual",
+            map: { dataset: "", item: "", date: "" },
+            isError: [true, false, false]
+          },
+          file: {
+            data: null,
+            status: [],
+            cachedStatus: [],
+            map: {},
+            isMapError: true,
+            isLoadError: true,
+            isValidateError: true,
+            isEdited: false
+          },
+          exac: {
+            status: [],
+            cachedStatus: []
+          }
         },
         Tab2ST: {
           reportStas: [] // ステータス

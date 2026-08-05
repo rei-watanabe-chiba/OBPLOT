@@ -7,7 +7,7 @@
       State.set("GLB.isLocked", true);
       try { await processFn(); }
       // エラー補足
-      catch (err) { State.set(`Tab1ST.${prefix}Stas`, ["error", err.message]); }
+      catch (err) { State.set(`Tab1ST.${prefix}.status`, ["error", err.message]); }
       // 終了処理
       finally {
         if (finallyFn) await finallyFn();
@@ -22,7 +22,7 @@
         fileDT = (await API.fetchData(global.filelistSheetName, 5, 5)).data;
       }
       // モード取得と検証
-      const exacMode = State.get("Tab1ST.configExacMode");
+      const exacMode = State.get("Tab1ST.config.mode"");
       const outData = Mtd.FileValidator.run(fileDT, global.filelistHeader, global.validModes, exacMode);
       const isAlert = outData.slice(1).some(row => row.at(-1) !== "");
       // 並列通信処理
@@ -32,16 +32,16 @@
       ]);
       // ステータス更新
       State.set({
-        "Tab1ST.isFileEdited": false,
-        "Tab1ST.fileStas": isAlert ? ["alert", "出力完了, errorあり"] : ["success", "出力完了, errorなし"],
-        "Tab1ST.isFileValidateError": isAlert
+        "Tab1ST.file.isEdited": false,
+        "Tab1ST.file.status": isAlert ? ["alert", "出力完了, errorあり"] : ["success", "出力完了, errorなし"],
+        "Tab1ST.file.isValidateError": isAlert
       });
     }
     
     // --- Fileシート取得 ---
     static async loadFile() {
       // 実行確認
-      if (State.get("Tab1ST.cachedFileData")) {
+      if (State.get("Tab1ST.file.data")) {
         if(!(await UI.confirm("確認", "内部データをリセットしますか？", Tab1UI.fileBar))) return;
       }
       let stas = [];
@@ -54,23 +54,23 @@
         // ステータス更新
         stas = ["success", message];
         State.set({
-          "Tab1ST.cachedFileData": data,
-          "Tab1ST.fileMap": newMap,
-          "Tab1ST.isFileMapError": [true, true, true, false, false],
-          "Tab1ST.fileStas": stas
+          "Tab1ST.file.data": data,
+          "Tab1ST.file.map": newMap,
+          "Tab1ST.file.isMapError": [true, true, true, false, false],
+          "Tab1ST.file.status": stas
         });
-      }, async () => State.set("Tab1ST.isFileLoadError", stas[0] === "error"));
+      }, async () => State.set("Tab1ST.file.isLoadError", stas[0] === "error"));
     }
 
     // --- ファイルリストリスト生成処理 ---
     static async makeFileList() {
       // UI監視と実行確認
       Evt.fileArea();
-      if (State.get("Tab1ST.isFileMapError")?.some(Boolean)) return;
+      if (State.get("Tab1ST.file.isMapError")?.some(Boolean)) return;
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
       // 列選択取得と共通処理
       await this.withAsyncLock("file", async () => {
-        const [global, fileDT, fileMap] = State.get(["GLB.cachedGlobal", "Tab1ST.cachedFileData", "Tab1ST.fileMap"]);
+        const [global, fileDT, fileMap] = State.get(["GLB.cachedGlobal", "Tab1ST.file.data", "Tab1ST.file.map"]);
         const indexArr = global.fileFields.map(f => fileMap[f.key] ? fileDT[0].indexOf(fileMap[f.key]) : -1);
         await this.processFileList("make", Mtd.Utils.remapArry(fileDT, indexArr, global.fileHeader), global);
       });
@@ -108,7 +108,7 @@
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
         // 出力とステータス更新
         await API.writeData(global.extractSheetName, outData);
-        State.set({"Tab1ST.isFileEdited": false, "Tab1ST.exacStas": ["success", `抽出: ${outData.length - 1} 件`]});
+        State.set({"Tab1ST.file.isEdited": false, "Tab1ST.exacStas": ["success", `抽出: ${outData.length - 1} 件`]});
       });
     }
 
@@ -127,7 +127,7 @@
         if (isDup && !await UI.confirm("確認", "重複dataset・IDが存在します。上書きしますか？", Tab1UI.exacBar)) return;
         // 条件分岐による書き込み
         await API.writeData(global.pxrfSheetName, isDup ? mergedData : extractData.slice(1), isDup ? "clear" : ["append"]);
-        State.set("Tab1ST.exacStas", ["success", `PXRF格納完了: ${extractData.length - 1} 件`]);
+        State.set("Tab1ST.exac.status", ["success", `PXRF格納完了: ${extractData.length - 1} 件`]);
       });
     }
 

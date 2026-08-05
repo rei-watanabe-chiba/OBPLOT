@@ -52,54 +52,54 @@
       if (fieldset) fieldset.disabled = isLocked;
     }
     // --- 設定層ハンドラ ---
-    handle_Tab1ST_configStas(stasValue) {
+    handle_Tab1ST_config_status(stasValue) {
       DOM.setDOM(Tab1UI.configBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
       const isError = stasValue?.[0] === "error";
       UIController.updateFileArea("update", isError);
     }
-    handle_Tab1ST_isConfigMapError(errorFlags) {
+    handle_Tab1ST_config_isError(errorFlags) {
       UIController.updateInputs(Tab1UI.configBox, "text", errorFlags);
     }
-    handle_Tab1ST_configExacMode(mode) {
-      const [data, isError] = State.get(["Tab1ST.cachedFileData", "Tab1ST.isFileValidateError"]);
+    handle_Tab1ST_config_mode(mode) {
+      const [data, isError] = State.get(["Tab1ST.file.data", "Tab1ST.file.isValidateError"]);
       if (!data || isError) return;
-      State.set({"Tab1ST.fileStas": ["error", "モード変更検知: 再検証"], "Tab1ST.isFileValidateError": true});
+      State.set({"Tab1ST.file.status": ["error", "モード変更検知: 再検証"], "Tab1ST.file.isValidateError": true});
       DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn`);
     }
     // --- ファイル層ハンドラ ---
-    handle_Tab1ST_fileStas(stasValue) {
+    handle_Tab1ST_file_status(stasValue) {
       const [stas, text] = stasValue;
       let cacheStas = (stas !== "" && stas !== "loading");
       DOM.setDOM(Tab1UI.fileBar, text, `status-bar ${stas}`);
-      if(State.get("Tab1ST.isFileMapError").some(Boolean)) {
+      if(State.get("Tab1ST.file.isMapError").some(Boolean)) {
         DOM.open(Tab1UI.fileArea, true);
-        cacheStas = false
+        cacheStas = false;
       }
-      if (cacheStas) State.set("Tab1ST.fileStasCached", stasValue);
+      if (cacheStas) State.set("Tab1ST.file.cachedStatus", stasValue);
     }
-    handle_Tab1ST_isFileLoadError(isError) {
+    handle_Tab1ST_file_isLoadError(isError) {
       UIController.updateFileArea("load", isError);
       !isError && DOM.open(Tab1UI.configBox, false);
     }
-    handle_Tab1ST_isFileMapError(errorFlags) {
+    handle_Tab1ST_file_isMapError(errorFlags) {
       UIController.updateInputs(Tab1UI.fileBox, "select", errorFlags);
     }
-    handle_Tab1ST_isFileValidateError(isError) {
-      if (State.get("Tab1ST.cachedFileData")) {
-        DOM.open(Tab1UI.configBox, false)
+    handle_Tab1ST_file_isValidateError(isError) {
+      if (State.get("Tab1ST.file.data")) {
+        DOM.open(Tab1UI.configBox, false);
         UIController.updateFileArea("list");
       }
       UIController.updateExacArea("update", isError);
     }
-    handle_Tab1ST_isFileEdited(isEdited) {
+    handle_Tab1ST_file_isEdited(isEdited) {
       if(isEdited){
-        State.set("Tab1ST.fileStas", ["error", "シート編集検知: 再検証"]);
+        State.set("Tab1ST.file.status", ["error", "シート編集検知: 再検証"]);
         DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn`);
         UIController.updateExacArea("edited");
       }
     }
     // --- 抽出層ハンドラ ---
-    handle_Tab1ST_exacStas(stasValue) {
+    handle_Tab1ST_exac_status(stasValue) {
       DOM.setDOM(Tab1UI.exacBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
     }
     // --- チャート層ハンドラ ---
@@ -115,7 +115,7 @@
       let className = "", text = "";
       if (mode === "reset") {
         const prefix = String(id).split("StasBar")[0];
-        const save = State.get(`Tab1ST.${prefix}StasCached`);
+        const save = State.get(`Tab1ST.${prefix}.cachedStatus`);
         className = save?.[0] ?? "";
         text = save?.[1] ?? "";
       } else if (!mode){

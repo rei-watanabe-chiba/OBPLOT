@@ -18,17 +18,17 @@
       const configMap = [...configArea.querySelectorAll('.input-text')].reduce((acc, input) => {
         if (input.dataset.field) acc[input.dataset.field] = input.value;
         return acc;
-      }, { ...State.get("Tab1ST.configMap") });
+      }, { ...State.get("Tab1ST.config.map") });
       // 入力値判定
       const isError = !(configMap.dataset?.trim());
       const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "単純抽出";
       // ステータス更新
       State.set({
-        "Tab1ST.configMap": configMap,
-        "Tab1ST.isConfigMapError": [isError, false, false],
-        "Tab1ST.configStas": [isError ? "error" : "", isError ? "エラー: Dataset未入力" : modeText],
-        "Tab1ST.configExacMode": selectMode,
-        "Tab1ST.exacStas": isError ? ["", ""] : ["loading", "計測IDでソートして抽出"]
+        "Tab1ST.config.map": configMap,
+        "Tab1ST.config.isMapError": [isError, false, false],
+        "Tab1ST.config.status": [isError ? "error" : "", isError ? "エラー: Dataset未入力" : modeText],
+        "Tab1ST.config.mode": selectMode,
+        "Tab1ST.exac.status": isError ? ["", ""] : ["loading", "計測IDでソートして抽出"]
       });
     }
 
@@ -40,10 +40,10 @@
       const isError = errorFlags.some(Boolean);
       // ステータス更新
       State.set({
-        "Tab1ST.isFileMapError": errorFlags,
-        "Tab1ST.fileStas": [
+        "Tab1ST.file.isMapError": errorFlags,
+        "Tab1ST.file.status": [
           isError ? "error" : "success", 
-          isError ? "エラー: 選択項目" : State.get("Tab1ST.fileStasCached")[1]
+          isError ? "エラー: 選択項目" : State.get("Tab1ST.file.cachedStatus")[1]
         ]
       });
     }
@@ -60,7 +60,7 @@
         },
         [Tab1UI.fileArea]: () => {
           if (target.classList.contains("input-select")) {
-            State.set("Tab1ST.fileMap", { ...State.get("Tab1ST.fileMap"), [fieldKey]: target.value });
+            State.set("Tab1ST.file.map", { ...State.get("Tab1ST.file.map"), [fieldKey]: target.value });
             this.processFileArea();
           }
         }
@@ -72,13 +72,13 @@
     // --- 初期化処理 ---
     static async init() {
       this.switchTab(State.get("GLB.activeTab"));
-      State.set({"GLB.isLocked": true, "Tab1ST.configStas": ["alert", "初期設定中..."]});
+      State.set({"GLB.isLocked": true, "Tab1ST.config.status": ["alert", "初期設定中..."]});
       // グローバル読込
       try {
         State.set("GLB.cachedGlobal", await API.getGlobal());
         this.processConfigArea();
       } catch (err) {
-        State.set("Tab1ST.configStas", ["error", "エラー: GAS通信エラー"]);
+        State.set("Tab1ST.config.status", ["error", "エラー: GAS通信エラー"]);
       } finally {
         State.set("GLB.isLocked", false);
       }
