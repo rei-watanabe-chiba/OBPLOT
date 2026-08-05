@@ -7,7 +7,7 @@
       return document.getElementById(id);
     }
     // --- 共通：DOMテキスト ---
-    static setText(id, text, className) {
+    static setDOM(id, text, className) {
       const el = this.get(id);
       if (el && text !== undefined) el.innerText = text;
       if (el && className !== undefined) el.className = className;
@@ -53,7 +53,7 @@
     }
     // --- 設定層ハンドラ ---
     handle_Tab1ST_configStas(stasValue) {
-      DOM.setText(Tab1UI.configBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+      DOM.setDOM(Tab1UI.configBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
       const isError = stasValue?.[0] === "error";
       UIController.updateFileArea("update", isError);
     }
@@ -64,13 +64,14 @@
       const [data, isError] = State.get(["Tab1ST.cachedFileData", "Tab1ST.isFileValidateError"]);
       if (!data || isError) return;
       State.set({"Tab1ST.fileStas": ["error", "モード変更検知: 再検証"], "Tab1ST.isFileValidateError": true});
+      DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn`);
     }
     // --- ファイル層ハンドラ ---
     handle_Tab1ST_fileStas(stasValue) {
       const [stas, text] = stasValue;
       let cacheStas = (stas !== "" && stas !== "loading");
-      DOM.setText(Tab1UI.fileBar, text, `status-bar ${stas}`);
-      if(State.get("Tab1ST.isFileMapError")) {
+      DOM.setDOM(Tab1UI.fileBar, text, `status-bar ${stas}`);
+      if(State.get("Tab1ST.isFileMapError").some(Boolean)) {
         DOM.open(Tab1UI.fileArea, true);
         cacheStas = false
       }
@@ -93,12 +94,13 @@
     handle_Tab1ST_isFileEdited(isEdited) {
       if(isEdited){
         State.set("Tab1ST.fileStas", ["error", "シート編集検知: 再検証"]);
+        DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn`);
         UIController.updateExacArea("edited");
       }
     }
     // --- 抽出層ハンドラ ---
     handle_Tab1ST_exacStas(stasValue) {
-      DOM.setText(Tab1UI.exacBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+      DOM.setDOM(Tab1UI.exacBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
     }
   }
 
@@ -116,7 +118,7 @@
         text = "処理中...";
         className = "loading";
       } 
-      DOM.setText(id, text, `status-bar ${className}`);
+      DOM.setDOM(id, text, `status-bar ${className}`);
     }
 
     // --- 共通：確認ダイアログ生成 ---
@@ -126,8 +128,8 @@
       // --- 本体処理 ---
       return new Promise((resolve) => {
         const dialog = DOM.get("universalConfirm");
-        DOM.setText("uDialogTitle", title);
-        DOM.setText("uDialogMessage", msg);
+        DOM.setDOM("uDialogTitle", title);
+        DOM.setDOM("uDialogMessage", msg);
         dialog?.showModal();
         const confirmBtn = DOM.get("uDialogConfirmBtn");
         const cancelBtn = DOM.get("uDialogCancelBtn");
@@ -172,18 +174,20 @@
           DOM.setDisabled(Tab1UI.fileLoadBtn, isError);
           return;
         case "load":
-          DOM.setText(Tab1UI.fileLoadBtn, "データを再取得");
+          DOM.setDOM(Tab1UI.fileLoadBtn, "データを再取得");
           DOM.setDisabled(Tab1UI.fileValdBtn, true);
           DOM.open(Tab1UI.fileArea, !isError);
           DOM.toggle(Tab1UI.fileArea, !isError);
           DOM.toggle(Tab1UI.fileMakeBtn, !isError);
           DOM.toggle(Tab1UI.fileValdBtn, !isError);
           DOM.setDisabled(Tab1UI.fileMakeBtn, isError);
-          return;
+          !isError && DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn --sub`);
+          break;
         case "list":
           DOM.open(Tab1UI.fileArea, false);
           DOM.setDisabled(Tab1UI.fileValdBtn, false);
-          return;
+          DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn --sub`);
+          break;
       }
     }
 
