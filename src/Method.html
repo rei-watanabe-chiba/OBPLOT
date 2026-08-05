@@ -139,34 +139,25 @@
     }
   }
 
-  // --- PXRF重複検証ロジック ---
+  // --- PXRF重複検証・統合ロジック ---
   class PxrfValidator {
-    // --- 重複チェック実行 ---
-    static checkDuplicate(existingDT, newDT) {
-      if (!existingDT?.length || !newDT?.length) return null;
+    static #COL = { DATASET: 2, ID: 1 };
+    static run(existingDT, newDT) {
+      if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
       const [exHeader, ...exRows] = existingDT;
-      const [newHeader, ...newRows] = newDT;
-      
-      const dsIdxEx = exHeader.indexOf("dataset");
-      const idIdxEx = exHeader.indexOf("ID");
-      const dsIdxNew = newHeader.indexOf("dataset");
-      const idIdxNew = newHeader.indexOf("ID");
-      
-      if (dsIdxEx === -1 || idIdxEx === -1 || dsIdxNew === -1 || idIdxNew === -1) return null;
-      
-      // 既存キーのSet構築
-      const existingKeys = new Set(exRows.map(row => `${row[dsIdxEx]}_${row[idIdxEx]}`));
-      
-      // 新規データとの突合
-      for (const row of newRows) {
-        const key = `${row[dsIdxNew]}_${row[idIdxNew]}`;
-        if (existingKeys.has(key)) {
-          return { dataset: row[dsIdxNew], id: row[idIdxNew] };
-        }
-      }
-      return null;
+      const [, ...newRows] = newDT;
+      // 検索キーをset化
+      const newKeys = new Set(newRows.map(row => `${row[this.#COL.DATASET]}_${row[this.#COL.ID]}`));
+      // 重複フィルタリングと判定
+      const filteredExRows = exRows.filter(row => !newKeys.has(`${row[this.#COL.DATASET]}_${row[this.#COL.ID]}`));
+      const isDup = filteredExRows.length !== exRows.length;
+      // 重複でない場合はnull →　新規のみappend
+      if (!isDup) return { isDup: false, data: null };
+      // 重複でない場合は整形配列
+      return { isDup: true, data: [exHeader, ...filteredExRows, ...newRows] };
     }
   }
+  
   // 他層からの呼び出し
   const Mtd = {
     Utils: DataUtils,
