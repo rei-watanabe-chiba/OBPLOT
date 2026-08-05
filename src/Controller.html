@@ -1,125 +1,95 @@
 <!-- Controller.html -->
 <script>
-  // --- コントローラー層クラス ---
+  // --- コントローラー層 ---
   class AppController {
-    // --- 共通：非同期ラッパー ---
+    // --- 非同期ラッパー ---
     static async withAsyncLock(prefix, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
-      try {
-        await processFn();
-      } catch (err) {
-        // エラー捕捉と状態更新
-        State.set(`Tab1ST.${prefix}Stas`, ["error", err.message]);
-      } finally {
-        // 終了処理
+      try { await processFn(); }
+      // エラー補足
+      catch (err) { State.set(`Tab1ST.${prefix}Stas`, ["error", err.message]); }
+      // 終了処理
+      finally {
         if (finallyFn) await finallyFn();
         State.set("GLB.isLocked", false);
       }
     }
 
-    // --- ファイルリスト共通処理 ---
+    // --- ファイルリスト共通 ---
     static async processFileList(actionType, fileDT, global) {
       // validateモードデータ取得
-      if (actionType === "validate"){
-        const { data } = await API.fetchData(global.filelistSheetName, 5, 5);
-        fileDT = data;
+      if (actionType === "validate") {
+        fileDT = (await API.fetchData(global.filelistSheetName, 5, 5)).data;
       }
       // モード取得と検証
       const exacMode = State.get("Tab1ST.configExacMode");
       const outData = Mtd.FileValidator.run(fileDT, global.filelistHeader, global.validModes, exacMode);
-      const isAlert = outData.slice(1).some(row => row[row.length - 1] !== "");
-      await API.writeData(global.filelistSheetName, outData, "rule");
-      await API.clearUserProperty(global.propFileEdited);
+      const isAlert = outData.slice(1).some(row => row.at(-1) !== "");
+      // 並列通信処理
+      await Promise.all([
+        API.writeData(global.filelistSheetName, outData, "rule"),
+        API.clearUserProperty(global.propFileEdited)
+      ]);
       // ステータス更新
-      const stas = isAlert ? ["alert", "出力完了, errorあり"] : ["success", "出力完了, errorなし"];
-      const isError = stas[0] !== "success";
       State.set({
         "Tab1ST.isFileEdited": false,
-        "Tab1ST.fileStas": stas,
-        "Tab1ST.isFileValidateError": isError,
+        "Tab1ST.fileStas": isAlert ? ["alert", "出力完了, errorあり"] : ["success", "出力完了, errorなし"],
+        "Tab1ST.isFileValidateError": isAlert
       });
     }
     
-    // --- Fileシート取得処理 ---
+    // --- Fileシート取得 ---
     static async loadFile() {
-      // リセット確認
-      const cachedFileData = State.get("Tab1ST.cachedFileData");
-      if (cachedFileData !== null) {
-        if (!await UI.confirm("確認", "内部データをリセットしますか？", Tab1UI.fileBar)) return;
-      }
-      
-      let stas = [];
-      // 非同期ラッパー実行
-      await this.withAsyncLock("file", 
-        // try処理
-        async () => {
-          // データ取得
-          const global = State.get("GLB.cachedGlobal");
-          const { data, message } = await API.fetchData(global.fileSheetName, 5);
-          // dataヘッダーで列マップ初期化
-          const newMap = {};
-          global.fileFields.forEach(f => newMap[f.key] = "");
-          UI.renderSelectors(data[0], Tab1UI.fileBox, global.fileFields);
-          // ステータス更新
-          stas = ["success", message];
-          State.set({
-            "Tab1ST.cachedFileData": data,
-            "Tab1ST.fileMap": newMap,
-            "Tab1ST.isFileMapError": [true, true, true, false, false],
-            "Tab1ST.fileStas": stas
-          });
-        },
-        // finally処理
-        async () => {
-          // ステータス記録とUI更新
-          State.set("Tab1ST.isFileLoadError", stas[0] === "error");
-        }
-      );
-    }
-
-    // --- ファイルリスト生成処理 ---
-    static async makeFileList() {
-      // 選択状態確認
-      Evt.fileArea();
-      if (State.get("Tab1ST.isFileMapError")?.some(Boolean)) return;
-    
       // 実行確認
-      if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？",Tab1UI.fileBar)) return;
-      // 非同期ラッパー実行
-      await this.withAsyncLock("file", async () => {
-        // インデックス抽出
-        const [global, fileDT, fileMap] = State.get([
-          "GLB.cachedGlobal", "Tab1ST.cachedFileData", "Tab1ST.fileMap"
-        ]);
-        const indexArr = global.fileFields.map(f => {
-          const selectedValue = fileMap[f.key];
-          return selectedValue ? fileDT[0].indexOf(selectedValue) : -1;
-        });
-        // 再配列実行
-        const remapData = Mtd.Utils.remapArry(fileDT, indexArr, global.fileHeader);
-        await this.processFileList("make", remapData, global);
-      });
-    }
-
-    // --- ファイルリスト検証処理 ---
-    static async validateFileList() {
-      // 上書き確認
-      if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？",Tab1UI.fileBar)) return;
-      
-      // 非同期ラッパー実行
+      if (State.get("Tab1ST.cachedFileData")) {
+        if(!(await UI.confirm("確認", "内部データをリセットしますか？", Tab1UI.fileBar))) return;
+      }
+      let stas = [];
       await this.withAsyncLock("file", async () => {
         const global = State.get("GLB.cachedGlobal");
-        await this.processFileList("validate", null, global);
+        // データ取得と列選択初期化
+        const { data, message } = await API.fetchData(global.fileSheetName, 5);
+        const newMap = Object.fromEntries(global.fileFields.map(f => [f.key, ""]));
+        UI.renderSelectors(data[0], Tab1UI.fileBox, global.fileFields);
+        // ステータス更新
+        stas = ["success", message];
+        State.set({
+          "Tab1ST.cachedFileData": data,
+          "Tab1ST.fileMap": newMap,
+          "Tab1ST.isFileMapError": [true, true, true, false, false],
+          "Tab1ST.fileStas": stas
+        });
+      }, async () => State.set("Tab1ST.isFileLoadError", stas[0] === "error"));
+    }
+
+    // --- ファイルリストリスト生成処理 ---
+    static async makeFileList() {
+      // UI監視と実行確認
+      Evt.fileArea();
+      if (State.get("Tab1ST.isFileMapError")?.some(Boolean)) return;
+      if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
+      // 列選択取得と共通処理
+      await this.withAsyncLock("file", async () => {
+        const [global, fileDT, fileMap] = State.get(["GLB.cachedGlobal", "Tab1ST.cachedFileData", "Tab1ST.fileMap"]);
+        const indexArr = global.fileFields.map(f => fileMap[f.key] ? fileDT[0].indexOf(fileMap[f.key]) : -1);
+        await this.processFileList("make", Mtd.Utils.remapArry(fileDT, indexArr, global.fileHeader), global);
       });
+    }
+
+    // --- リスト検証処理 ---
+    static async validateFileList() {
+      // 実行確認
+      if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
+      // 共通処理
+      await this.withAsyncLock("file", async () => this.processFileList("validate", null, State.get("GLB.cachedGlobal")));
     }
 
     // --- File - Results突合抽出処理 ---
     static async extractFile() {
-      // 実行確認（編集フラグ事前読込）
+      // 実行確認（待機時間解消のため編集フラグ事前読込）
       const global = State.get("GLB.cachedGlobal");
       const flagEdited = await API.checkUserProperty(global.propFileEdited);
       if (!await UI.confirm("確認", "既存の「抽出データ」シートを上書きしますか？",Tab1UI.exacBar)) return;
-      
       // 非同期ラッパー実行
       await this.withAsyncLock("exac", async () => {
         // 編集検知
@@ -128,45 +98,36 @@
           return;
         }
         // データ取得
-        const { data: fileData } = await API.fetchData(global.filelistSheetName, 6, 6);
-        const { data: resultData } = await API.fetchData(global.resultsSheetName);
-        // データ抽出
-        const [exacMode, configMap] = State.get([
-          "Tab1ST.configExacMode", "Tab1ST.configMap"
+        const [fileRes, resultRes, exacMode, configMap] = await Promise.all([
+          API.fetchData(global.filelistSheetName, 6, 6),
+          API.fetchData(global.resultsSheetName),
+          State.get("Tab1ST.configExacMode"),
+          State.get("Tab1ST.configMap")
         ]);
-        const outData = Mtd.DataExtractor.run(fileData, resultData, configMap, global);
-        // 生成結果確認
+        const outData = Mtd.DataExtractor.run(fileRes.data, resultRes.data, configMap, global);
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
-        // データ出力
+        // 出力とステータス更新
         await API.writeData(global.extractSheetName, outData);
-        // ステータス更新
         State.set({"Tab1ST.isFileEdited": false, "Tab1ST.exacStas": ["success", `抽出: ${outData.length - 1} 件`]});
       });
     }
 
-    // --- 抽出データのPXRF格納処理 ---
+    // --- PXRF格納処理 ---
     static async pushExacData() {
       const global = State.get("GLB.cachedGlobal");
       if (!await UI.confirm("確認", "「抽出データ」をPXRFシートに格納しますか？", Tab1UI.exacBar)) return;
-
       await this.withAsyncLock("exac", async () => {
-        // 抽出データ取得
-        const { data: extractData } = await API.fetchData(global.extractSheetName);
-        // PXRFデータ取得
-        const { data: pxrfData } = await API.fetchData(global.pxrfSheetName);
-        // 重複検証と統合データ生成
+        // データ取得
+        const [{ data: extractData }, { data: pxrfData }] = await Promise.all([
+          API.fetchData(global.extractSheetName),
+          API.fetchData(global.pxrfSheetName)
+        ]);
+        // 上書き判定
         const { isDup, data: mergedData } = Mtd.PxrfValidator.run(pxrfData, extractData);
-        if (isDup) {
-          const isOk = await UI.confirm("確認", "重複dataset・IDが存在します。上書きしますか？", Tab1UI.exacBar);
-          if (!isOk) return;
-          // 置換書き込み
-          await API.writeData(global.pxrfSheetName, mergedData, "clear");
-          State.set("Tab1ST.exacStas", ["success", `PXRF上書き格納完了: ${extractData.length - 1} 件`]);
-        } else {
-          // 重複なし：単純追記
-          await API.writeData(global.pxrfSheetName, extractData.slice(1), ["append"]);
-          State.set("Tab1ST.exacStas", ["success", `PXRF格納完了: ${extractData.length - 1} 件`]);
-        }
+        if (isDup && !await UI.confirm("確認", "重複dataset・IDが存在します。上書きしますか？", Tab1UI.exacBar)) return;
+        // 条件分岐による書き込み
+        await API.writeData(global.pxrfSheetName, isDup ? mergedData : extractData.slice(1), isDup ? "clear" : ["append"]);
+        State.set("Tab1ST.exacStas", ["success", `PXRF格納完了: ${extractData.length - 1} 件`]);
       });
     }
 
@@ -174,20 +135,15 @@
     static async openReport() {
       await this.withAsyncLock("report", async () => {
         State.set("Tab2ST.reportStas", ["loading", "テンプレート取得中..."]);
-        
         // テンプレート取得
         const htmlContent = await API.getReportTemplate();
-        if (!htmlContent) throw new Error("テンプレート取得失敗");
-        
-        // Blob生成と別タブ展開
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-        
+        // 別タブ生成
+        window.open(URL.createObjectURL(new Blob([htmlContent], { type: 'text/html' })), '_blank');
         State.set("Tab2ST.reportStas", ["success", "別タブで展開しました"]);
       });
     }
   }
+
   // 他層からの呼び出し
   const Ctrl = AppController;
 </script>

@@ -68,95 +68,50 @@
     }
 
     // --- 状態取得 ---
-    get(pathOrPaths) {
-      //配列対応
-      if (Array.isArray(pathOrPaths)) {
-        return pathOrPaths.map(path => {
-          const keys = this.#resolvePath(path);
-          return keys.reduce((obj, key) => obj?.[key], this.#state);
-        });
-      }
-      //文字列対応
-      const keys = this.#resolvePath(pathOrPaths);
-      return keys.reduce((obj, key) => obj?.[key], this.#state);
+    get(paths) {
+      // 文字列/配列判定
+      const resolve = p => (Array.isArray(p) ? p : p.split('.')).reduce((o, k) => o?.[k], this.#state);
+      // 共通処理
+      return Array.isArray(paths) ? paths.map(resolve) : resolve(paths);
     }
-
     // --- 状態更新 ---
-    set(pathOrUpdates, value) {
-      //配列対応
-      if (typeof pathOrUpdates === 'object' && pathOrUpdates !== null && !Array.isArray(pathOrUpdates)) {
-        Object.entries(pathOrUpdates).forEach(([path, val]) => {
-          this.set(path, val);
-        });
-        return;
+    set(updates, value) {
+      // 文字列/オブジェクト判定
+      if (typeof updates === 'object' && !Array.isArray(updates)) {
+        return Object.entries(updates).forEach(([k, v]) => this.set(k, v));
       }
-      //共通処理
-      const keys = this.#resolvePath(pathOrUpdates);
-      const lastKey = keys.pop();
-      let target = this.#state;
-      for (const key of keys) {
-        if (!target[key]) target[key] = {};
-        target = target[key];
-      }
-      if (target[lastKey] !== value) {
-        target[lastKey] = value;
-        this.#notify(keys.concat(lastKey).join('.'), value);
+      // 共通処理
+      const keys = Array.isArray(updates) ? updates : updates.split('.');
+      const last = keys.pop();
+      const target = keys.reduce((o, k) => o[k] ??= {}, this.#state);
+      if (target[last] !== value) {
+        target[last] = value;
+        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(value));
       }
     }
-
     // --- 変更の監視登録 ---
     subscribe(path, callback) {
-      const keyStr = typeof path === 'string' ? path : path.join('.');
-      if (!this.#listeners[keyStr]) {
-        this.#listeners[keyStr] = [];
-      }
-      this.#listeners[keyStr].push(callback);
-    }
-    // --- 変更の反映 ---
-    #notify(keyStr, value) {
-      if (this.#listeners[keyStr]) {
-        this.#listeners[keyStr].forEach(callback => callback(value));
-      }
+      const key = Array.isArray(path) ? path.join('.') : path;
+      (this.#listeners[key] ??= []).push(callback);
     }
   }
 
   // --- GAS通信(API)クラス ---
   class GasService {
-    // --- GAS通信ラップ ---
     static #serverCall(funcName, ...args) {
       return new Promise((resolve, reject) => {
-        // 非同期処理のPromise化
         google.script.run
-          .withSuccessHandler(res => {
-            // DTO解析
-            if (res && typeof res === 'object' && 'success' in res) {
-              if (res.success) resolve(res.payload);
-              else reject(new Error(`[${res.errorType}] ${res.message}`));
-            } else {
-              // 後方互換
-              resolve(res);
-            }
-          })
-          .withFailureHandler(err => reject(new Error(`[NET_ERR] ${err.message}`)))
+          .withSuccessHandler(r => r?.success ? resolve(r.payload) : reject(new Error(`[${r?.errorType || 'ERR'}] ${r?.message}`)))
+          .withFailureHandler(e => reject(new Error(`[NET_ERR] ${e.message}`)))
           [funcName](...args);
       });
     }
-
-    // --- 構成設定取得 ---
+    // 通信関数定義
     static getGlobal() { return this.#serverCall("getGlobal"); }
-    // --- データ取得 ---
-    static fetchData(sheetName, quotaCol = null, loadCol = null) {
-      return this.#serverCall("fetchData", sheetName, quotaCol, loadCol);
-    }
-    // --- データ出力 ---
-    static writeData(sheetName, data, options = "clear") {
-      return this.#serverCall("writeData", sheetName, data, options);
-    }
-    // --- プロパティ確認 ---
+    static fetchData(sheet, quotaCol = null, loadCol = null) { return this.#serverCall("fetchData", sheet, quotaCol, loadCol); }
+    static writeData(sheet, data, options = "clear") { return this.#serverCall("writeData", sheet, data, options); }
     static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }
-    // --- プロパティ消去 ---
     static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
-    // --- Reportテンプレート取得 ---
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
   }
 

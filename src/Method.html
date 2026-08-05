@@ -2,31 +2,19 @@
 <script>
   // --- 共通ユーティリティ ---
   class DataUtils {
-    // --- 共通：再配列処理 ---
+    // --- 再配列処理 ---
     static remapArry(data, indexArr, newHeader = null) {
       if (!data?.length) return [];
-      const [rawHeader, ...dataBody] = data;
-      // 値取得ヘルパー
-      const getValue = (source, idx) => idx !== -1 ? (source?.[idx] ?? "") : "";
-      // 再配列とヘッダ指定
-      const remapBody = dataBody.map(row => indexArr.map(idx => getValue(row, idx)));
-      const outHeader = newHeader ?? indexArr.map(idx => getValue(rawHeader, idx));
-      return [outHeader, ...remapBody];
+      const [rawHeader, ...body] = data;
+      const remapBody = body.map(row => indexArr.map(idx => idx !== -1 ? (row?.[idx] ?? "") : ""));
+      return [newHeader ?? indexArr.map(idx => idx !== -1 ? (rawHeader?.[idx] ?? "") : ""), ...remapBody];
     }
 
-    // --- 共通：セレクタ配列判定 ---
-    static validateSelect(selectedValues, quota = selectedValues.length) {
-      const checkLimit = Math.min(quota, selectedValues.length);
-      const valueCounts = {};
-      // 重複判定
-      for (let i = 0; i < checkLimit; i++) {
-        const v = selectedValues[i];
-        if (v) valueCounts[v] = (valueCounts[v] || 0) + 1;
-      }
-      // 空欄判定
-      return selectedValues.map((val, idx) => 
-        idx < checkLimit ? (!val || valueCounts[val] > 1) : false
-      );
+    // --- セレクタ配列判定 ---
+    static validateSelect(values, quota = values.length) {
+      const checkVals = values.slice(0, quota);
+      // 空欄、または同一配列内での重複を判定
+      return values.map((v, i) => i < quota ? (!v || checkVals.indexOf(v) !== checkVals.lastIndexOf(v)) : false);
     }
   }
 
@@ -35,133 +23,89 @@
     // --- インデックスと計測ID生成 ---
     static #COL = { FILE: 0, MODE: 1, ID: 2, SUB_ID: 3, INFO: 4 };
     static #getScanID = (id, sub_id) => sub_id ? `${id}_${sub_id}` : `${id}`;
-    // --- 事前集計 ---
-    static #analyzeData(body) {
-      const stats = { scan: {}, file: {} };
-      body.forEach(row => {
-        const file = row[this.#COL.FILE];
-        const scan_id = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
-        // 出現カウント
-        stats.file[file] = (stats.file[file] || 0) + 1;
-        stats.scan[scan_id] ??= { modes: new Set(), count: 0 };
-        stats.scan[scan_id].modes.add(row[this.#COL.MODE]);
-        stats.scan[scan_id].count++;
-      });
-      return stats;
-    }
-    // --- 検証実行 ---
+    // --- 実行 ---
     static run(sheetData, outHeader, validModes, exacMode) {
       if (!sheetData?.length) return [];
-      const [, ...dataBody] = sheetData;
-      // パス1: 事前集計
-      const stats = this.#analyzeData(dataBody);
-      // 検証ルール定義
+      const [, ...body] = sheetData;
+      // 事前集計
+      const stats = body.reduce((acc, row) => {
+        const scan_id = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
+        acc.file[row[this.#COL.FILE]] = (acc.file[row[this.#COL.FILE]] || 0) + 1;
+        (acc.scan[scan_id] ??= { modes: new Set(), count: 0 }).modes.add(row[this.#COL.MODE]);
+        acc.scan[scan_id].count++;
+        return acc;
+      }, { scan: {}, file: {} });
+      // ルール定義と判定
       const rules = [
-        { check: row => !/^\d+$/.test(row[this.#COL.FILE] ?? ""), err: " file形式" },
-        { check: row => !validModes.includes(row[this.#COL.MODE]), err: " mode形式" },
-        { check: row => !row[this.#COL.ID], err: " id形式" },
-        { check: row => stats.file[row[this.#COL.FILE]] > 1, err: " file重複" },
-        { check: row => {
-            const scan_id = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
-            const s = stats.scan[scan_id];
+        { check: r => !/^\d+$/.test(r[this.#COL.FILE] ?? ""), err: " file形式" },
+        { check: r => !validModes.includes(r[this.#COL.MODE]), err: " mode形式" },
+        { check: r => !r[this.#COL.ID], err: " id形式" },
+        { check: r => stats.file[r[this.#COL.FILE]] > 1, err: " file重複" },
+        { check: r => {
+            const s = stats.scan[this.#getScanID(r[this.#COL.ID], r[this.#COL.SUB_ID])];
             if (exacMode === "Single") return s.count > 1;
-            // Dualモード判定
-            return !(s?.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian') && s.count === 2);
-          }, 
-          err: exacMode === "Single" ? " id重複" : " 計測id-mode形式"
+            const isValidDual = s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian');
+            return !isValidDual;
+          }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式"
         }
       ];
-      // パス2: ルールベース判定
-      const processedBody = dataBody.map(row => {
-        const scan_id = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
-        const errors = rules.filter(r => r.check(row)).map(r => r.err).join(",");
-        return [...row, scan_id, errors];
-      });
-      return [[...outHeader, "error"], ...processedBody];
+      // 配列返却
+      return [[...outHeader, "error"], ...body.map(row => [
+        ...row, 
+        this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]), 
+        rules.filter(r => r.check(row)).map(r => r.err).join(",")
+      ])];
     }
   }
 
   // --- Results抽出ロジック ---
   class DataExtractor {
-    // --- 抽出実行 ---
     static run(fileDT, resultDT, configMap, global) {
       if (!fileDT?.length || !resultDT?.length) return [];
-      // Results検索マップ構築
-      const resultMap = new Map(resultDT.slice(1).map(row => [String(row[0]), row]));
-      // 各処理に引数分配
-      const scanIDMap = this.#buildScanIDMap(fileDT);
-      const { obKeys, mdKeys } = this.#getSortedKeysList(global);
-      const outHeader = this.#buildHeader(obKeys, mdKeys);
-      const outRows = this.#buildRows(scanIDMap, resultMap, configMap, global, obKeys, mdKeys);
-      // 出力データ
-      return [outHeader, ...outRows];
-    }
-    // --- 計測ID単位でのグループ化 ---
-    static #buildScanIDMap(fileDT) {
-      return fileDT.slice(1).reduce((map, [file, mode, id, , , scanId]) => {
+      const resultMap = new Map(resultDT.slice(1).map(r => [String(r[0]), r]));
+      // ID単位グループ化
+      const scanIDMap = fileDT.slice(1).reduce((map, [file, mode, id, , , scanId]) => {
         const entry = map.get(scanId) ?? { id, files: {} };
         entry.files[String(mode).toLowerCase()] = file;
         return map.set(scanId, entry);
       }, new Map());
-    }
-    // --- ソート処理 ---
-    static #getSortedKeysList({ obsidianIndex, mudrockIndex }) {
+      // 計測モード別ソート
       const sortKeys = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
-      return { obKeys: sortKeys(obsidianIndex), mdKeys: sortKeys(mudrockIndex) };
-    }
-    // --- 固定ヘッダー構築 ---
-    static #buildHeader(obKeys, mdKeys) {
-      return [
-        '計測ID', 'ID', 'dataset', 'item', 'date',
-        ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`),
-        ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)
-      ];
-    }
-    // --- 出力用行データの生成 ---
-    static #buildRows(scanIDMap, resultMap, configMap, global, obKeys, mdKeys) {
-      return Array.from(scanIDMap, ([scanId, { id, files }]) => {
-        const ob = this.#extractValues(resultMap, files.obsidian, obKeys, global.obsidianIndex);
-        const mu = this.#extractValues(resultMap, files.mudrock, mdKeys, global.mudrockIndex);
-        const { dataset, item, date } = configMap;
-        return [scanId, id, dataset, item, date,...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
-      });
-    }
-    // --- 元素値抽出 ---
-    static #extractValues(resultMap, fileName, keys, idxObj) {
-      const row = resultMap.get(String(fileName ?? ""));
-      return keys.reduce((acc, k) => {
+      const [obKeys, mdKeys] = [sortKeys(global.obsidianIndex), sortKeys(global.mudrockIndex)];
+      // 抽出クロージャ
+      const extract = (fileName, keys, idxObj) => keys.reduce((acc, k) => {
         const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
+        const row = resultMap.get(String(fileName ?? ""));
         acc.vals.push(idx !== null ? (row?.[idx] ?? "") : "");
         acc.errs.push(idx !== null ? (row?.[idx + 1] ?? "") : "");
         return acc;
       }, { vals: [], errs: [] });
+      // 配列返却
+      return [
+        ['計測ID', 'ID', 'dataset', 'item', 'date', ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`), ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)],
+        ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+          const ob = extract(files.obsidian, obKeys, global.obsidianIndex);
+          const mu = extract(files.mudrock, mdKeys, global.mudrockIndex);
+          return [scanId, id, configMap.dataset, configMap.item, configMap.date, ...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
+        })
+      ];
     }
   }
   
   // --- PXRF重複検証・統合ロジック ---
   class PxrfValidator {
-    static #COL = { DATASET: 2, ID: 1 };
     static run(existingDT, newDT) {
       if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
-      const [exHeader, ...exRows] = existingDT;
-      const [, ...newRows] = newDT;
-      // 検索キーをset化
-      const newKeys = new Set(newRows.map(row => `${row[this.#COL.DATASET]}_${row[this.#COL.ID]}`));
-      // 重複フィルタリングと判定
-      const filteredExRows = exRows.filter(row => !newKeys.has(`${row[this.#COL.DATASET]}_${row[this.#COL.ID]}`));
-      const isDup = filteredExRows.length !== exRows.length;
-      // 重複でない場合はnull →　新規のみappend
-      if (!isDup) return { isDup: false, data: null };
-      // 重複でない場合は整形配列
-      return { isDup: true, data: [exHeader, ...filteredExRows, ...newRows] };
+      // 検索キー設定とフィルタ
+      const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
+      const filteredEx = existingDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
+      // データ長から重複判定
+      return filteredEx.length !== existingDT.length - 1 
+        ? { isDup: true, data: [existingDT[0], ...filteredEx, ...newDT.slice(1)] } 
+        : { isDup: false, data: null };
     }
   }
   
   // 他層からの呼び出し
-  const Mtd = {
-    Utils: DataUtils,
-    FileValidator: FileValidator,
-    DataExtractor: DataExtractor,
-    PxrfValidator: PxrfValidator
-  };
+  const Mtd = { Utils: DataUtils, FileValidator, DataExtractor, PxrfValidator };
 </script>

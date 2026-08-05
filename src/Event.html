@@ -5,109 +5,89 @@
     // --- タブ切替 ---
     static switchTab(tabId) {
       document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
-      const targetBtn = document.querySelector(`[data-target="${tabId}"]`);
-      const targetContent = DOM.get(tabId);
-      if (targetBtn && targetContent) {
-        targetBtn.classList.add("active");
-        targetContent.classList.add("active");
-        State.set("GLB.activeTab", tabId);
-      }
+      document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
+      DOM.get(tabId)?.classList.add("active");
+      State.set("GLB.activeTab", tabId);
     }
 
     // --- 設定エリアイベント ---
     static processConfigArea() {
       const configArea = DOM.get(Tab1UI.configArea);
       const selectMode = configArea.querySelector('[data-field="configExacMode"]')?.value;
-      const inputAttr = configArea.querySelectorAll('.input-text');
-      // 入力値取得
-      const configMap = { ...State.get("Tab1ST.configMap") };
-      inputAttr.forEach(input => {
-        const fieldKey = input.getAttribute("data-field");
-        if (fieldKey) configMap[fieldKey] = input.value;
-      });
+      // 入力値取得と統合
+      const configMap = [...configArea.querySelectorAll('.input-text')].reduce((acc, input) => {
+        if (input.dataset.field) acc[input.dataset.field] = input.value;
+        return acc;
+      }, { ...State.get("Tab1ST.configMap") });
       // 入力値判定
-      const datasetValue = configMap.dataset?.trim() ?? "";
-      const isError = !datasetValue;
+      const isError = !(configMap.dataset?.trim());
+      const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "単純抽出";
       // ステータス更新
-      const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "単純抽出（モード混在可）";
-      const text = isError ? "エラー: Dataset未入力" : modeText;
-      const className = isError ? "error" : "";
-      const exacStas = isError? ["",""] : ["loading", "計測ID（id + sub_id）でソートして抽出"];
       State.set({
         "Tab1ST.configMap": configMap,
         "Tab1ST.isConfigMapError": [isError, false, false],
-        "Tab1ST.configStas": [className, text],
+        "Tab1ST.configStas": [isError ? "error" : "", isError ? "エラー: Dataset未入力" : modeText],
         "Tab1ST.configExacMode": selectMode,
-        "Tab1ST.exacStas": exacStas
+        "Tab1ST.exacStas": isError ? ["", ""] : ["loading", "計測IDでソートして抽出"]
       });
     }
 
     // --- Fileエリアイベント ---
     static processFileArea() {
-      const container = DOM.get(Tab1UI.fileBox);
-      const selectors = container.querySelectorAll(".input-select");
-      const selectValues = [...selectors].map(s => s.value);
-      // 必須項目３で判定とState更新
-      const errorFlags = Mtd.Utils.validateSelect(selectValues, 3);
-      State.set("Tab1ST.isFileMapError", errorFlags);
-      // ステータス更新
+      const selectors = [...DOM.get(Tab1UI.fileBox).querySelectorAll(".input-select")];
+      // 必須項目３で判定
+      const errorFlags = Mtd.Utils.validateSelect(selectors.map(s => s.value), 3);
       const isError = errorFlags.some(Boolean);
-      const text = isError ? "エラー: 選択項目" : State.get("Tab1ST.fileStasCached")[1];
-      const className = isError ? "error" : "success";
-      State.set("Tab1ST.fileStas", [className, text]);
+      // ステータス更新
+      State.set({
+        "Tab1ST.isFileMapError": errorFlags,
+        "Tab1ST.fileStas": [
+          isError ? "error" : "success", 
+          isError ? "エラー: 選択項目" : State.get("Tab1ST.fileStasCached")[1]
+        ]
+      });
+    }
+
+    // --- 変更イベントハンドラ ---
+    static #handleChange(e) {
+      const target = e.target;
+      const fieldKey = target?.dataset?.field;
+      if (!fieldKey) return;
+      // アクションマップ
+      const actionMap = {
+        [Tab1UI.configArea]: () => {
+          if (fieldKey === "configExacMode" || target.classList.contains("input-text")) this.processConfigArea();
+        },
+        [Tab1UI.fileArea]: () => {
+          if (target.classList.contains("input-select")) {
+            State.set("Tab1ST.fileMap", { ...State.get("Tab1ST.fileMap"), [fieldKey]: target.value });
+            this.processFileArea();
+          }
+        }
+      };
+      // 対象エリアの処理を実行
+      Object.entries(actionMap).some(([id, action]) => target.closest(`#${id}`) && (action(), true));
     }
 
     // --- 初期化処理 ---
     static async init() {
-      // 初期タブ設定
       this.switchTab(State.get("GLB.activeTab"));
-      // UIロックし設定読込
       State.set({"GLB.isLocked": true, "Tab1ST.configStas": ["alert", "初期設定中..."]});
+      // グローバル読込
       try {
-        const global = await API.getGlobal();
-        State.set("GLB.cachedGlobal", global);
-        // ステータス初期化
+        State.set("GLB.cachedGlobal", await API.getGlobal());
         this.processConfigArea();
       } catch (err) {
         State.set("Tab1ST.configStas", ["error", "エラー: GAS通信エラー"]);
       } finally {
         State.set("GLB.isLocked", false);
       }
-
-      // タブ切替設定
-      document.querySelectorAll(".tab-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          this.switchTab(btn.getAttribute("data-target"));
-        });
+      // イベントリスナー登録
+      document.addEventListener("click", e => {
+        const tabId = e.target?.dataset?.target;
+        if (tabId && e.target.classList.contains("tab-btn")) this.switchTab(tabId);
       });
-
-      // UI監視初期化（switch文による処理分岐）
-      document.addEventListener("change", (e) => {
-        const target = e.target;
-        if (!target) return;
-        const fieldKey = target.getAttribute("data-field");
-        if (!fieldKey) return;
-        // 変更箇所の特定
-        const isConfig = target.closest(`#${Tab1UI.configArea}`);
-        const isFile = target.closest(`#${Tab1UI.fileArea}`);
-        switch (true) {
-          // 設定エリア
-          case !!isConfig:
-            if (fieldKey === "configExacMode" || target.classList.contains("input-text")) {
-              this.processConfigArea();
-            }
-            break;
-          // ファイルエリア
-          case !!isFile:
-            if (target.classList.contains("input-select")) {
-              const fileMap = { ...State.get("Tab1ST.fileMap") };
-              fileMap[fieldKey] = target.value;
-              State.set("Tab1ST.fileMap", fileMap);
-              this.processFileArea();
-            }
-            break;
-        }
-      });
+      document.addEventListener("change", this.#handleChange.bind(this));
     }
   }
 
