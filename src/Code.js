@@ -1,4 +1,3 @@
-// --- gitingestのバイナリエラー回避のため一時的にtxt形式で保存 ---
 // --- グローバル変数定義 ---
 const FILE_SHEET_NAME = "File";
 const FILE_HEADER = ['file', 'mode', 'id', 'sub_id', 'info'];
