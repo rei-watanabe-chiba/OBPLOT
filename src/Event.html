@@ -32,7 +32,7 @@
       const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "単純抽出（モード混在可）";
       const text = isError ? "エラー: Dataset未入力" : modeText;
       const className = isError ? "error" : "";
-      const exacStas = isError? ["",""], ["loading", "計測ID（id + sub_id）でソートして抽出"];
+      const exacStas = isError? ["",""] : ["loading", "計測ID（id + sub_id）でソートして抽出"];
       State.set({
         "Tab1ST.configMap": configMap,
         "Tab1ST.isConfigMapError": [isError, false, false],
