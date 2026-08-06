@@ -5,10 +5,10 @@
 - **フロントエンド**: HTML Service / サイドバーおよび別タブ（Blob URL展開）
 - **描画エンジン**: Google Visualization API (CoreChart: ScatterChart) ※サンプル描画確認済み
 - **アーキテクチャ**: SPA型 MVMSアーキテクチャ (Model, View, Method, Service)
-- **状態管理**: `AppState` クラスによる Observer（Pub/Sub）パターン。
+- **状態管理**: `AppState` クラスによる Observer（Pub/Sub）パターン、`APP_PHASE` 定数によるフェーズの一元管理。
 - **UI思想**: Google Material Design準拠、CSS Gridレイアウト。
 - **通信方式**: `google.script.run` を Promise 化してラップ。async/await による厳密な非同期制御。
-- **レポート展開方式**: `Report.html` をGASバックエンド経由で取得し、Blob URLを生成してデプロイ不要で別タブに描画する方式を採用。
+- **レポート展開方式**: `Report.html` をGASバックエンド経由で取得し、Blob URLを生成してデプロイ不要で別タブに描画。
 ## 2. ディレクトリ構造・ファイル一覧
 - `Code.gs`: バックエンドデータ入出力・設定管理・テンプレート取得API
 - `Sidebar.html`: サイドバーのHTML構造
