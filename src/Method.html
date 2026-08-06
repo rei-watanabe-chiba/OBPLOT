@@ -60,7 +60,7 @@
 
   // --- Results抽出ロジック ---
   class DataExtractor {
-    static run(fileDT, resultDT, configMap, global) {
+    static run(fileDT, resultDT, exacMap, global) {
       if (!fileDT?.length || !resultDT?.length) return [];
       const resultMap = new Map(resultDT.slice(1).map(r => [String(r[0]), r]));
       // ID単位グループ化
@@ -86,7 +86,7 @@
         ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
           const ob = extract(files.obsidian, obKeys, global.obsidianIndex);
           const mu = extract(files.mudrock, mdKeys, global.mudrockIndex);
-          return [scanId, id, configMap.dataset, configMap.item, configMap.date, ...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
+          return [scanId, id, exacMap.dataset, exacMap.item, exacMap.date, ...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
         })
       ];
     }

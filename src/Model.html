@@ -3,25 +3,25 @@
   // --- htmlID ---
   const Tab1UI = {
       tabSet: "tab1Fieldset",       // タブ全体UI
-      configArea: "configMapArea",  // 設定エリア
-      configBar: "configStasBar",   // 設定コンソール
-      fileArea: "fileMapArea",      // ファイルエリア
-      fileBar: "fileStasBar",       // ファイルコンソール
-      fileBox: "fileMapBox",        // ファイル入力BOX
+      configBar: "configStatusBar",   // 設定コンソール
+      configArea: "configMapArea",  // 設定入力エリア
       fileLoadBtn: "fileLoadBtn",   // 読込ボタン
+      fileBar: "fileStatusBar",       // ファイルコンソール
+      fileArea: "fileMapArea",      // ファイル入力エリア
+      fileBox: "fileMapBox",        // ファイル入力BOX
       fileMakeBtn: "fileMakeBtn",   // リスト生成ボタン
       fileValdBtn: "fileValdBtn",   // 検証ボタン
-      exacArea: "extractAreaContainer",
-      exacBar: "exacStasBar",       // 抽出コンソール
+      exacBar: "exacStatusBar",       // 抽出コンソール
       exacBtn: "exacBtn",           // 抽出ボタン
+      exacArea: "exacMapBox",       // 抽出入力エリア
       exacPushBtn: "exacPushBtn",   // PXRFに格納ボタン
-      exacBox: "exacMapBox"         // 抽出設定BOX（新規追加）
+      exacBox: "exacMapBox"         // 抽出設定BOX
   }
 
   const Tab2UI = {
     tabSet: "tab2Fieldset",     // タブ全体UI
     reportBtn: "reportOpenBtn", // 展開ボタン
-    reportBar: "reportStasBar"  // 状態表示
+    reportBar: "reportStatusBar"  // 状態表示
   }
 
   // --- フェーズ定義 ---
@@ -73,7 +73,7 @@
           }
         },
         Tab2ST: {
-          reportStas: []
+          reportstatus: []
         }
       };
       this.#listeners = {};

@@ -38,7 +38,7 @@
         const match = method.match(/^handle_([^_]+)_(.+)$/);
         if (match) {
           const [, group, key] = match;
-          State.subscribe(`${group}.${key}`, this[method].bind(this));
+          State.subscribe(`${group}.${key.replace(/_/g, '.')}`, this[method].bind(this));
         }
       });
     }
@@ -54,14 +54,7 @@
     // --- ファイル層ハンドラ ---
     handle_Tab1ST_file_status(stasValue) {
       const [stas, text] = stasValue;
-      let cacheStas = (stas !== "" && stas !== "loading");
       DOM.setDOM(Tab1UI.fileBar, text, `status-bar ${stas}`);
-      // phaseステータス記録
-      if(State.get("Tab1ST.file.isMapError").some(Boolean)) {
-        DOM.open(Tab1UI.fileArea, true);
-        cacheStas = false;
-      }
-      if (cacheStas) State.set("Tab1ST.file.cachedStatus", stasValue);
     }
     handle_Tab1ST_file_isMapError(errorFlags) {
       UIController.updateInputs(Tab1UI.fileBox, "select", errorFlags);
@@ -94,14 +87,12 @@
   // --- UI更新・生成処理群 ---
   class UIController {
     // --- 共通：処理中ステータス ---
-    static loadingStatsBar(id, mode = null) {
+    static loadingStatsBar(id, status = null) {
       let className = "", text = "";
-      if (mode === "reset") {
-        const prefix = String(id).split("StasBar")[0];
-        const save = State.get(`Tab1ST.${prefix}.cachedStatus`);
-        className = save?.[0] ?? "";
-        text = save?.[1] ?? "";
-      } else if (!mode){
+      if (status) {
+        className = status[0];
+        text = status[1] ;
+      } else {
         text = "処理中...";
         className = "loading";
       } 
@@ -111,6 +102,8 @@
     // --- 共通：確認ダイアログ生成 ---
     static confirm(title, msg, barObj = null) {
       // --- コンソールバー処理 ---
+      const prefix = String(barObj).split("StatusBar")[0];
+      const saveStatus = State.get(`Tab1ST.${prefix}.status`);
       if(barObj) this.loadingStatsBar(barObj);
       // --- 本体処理 ---
       return new Promise((resolve) => {
@@ -124,7 +117,7 @@
         if (confirmBtn) confirmBtn.onclick = () => { dialog?.close(); resolve(true); };
         if (cancelBtn) cancelBtn.onclick = () => {
           dialog?.close();
-          if(barObj) this.loadingStatsBar(barObj, "reset");
+          if(barObj) this.loadingStatsBar(barObj, saveStatus);
           resolve(false);
         };
       });
@@ -164,55 +157,60 @@
       // 共通判定フラグ
       const fileLoaded = phase >= APP_PHASE.LOAD.val;
       const fileValidated = phase >= APP_PHASE.VALID.val;
+      const fileExtracted = phase >= APP_PHASE.EXTRACT.val;
+      // ステータス保存
+      State.set("Tab1ST.file.cachedStatus", State.get("Tab1ST.file.status"))
+      const currentMode = State.get("Tab1ST.config.mode")
 
-      // 1. ファイル層のUI制御
-      DOM.setDisabled(Tab1UI.fileLoadBtn, false); 
+      // --- ファイル層の制御 ---
+      // 表示
+      DOM.setDOM(Tab1UI.fileValdBtn, undefined, isInvalid? `action-btn` : `action-btn --sub`);
       DOM.setDOM(Tab1UI.fileLoadBtn, isInit ? "データを取得" : "データを再取得");
-      // 列選択の表示と開閉
       DOM.toggle(Tab1UI.fileArea, fileLoaded);
-      if (isLoad) DOM.open(Tab1UI.fileArea, true);
-      else if (phase >= APP_PHASE.INVALID.val) DOM.open(Tab1UI.fileArea, false);
-      // ボタンの表示
+      DOM.open(Tab1UI.fileArea, State.get("Tab1ST.file.isMapError").some(Boolean));
       DOM.toggle(Tab1UI.fileMakeBtn, fileLoaded);
       DOM.toggle(Tab1UI.fileValdBtn, fileLoaded);
-      // ボタンの有効化状態
+      // 無効／有効化
       if (isLoad) {
         this.updateButtonsByMapError("file");
       } else if (isInvalid || isValid || isExtract) {
-        DOM.setDisabled(Tab1UI.fileMakeBtn, true);
+        DOM.setDisabled(Tab1UI.fileMakeBtn, false);
         DOM.setDisabled(Tab1UI.fileValdBtn, false);
-        DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn --sub`);
-      } else {
+      } else { // INIT
+        DOM.setDisabled(Tab1UI.fileLoadBtn, false); 
         DOM.setDisabled(Tab1UI.fileMakeBtn, true);
         DOM.setDisabled(Tab1UI.fileValdBtn, true);
       }
 
-      // 2. 抽出層のUI制御
-      DOM.toggle("exacInfoTxt", fileValidated);
-      DOM.toggle(Tab1UI.exacBtn, fileValidated);
+      // --- 抽出層の制御 ---
+      // UI表示
       DOM.toggle(Tab1UI.exacBox, fileValidated);
-      DOM.toggle(Tab1UI.exacPushBtn, fileValidated);
-      // ボタンとマップの開閉・有効化状態
+      DOM.toggle(Tab1UI.exacPushBtn, fileExtracted);
+      DOM.open(Tab1UI.exacBox, State.get("Tab1ST.exac.isMapError").some(Boolean));
+      // 無効／有効化
       if (isValid) {
-        DOM.open(Tab1UI.exacBox, true);
         this.updateButtonsByMapError("exac");
         DOM.setDisabled(Tab1UI.exacPushBtn, true);
+        DOM.toggle(Tab1UI.exacBar, true);
+        State.set("Tab1ST.exac.cachedStatus", ["loading", `${currentMode}でResultsを抽出します`])
       } else if (isExtract) {
-        DOM.open(Tab1UI.exacBox, false);
-        DOM.setDisabled(Tab1UI.exacBtn, false); // 再抽出可
-        DOM.setDisabled(Tab1UI.exacPushBtn, false); // 格納可
+        DOM.setDisabled(Tab1UI.exacBtn, false);
+        DOM.setDisabled(Tab1UI.exacPushBtn, false);
+        State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.file.status"))
       } else { // INIT, LOAD, INVALID
         DOM.setDisabled(Tab1UI.exacBtn, true);
         DOM.setDisabled(Tab1UI.exacPushBtn, true);
+        DOM.toggle(Tab1UI.exacBar, false);
       }
     }
 
-    // --- エラーフラグ連動ボタン更新 ---
+    // --- 入力マップstate - UI更新 ---
     static updateButtonsByMapError(type) {
       if (type === "file") {
         const isError = State.get("Tab1ST.file.isMapError").some(Boolean);
+        const isListed = State.get("Tab1ST.phase") >= APP_PHASE.INVALID.val;
         DOM.setDisabled(Tab1UI.fileMakeBtn, isError);
-        DOM.setDisabled(Tab1UI.fileValdBtn, isError);
+        if (isListed) DOM.setDisabled(Tab1UI.fileValdBtn, isError);
       } else if (type === "exac") {
         const isError = State.get("Tab1ST.exac.isMapError").some(Boolean);
         DOM.setDisabled(Tab1UI.exacBtn, isError);

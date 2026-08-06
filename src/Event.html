@@ -55,7 +55,7 @@
       State.set({
         "Tab1ST.exac.map": exacMap,
         "Tab1ST.exac.isMapError": [isError, false, false],
-        "Tab1ST.exac.status": isError ? ["error", "エラー: Dataset未入力"] : ["loading", "計測IDでソートしてfileを抽出"]
+        "Tab1ST.exac.status": isError ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus")
       });
     }
 

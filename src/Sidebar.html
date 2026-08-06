@@ -29,7 +29,7 @@
                   </select>
                 </div>
               </div>
-              <div id="configStasBar" class="txt-note"></div>
+              <div id="configStatusBar" class="status-bar loading"></div>
             </div>
           </div>
           <hr class="section-hr">
@@ -39,7 +39,7 @@
             <!-- メインボタン -->
             <button id="fileLoadBtn" class="action-btn" title="Fileシートを内部データに格納" onclick="Ctrl.loadFile()">データを取得</button>
             <span class="txt-btninfo">読込シート「File」</span>
-            <div id="fileStasBar" class="status-bar"></div>
+            <div id="fileStatusBar" class="status-bar"></div>
             <!-- 列選択（初期非表示） -->
             <details id="fileMapArea" style="display: none;">
               <summary class="mapping-title">列を選択する</summary>
@@ -56,8 +56,8 @@
           <!-- 第3層: 抽出エリア -->
           <div id="extractAreaContainer">
             <button id="exacBtn" class="action-btn" title="Resultsからファイルを抽出" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
-            <span class="txt-btninfo" id="exacInfoTxt" style="display: none;">読込シート「Results」</span>
-            <div id="exacStasBar" class="status-bar"></div>
+            <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
+            <div id="exacStatusBar" class="status-bar"></div>
             <!-- データ属性（初期非表示） -->
             <details id="exacMapBox" style="display: none;">
               <summary class="mapping-title">データ属性</summary>
@@ -87,7 +87,7 @@
           <div class="action-btn-container">
             <button id="reportOpenBtn" class="action-btn" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
           </div>
-          <div id="reportStasBar" class="status-bar"></div>
+          <div id="reportStatusBar" class="status-bar"></div>
         </fieldset>
       </div>
     </main>

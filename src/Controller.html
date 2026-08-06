@@ -35,6 +35,7 @@
         "Tab1ST.file.status": isAlert ? ["alert", "出力完了, errorあり"] : ["success", "出力完了, errorなし"],
         "Tab1ST.phase": isAlert ? APP_PHASE.INVALID.val : APP_PHASE.VALID.val
       });
+      if(!isAlert) Evt.exacArea()
     }
     
     // --- Fileシート取得 ---
@@ -57,14 +58,13 @@
           "Tab1ST.file.status": ["success", message],
           "Tab1ST.phase": APP_PHASE.LOAD.val
         });
+        Evt.fileArea()
       });
     }
 
     // --- ファイルリストリスト生成処理 ---
     static async makeFileList() {
       // UI監視と実行確認
-      Evt.fileArea();
-      if (State.get("Tab1ST.file.isMapError")?.some(Boolean)) return;
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
       // 列選択取得と共通処理
       await this.withAsyncLock("file", async () => {
@@ -86,7 +86,7 @@
     static async extractFile() {
       // 実行確認（待機時間解消のため編集フラグ事前読込）
       const global = State.get("GLB.cachedGlobal");
-      const flagEdited = await API.checkUserProperty(global.propFileEdited);
+      const flagEdited = API.checkUserProperty(global.propFileEdited);
       if (!await UI.confirm("確認", "既存の「抽出データ」シートを上書きしますか？",Tab1UI.exacBar)) return;
       // 非同期ラッパー実行
       await this.withAsyncLock("exac", async () => {
@@ -99,11 +99,11 @@
           return;
         }
         // データ取得
-        const [fileRes, resultRes, exacMode, exacMap] = await Promise.all([
+        const exacMode = State.get("Tab1ST.config.mode");
+        const exacMap = State.get("Tab1ST.exac.map");
+        const [fileRes, resultRes] = await Promise.all([
           API.fetchData(global.filelistSheetName, 6, 6),
-          API.fetchData(global.resultsSheetName),
-          State.get("Tab1ST.config.mode"),
-          State.get("Tab1ST.exac.map")
+          API.fetchData(global.resultsSheetName)
         ]);
         const outData = Mtd.DataExtractor.run(fileRes.data, resultRes.data, exacMap, global);
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
@@ -138,12 +138,12 @@
     // --- レポート画面展開 ---
     static async openReport() {
       await this.withAsyncLock("report", async () => {
-        State.set("Tab2ST.reportStas", ["loading", "テンプレート取得中..."]);
+        State.set("Tab2ST.reportstatus", ["loading", "テンプレート取得中..."]);
         // テンプレート取得
         const htmlContent = await API.getReportTemplate();
         // 別タブ生成
         window.open(URL.createObjectURL(new Blob([htmlContent], { type: 'text/html' })), '_blank');
-        State.set("Tab2ST.reportStas", ["success", "別タブで展開しました"]);
+        State.set("Tab2ST.reportstatus", ["success", "別タブで展開しました"]);
       });
     }
   }
