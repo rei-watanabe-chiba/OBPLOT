@@ -20,8 +20,8 @@
 
   const Tab2UI = {
     tabSet: "tab2Fieldset",     // タブ全体UI
-    reportBtn: "reportOpenBtn", // 展開ボタン
-    reportBar: "reportStatusBar"  // 状態表示
+    reppBtn: "reportOpenBtn", // 展開ボタン
+    repoBar: "reportStatusBar"  // 状態表示
   }
 
   // --- フェーズ定義 ---
@@ -36,15 +36,7 @@
   // --- 状態管理クラス定義 ---
   class AppState {
     #state; // 内部状態
-    #listeners; // 登録されたコールバック群
-    
-    #resolvePath(path) {// ネスト結合
-      if (typeof path === 'string') {
-        return path.split('.');
-      }
-      return path;
-    }
-
+    #listeners; // 登録されたコールバック群  
     constructor() {
       this.#state = {
         GLB: {
@@ -73,7 +65,7 @@
           }
         },
         Tab2ST: {
-          reportstatus: []
+          repoStatus: []
         }
       };
       this.#listeners = {};

@@ -138,12 +138,12 @@
     // --- レポート画面展開 ---
     static async openReport() {
       await this.withAsyncLock("report", async () => {
-        State.set("Tab2ST.reportstatus", ["loading", "テンプレート取得中..."]);
+        State.set("Tab2ST.repoStatus", ["loading", "テンプレート取得中..."]);
         // テンプレート取得
         const htmlContent = await API.getReportTemplate();
         // 別タブ生成
         window.open(URL.createObjectURL(new Blob([htmlContent], { type: 'text/html' })), '_blank');
-        State.set("Tab2ST.reportstatus", ["success", "別タブで展開しました"]);
+        State.set("Tab2ST.repoStatus", ["success", "別タブで展開しました"]);
       });
     }
   }
