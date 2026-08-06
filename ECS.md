@@ -1,5 +1,5 @@
 # for gemini
-# 設計変更
+# Specification Change Design Document(dft)
 - **この設計変更はまだ企画段階です。内容の検証とユーザーとの対話により変更内容を補足・確定する必要があります。**
 - データ属性（dataset, itme, date）をそのまま抽出層に移動する。位置はデータ抽出の下、データ格納の上
 - gnfigbarはモード切替のテキスト変更のみに依存
