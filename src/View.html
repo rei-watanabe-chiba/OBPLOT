@@ -31,21 +31,17 @@
 
   // --- UI更新 - state同期 ---
   class UIStateUpdater {
-    // --- 状態更新の動的接続 ---
+    // --- 状態更新の接続（命名規則からパス作成） ---
     constructor() {
-      // プロトタイプからメソッドを抽出
       const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(this));
       methods.forEach(method => {
-        // 命名規則 "handle_グループ名_キー名" 判定
         const match = method.match(/^handle_([^_]+)_(.+)$/);
         if (match) {
           const [, group, key] = match;
-          // Stateのパス（例: GLB.isLocked）を動的生成して接続
           State.subscribe(`${group}.${key}`, this[method].bind(this));
         }
       });
     }
-
     // --- 共通ハンドラ ---
     handle_GLB_isLocked(isLocked) {
       const fieldset = DOM.get(Tab1UI.tabSet);
@@ -54,53 +50,40 @@
     // --- 設定層ハンドラ ---
     handle_Tab1ST_config_status(stasValue) {
       DOM.setDOM(Tab1UI.configBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
-      const isError = stasValue?.[0] === "error";
-      UIController.updateFileArea("update", isError);
-    }
-    handle_Tab1ST_config_isMapError(errorFlags) {
-      UIController.updateInputs(Tab1UI.configBox, "text", errorFlags);
-    }
-    handle_Tab1ST_config_mode(mode) {
-      const [data, isError] = State.get(["Tab1ST.file.data", "Tab1ST.file.isValidateError"]);
-      if (!data || isError) return;
-      State.set({"Tab1ST.file.status": ["error", "モード変更検知: 再検証"], "Tab1ST.file.isValidateError": true});
-      DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn`);
     }
     // --- ファイル層ハンドラ ---
     handle_Tab1ST_file_status(stasValue) {
       const [stas, text] = stasValue;
       let cacheStas = (stas !== "" && stas !== "loading");
       DOM.setDOM(Tab1UI.fileBar, text, `status-bar ${stas}`);
+      // phaseステータス記録
       if(State.get("Tab1ST.file.isMapError").some(Boolean)) {
         DOM.open(Tab1UI.fileArea, true);
         cacheStas = false;
       }
       if (cacheStas) State.set("Tab1ST.file.cachedStatus", stasValue);
     }
-    handle_Tab1ST_file_isLoadError(isError) {
-      UIController.updateFileArea("load", isError);
-      !isError && DOM.open(Tab1UI.configBox, false);
-    }
     handle_Tab1ST_file_isMapError(errorFlags) {
       UIController.updateInputs(Tab1UI.fileBox, "select", errorFlags);
-    }
-    handle_Tab1ST_file_isValidateError(isError) {
-      if (State.get("Tab1ST.file.data")) {
-        DOM.open(Tab1UI.configBox, false);
-        UIController.updateFileArea("list");
-      }
-      UIController.updateExacArea("update", isError);
-    }
-    handle_Tab1ST_file_isEdited(isEdited) {
-      if(isEdited){
-        State.set("Tab1ST.file.status", ["error", "シート編集検知: 再検証"]);
-        DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn`);
-        UIController.updateExacArea("edited");
+      // Phase 2 (LOAD) :ボタン更新
+      if (State.get("Tab1ST.phase") === APP_PHASE.LOAD.val) {
+        UIController.updateButtonsByMapError("file");
       }
     }
     // --- 抽出層ハンドラ ---
     handle_Tab1ST_exac_status(stasValue) {
       DOM.setDOM(Tab1UI.exacBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+    }
+    handle_Tab1ST_exac_isMapError(errorFlags) {
+      UIController.updateInputs(Tab1UI.exacBox, "text", errorFlags);
+      // Phase 4 (VALID) ：ボタン更新
+      if (State.get("Tab1ST.phase") === APP_PHASE.VALID.val) {
+        UIController.updateButtonsByMapError("exac");
+      }
+    }
+    // --- フェーズ管理ハンドラ ---
+    handle_Tab1ST_phase(phaseVal) {
+      UIController.updatePhaseUI(phaseVal);
     }
     // --- チャート層ハンドラ ---
     handle_Tab2ST_reportStas(stasValue) {
@@ -171,41 +154,68 @@
       selectors?.forEach((s, idx) => s.classList.toggle("error", errorFlags?.[idx] ?? false));
     }
 
-    // --- 「ファイル処理エリア」UI更新 ---
-    static updateFileArea(mode, isError = false) {
-      switch (mode) {
-        case "update":
-          DOM.setDisabled(Tab1UI.fileLoadBtn, isError);
-          return;
-        case "load":
-          DOM.setDOM(Tab1UI.fileLoadBtn, "データを再取得");
-          DOM.setDisabled(Tab1UI.fileValdBtn, true);
-          DOM.open(Tab1UI.fileArea, !isError);
-          DOM.toggle(Tab1UI.fileArea, !isError);
-          DOM.toggle(Tab1UI.fileMakeBtn, !isError);
-          DOM.toggle(Tab1UI.fileValdBtn, !isError);
-          DOM.setDisabled(Tab1UI.fileMakeBtn, isError);
-          !isError && DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn --sub`);
-          break;
-        case "list":
-          DOM.open(Tab1UI.fileArea, false);
-          DOM.setDisabled(Tab1UI.fileValdBtn, false);
-          DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn --sub`);
-          break;
+    // --- フェーズ連動UI更新 ---
+    static updatePhaseUI(phase) {
+      const isInit = phase === APP_PHASE.INIT.val;
+      const isLoad = phase === APP_PHASE.LOAD.val;
+      const isInvalid = phase === APP_PHASE.INVALID.val;
+      const isValid = phase === APP_PHASE.VALID.val;
+      const isExtract = phase === APP_PHASE.EXTRACT.val;
+      // 共通判定フラグ
+      const fileLoaded = phase >= APP_PHASE.LOAD.val;
+      const fileValidated = phase >= APP_PHASE.VALID.val;
+
+      // 1. ファイル層のUI制御
+      DOM.setDisabled(Tab1UI.fileLoadBtn, false); 
+      DOM.setDOM(Tab1UI.fileLoadBtn, isInit ? "データを取得" : "データを再取得");
+      // 列選択の表示と開閉
+      DOM.toggle(Tab1UI.fileArea, fileLoaded);
+      if (isLoad) DOM.open(Tab1UI.fileArea, true);
+      else if (phase >= APP_PHASE.INVALID.val) DOM.open(Tab1UI.fileArea, false);
+      // ボタンの表示
+      DOM.toggle(Tab1UI.fileMakeBtn, fileLoaded);
+      DOM.toggle(Tab1UI.fileValdBtn, fileLoaded);
+      // ボタンの有効化状態
+      if (isLoad) {
+        this.updateButtonsByMapError("file");
+      } else if (isInvalid || isValid || isExtract) {
+        DOM.setDisabled(Tab1UI.fileMakeBtn, true);
+        DOM.setDisabled(Tab1UI.fileValdBtn, false);
+        DOM.setDOM(Tab1UI.fileValdBtn, undefined, `action-btn --sub`);
+      } else {
+        DOM.setDisabled(Tab1UI.fileMakeBtn, true);
+        DOM.setDisabled(Tab1UI.fileValdBtn, true);
+      }
+
+      // 2. 抽出層のUI制御
+      DOM.toggle("exacInfoTxt", fileValidated);
+      DOM.toggle(Tab1UI.exacBtn, fileValidated);
+      DOM.toggle(Tab1UI.exacBox, fileValidated);
+      DOM.toggle(Tab1UI.exacPushBtn, fileValidated);
+      // ボタンとマップの開閉・有効化状態
+      if (isValid) {
+        DOM.open(Tab1UI.exacBox, true);
+        this.updateButtonsByMapError("exac");
+        DOM.setDisabled(Tab1UI.exacPushBtn, true);
+      } else if (isExtract) {
+        DOM.open(Tab1UI.exacBox, false);
+        DOM.setDisabled(Tab1UI.exacBtn, false); // 再抽出可
+        DOM.setDisabled(Tab1UI.exacPushBtn, false); // 格納可
+      } else { // INIT, LOAD, INVALID
+        DOM.setDisabled(Tab1UI.exacBtn, true);
+        DOM.setDisabled(Tab1UI.exacPushBtn, true);
       }
     }
 
-    // --- データ抽出エリアUI更新 ---
-    static updateExacArea(mode, isError = false) {
-      switch (mode) {
-        // editedモード：編集検知
-        case "edited":
-          DOM.setDisabled(Tab1UI.exacBtn, true); 
-          return;
-        // updateモード：判定更新
-        case "update":
-          DOM.setDisabled(Tab1UI.exacBtn, isError);
-          return;
+    // --- エラーフラグ連動ボタン更新 ---
+    static updateButtonsByMapError(type) {
+      if (type === "file") {
+        const isError = State.get("Tab1ST.file.isMapError").some(Boolean);
+        DOM.setDisabled(Tab1UI.fileMakeBtn, isError);
+        DOM.setDisabled(Tab1UI.fileValdBtn, isError);
+      } else if (type === "exac") {
+        const isError = State.get("Tab1ST.exac.isMapError").some(Boolean);
+        DOM.setDisabled(Tab1UI.exacBtn, isError);
       }
     }
   }

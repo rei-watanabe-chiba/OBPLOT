@@ -2,31 +2,42 @@
 <script>
   // --- htmlID ---
   const Tab1UI = {
-      tabSet: "tab1Fieldset", // タブ全体UI
-      configArea: "configMapArea", // 設定エリア
-      configBar: "configStasBar", // 設定コンソール
-      configBox: "configMapBox", // 設定入力BOX
-      fileArea: "fileMapArea", // ファイルエリア
-      fileBar: "fileStasBar", // ファイルコンソール
-      fileBox: "fileMapBox", // ファイル入力BOX
-      fileLoadBtn: "fileLoadBtn", // 読込ボタン
-      fileMakeBtn: "fileMakeBtn", // リスト生成ボタン
-      fileValdBtn: "fileValdBtn", // 検証ボタン
-      exacBar: "exacStasBar", // 抽出コンソール
-      exacBtn: "exacBtn", // 抽出ボタン
-      exacPushBtn: "exacPushBtn" // PXRFに格納ボタン
+      tabSet: "tab1Fieldset",       // タブ全体UI
+      configArea: "configMapArea",  // 設定エリア
+      configBar: "configStasBar",   // 設定コンソール
+      fileArea: "fileMapArea",      // ファイルエリア
+      fileBar: "fileStasBar",       // ファイルコンソール
+      fileBox: "fileMapBox",        // ファイル入力BOX
+      fileLoadBtn: "fileLoadBtn",   // 読込ボタン
+      fileMakeBtn: "fileMakeBtn",   // リスト生成ボタン
+      fileValdBtn: "fileValdBtn",   // 検証ボタン
+      exacArea: "extractAreaContainer",
+      exacBar: "exacStasBar",       // 抽出コンソール
+      exacBtn: "exacBtn",           // 抽出ボタン
+      exacPushBtn: "exacPushBtn",   // PXRFに格納ボタン
+      exacBox: "exacMapBox"         // 抽出設定BOX（新規追加）
   }
 
   const Tab2UI = {
-    tabSet: "tab2Fieldset", // タブ全体UI
+    tabSet: "tab2Fieldset",     // タブ全体UI
     reportBtn: "reportOpenBtn", // 展開ボタン
-    reportBar: "reportStasBar" // 状態表示
+    reportBar: "reportStasBar"  // 状態表示
   }
+
+  // --- フェーズ定義 ---
+  const APP_PHASE = {
+    INIT: { val: 1, name: 'init' },       // 初期状態・リセット時
+    LOAD: { val: 2, name: 'load' },       // データ取得成功
+    INVALID: { val: 3, name: 'invalid' }, // 要検証
+    VALID: { val: 4, name: 'valid' },     // 検証成功（抽出可能）
+    EXTRACT: { val: 5, name: 'extract' }  // 抽出成功（PXRF格納可能）
+  };
 
   // --- 状態管理クラス定義 ---
   class AppState {
     #state; // 内部状態
     #listeners; // 登録されたコールバック群
+    
     #resolvePath(path) {// ネスト結合
       if (typeof path === 'string') {
         return path.split('.');
@@ -42,29 +53,27 @@
           cachedGlobal: null,
         },
         Tab1ST: {
+          phase: APP_PHASE.INIT.val,
           config: {
             status: [],
-            mode: "Dual",
-            map: { dataset: "", item: "", date: "" },
-            isMapError: [true, false, false]
+            mode: "Dual"
           },
           file: {
             data: null,
             status: [],
             cachedStatus: [],
             map: {},
-            isMapError: [true, true, true, false, false],
-            isLoadError: true,
-            isValidateError: true,
-            isEdited: false
+            isMapError: [true, true, true, false, false]
           },
           exac: {
             status: [],
-            cachedStatus: []
+            cachedStatus: [],
+            map: { dataset: "", item: "", date: "" },
+            isMapError: [true, false, false]
           }
         },
         Tab2ST: {
-          reportStas: [] // ステータス
+          reportStas: []
         }
       };
       this.#listeners = {};
@@ -77,6 +86,7 @@
       // 共通処理
       return Array.isArray(paths) ? paths.map(resolve) : resolve(paths);
     }
+    
     // --- 状態更新 ---
     set(updates, value) {
       // 文字列/オブジェクト判定
@@ -92,6 +102,7 @@
         this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(value));
       }
     }
+    
     // --- 変更の監視登録 ---
     subscribe(path, callback) {
       const key = Array.isArray(path) ? path.join('.') : path;

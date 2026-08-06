@@ -12,23 +12,20 @@
 
     // --- 設定エリアイベント ---
     static processConfigArea() {
-      const configArea = DOM.get(Tab1UI.configArea);
-      const selectMode = configArea.querySelector('[data-field="configExacMode"]')?.value;
-      // 入力値取得と統合
-      const configMap = [...configArea.querySelectorAll('.input-text')].reduce((acc, input) => {
-        if (input.dataset.field) acc[input.dataset.field] = input.value;
-        return acc;
-      }, { ...State.get("Tab1ST.config.map") });
-      // 入力値判定
-      const isError = !(configMap.dataset?.trim());
+      const selectMode = DOM.get(Tab1UI.configArea)?.querySelector('[data-field="configExacMode"]')?.value;
       const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "単純抽出";
-      // ステータス更新
+      const currentPhase = State.get("Tab1ST.phase");
+      const currentMode = State.get("Tab1ST.config.mode");
+      // モード変更判定とステータス更新
+      if (selectMode !== currentMode && currentPhase >= APP_PHASE.VALID.val) {
+        State.set({
+          "Tab1ST.file.status": ["error", "モード変更検知: 再検証"],
+          "Tab1ST.phase": APP_PHASE.INVALID.val
+        });
+      }
       State.set({
-        "Tab1ST.config.map": configMap,
-        "Tab1ST.config.isMapError": [isError, false, false],
-        "Tab1ST.config.status": [isError ? "error" : "", isError ? "エラー: Dataset未入力" : modeText],
         "Tab1ST.config.mode": selectMode,
-        "Tab1ST.exac.status": isError ? ["", ""] : ["loading", "計測IDでソートして抽出"]
+        "Tab1ST.config.status": ["", modeText]
       });
     }
 
@@ -48,31 +45,44 @@
       });
     }
 
+    // --- 抽出エリアイベント ---
+    static processExacArea() {
+      const inputs = [...DOM.get(Tab1UI.exacBox).querySelectorAll('.input-text')];
+      // dataset入力を判定
+      const exacMap = Object.fromEntries(inputs.map(i => [i.dataset.field, i.value]));
+      const isError = !(exacMap.dataset?.trim());
+      // ステータス更新
+      State.set({
+        "Tab1ST.exac.map": exacMap,
+        "Tab1ST.exac.isMapError": [isError, false, false],
+        "Tab1ST.exac.status": isError ? ["error", "エラー: Dataset未入力"] : ["loading", "計測IDでソートしてfileを抽出"]
+      });
+    }
+
     // --- 変更イベントハンドラ ---
     static #handleChange(e) {
       const target = e.target;
       const fieldKey = target?.dataset?.field;
-      if (!fieldKey) return;
-      // アクションマップ
+      if (!fieldKey) return; 
       const actionMap = {
-        [Tab1UI.configArea]: () => {
-          if (fieldKey === "configExacMode" || target.classList.contains("input-text")) this.processConfigArea();
-        },
+        [Tab1UI.configArea]: () => this.processConfigArea(),
         [Tab1UI.fileArea]: () => {
-          if (target.classList.contains("input-select")) {
-            State.set("Tab1ST.file.map", { ...State.get("Tab1ST.file.map"), [fieldKey]: target.value });
-            this.processFileArea();
-          }
-        }
+          State.set("Tab1ST.file.map", { ...State.get("Tab1ST.file.map"), [fieldKey]: target.value });
+          this.processFileArea();
+        },
+        [Tab1UI.exacArea]: () => this.processExacArea()
       };
-      // 対象エリアの処理を実行
       Object.entries(actionMap).some(([id, action]) => target.closest(`#${id}`) && (action(), true));
     }
 
     // --- 初期化処理 ---
     static async init() {
       this.switchTab(State.get("GLB.activeTab"));
-      State.set({"GLB.isLocked": true, "Tab1ST.config.status": ["alert", "初期設定中..."]});
+      State.set({
+        "GLB.isLocked": true, 
+        "Tab1ST.config.status": ["alert", "初期設定中..."],
+        "Tab1ST.phase": APP_PHASE.INIT.val
+      });
       // グローバル読込
       try {
         State.set("GLB.cachedGlobal", await API.getGlobal());
@@ -91,13 +101,12 @@
     }
   }
 
-  // 他層からの呼び出し用互換レイヤー
+  // --- 呼び出し短縮と初期化 ---
   const Evt = {
     switchTab: EventManager.switchTab.bind(EventManager),
     configArea: EventManager.processConfigArea.bind(EventManager),
-    fileArea: EventManager.processFileArea.bind(EventManager)
+    fileArea: EventManager.processFileArea.bind(EventManager),
+    exacArea: EventManager.processExacArea.bind(EventManager)
   };
-
-  // 初期化処理の実行
   window.addEventListener("DOMContentLoaded", () => EventManager.init());
 </script>

@@ -16,6 +16,7 @@
       <!-- データ処理 -->
       <div id="tab1" class="tab-content">
         <fieldset id="tab1Fieldset" style="border: none; padding: 0; margin: 0;">
+          
           <!-- 第1層: 設定エリア -->
           <div id="configAreaContainer">
             <div id="configMapArea">
@@ -29,44 +30,51 @@
                 </div>
               </div>
               <div id="configStasBar" class="txt-note"></div>
-              <details id="configMapBox" open>
-                <summary class="mapping-title">データ属性</summary>
-                <div class="field-row">
-                  <div class="input-wrapper">
-                    <label class="input-label">dataset *必須</label>
-                    <input type="text" class="input-text" data-field="dataset" placeholder="データセット・遺跡名（必須）">
-                    <label class="input-label">item</label>
-                    <input type="text" class="input-text" data-field="item" placeholder="計測情報（任意）">
-                    <label class="input-label">date</label>
-                    <input type="text" class="input-text" data-field="date" placeholder="date - 計測日（任意）">
-                  </div>
-                </div>
-              </details>
             </div>
           </div>
           <hr class="section-hr">
+          
           <!-- 第2層: ファイル処理エリア -->
           <div id="fileAreaContainer">
-            <button id="fileLoadBtn" class="action-btn" title="現在のデータを内部データに格納" onclick="Ctrl.loadFile()" disabled>データを取得</button>
+            <!-- メインボタン -->
+            <button id="fileLoadBtn" class="action-btn" title="Fileシートを内部データに格納" onclick="Ctrl.loadFile()">データを取得</button>
             <span class="txt-btninfo">読込シート「File」</span>
             <div id="fileStasBar" class="status-bar"></div>
-            <details id="fileMapArea" style="display:none;" open>
+            <!-- 列選択（初期非表示） -->
+            <details id="fileMapArea" style="display: none;">
               <summary class="mapping-title">列を選択する</summary>
               <div id="fileMapBox"></div>
             </details>
+            <!-- ボタン群（初期非表示） -->
             <div id="fileBtnArea" class="action-btn-container">
-              <button id="fileMakeBtn" class="action-btn --sub" style="display: none;" onclick="Ctrl.makeFileList()">リスト生成</button>
-              <button id="fileValdBtn" class="action-btn --sub" style="display: none;" onclick="Ctrl.validateFileList()">検証</button>
+              <button id="fileMakeBtn" class="action-btn --sub" style="display: none;" onclick="Ctrl.makeFileList()" disabled>リスト生成</button>
+              <button id="fileValdBtn" class="action-btn --sub" style="display: none;" onclick="Ctrl.validateFileList()" disabled>検証</button>
             </div>
           </div>
           <hr class="section-hr">
+          
           <!-- 第3層: 抽出エリア -->
           <div id="extractAreaContainer">
             <button id="exacBtn" class="action-btn" title="Resultsからファイルを抽出" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
-            <span class="txt-btninfo">読込シート「Results」</span>
+            <span class="txt-btninfo" id="exacInfoTxt" style="display: none;">読込シート「Results」</span>
             <div id="exacStasBar" class="status-bar"></div>
-            <div id="fileBtnArea" class="action-btn-container">
-              <button id="exacPushBtn" class="action-btn --sub" title="抽出データをPXRFに格納" onclick="Ctrl.pushExacData()">PXRFに格納</button>
+            <!-- データ属性（初期非表示） -->
+            <details id="exacMapBox" style="display: none;">
+              <summary class="mapping-title">データ属性</summary>
+              <div class="field-row">
+                <div class="input-wrapper">
+                  <label class="input-label">dataset *必須</label>
+                  <input type="text" class="input-text" data-field="dataset" placeholder="データセット・遺跡名（必須）">
+                  <label class="input-label">item</label>
+                  <input type="text" class="input-text" data-field="item" placeholder="計測情報（任意）">
+                  <label class="input-label">date</label>
+                  <input type="text" class="input-text" data-field="date" placeholder="date - 計測日（任意）">
+                </div>
+              </div>
+            </details>
+            <!-- ボタン群（初期非表示） -->
+            <div id="exacBtnArea" class="action-btn-container">
+              <button id="exacPushBtn" class="action-btn --sub" title="抽出データをPXRFに格納" style="display: none;" onclick="Ctrl.pushExacData()" disabled>PXRFに格納</button>
             </div>
           </div>
 

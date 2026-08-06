@@ -32,9 +32,8 @@
       ]);
       // ステータス更新
       State.set({
-        "Tab1ST.file.isEdited": false,
         "Tab1ST.file.status": isAlert ? ["alert", "出力完了, errorあり"] : ["success", "出力完了, errorなし"],
-        "Tab1ST.file.isValidateError": isAlert
+        "Tab1ST.phase": isAlert ? APP_PHASE.INVALID.val : APP_PHASE.VALID.val
       });
     }
     
@@ -44,7 +43,6 @@
       if (State.get("Tab1ST.file.data")) {
         if(!(await UI.confirm("確認", "内部データをリセットしますか？", Tab1UI.fileBar))) return;
       }
-      let stas = [];
       await this.withAsyncLock("file", async () => {
         const global = State.get("GLB.cachedGlobal");
         // データ取得と列選択初期化
@@ -52,14 +50,14 @@
         const newMap = Object.fromEntries(global.fileFields.map(f => [f.key, ""]));
         UI.renderSelectors(data[0], Tab1UI.fileBox, global.fileFields);
         // ステータス更新
-        stas = ["success", message];
         State.set({
           "Tab1ST.file.data": data,
           "Tab1ST.file.map": newMap,
           "Tab1ST.file.isMapError": [true, true, true, false, false],
-          "Tab1ST.file.status": stas
+          "Tab1ST.file.status": ["success", message],
+          "Tab1ST.phase": APP_PHASE.LOAD.val
         });
-      }, async () => State.set("Tab1ST.file.isLoadError", stas[0] === "error"));
+      });
     }
 
     // --- ファイルリストリスト生成処理 ---
@@ -92,23 +90,29 @@
       if (!await UI.confirm("確認", "既存の「抽出データ」シートを上書きしますか？",Tab1UI.exacBar)) return;
       // 非同期ラッパー実行
       await this.withAsyncLock("exac", async () => {
-        // 編集検知
+        // 編集検知（Phaseダウングレード）
         if (await flagEdited) {
-          State.set("Tab1ST.isFileEdited", true);
+          State.set({
+            "Tab1ST.file.status": ["error", "シート編集検知: 再検証"],
+            "Tab1ST.phase": APP_PHASE.INVALID.val
+          });
           return;
         }
         // データ取得
-        const [fileRes, resultRes, exacMode, configMap] = await Promise.all([
+        const [fileRes, resultRes, exacMode, exacMap] = await Promise.all([
           API.fetchData(global.filelistSheetName, 6, 6),
           API.fetchData(global.resultsSheetName),
-          State.get("Tab1ST.configExacMode"),
-          State.get("Tab1ST.configMap")
+          State.get("Tab1ST.config.mode"),
+          State.get("Tab1ST.exac.map")
         ]);
-        const outData = Mtd.DataExtractor.run(fileRes.data, resultRes.data, configMap, global);
+        const outData = Mtd.DataExtractor.run(fileRes.data, resultRes.data, exacMap, global);
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
         // 出力とステータス更新
         await API.writeData(global.extractSheetName, outData);
-        State.set({"Tab1ST.file.isEdited": false, "Tab1ST.exacStas": ["success", `抽出: ${outData.length - 1} 件`]});
+        State.set({
+          "Tab1ST.exac.status": ["success", `抽出: ${outData.length - 1} 件`],
+          "Tab1ST.phase": APP_PHASE.EXTRACT.val
+        });
       });
     }
 
