@@ -19,7 +19,7 @@
 
 ### ③ 補正＆プレビュー（CorrectionArea）
 - **機能**: 特定元素・指数の相関確認と補正適用・出力
-- **UI**: [対象](「元素 ＋ 指数リスト」から選択プルダウン)
+- **UI**: [対象]:`Tab2ST.value`から選択プルダウン)
 - **UI**: [補正値]（「補正なし, 現在の補正値, Correctionシートのインデックス名をマップ」からプルダウン選択）
 - **UI**: プレビュー用散布図（相関直線付き、幅260px程度）
 - **UI**: 統計情報パネル（動的生成・表形式）。
@@ -47,7 +47,7 @@
 - **phase**: アプリの進行状態（初期[1] -> 読込済[2]...）
 - **rawData**: { pxrf, wdxrf, correction } の各シート生データ
 - **baseData**: dataset + ID でpxrf, wdxrfを結合したベースデータ
-- **statsLogic**: 各元素・指数の計算文字列。構造: （例: `"Mn", "Fe", "K", "Ca", "Rb".... "Mn * 100 / Fe"`）
+- **valueLogic**: 各元素・指数の計算文字列。構造: （例: `"Mn", "Fe", "K", "Ca", "Rb".... "Mn * 100 / Fe"`）
 - **filter**: { datasets: [] } （①の選択状態）
 - **symbol**: { baseKey: "dataset", mapping: {} } （②のマッピング状態）
 - **preview**: { element: "", isCorrected: false } （③のプレビュー状態）
