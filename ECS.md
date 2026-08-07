@@ -1,31 +1,36 @@
 # OBPLOT タブ2（グラフ描画・データ補正機能）設計書
 
 ## 1. Sidebar UIの設計（アコーディオン4層構造）
-限られた幅（300px）を有効活用するため、`<details>`を用いたアコーディオンで各エリアを構成。拡張性を持たせるため、パネル内の要素はJavaScriptから動的に生成・更新する前提とする。
+限られた幅（300px）を有効活用するため、`<details>`を用いたアコーディオンで各エリアを構成。拡張性を持たせるため、パネル内の要素はJavaScriptから動的に生成・更新する前提とする。各エリアUIはphase開始時に更新。①データ設定の更新でphase 1に強制ダウングレードで内部データ初期化。
 
 ### ① データ設定（ConfigArea）
 - **機能**: 分析対象のdatasetを絞り込み
 - **UI**: 「読込」ボタン + 「確定/更新」ボタン
 - **UI**: 読み込み後、PXRFの `dataset` をリストアップした「スクロール可能なチェックボックス群」を動的生成（CSSで高さ制限＋スクロール）
-  - チェックボックス入力後、「確定/更新」ボタンで`Tab2ST.filter`に代入
+  - チェックボックス入力後、「確定/更新」ボタンで`Tab2ST.filter`に代入、`Tab2ST.baseData`をフィルターして生成（以降の処理の共通データ）
 
 ### ② シンボルマッピング（SymbolMapArea）
 - **機能**: グラフ上の点（マーカー）のスタイル設定
 - **UI**: マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）
-  - 入力結果を`Tab2ST.symbol`のbaseKeyに格納
+  - 入力結果を即時`Tab2ST.symbol`のbaseKeyに格納
 - **UI**: 10行の設定行（全てプルダウン：[値名] + [形状: `circle`, `triangle`, `square`] + [色: primary色（CSS）]）
-  - 価名はbaseKeyに応じて`Tab2ST.baseData`のユニーク値を動的マップ
+  - 価名はbaseKeyに応じて`Tab2ST.baseData`の該当列ユニーク値を動的生成して選択肢に格納
 - **UI**: 「シンボル確定」ボタン
+  - `Tab2ST.symbol`にマッピング
 
 ### ③ 補正＆プレビュー（CorrectionArea）
 - **機能**: 特定元素・指数の相関確認と補正適用・出力
-- **UI**: [対象]: `Tab2ST.value`から選択プルダウン)
-- **UI**: [補正値]（「"補正なし", "現在の補正値", Correctionシートのインデックス名マップ」をプルダウン選択, Tab2STには登録しない変数）
+- **UI**: [対象]: `GLB.valueLogic`から選択プルダウン
+- **UI**: Mn, Fe, Rb, Sr, Y, Zr, Nbの6行のプルダウン
+  - `Tab2ST.modeMap`に代入（プレビュー更新時）
+- **UI**: [補正値]: 「"補正なし", "現在の補正値", Correctionシートのインデックス名マップ」をプルダウン選択(phase開始時に生成）
 - **UI**: [プレビュー更新]: `Tab2ST.value`から選択プルダウン)
+  - `Tab2ST.baseData`を`Tab2ST.modeMap`でソートして`Tab2ST.selectData`に代入。対象・補正値を`Tab2ST.preview`に代入し、`Tab2ST.selectData`に抽出（指数なら計算）し、補正値を計算適用して作図（値データはプレビュー用のみの一時データ扱い）
 - **UI**: プレビュー用散布図（相関直線付き、幅260px程度）
 - **UI**: 統計情報パネル（動的生成・表形式）。
-  - 計算ロジックから渡される配列データ（相関係数、決定係数、残差標準偏差、Err値の3σ、最大残差）をループで回し、CSS Grid等でコンパクトな表形式に自動レンダリング。
+  - 計算ロジックから渡される配列データ（相関係数、決定係数、傾き、切片、残差標準偏差、Err値の3σ、最大残差）をループで回し、CSS Grid等でコンパクトな表形式に自動レンダリング。
 - **UI**: [新規インデックス名入力欄] + 「Correction保存」ボタン : "現在の補正値"ならば有効化
+  - `Tab2ST.selectData`の各元素の補正係数を「新規インデックス名」で「Correction」シートに書き出し（書き出し時は`pushExacData()`の上書き判定ロジックに準拠）
 
 
 ### ④ レポート出力設定（ReportArea）
@@ -44,15 +49,19 @@
 - **安全な動的式評価 (Safe Expression Parser)**:
   - 指数文字列（例: `"Mn * 100 / Fe"`）を計算する際、`eval` は使わず、`new Function()` を用いて使用可能な変数スコープを制限し、高速かつ安全に配列データを処理するコンパイラ関数をMethod層に実装します。
 
-### 【State (Model) - `Tab2ST` 拡張】
-- **phase**: アプリの進行状態（初期[1] -> 読込済[2]...）
-- **rawData**: { pxrf, wdxrf, correction } の各シート生データ
-- **baseData**: dataset + ID でpxrf, wdxrfを結合したベースデータ
-- **valueLogic**: 各元素・指数の計算文字列。構造: （例: `"Mn", "Fe", "K", "Ca", "Rb".... "Mn * 100 / Fe"`）
-- **filter**: { datasets: [] } （①の選択状態）
-- **symbol**: { baseKey: "dataset", mapping: {} } （②のマッピング状態）
-- **preview**: { element: "", isCorrected: false } （③のプレビュー状態）
-- **report**: { elements: [], applyCorrection: false } （④の出力状態）
+### 【State (Model) 】
+- `GLB`拡張
+  - **valueLogic**: 各元素・指数の計算文字列。構造: （"Mn", "Fe", "K", "Ca", "Rb".... "Mn * 100 / Fe"`）
+- `Tab2ST`拡張
+  - **phase**: アプリの進行状態（初期[1] -> 読込済[2]...）
+  - **rawData**: { pxrf, wdxrf, correction } の各シート生データ
+  - **baseData**: dataset + ID でpxrf, wdxrfを結合したベースデータ
+  - **selectData**: モード選択と補正計算を反映した可視化ベースデータ
+  - **filter**: { datasets: [] } （①の選択状態）
+  - **symbol**: { baseKey: "dataset", mapping: {} } （②のマッピング状態）
+  - **modeMap** : { Mn : "", Fe : "", ....}（③のマッピング状態）
+  - **preview**: { element: "", isCorrected: false } （③のプレビュー状態）
+  - **report**: { elements: [], applyCorrection: false } （④の出力状態）
 
 ### 【Method (純粋ロジック)】
 - **DataMerger**: PXRFとWDXRFを `dataset + "_" + ID` をキーとしてInner Join。
