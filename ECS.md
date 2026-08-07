@@ -11,7 +11,7 @@
 
 ### ② シンボルマッピング（SymbolMapArea）
 - **機能**: グラフ上の点（マーカー）のスタイル設定
-- **UI**: マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）Tab2ST.symbolのbaseKeyに格納
+- **UI**: マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）→　入力結果を`Tab2ST.symbol`のbaseKeyに格納
 - **UI**: 10行の設定行（全てプルダウン：[値名] + [形状: `circle`, `triangle`, `square`] + [色: primary色（CSS）]）
   - 価名はbaseKeyに応じてユニーク値を動的マップ
 
