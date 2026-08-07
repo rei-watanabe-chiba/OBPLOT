@@ -11,9 +11,11 @@
 
 ### ② シンボルマッピング（SymbolMapArea）
 - **機能**: グラフ上の点（マーカー）のスタイル設定
-- **UI**: マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）→　入力結果を`Tab2ST.symbol`のbaseKeyに格納
+- **UI**: マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）
+  - 入力結果を`Tab2ST.symbol`のbaseKeyに格納
 - **UI**: 10行の設定行（全てプルダウン：[値名] + [形状: `circle`, `triangle`, `square`] + [色: primary色（CSS）]）
-  - 価名はbaseKeyに応じてユニーク値を動的マップ
+  - 価名はbaseKeyに応じて`Tab2ST.baseData`のユニーク値を動的マップ
+- **UI**: 「シンボル確定」ボタン
 
 ### ③ 補正＆プレビュー（CorrectionArea）
 - **機能**: 特定元素・指数の相関確認と補正適用・出力
