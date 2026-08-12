@@ -7,7 +7,7 @@
       State.set("GLB.isLocked", true);
       try { await processFn(); }
       // エラー補足
-      catch (err) { State.set(`Tab1ST.${prefix}.status`, ["error", err.message]); }
+      catch (err) { State.set(`${prefix}.status`, ["error", err.message]); }
       // 終了処理
       finally {
         if (finallyFn) await finallyFn();
@@ -33,7 +33,7 @@
       // ステータス更新
       State.set({
         "Tab1ST.file.status": isAlert ? ["alert", "出力完了, errorあり"] : ["success", "出力完了, errorなし"],
-        "Tab1ST.phase": isAlert ? APP_PHASE.INVALID.val : APP_PHASE.VALID.val
+        "Tab1ST.phase": isAlert ? TAB1_PHASE.INVALID.val : TAB1_PHASE.VALID.val
       });
       if(!isAlert) Evt.exacArea()
     }
@@ -44,7 +44,7 @@
       if (State.get("Tab1ST.file.data")) {
         if(!(await UI.confirm("確認", "内部データをリセットしますか？", Tab1UI.fileBar))) return;
       }
-      await this.withAsyncLock("file", async () => {
+      await this.withAsyncLock("Tab1ST.file", async () => {
         const global = State.get("GLB.cachedGlobal");
         // データ取得と列選択初期化
         const { data, message } = await API.fetchData(global.fileSheetName, 5);
@@ -56,7 +56,7 @@
           "Tab1ST.file.map": newMap,
           "Tab1ST.file.isMapError": [true, true, true, false, false],
           "Tab1ST.file.status": ["success", message],
-          "Tab1ST.phase": APP_PHASE.LOAD.val
+          "Tab1ST.phase": TAB1_PHASE.LOAD.val
         });
         Evt.fileArea()
       });
@@ -67,7 +67,7 @@
       // UI監視と実行確認
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
       // 列選択取得と共通処理
-      await this.withAsyncLock("file", async () => {
+      await this.withAsyncLock("Tab1ST.file", async () => {
         const [global, fileDT, fileMap] = State.get(["GLB.cachedGlobal", "Tab1ST.file.data", "Tab1ST.file.map"]);
         const indexArr = global.fileFields.map(f => fileMap[f.key] ? fileDT[0].indexOf(fileMap[f.key]) : -1);
         await this.processFileList("make", Mtd.Utils.remapArry(fileDT, indexArr, global.fileHeader), global);
@@ -79,7 +79,7 @@
       // 実行確認
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
       // 共通処理
-      await this.withAsyncLock("file", async () => this.processFileList("validate", null, State.get("GLB.cachedGlobal")));
+      await this.withAsyncLock("Tab1ST.file", async () => this.processFileList("validate", null, State.get("GLB.cachedGlobal")));
     }
 
     // --- File - Results突合抽出処理 ---
@@ -89,12 +89,12 @@
       const flagEdited = API.checkUserProperty(global.propFileEdited);
       if (!await UI.confirm("確認", "既存の「抽出データ」シートを上書きしますか？",Tab1UI.exacBar)) return;
       // 非同期ラッパー実行
-      await this.withAsyncLock("exac", async () => {
+      await this.withAsyncLock("Tab1ST.exac", async () => {
         // 編集検知（Phaseダウングレード）
         if (await flagEdited) {
           State.set({
             "Tab1ST.file.status": ["error", "シート編集検知: 再検証"],
-            "Tab1ST.phase": APP_PHASE.INVALID.val
+            "Tab1ST.phase": TAB1_PHASE.INVALID.val
           });
           return;
         }
@@ -111,7 +111,7 @@
         await API.writeData(global.extractSheetName, outData);
         State.set({
           "Tab1ST.exac.status": ["success", `抽出: ${outData.length - 1} 件`],
-          "Tab1ST.phase": APP_PHASE.EXTRACT.val
+          "Tab1ST.phase": TAB1_PHASE.EXTRACT.val
         });
       });
     }
@@ -120,7 +120,7 @@
     static async pushExacData() {
       const global = State.get("GLB.cachedGlobal");
       if (!await UI.confirm("確認", "「抽出データ」をPXRFシートに格納しますか？", Tab1UI.exacBar)) return;
-      await this.withAsyncLock("exac", async () => {
+      await this.withAsyncLock("Tab1ST.exac", async () => {
         // データ取得
         const [{ data: extractData }, { data: pxrfData }] = await Promise.all([
           API.fetchData(global.extractSheetName),
@@ -135,9 +135,55 @@
       });
     }
 
+    // --- Tab2 データ取得・更新処理 ---
+    static async getTab2Data(mode, payload = null) {
+      await this.withAsyncLock("Tab2ST.datasetload", async () => {
+        const global = State.get("GLB.cachedGlobal");
+        // 1. データロードモード
+        if (mode === "load") {
+          State.set("Tab2ST.datasetload.status", ["loading", "処理中..."]);
+          const [pxrfRes, wdxrfRes, corrRes] = await Promise.all([
+            API.fetchData(global.pxrfSheetName),
+            API.fetchData(global.wdxrfSheetName),
+            API.fetchData(global.correctionSheetName).catch(() => ({ data: [] }))
+          ]);
+          if (!pxrfRes.data || pxrfRes.data.length <= 1) throw new Error("PXRFデータ不足");
+          if (!wdxrfRes.data || wdxrfRes.data.length <= 1) throw new Error("WDXRFデータ不足");
+          const { mergedPXRF, wdxrfObjs } = Mtd.DataMerger.load(pxrfRes.data, wdxrfRes.data);
+          State.set({
+            "Tab2ST.rawData": { correction: corrRes.data || [], mergedPXRF, wdxrfObjs },
+            "Tab2ST.phase": TAB2_PHASE.LOADED.val
+          });
+          const datasets = [...new Set(mergedPXRF.map(d => d.dataset).filter(Boolean))];
+          UI.renderCheckboxes(datasets, Tab2UI.dataSetBOX);
+          State.set("Tab2ST.datasetload.status", ["success", `読込完了: dataset ${datasets.length}件`]);
+        } 
+        // 2. フィルタリングモード
+        else if (mode === "filter") {
+          const container = DOM.get(Tab2UI.dataSetBOX);
+          const checkedVals = [...container.querySelectorAll('.dataset-cb:checked')].map(cb => cb.value);
+          if (checkedVals.length === 0) throw new Error("Dataset未選択");
+          State.set("Tab2ST.datasetload.status", ["loading", "フィルター適用中..."]);
+          const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
+          const { basePXRF, baseWDXRF } = Mtd.DataMerger.filter(mergedPXRF, wdxrfObjs, checkedVals);
+          State.set({
+            "Tab2ST.filter.datasets": checkedVals,
+            "Tab2ST.basePXRF": basePXRF,
+            "Tab2ST.baseWDXRF": baseWDXRF,
+            "Tab2ST.phase": TAB2_PHASE.FILTERED.val,
+            "Tab2ST.symbol.mapping": {},
+            "Tab2ST.modeMap": {},
+            "Tab2ST.correctionLogic": {}
+          });
+          State.set("Tab2ST.datasetload.status", ["success", "データ設定を更新しました"]);
+          DOM.open(Tab2UI.dataSetArea, false);
+        }
+      });
+    }
+
     // --- レポート画面展開 ---
     static async openReport() {
-      await this.withAsyncLock("report", async () => {
+      await this.withAsyncLock("Tab2ST.report", async () => {
         State.set("Tab2ST.repoStatus", ["loading", "テンプレート取得中..."]);
         // テンプレート取得
         const htmlContent = await API.getReportTemplate();

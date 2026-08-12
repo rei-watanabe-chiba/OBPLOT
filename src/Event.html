@@ -17,10 +17,10 @@
       const currentPhase = State.get("Tab1ST.phase");
       const currentMode = State.get("Tab1ST.config.mode");
       // モード変更判定とステータス更新
-      if (selectMode !== currentMode && currentPhase >= APP_PHASE.VALID.val) {
+      if (selectMode !== currentMode && currentPhase >= TAB1_PHASE.VALID.val) {
         State.set({
           "Tab1ST.file.status": ["error", "モード変更検知: 再検証"],
-          "Tab1ST.phase": APP_PHASE.INVALID.val
+          "Tab1ST.phase": TAB1_PHASE.INVALID.val
         });
       }
       State.set({
@@ -81,7 +81,7 @@
       State.set({
         "GLB.isLocked": true, 
         "Tab1ST.config.status": ["alert", "初期設定中..."],
-        "Tab1ST.phase": APP_PHASE.INIT.val
+        "Tab1ST.phase": TAB1_PHASE.INIT.val
       });
       // グローバル読込
       try {

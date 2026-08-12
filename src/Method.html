@@ -72,12 +72,21 @@
       // 計測モード別ソート
       const sortKeys = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
       const [obKeys, mdKeys] = [sortKeys(global.obsidianIndex), sortKeys(global.mudrockIndex)];
+      // 値の変換処理
+      const formatVal = val => {
+        if (val === "" || val === null || val === undefined) return "";
+        if (String(val).trim() === "< LOD") return val;
+        const num = Number(val);
+        return !isNaN(num) ? num * 10000 : val;
+      };
       // 抽出クロージャ
       const extract = (fileName, keys, idxObj) => keys.reduce((acc, k) => {
         const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
         const row = resultMap.get(String(fileName ?? ""));
-        acc.vals.push(idx !== null ? (row?.[idx] ?? "") : "");
-        acc.errs.push(idx !== null ? (row?.[idx + 1] ?? "") : "");
+        const rawVal = idx !== null ? (row?.[idx] ?? "") : "";
+        const rawErr = idx !== null ? (row?.[idx + 1] ?? "") : "";
+        acc.vals.push(formatVal(rawVal));
+        acc.errs.push(formatVal(rawErr));
         return acc;
       }, { vals: [], errs: [] });
       // 配列返却
@@ -105,7 +114,49 @@
         : { isDup: false, data: null };
     }
   }
+
+  // --- Tab2 データマージ＆フィルタリングロジック ---
+  class DataMerger {
+    // --- 行指向オブジェクト配列に変換 ---
+    static #toObjArray(data) {
+      const [header, ...body] = data;
+      return body.map(row => header.reduce((obj, h, i) => {
+        obj[String(h).trim()] = row[i];
+        return obj;
+      }, {}));
+    }
+    // --- ロードフェーズ: WDXRF属性結合とdataset抽出 ---
+    static load(pxrfData, wdxrfData) {
+      const pxrfObjs = this.#toObjArray(pxrfData);
+      const wdxrfObjs = this.#toObjArray(wdxrfData);
+      // WDXRFを結合用キー (dataset_id) でマップ化
+      const wdxrfMap = new Map(wdxrfObjs.map(obj => [`${obj.dataset}_${obj.id}`, obj]));
+      const datasetSet = new Set();
+      // PXRFデータにGroupとSourceを付与
+      pxrfObjs.forEach(pObj => {
+        // Tab1の抽出仕様上、PXRF側のキーは 'ID' か 'id' になるためフォールバック
+        const key = `${pObj.dataset}_${pObj.ID || pObj.id}`;
+        const wObj = wdxrfMap.get(key);
+        pObj.Group = wObj?.Group ?? "Unknown";
+        pObj.Source = wObj?.Source ?? "Unknown";
+        if (pObj.dataset) datasetSet.add(pObj.dataset);
+      });
+      return {
+        mergedPXRF: pxrfObjs,
+        wdxrfObjs: wdxrfObjs,
+        datasets: [...datasetSet]
+      };
+    }
+    // --- フィルターフェーズ: 対象datasetのみ抽出 ---
+    static filter(mergedPXRF, wdxrfObjs, selectedDatasets) {
+      const targetSet = new Set(selectedDatasets);
+      return {
+        basePXRF: mergedPXRF.filter(obj => targetSet.has(obj.dataset)),
+        baseWDXRF: wdxrfObjs.filter(obj => targetSet.has(obj.dataset))
+      };
+    }
+  }
   
   // 他層からの呼び出し
-  const Mtd = { Utils: DataUtils, FileValidator, DataExtractor, PxrfValidator };
+  const Mtd = { Utils: DataUtils, FileValidator, DataExtractor, PxrfValidator, DataMerger };
 </script>

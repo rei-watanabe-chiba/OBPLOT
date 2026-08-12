@@ -2,35 +2,46 @@
 <script>
   // --- htmlID ---
   const Tab1UI = {
-      tabSet: "tab1Fieldset",       // タブ全体UI
-      configBar: "configStatusBar",   // 設定コンソール
-      configArea: "configMapArea",  // 設定入力エリア
-      fileLoadBtn: "fileLoadBtn",   // 読込ボタン
-      fileBar: "fileStatusBar",       // ファイルコンソール
-      fileArea: "fileMapArea",      // ファイル入力エリア
-      fileBox: "fileMapBox",        // ファイル入力BOX
-      fileMakeBtn: "fileMakeBtn",   // リスト生成ボタン
-      fileValdBtn: "fileValdBtn",   // 検証ボタン
-      exacBar: "exacStatusBar",       // 抽出コンソール
-      exacBtn: "exacBtn",           // 抽出ボタン
-      exacArea: "exacMapBox",       // 抽出入力エリア
-      exacPushBtn: "exacPushBtn",   // PXRFに格納ボタン
-      exacBox: "exacMapBox"         // 抽出設定BOX
+    tabSet: "tab1Fieldset",       // タブ全体UI
+    configBar: "configStatusBar",   // 設定コンソール
+    configArea: "configMapArea",  // 設定入力エリア
+    fileLoadBtn: "fileLoadBtn",   // 読込ボタン
+    fileBar: "fileStatusBar",       // ファイルコンソール
+    fileArea: "fileMapArea",      // ファイル入力エリア
+    fileBox: "fileMapBox",        // ファイル入力BOX
+    fileMakeBtn: "fileMakeBtn",   // リスト生成ボタン
+    fileValdBtn: "fileValdBtn",   // 検証ボタン
+    exacBar: "exacStatusBar",       // 抽出コンソール
+    exacBtn: "exacBtn",           // 抽出ボタン
+    exacArea: "exacMapBox",       // 抽出入力エリア
+    exacPushBtn: "exacPushBtn",   // PXRFに格納ボタン
+    exacBox: "exacMapBox"         // 抽出設定BOX
   }
 
   const Tab2UI = {
     tabSet: "tab2Fieldset",     // タブ全体UI
+    datasetLoadBtn: "datasetLoadBtn",        // 読込ボタン
+    datasetfilterBtn: "datasetFilterBtn",    // 確定/更新ボタン
+    datasetloadBar: "datasetLoadBar",        // ステータスバー
+    dataSetArea: "dataSetArea",  // アコーディオン全体
+    dataSetBOX: "dataSetBOX",    // チェックボックスコンテナ
     reppBtn: "reportOpenBtn", // 展開ボタン
     repoBar: "reportStatusBar"  // 状態表示
   }
 
   // --- フェーズ定義 ---
-  const APP_PHASE = {
+  const TAB1_PHASE = {
     INIT: { val: 1, name: 'init' },       // 初期状態・リセット時
     LOAD: { val: 2, name: 'load' },       // データ取得成功
     INVALID: { val: 3, name: 'invalid' }, // 要検証
     VALID: { val: 4, name: 'valid' },     // 検証成功（抽出可能）
     EXTRACT: { val: 5, name: 'extract' }  // 抽出成功（PXRF格納可能）
+  };
+  const TAB2_PHASE = {
+    INIT: { val: 1, name: 'init' },
+    LOADED: { val: 2, name: 'loaded' },
+    FILTERED: { val: 3, name: 'filtered' },
+    MAPPED: { val: 4, name: 'mapped' }
   };
 
   // --- 状態管理クラス定義 ---
@@ -45,7 +56,7 @@
           cachedGlobal: null,
         },
         Tab1ST: {
-          phase: APP_PHASE.INIT.val,
+          phase: TAB1_PHASE.INIT.val,
           config: {
             status: [],
             mode: "Dual"
@@ -65,6 +76,16 @@
           }
         },
         Tab2ST: {
+          phase: TAB2_PHASE.INIT.val,
+          rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null },
+          basePXRF: null,
+          baseWDXRF: null,
+          filter: { datasets: [] },
+          symbol: { baseKey: "dataset", mapping: {} },
+          modeMap: {},
+          preview: { value: "", correction: "rawdata" },
+          correctionLogic: {},
+          report: { values: [], corrections: [] },
           repoStatus: []
         }
       };

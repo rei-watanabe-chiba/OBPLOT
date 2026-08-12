@@ -59,7 +59,7 @@
     handle_Tab1ST_file_isMapError(errorFlags) {
       UIController.updateInputs(Tab1UI.fileBox, "select", errorFlags);
       // Phase 2 (LOAD) :ボタン更新
-      if (State.get("Tab1ST.phase") === APP_PHASE.LOAD.val) {
+      if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) {
         UIController.updateButtonsByMapError("file");
       }
     }
@@ -70,7 +70,7 @@
     handle_Tab1ST_exac_isMapError(errorFlags) {
       UIController.updateInputs(Tab1UI.exacBox, "text", errorFlags);
       // Phase 4 (VALID) ：ボタン更新
-      if (State.get("Tab1ST.phase") === APP_PHASE.VALID.val) {
+      if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) {
         UIController.updateButtonsByMapError("exac");
       }
     }
@@ -81,6 +81,20 @@
     // --- チャート層ハンドラ ---
     handle_Tab2ST_repoStatus(stasValue) {
       DOM.setDOM(Tab2UI.reporBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+    }
+    // --- Tab2 ロード層ハンドラ ---
+    handle_Tab2ST_datasetload_status(stasValue) {
+      DOM.setDOM(Tab2UI.datasetloadBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+    }
+    // --- Tab2 フェーズ管理ハンドラ ---
+    handle_Tab2ST_phase(phaseVal) {
+      // INIT(1), LOADED(2), FILTERED(3), MAPPED(4)
+      const isLoadedOrLater = phaseVal >= TAB2_PHASE.LOADED.val;
+      // 読込ボタンは常時有効、確定ボタンは読込済以降で有効化
+      DOM.setDisabled(Tab2UI.datasetLoadBtn, false);
+      DOM.setDisabled(Tab2UI.datasetfilterBtn, !isLoadedOrLater);
+      // INIT時はアコーディオンを開く
+      if (phaseVal === TAB2_PHASE.INIT.val) DOM.open(Tab2UI.dataSetArea, true);
     }
   }
 
@@ -147,27 +161,45 @@
       selectors?.forEach((s, idx) => s.classList.toggle("error", errorFlags?.[idx] ?? false));
     }
 
+    // --- Tab2: チェックボックス動的生成 ---
+    static renderCheckboxes(arr, objID) {
+      const container = DOM.get(objID);
+      if (!container) return;
+      
+      if (!arr || arr.length === 0) {
+        container.innerHTML = '<div class="txt-note">データがありません</div>';
+        return;
+      }
+      // チェックボックス要素の生成
+      container.innerHTML = arr.map(item => `
+        <label style="display:flex; align-items:center; font-size:13px; margin-bottom:6px; cursor:pointer;">
+          <input type="checkbox" value="${item}" class="dataset-cb" style="margin-right:8px;" checked>
+          ${item}
+        </label>
+      `).join("");
+    }
+
     // --- フェーズ連動UI更新 ---
     static updatePhaseUI(phase) {
       // 状態の定義化
       const config = {
-        [APP_PHASE.INIT.val]: {
+        [TAB1_PHASE.INIT.val]: {
           file: { show: false, disableMake: true, disableVald: true },
           exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
         },
-        [APP_PHASE.LOAD.val]: {
+        [TAB1_PHASE.LOAD.val]: {
           file: { show: true, disableMake: false, disableVald: true },
           exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
         },
-        [APP_PHASE.INVALID.val]: {
+        [TAB1_PHASE.INVALID.val]: {
           file: { show: true, disableMake: false, disableVald: false },
           exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
         },
-        [APP_PHASE.VALID.val]: {
+        [TAB1_PHASE.VALID.val]: {
           file: { show: true, disableMake: false, disableVald: false },
           exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true }
         },
-        [APP_PHASE.EXTRACT.val]: {
+        [TAB1_PHASE.EXTRACT.val]: {
           file: { show: true, disableMake: false, disableVald: false },
           exac: { showBox: true, showBar: true, showPush: true, disableExac: false, disablePush: false }
         }
@@ -177,8 +209,8 @@
       State.set("Tab1ST.file.cachedStatus", State.get("Tab1ST.file.status"));
       const currentMode = State.get("Tab1ST.config.mode");
       // UI変更箇所の定義
-      const loadText = phase === APP_PHASE.INIT.val ? "データを取得" : "データを再取得";
-      const valdClass = phase === APP_PHASE.INVALID.val ? "action-btn" : "action-btn --sub";
+      const loadText = phase === TAB1_PHASE.INIT.val ? "データを取得" : "データを再取得";
+      const valdClass = phase === TAB1_PHASE.INVALID.val ? "action-btn" : "action-btn --sub";
       // --- ファイル層UI適用 ---
       DOM.setDOM(Tab1UI.fileValdBtn, undefined, valdClass);
       DOM.setDOM(Tab1UI.fileLoadBtn, loadText);
@@ -187,7 +219,7 @@
       DOM.setDisabled(Tab1UI.fileMakeBtn, config.file.disableMake);
       DOM.setDisabled(Tab1UI.fileValdBtn, config.file.disableVald);
       DOM.open(Tab1UI.fileArea, State.get("Tab1ST.file.isMapError").some(Boolean));
-      if (phase === APP_PHASE.LOAD.val) this.updateButtonsByMapError("file");
+      if (phase === TAB1_PHASE.LOAD.val) this.updateButtonsByMapError("file");
       // --- 抽出層UI適用 ---
       DOM.toggle(Tab1UI.exacBox, config.exac.showBox);
       DOM.toggle(Tab1UI.exacBar, config.exac.showBar);
@@ -196,10 +228,10 @@
       DOM.setDisabled(Tab1UI.exacPushBtn, config.exac.disablePush);
       DOM.open(Tab1UI.exacBox, State.get("Tab1ST.exac.isMapError").some(Boolean));
       // 特殊条件のステータス更新
-      if (phase === APP_PHASE.VALID.val) {
+      if (phase === TAB1_PHASE.VALID.val) {
         this.updateButtonsByMapError("exac");
         State.set("Tab1ST.exac.cachedStatus", ["loading", `${currentMode}でResultsを抽出します`]);
-      } else if (phase === APP_PHASE.EXTRACT.val) {
+      } else if (phase === TAB1_PHASE.EXTRACT.val) {
         State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.file.status"));
       }
     }
@@ -208,7 +240,7 @@
     static updateButtonsByMapError(type) {
       if (type === "file") {
         const isError = State.get("Tab1ST.file.isMapError").some(Boolean);
-        const isListed = State.get("Tab1ST.phase") >= APP_PHASE.INVALID.val;
+        const isListed = State.get("Tab1ST.phase") >= TAB1_PHASE.INVALID.val;
         DOM.setDisabled(Tab1UI.fileMakeBtn, isError);
         if (isListed) DOM.setDisabled(Tab1UI.fileValdBtn, isError);
       } else if (type === "exac") {

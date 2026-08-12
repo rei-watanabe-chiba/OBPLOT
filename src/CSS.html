@@ -71,9 +71,10 @@
     &:hover { background: var(--bg-hover); }
     /* アクティブ時の装飾 */
     &.active { 
-      border-bottom: 2px solid var(--primary-blue); 
+      border-bottom: 2px solid currentColor; 
       color: var(--primary-blue); 
       font-weight: 500; 
+      &.--green { color: var(--primary-green); }
     }
   }
 
@@ -256,5 +257,16 @@
     border-radius: 4px;
     cursor: pointer;
     font-size: 13px;
+  }
+
+  /* --- Tab2用 アコーディオン・チェックボックス --- */
+  .checkbox-container {
+    max-height: 120px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 10px;
+    background: var(--bg-white);
   }
 </style>

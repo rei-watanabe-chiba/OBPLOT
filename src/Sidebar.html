@@ -9,7 +9,7 @@
     <!-- ナビゲーション -->
     <nav class="nav" id="nav">
       <button class="tab-btn" data-target="tab1">Data</button>
-      <button class="tab-btn" data-target="tab2">Chart</button>
+      <button class="tab-btn --green" data-target="tab2">Chart</button>
     </nav>
 
     <main class="content-area">
@@ -84,10 +84,26 @@
       <!-- チャート表示 -->
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset" style="border: none; padding: 0; margin: 0;">
-          <div class="action-btn-container">
-            <button id="reportOpenBtn" class="action-btn" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
-          </div>
-          <div id="reportStatusBar" class="status-bar"></div>
+          <div id="datasetAreaContainer">
+            <!-- 第1層: データセット設定 -->
+            <label class="input-label">可視化データ設定</label>
+            <div id="datasetBtnArea" class="action-btn-container">
+              <button id="datasetLoadBtn" class="action-btn --green" onclick="Ctrl.getTab2Data('load')">読込</button>
+              <button id="datasetFilterBtn" class="action-btn --green --sub" onclick="Ctrl.getTab2Data('filter')" disabled>確定/更新</button>
+            </div>
+            <div id="datasetLoadBar" class="status-bar"></div>
+            <details id="dataSetArea" open>
+              <summary class="mapping-title">dataset選択</summary>
+                <div id="dataSetBOX" class="checkbox-container"></div>
+            </details>
+            <!-- 以降のエリア (②, ③, ④) は次フェーズで実装するためプレースホルダー -->
+        </div> 
+        <hr class="section-hr">
+        <!-- 別タブ出力テスト用 -->
+            <div class="action-btn-container">
+              <button id="reportOpenBtn" class="action-btn --green" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
+            </div>
+            <div id="reportStatusBar" class="status-bar"></div>        
         </fieldset>
       </div>
     </main>

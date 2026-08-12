@@ -1,16 +1,4 @@
-// --- Global ---
-const FILE_SHEET_NAME = "File";
-const FILE_HEADER = ['file', 'mode', 'id', 'sub_id', 'info'];
-const RESULTS_SHEET_NAME = "Results";
-const FILELIST_SHEET_NAME = "ファイルリスト";
-const FILELIST_HEADER = ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'];
-const EXTRACT_SHEET_NAME = "抽出データ";
-const PXRF_SHEET_NAME = "PXRF";
-const VALID_MODES = ["mudrock", "obsidian"];
-const OBSIDIAN_INDEX_MAP = { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 };
-const MUDROCK_INDEX_MAP = { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 };
-
-// --- DTO生成 ---
+// --- DTO ---
 class ApiResponse {
   static success(payload) { return { success: true, payload }; }
   static error(type, msg) { return { success: false, errorType: type, message: msg }; }
@@ -36,14 +24,16 @@ function onOpen() {
 // --- 定数設定取得 ---
 function getGlobal() {
   return withErrorHandling(() => ApiResponse.success({
-    fileSheetName: FILE_SHEET_NAME,
-    fileHeader: FILE_HEADER,
-    resultsSheetName: RESULTS_SHEET_NAME,
-    filelistSheetName: FILELIST_SHEET_NAME,
-    filelistHeader: FILELIST_HEADER,
-    extractSheetName: EXTRACT_SHEET_NAME,
-    pxrfSheetName: PXRF_SHEET_NAME,
-    validModes: VALID_MODES,
+    fileSheetName: "File",
+    fileHeader: ['file', 'mode', 'id', 'sub_id', 'info'],
+    resultsSheetName: "Results",
+    filelistSheetName: "ファイルリスト",
+    filelistHeader: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'],
+    extractSheetName: "抽出データ",
+    pxrfSheetName: "PXRF",
+    wdxrfSheetName: "WDXRF",
+    correctionSheetName: "Correction",
+    validModes: ["mudrock", "obsidian"],
     propFileEdited: "isFileListEdited",
     fileFields: [
       { key: "file", label: "file *必須", required: true },
@@ -52,8 +42,8 @@ function getGlobal() {
       { key: "sub_id", label: "sub_id", required: false },
       { key: "info", label: "info", required: false }
     ],
-    obsidianIndex: OBSIDIAN_INDEX_MAP,
-    mudrockIndex: MUDROCK_INDEX_MAP
+    obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
+    mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 }
   }));
 }
 
@@ -112,7 +102,8 @@ function writeData(sheetName, data, options = "clear") {
 
 // --- 編集検知 ---
 function onEdit(e) {
-  if (e?.source?.getActiveSheet().getName() === FILELIST_SHEET_NAME) {
+
+  if (e?.source?.getActiveSheet().getName() === "ファイルリスト") {
     PropertiesService.getUserProperties().setProperty("isFileListEdited", "true");
   }
 }
