@@ -8,6 +8,7 @@
 ### ① データ設定（ConfigArea）
 - **機能**: 分析対象のdatasetを絞り込み
 - **UI**: 「読込」ボタン + 「確定/更新」ボタン
+  - 「読込」ボタン実行時に`Tab2ST.rawData`に各データを格納
 - **UI**: 読み込み後、PXRFの `dataset` をリストアップした「スクロール可能なチェックボックス群」を動的生成（CSSで高さ制限＋スクロール）
   - チェックボックス入力後、「確定/更新」ボタンで`Tab2ST.filter`に代入、`Tab2ST.baseData`をフィルターして生成（以降の処理の共通データ）
 
@@ -27,7 +28,8 @@
 - **UI**: [対象]: `GLB.valueLogic`から選択プルダウン
   - `Tab2ST.preview`に反映
 - **UI**: [補正値]: 「"補正なし", "現在の補正値", Correctionシートのインデックス名マップ」をプルダウン選択(phase開始時に生成）
-  - `Tab2ST.correctionLogic`に反映
+  - `Tab2ST.rawData`の`correction`がnullの場合は選択肢を"補正なし", "現在の補正値"に規定
+  - 選択により各元素の補正係数を`Tab2ST.correctionLogic`に反映（補正なしなら1、現在の補正値な計算値、インデックス名なら`Correction`から参照）
 - **UI**: [プレビュー更新]
   - 更新押下で３つのstateを反映更新。`Tab2ST.baseData`を`Tab2ST.modeMap`でソートして`Tab2ST.selectData`に代入。`Tab2ST.preview`を参照して`Tab2ST.selectData`に`Tab2ST.correctionLogic`を適用。valueが指数ならば動的計算して作図（値データはプレビュー用のみの一時データ扱い）。
 - **UI**: プレビュー用散布図（相関直線付き、幅260px程度）
@@ -67,7 +69,7 @@
   - **valueLogic**: 各元素・指数の計算文字列。構造: （"Mn", "Fe", "K", "Ca", "Rb".... "Mn * 100 / Fe"`）
 - `Tab2ST`拡張
   - **phase**: アプリの進行状態（初期[1] -> 読込済[2]...）
-  - **rawData**: { pxrf, wdxrf, correction } の各シート生データ
+  - **rawData**: { pxrf, wdxrf, correction } の各シート生のデータ
   - **baseData**: dataset + ID でpxrf, wdxrfを結合したベースデータ
   - **selectData**: モード選択と補正計算を反映した可視化ベースデータ
   - **filter**: { datasets: [] } （①の選択状態）
