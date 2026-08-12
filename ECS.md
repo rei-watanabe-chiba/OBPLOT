@@ -1,6 +1,8 @@
 # for gemini
 
-# OBPLOT TAB2
+# OBPLOT Tab2
+
+## 0. 説明
 グラフ描画・データ補正機能）設計書
 
 ## 1. Sidebar UIの設計（アコーディオン4層構造）
