@@ -1,7 +1,5 @@
 # for gemini
-
 # OBPLOT Tab2
-
 ## 0. 説明
 グラフ描画・データ補正機能）設計書
 
