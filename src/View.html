@@ -251,8 +251,8 @@
          DOM.setDisabled(Tab2UI.datasetfilterBtn, false);
         },
         [TAB2_PHASE.FILTERED.val]: () => {
-          DOM.toggle(Tab2UI.symbolArea, true);
-          DOM.open(Tab2UI.symbolArea, true);
+          DOM.toggle(Tab2UI.symbolMapArea, true);
+          DOM.open(Tab2UI.symbolMapArea, true);
           // 軸選択の生成
           const opts = ['dataset', 'item', 'Group', 'Source'];
           const field = [{ key: "symbolBaseKey", label: "分類軸" }];
@@ -280,7 +280,6 @@
         container.innerHTML = '<div class="txt-note">データがありません</div>';
         return;
       }
-      // チェックボックス要素の生成
       container.innerHTML = arr.map(item => `
         <label style="display:flex; align-items:center; font-size:13px; margin-bottom:6px; cursor:pointer;">
           <input type="checkbox" value="${item}" class="dataset-cb" style="margin-right:8px;" checked>

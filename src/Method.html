@@ -18,7 +18,7 @@
     }
   }
 
-  // --- ファイルリスト検証ロジック ---
+  // --- Tab1 ファイルリスト検証ロジック ---
   class FileValidator {
     // --- インデックスと計測ID生成 ---
     static #COL = { FILE: 0, MODE: 1, ID: 2, SUB_ID: 3, INFO: 4 };
@@ -58,7 +58,7 @@
     }
   }
 
-  // --- Results抽出ロジック ---
+  // --- Tab1 Results抽出ロジック ---
   class DataExtractor {
     static run(fileDT, resultDT, exacMap, global) {
       if (!fileDT?.length || !resultDT?.length) return [];
@@ -101,7 +101,7 @@
     }
   }
   
-  // --- PXRF重複検証・統合ロジック ---
+  // --- Tab1 PXRF重複検証・統合ロジック ---
   class PxrfValidator {
     static run(existingDT, newDT) {
       if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
@@ -115,7 +115,7 @@
     }
   }
 
-  // --- Tab2 データマージ＆フィルタリングロジック ---
+  // --- Tab2 データ取得ロジック ---
   class DataMerger {
     // --- 行指向オブジェクト配列に変換 ---
     static #toObjArray(data) {
@@ -128,14 +128,18 @@
     // --- ロードフェーズ: WDXRF属性結合とdataset抽出 ---
     static load(pxrfData, wdxrfData) {
       const pxrfObjs = this.#toObjArray(pxrfData);
-      const wdxrfObjs = this.#toObjArray(wdxrfData);
+      const wdxrfObjs = this.#toObjArray(wdxrfData);    
+      // --- キー正規化 ---
+      const normalizeKey = (dataset, id) => {
+        const clean = str => String(str ?? "").replace(/\s+/g, "").toUpperCase();
+        return `${clean(dataset)}_${clean(id)}`;
+      };
       // WDXRFを結合用キー (dataset_id) でマップ化
-      const wdxrfMap = new Map(wdxrfObjs.map(obj => [`${obj.dataset}_${obj.id}`, obj]));
+      const wdxrfMap = new Map(wdxrfObjs.map(obj => [normalizeKey(obj.dataset, obj.ID || obj.id), obj]));
       const datasetSet = new Set();
       // PXRFデータにGroupとSourceを付与
       pxrfObjs.forEach(pObj => {
-        // Tab1の抽出仕様上、PXRF側のキーは 'ID' か 'id' になるためフォールバック
-        const key = `${pObj.dataset}_${pObj.ID || pObj.id}`;
+        const key = normalizeKey(pObj.dataset, pObj.ID || pObj.id);
         const wObj = wdxrfMap.get(key);
         pObj.Group = wObj?.Group ?? "Unknown";
         pObj.Source = wObj?.Source ?? "Unknown";
