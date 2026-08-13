@@ -70,7 +70,8 @@
           State.set("Tab1ST.file.map", { ...State.get("Tab1ST.file.map"), [fieldKey]: target.value });
           this.processFileArea();
         },
-        [Tab1UI.exacArea]: () => this.processExacArea()
+        [Tab1UI.exacArea]: () => this.processExacArea();
+        [Tab2UI.symbolMapArea]: () => { if (fieldKey === "symbolBaseKey") State.set("Tab2ST.symbol.baseKey", target.value);}
       };
       Object.entries(actionMap).some(([id, action]) => target.closest(`#${id}`) && (action(), true));
     }

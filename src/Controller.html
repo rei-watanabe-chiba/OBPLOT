@@ -163,7 +163,6 @@
           const container = DOM.get(Tab2UI.dataSetBOX);
           const checkedVals = [...container.querySelectorAll('.dataset-cb:checked')].map(cb => cb.value);
           if (checkedVals.length === 0) throw new Error("Dataset未選択");
-          State.set("Tab2ST.datasetload.status", ["loading", "フィルター適用中..."]);
           const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
           const { basePXRF, baseWDXRF } = Mtd.DataMerger.filter(mergedPXRF, wdxrfObjs, checkedVals);
           State.set({
@@ -178,6 +177,27 @@
           State.set("Tab2ST.datasetload.status", ["success", "データ設定を更新しました"]);
           DOM.open(Tab2UI.dataSetArea, false);
         }
+      });
+    }
+
+    // --- Tab2 シンボルマッピング確定 ---
+    static async confirmSymbolMapping() {
+      await this.withAsyncLock("Tab2ST.symbol", async () => {
+        const box = DOM.get(Tab2UI.symbolMapBox);
+        if (!box) return;
+        const mapping = {};
+        // 設定値の取得と構築
+        for (let i = 0; i < 10; i++) {
+          const target = box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="target"]`)?.value;
+          const shape = box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="shape"]`)?.value;
+          const color = box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="color"]`)?.value;
+          if (target) mapping[target] = { shape, color };
+        }
+        // state更新
+        State.set({
+          "Tab2ST.symbol.mapping": mapping,
+          "Tab2ST.phase": TAB2_PHASE.MAPPED.val
+        });
       });
     }
 

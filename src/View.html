@@ -76,7 +76,7 @@
     }
     // --- フェーズ管理ハンドラ ---
     handle_Tab1ST_phase(phaseVal) {
-      UIController.updatePhaseUI(phaseVal);
+      UIController.updateTab1PhaseUI(phaseVal);
     }
     // --- チャート層ハンドラ ---
     handle_Tab2ST_repoStatus(stasValue) {
@@ -88,13 +88,14 @@
     }
     // --- Tab2 フェーズ管理ハンドラ ---
     handle_Tab2ST_phase(phaseVal) {
-      // INIT(1), LOADED(2), FILTERED(3), MAPPED(4)
-      const isLoadedOrLater = phaseVal >= TAB2_PHASE.LOADED.val;
-      // 読込ボタンは常時有効、確定ボタンは読込済以降で有効化
-      DOM.setDisabled(Tab2UI.datasetLoadBtn, false);
-      DOM.setDisabled(Tab2UI.datasetfilterBtn, !isLoadedOrLater);
-      // INIT時はアコーディオンを開く
-      if (phaseVal === TAB2_PHASE.INIT.val) DOM.open(Tab2UI.dataSetArea, true);
+      UIController.updateTab2PhaseUI(phaseVal);
+    }
+    // --- Tab2 シンボル変更ハンドラ ---
+    handle_Tab2ST_symbol_baseKey(newKey) {
+      const baseData = State.get("Tab2ST.basePXRF") ?? [];
+      // ユニーク値再抽出
+      const uniqueVals = [...new Set(baseData.map(d => d[newKey]).filter(Boolean))];
+      UIController.renderSymbolRows(uniqueVals, Tab2UI.symbolMapBox);
     }
   }
 
@@ -138,15 +139,18 @@
     }
 
     // --- 共通：列選択動的生成 ---
-    static renderSelectors(arr, objID, fields) {
+    static renderSelectors(arr, objID, fields, hasEmpty = true) {
       const mapBox = DOM.get(objID);
       if (!mapBox || !arr || !fields) return;
+      // 空オプション
+      const emptyOpt = hasEmpty ? '<option value="" selected>---未選択---</option>' : '';
+      // セレクタ生成
       mapBox.innerHTML = fields.map(field => `
         <div class="field-row">
           <label class="input-label">${field.label}</label>
           <div class="select-wrapper">
             <select class="input-select" data-field="${field.key}">
-              <option value="" selected>---未選択---</option>
+              ${emptyOpt}
               ${arr.map(h => `<option value="${h}">${h}</option>`).join("")}
             </select>
           </div>
@@ -161,26 +165,9 @@
       selectors?.forEach((s, idx) => s.classList.toggle("error", errorFlags?.[idx] ?? false));
     }
 
-    // --- Tab2: チェックボックス動的生成 ---
-    static renderCheckboxes(arr, objID) {
-      const container = DOM.get(objID);
-      if (!container) return;
-      
-      if (!arr || arr.length === 0) {
-        container.innerHTML = '<div class="txt-note">データがありません</div>';
-        return;
-      }
-      // チェックボックス要素の生成
-      container.innerHTML = arr.map(item => `
-        <label style="display:flex; align-items:center; font-size:13px; margin-bottom:6px; cursor:pointer;">
-          <input type="checkbox" value="${item}" class="dataset-cb" style="margin-right:8px;" checked>
-          ${item}
-        </label>
-      `).join("");
-    }
 
-    // --- フェーズ連動UI更新 ---
-    static updatePhaseUI(phase) {
+    // --- Tab1 フェーズ連動UI更新 ---
+    static updateTab1PhaseUI(phase) {
       // 状態の定義化
       const config = {
         [TAB1_PHASE.INIT.val]: {
@@ -247,6 +234,92 @@
         const isError = State.get("Tab1ST.exac.isMapError").some(Boolean);
         DOM.setDisabled(Tab1UI.exacBtn, isError);
       }
+    }
+
+    static updateTab2PhaseUI(phase) {
+      // 共通の有効化処理
+      const isLoaded = phase >= TAB2_PHASE.LOADED.val;
+      DOM.setDisabled(Tab2UI.datasetLoadBtn, false);
+      DOM.setDisabled(Tab2UI.datasetfilterBtn, !isLoaded);
+
+      // アクション辞書
+      const actions = {
+        [TAB2_PHASE.INIT.val]: () => DOM.open(Tab2UI.dataSetArea, false),
+        [TAB2_PHASE.LOADED.val]: () => {
+         DOM.open(Tab2UI.dataSetArea, true)
+         DOM.setDisabled(Tab2UI.datasetLoadBtn, false);
+         DOM.setDisabled(Tab2UI.datasetfilterBtn, false);
+        },
+        [TAB2_PHASE.FILTERED.val]: () => {
+          DOM.toggle(Tab2UI.symbolArea, true);
+          DOM.open(Tab2UI.symbolArea, true);
+          // 軸選択の生成
+          const opts = ['dataset', 'item', 'Group', 'Source'];
+          const field = [{ key: "symbolBaseKey", label: "分類軸" }];
+          this.renderSelectors(opts, Tab2UI.symbolAxisBox, field, false);
+          // 初期値セット
+          const select = DOM.get(Tab2UI.symbolAxisBox).querySelector("select");
+          if (select) select.value = State.get("Tab2ST.symbol.baseKey");
+          // マッピング行の生成
+          const baseData = State.get("Tab2ST.basePXRF") ?? [];
+          const baseKey = State.get("Tab2ST.symbol.baseKey");
+          const uniqueVals = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
+          this.renderSymbolRows(uniqueVals, Tab2UI.symbolMapBox);
+          DOM.setDisabled(Tab2UI.symbolBtn, false);
+        }
+      };
+      // 該当フェーズ処理実行
+      actions[phase]?.();
+    }
+
+    // --- チェックボックス動的生成 ---
+    static renderCheckboxes(arr, objID) {
+      const container = DOM.get(objID);
+      if (!container) return;
+      if (!arr || arr.length === 0) {
+        container.innerHTML = '<div class="txt-note">データがありません</div>';
+        return;
+      }
+      // チェックボックス要素の生成
+      container.innerHTML = arr.map(item => `
+        <label style="display:flex; align-items:center; font-size:13px; margin-bottom:6px; cursor:pointer;">
+          <input type="checkbox" value="${item}" class="dataset-cb" style="margin-right:8px;" checked>
+          ${item}
+        </label>
+      `).join("");
+    }
+
+    // --- シンボル設定行生成 ---
+    static renderSymbolRows(values, objID) {
+      const box = DOM.get(objID);
+      if (!box || !values) return;
+      const shapes = ['circle', 'triangle', 'square'];
+      const colors = [
+        { val: 'var(--primary-blue)', label: 'Blue' },
+        { val: 'var(--primary-green)', label: 'Green' },
+        { val: 'var(--primary-red)', label: 'Red' },
+        { val: 'var(--primary-yellow)', label: 'Yellow' },
+        { val: 'var(--sub-color)', label: 'Gray' }
+      ];
+      // 10行の空行を生成
+      const rows = Array.from({ length: 10 });
+      const selectConfigs = [
+        { type: 'target', options: values.map(v => `<option value="${v}">${v}</option>`), hasDefault: true },
+        { type: 'shape',  options: shapes.map(s => `<option value="${s}">${s}</option>`),  hasDefault: false },
+        { type: 'color',  options: colors.map(c => `<option value="${c.val}">${c.label}</option>`), hasDefault: false }
+      ];
+      box.innerHTML = rows.map((_, i) => `
+        <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+          ${selectConfigs.map(config => `
+            <div class="select-wrapper" style="flex:1;">
+              <select class="input-select" data-symbol-idx="${i}" data-symbol-type="${config.type}" style="padding: 4px 20px 4px 8px; font-size:13px;">
+                ${config.hasDefault ? '<option value="" selected>---未選択---</option>' : ''}
+                ${config.options.join('')}
+              </select>
+            </div>
+          `).join('')}
+        </div>
+      `).join("");
     }
   }
 
