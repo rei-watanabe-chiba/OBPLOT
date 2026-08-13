@@ -17,8 +17,8 @@
 - `Model.html`: 状態管理、UI定数管理、GAS通信ラップ
 - `View.html`: DOM操作・state連動によるUI制御
 - `Method.html`: 純粋関数ベースのデータ加工・バリデーション・データ抽出
-- `Controller.html`: 非同期通信・ビジネスロジック制御、フェーズの進行とダウングレード管理
-- `Event.html`: イベント監視・ハンドリング・各エリアの入力値処理
+- `Controller.html`: 非同期通信・ビジネスロジック制御、ボタン押下で発火するstate操作、フェーズ進行のメイン
+- `Event.html`: ボタン押下以外のイベント監視・ハンドリング・各エリアの入力値処理
 - `Report.html`: 別タブで展開されるレポート画面（Google Visualization API によるサンプル散布図描画）
 
 ## 3. 次の開発作業
