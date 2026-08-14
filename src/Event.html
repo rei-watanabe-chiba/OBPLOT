@@ -9,14 +9,13 @@
       DOM.get(tabId)?.classList.add("active");
       State.set("GLB.activeTab", tabId);
     }
-
     // --- 設定エリアイベント ---
     static processConfigArea() {
       const selectMode = DOM.get(Tab1UI.configArea)?.querySelector('[data-field="configExacMode"]')?.value;
       const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "単純抽出";
       const currentPhase = State.get("Tab1ST.phase");
       const currentMode = State.get("Tab1ST.config.mode");
-      // モード変更判定とステータス更新
+      // モード変更判定
       if (selectMode !== currentMode && currentPhase >= TAB1_PHASE.VALID.val) {
         State.set({
           "Tab1ST.file.status": ["error", "モード変更検知: 再検証"],
@@ -31,11 +30,11 @@
 
     // --- Fileエリアイベント ---
     static processFileArea() {
-      const selectors = [...DOM.get(Tab1UI.fileBox).querySelectorAll(".input-select")];
+      // 標準selectタグで取得
+      const selectors = [...DOM.get(Tab1UI.fileBox).querySelectorAll("select")];
       // 必須項目３で判定
       const errorFlags = Mtd.Utils.validateSelect(selectors.map(s => s.value), 3);
       const isError = errorFlags.some(Boolean);
-      // ステータス更新
       State.set({
         "Tab1ST.file.isMapError": errorFlags,
         "Tab1ST.file.status": [
@@ -47,11 +46,11 @@
 
     // --- 抽出エリアイベント ---
     static processExacArea() {
-      const inputs = [...DOM.get(Tab1UI.exacBox).querySelectorAll('.input-text')];
+      // 標準inputタグで取得
+      const inputs = [...DOM.get(Tab1UI.exacBox).querySelectorAll('input')];
       // dataset入力を判定
       const exacMap = Object.fromEntries(inputs.map(i => [i.dataset.field, i.value]));
       const isError = !(exacMap.dataset?.trim());
-      // ステータス更新
       State.set({
         "Tab1ST.exac.map": exacMap,
         "Tab1ST.exac.isMapError": [isError, false, false],
@@ -64,6 +63,7 @@
       const target = e.target;
       const fieldKey = target?.dataset?.field;
       if (!fieldKey) return; 
+      // アクション割当
       const actionMap = {
         [Tab1UI.configArea]: () => this.processConfigArea(),
         [Tab1UI.fileArea]: () => {
@@ -93,7 +93,6 @@
       } finally {
         State.set("GLB.isLocked", false);
       }
-      // イベントリスナー登録
       document.addEventListener("click", e => {
         const tabId = e.target?.dataset?.target;
         if (tabId && e.target.classList.contains("tab-btn")) this.switchTab(tabId);

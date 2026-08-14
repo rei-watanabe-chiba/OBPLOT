@@ -3,14 +3,11 @@
   // --- UI utilities ---
   class DOM {
     // --- 共通：DOM取得 ---
-    static get(id) {
-      return document.getElementById(id);
-    }
+    static get(id) { return document.getElementById(id); }
     // --- 共通：DOMテキスト ---
-    static setDOM(id, text, className) {
+    static setDOM(id, text) {
       const el = this.get(id);
       if (el && text !== undefined) el.innerText = text;
-      if (el && className !== undefined) el.className = className;
     }
     // --- 共通：DOM表示切替 ---
     static toggle(id, isShow) {
@@ -38,58 +35,38 @@
         const match = method.match(/^handle_([^_]+)_(.+)$/);
         if (match) {
           const [, group, key] = match;
+          // State変更の監視登録
           State.subscribe(`${group}.${key.replace(/_/g, '.')}`, this[method].bind(this));
         }
       });
     }
+    
     // --- 共通ハンドラ ---
-    handle_GLB_isLocked(isLocked) {
-      const fieldset = DOM.get(Tab1UI.tabSet);
-      if (fieldset) fieldset.disabled = isLocked;
-    }
-    // --- 設定層ハンドラ ---
-    handle_Tab1ST_config_status(stasValue) {
-      DOM.setDOM(Tab1UI.configBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
-    }
-    // --- ファイル層ハンドラ ---
-    handle_Tab1ST_file_status(stasValue) {
-      const [stas, text] = stasValue;
-      DOM.setDOM(Tab1UI.fileBar, text, `status-bar ${stas}`);
-    }
+    handle_GLB_isLocked(isLocked) { DOM.get(Tab1UI.tabSet).disabled = isLocked; }
+    
+    // --- 各種ステータスバーハンドラ ---
+    handle_Tab1ST_config_status(v) { UIController.loadingStatsBar(Tab1UI.configBar, v); }
+    handle_Tab1ST_file_status(v) { UIController.loadingStatsBar(Tab1UI.fileBar, v); }
+    handle_Tab1ST_exac_status(v) { UIController.loadingStatsBar(Tab1UI.exacBar, v); }
+    handle_Tab2ST_datasetload_status(v) { UIController.loadingStatsBar(Tab2UI.datasetloadBar, v); }
+    handle_Tab2ST_repoStatus(v) { UIController.loadingStatsBar(Tab2UI.repoBar, v); }
+
+    // --- 入力エラーUI連動ハンドラ ---
     handle_Tab1ST_file_isMapError(errorFlags) {
-      UIController.updateInputs(Tab1UI.fileBox, "select", errorFlags);
-      // Phase 2 (LOAD) :ボタン更新
-      if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) {
-        UIController.updateButtonsByMapError("file");
-      }
-    }
-    // --- 抽出層ハンドラ ---
-    handle_Tab1ST_exac_status(stasValue) {
-      DOM.setDOM(Tab1UI.exacBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
+      UIController.updateInputs(Tab1UI.fileBox, errorFlags);
+      // LOAD時のみボタン更新
+      if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) UIController.updateButtonsByMapError("file");
     }
     handle_Tab1ST_exac_isMapError(errorFlags) {
-      UIController.updateInputs(Tab1UI.exacBox, "text", errorFlags);
-      // Phase 4 (VALID) ：ボタン更新
-      if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) {
-        UIController.updateButtonsByMapError("exac");
-      }
+      UIController.updateInputs(Tab1UI.exacBox, errorFlags);
+      // VALID時のみボタン更新
+      if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) UIController.updateButtonsByMapError("exac");
     }
+
     // --- フェーズ管理ハンドラ ---
-    handle_Tab1ST_phase(phaseVal) {
-      UIController.updateTab1PhaseUI(phaseVal);
-    }
-    // --- チャート層ハンドラ ---
-    handle_Tab2ST_repoStatus(stasValue) {
-      DOM.setDOM(Tab2UI.reporBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
-    }
-    // --- Tab2 ロード層ハンドラ ---
-    handle_Tab2ST_datasetload_status(stasValue) {
-      DOM.setDOM(Tab2UI.datasetloadBar, stasValue?.[1], `status-bar ${stasValue?.[0]}`);
-    }
-    // --- Tab2 フェーズ管理ハンドラ ---
-    handle_Tab2ST_phase(phaseVal) {
-      UIController.updateTab2PhaseUI(phaseVal);
-    }
+    handle_Tab1ST_phase(phaseVal) { UIController.updateTab1PhaseUI(phaseVal); }
+    handle_Tab2ST_phase(phaseVal) { UIController.updateTab2PhaseUI(phaseVal); }
+
     // --- Tab2 シンボル変更ハンドラ ---
     handle_Tab2ST_symbol_baseKey(newKey) {
       const baseData = State.get("Tab2ST.basePXRF") ?? [];
@@ -101,37 +78,43 @@
 
   // --- UI更新・生成処理群 ---
   class UIController {
-    // --- 共通：処理中ステータス ---
+    // --- 共通：プログレス表記対応ステータスバー ---
     static loadingStatsBar(id, status = null) {
-      let className = "", text = "";
+      const el = DOM.get(id);
+      if (!el) return;
+      let isError = false, text = "処理中...", showProgress = true;
       if (status) {
-        className = status[0];
-        text = status[1] ;
-      } else {
-        text = "処理中...";
-        className = "loading";
-      } 
-      DOM.setDOM(id, text, `status-bar ${className}`);
+        const className = status[0];
+        text = status[1];
+        showProgress = (className === "loading");
+        isError = (className === "error" || className === "alert");
+      }
+      // OatUI仕様のDOM構築
+      el.innerHTML = `
+        <div style="font-size: 13px; font-weight: 500; color: ${isError ? 'var(--primary-red)' : 'inherit'}; margin-bottom: 6px;">
+          ${text}
+        </div>
+        ${showProgress ? '<progress style="width: 100%;"></progress>' : ''}
+      `;
     }
 
-    // --- 共通：確認ダイアログ生成 ---
+    // --- 共通：HTML5ネイティブ ダイアログ生成 ---
     static confirm(title, msg, barObj = null) {
-      // --- コンソールバー処理 ---
       const prefix = String(barObj).split("StatusBar")[0];
       const saveStatus = State.get(`Tab1ST.${prefix}.status`);
       if(barObj) this.loadingStatsBar(barObj);
-      // --- 本体処理 ---
+      // ダイアログ生成
       return new Promise((resolve) => {
         const dialog = DOM.get("universalConfirm");
         DOM.setDOM("uDialogTitle", title);
         DOM.setDOM("uDialogMessage", msg);
-        dialog?.showModal();
+        dialog.showModal(); 
         const confirmBtn = DOM.get("uDialogConfirmBtn");
         const cancelBtn = DOM.get("uDialogCancelBtn");
-        // ボタン処理の紐付け
-        if (confirmBtn) confirmBtn.onclick = () => { dialog?.close(); resolve(true); };
-        if (cancelBtn) cancelBtn.onclick = () => {
-          dialog?.close();
+        // ボタン処理
+        confirmBtn.onclick = () => { dialog.close(); resolve(true); };
+        cancelBtn.onclick = () => {
+          dialog.close();
           if(barObj) this.loadingStatsBar(barObj, saveStatus);
           resolve(false);
         };
@@ -144,77 +127,62 @@
       if (!mapBox || !arr || !fields) return;
       // 空オプション
       const emptyOpt = hasEmpty ? '<option value="" selected>---未選択---</option>' : '';
-      // セレクタ生成
       mapBox.innerHTML = fields.map(field => `
-        <div class="field-row">
-          <label class="input-label">${field.label}</label>
-          <div class="select-wrapper">
-            <select class="input-select" data-field="${field.key}">
-              ${emptyOpt}
-              ${arr.map(h => `<option value="${h}">${h}</option>`).join("")}
-            </select>
-          </div>
-        </div>
+        <label>${field.label}
+          <select data-field="${field.key}">
+            ${emptyOpt}
+            ${arr.map(h => `<option value="${h}">${h}</option>`).join("")}
+          </select>
+        </label>
       `).join("");
     }
 
-    // --- 共通：入力UI更新 ---
-    static updateInputs(mapBoxId, type, errorFlags) {
+    // --- 共通：セレクタスタイル更新 ---
+    static updateInputs(mapBoxId, errorFlags) {
       const mapBox = DOM.get(mapBoxId);
-      const selectors = mapBox?.querySelectorAll(`.input-${type}`);
-      selectors?.forEach((s, idx) => s.classList.toggle("error", errorFlags?.[idx] ?? false));
+      const selectors = mapBox?.querySelectorAll('select, input');
+      selectors?.forEach((s, idx) => {
+        if (errorFlags?.[idx]) {
+          s.style.borderColor = 'var(--primary-red)';
+          s.style.backgroundColor = 'color-mix(in srgb, var(--primary-red) 10%, #fff)';
+        } else {
+          s.style.borderColor = '';
+          s.style.backgroundColor = '';
+        }
+      });
     }
-
 
     // --- Tab1 フェーズ連動UI更新 ---
     static updateTab1PhaseUI(phase) {
-      // 状態の定義化
       const config = {
-        [TAB1_PHASE.INIT.val]: {
-          file: { show: false, disableMake: true, disableVald: true },
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
-        },
-        [TAB1_PHASE.LOAD.val]: {
-          file: { show: true, disableMake: false, disableVald: true },
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
-        },
-        [TAB1_PHASE.INVALID.val]: {
-          file: { show: true, disableMake: false, disableVald: false },
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
-        },
-        [TAB1_PHASE.VALID.val]: {
-          file: { show: true, disableMake: false, disableVald: false },
-          exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true }
-        },
-        [TAB1_PHASE.EXTRACT.val]: {
-          file: { show: true, disableMake: false, disableVald: false },
-          exac: { showBox: true, showBar: true, showPush: true, disableExac: false, disablePush: false }
-        }
+        [TAB1_PHASE.INIT.val]: { file: { show: false, disableMake: true, disableVald: true }, exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true } },
+        [TAB1_PHASE.LOAD.val]: { file: { show: true, disableMake: false, disableVald: true }, exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true } },
+        [TAB1_PHASE.INVALID.val]: { file: { show: true, disableMake: false, disableVald: false }, exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true } },
+        [TAB1_PHASE.VALID.val]: { file: { show: true, disableMake: false, disableVald: false }, exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true } },
+        [TAB1_PHASE.EXTRACT.val]: { file: { show: true, disableMake: false, disableVald: false }, exac: { showBox: true, showBar: true, showPush: true, disableExac: false, disablePush: false } }
       }[phase];
-
       // ステータス保存
       State.set("Tab1ST.file.cachedStatus", State.get("Tab1ST.file.status"));
       const currentMode = State.get("Tab1ST.config.mode");
-      // UI変更箇所の定義
       const loadText = phase === TAB1_PHASE.INIT.val ? "データを取得" : "データを再取得";
-      const valdClass = phase === TAB1_PHASE.INVALID.val ? "action-btn" : "action-btn --sub";
-      // --- ファイル層UI適用 ---
-      DOM.setDOM(Tab1UI.fileValdBtn, undefined, valdClass);
+      const valdClass = phase === TAB1_PHASE.INVALID.val ? "btn-blue" : "btn-blue sub";
+      // ファイル層UI適用
+      DOM.get(Tab1UI.fileValdBtn).className = valdClass;
       DOM.setDOM(Tab1UI.fileLoadBtn, loadText);
       [Tab1UI.fileArea, Tab1UI.fileMakeBtn, Tab1UI.fileValdBtn].forEach(id => DOM.toggle(id, config.file.show));
-      DOM.setDisabled(Tab1UI.fileLoadBtn, false); // 常時有効
+      DOM.setDisabled(Tab1UI.fileLoadBtn, false);
       DOM.setDisabled(Tab1UI.fileMakeBtn, config.file.disableMake);
       DOM.setDisabled(Tab1UI.fileValdBtn, config.file.disableVald);
       DOM.open(Tab1UI.fileArea, State.get("Tab1ST.file.isMapError").some(Boolean));
       if (phase === TAB1_PHASE.LOAD.val) this.updateButtonsByMapError("file");
-      // --- 抽出層UI適用 ---
+      // 抽出層UI適用
       DOM.toggle(Tab1UI.exacBox, config.exac.showBox);
       DOM.toggle(Tab1UI.exacBar, config.exac.showBar);
       DOM.toggle(Tab1UI.exacPushBtn, config.exac.showPush);
       DOM.setDisabled(Tab1UI.exacBtn, config.exac.disableExac);
       DOM.setDisabled(Tab1UI.exacPushBtn, config.exac.disablePush);
       DOM.open(Tab1UI.exacBox, State.get("Tab1ST.exac.isMapError").some(Boolean));
-      // 特殊条件のステータス更新
+      // 特殊条件ステータス更新
       if (phase === TAB1_PHASE.VALID.val) {
         this.updateButtonsByMapError("exac");
         State.set("Tab1ST.exac.cachedStatus", ["loading", `${currentMode}でResultsを抽出します`]);
@@ -236,27 +204,20 @@
       }
     }
 
+    // --- Tab2 フェーズ連動UI更新 ---
     static updateTab2PhaseUI(phase) {
-      // 共通の有効化処理
       const isLoaded = phase >= TAB2_PHASE.LOADED.val;
       DOM.setDisabled(Tab2UI.datasetLoadBtn, false);
       DOM.setDisabled(Tab2UI.datasetfilterBtn, !isLoaded);
-
-      // アクション辞書
+      // 各層UI
       const actions = {
         [TAB2_PHASE.INIT.val]: () => DOM.open(Tab2UI.dataSetArea, false),
-        [TAB2_PHASE.LOADED.val]: () => {
-         DOM.open(Tab2UI.dataSetArea, true)
-         DOM.setDisabled(Tab2UI.datasetLoadBtn, false);
-         DOM.setDisabled(Tab2UI.datasetfilterBtn, false);
-        },
+        [TAB2_PHASE.LOADED.val]: () => { DOM.open(Tab2UI.dataSetArea, true); },
         [TAB2_PHASE.FILTERED.val]: () => {
           DOM.toggle(Tab2UI.symbolMapArea, true);
           DOM.open(Tab2UI.symbolMapArea, true);
-          // 軸選択の生成
           const opts = ['dataset', 'item', 'Group', 'Source'];
-          const field = [{ key: "symbolBaseKey", label: "分類軸" }];
-          this.renderSelectors(opts, Tab2UI.symbolAxisBox, field, false);
+          this.renderSelectors(opts, Tab2UI.symbolAxisBox, [{ key: "symbolBaseKey", label: "分類軸" }], false);
           // 初期値セット
           const select = DOM.get(Tab2UI.symbolAxisBox).querySelector("select");
           if (select) select.value = State.get("Tab2ST.symbol.baseKey");
@@ -268,7 +229,6 @@
           DOM.setDisabled(Tab2UI.symbolBtn, false);
         }
       };
-      // 該当フェーズ処理実行
       actions[phase]?.();
     }
 
@@ -277,12 +237,12 @@
       const container = DOM.get(objID);
       if (!container) return;
       if (!arr || arr.length === 0) {
-        container.innerHTML = '<div class="txt-note">データがありません</div>';
+        container.innerHTML = '<div class="txt-btninfo">データがありません</div>';
         return;
       }
       container.innerHTML = arr.map(item => `
-        <label style="display:flex; align-items:center; font-size:13px; margin-bottom:6px; cursor:pointer;">
-          <input type="checkbox" value="${item}" class="dataset-cb" style="margin-right:8px;" checked>
+        <label style="display:flex; align-items:center; margin-bottom:4px; cursor:pointer;">
+          <input type="checkbox" value="${item}" class="dataset-cb" style="margin-right: 8px;" checked>
           ${item}
         </label>
       `).join("");
@@ -294,13 +254,10 @@
       if (!box || !values) return;
       const shapes = ['circle', 'triangle', 'square'];
       const colors = [
-        { val: 'var(--primary-blue)', label: 'Blue' },
-        { val: 'var(--primary-green)', label: 'Green' },
-        { val: 'var(--primary-red)', label: 'Red' },
-        { val: 'var(--primary-yellow)', label: 'Yellow' },
+        { val: 'var(--primary-blue)', label: 'Blue' }, { val: 'var(--primary-green)', label: 'Green' },
+        { val: 'var(--primary-red)', label: 'Red' }, { val: 'var(--primary-yellow)', label: 'Yellow' },
         { val: 'var(--sub-color)', label: 'Gray' }
       ];
-      // 10行の空行を生成
       const rows = Array.from({ length: 10 });
       const selectConfigs = [
         { type: 'target', options: values.map(v => `<option value="${v}">${v}</option>`), hasDefault: true },
@@ -308,14 +265,12 @@
         { type: 'color',  options: colors.map(c => `<option value="${c.val}">${c.label}</option>`), hasDefault: false }
       ];
       box.innerHTML = rows.map((_, i) => `
-        <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+        <div style="display:flex; gap:4px; margin-bottom:6px; align-items:center;">
           ${selectConfigs.map(config => `
-            <div class="select-wrapper" style="flex:1;">
-              <select class="input-select" data-symbol-idx="${i}" data-symbol-type="${config.type}" style="padding: 4px 20px 4px 8px; font-size:13px;">
-                ${config.hasDefault ? '<option value="" selected>---未選択---</option>' : ''}
-                ${config.options.join('')}
-              </select>
-            </div>
+            <select data-symbol-idx="${i}" data-symbol-type="${config.type}" style="flex:1; padding:4px;">
+              ${config.hasDefault ? '<option value="" selected>未選択</option>' : ''}
+              ${config.options.join('')}
+            </select>
           `).join('')}
         </div>
       `).join("");
