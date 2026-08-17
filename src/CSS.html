@@ -1,145 +1,137 @@
 <!-- CSS.html -->
-<!-- Oat UI CDN -->
+<!-- Oat.UI CDN -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@knadh/oat@latest/oat.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@knadh/oat@latest/oat.min.js"></script>
 
 <style>
-  /* --- トークン定義 --- */
+  /* --- カラー設定 --- */
   :root {
-    --primary-blue: #1a73e8;
-    --primary-green: #34a853;
-    --primary-red: #ea4335;
-    --primary-yellow: #fbbc05;
-    --sub-color: #5f6368;
-    --bg-white: #ffffff;
-    --bg-hover: #f8f8f8;
+    --main-blue: #1a73e8;
+    --main-green: #34a853;
+    --main-red: #ea4335;
+    --grey600: #546e7a;
   }
 
   /* --- 基本レイアウト --- */
+  * { box-sizing: border-box; }
   body { 
-    padding: 8px 12px;
     display: grid; 
     grid-template-rows: auto 1fr; 
     height: 100vh; 
     overflow: hidden;
+    font-family: 'Roboto', 'Noto Sans JP', sans-serif;
+    font-size: 13px;
   }
-  main {
-    overflow-y: auto;
-    padding-right: 4px;
-    padding-bottom: 20px;
+  main { 
+    overflow-y: auto; 
+    padding: 12px; 
   }
-  .flex-row { 
-    display: flex; 
-    gap: 4px;
-    align-items: center; 
-    margin-top: 6px;
-  }
-  .mt-2 { margin-top: 8px; }
-  .txt-btninfo { font-size: 11px; color: var(--sub-color); }
-  hr { margin: 12px 0; border: none; border-top: 1px solid #eaeaea; }
+  fieldset { border: none; padding: 0; }
+  .flex-row { display: flex; align-items: center; gap: 0; }
+  .txt-btninfo { font-size: 11px; color: var(--grey600); margin-left: 8px; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
 
-  /* --- タブナビゲーション --- */
-  .nav-tabs { 
-    display: flex; 
-    border-bottom: 1px solid #ccc; 
-    margin-bottom: 8px; 
-  }
+  /* --- ナビゲーション --- */
+  .nav-tabs { display: flex; border-bottom: 1px solid #ccc; }
   .tab-btn { 
     background: none; 
     border: none; 
-    cursor: pointer; 
-    flex: 1; 
-    padding: 6px 12px;
-    font-weight: 600; 
-    color: var(--sub-color); 
     border-radius: 0;
-    font-size: 14px;
+    color: var(--grey600); 
+    flex: 1; 
+    font-weight: 600; 
+    cursor: pointer; 
   }
   .tab-btn.active { 
-    color: var(--primary-blue); 
-    border-bottom: 2px solid var(--primary-blue); 
+    border-bottom: 2px solid currentColor; 
+    &.blue { color: var(--main-blue); }
+    &.green { color: var(--main-green); }
   }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
-  /* --- コンテンツ要素 --- */
-  .map-content {
-    display: flex; 
-    flex-direction: column; 
-    gap: 2px !important;
-    margin-top: 2px !important;
+  /* --- フォームコントロール --- */
+  label { display: block; }
+  input, select { width: 100%; font-size: 13px; 
+    &:hover:not(:disabled) { border-color: var(--main-blue); }
+    &:focus, &:focus-visible {
+      border-color: var(--main-blue);
+      outline: none;
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--main-blue) 20%, transparent);
+    }
   }
-  .map-content label {
-    margin-bottom: 2px !important;
+  details { padding: 0; margin: 0;
+    & select, & input, & label { margin: 0; }
   }
-  .map-content input, select {
-    margin-bottom: 2px !important;
-    padding: 0px 4px !important;
-  }
-
-  /* --- フォーム要素 --- */
-  label {
-    font-size: 13px;
-    display: block;
-    margin-bottom: 2px;
-  }
-  input, select {
-    width: 100%;
-    padding: 4px 6px;
-    font-size: 13px;
-    height: auto; 
-    box-sizing: border-box;
-  }
-  details { margin-top: 8px; }
-  summary {
-    font-size: 13px;
-    padding: 6px;
-    color: var(--sub-color);
-  }
+  summary { color: var(--grey600); cursor: pointer; padding: 8px;  margin-bottom: 2px; }
 
   /* --- ボタンレイアウト --- */
   .btn-container {
     display: flex;
-    gap: 4px;
-    margin-top: 8px;
     width: 100%;
+    gap: 6px;
+    margin: 8px auto;
+    & > button {
+      flex: 1;
+      font-size: 13px;
+      cursor: pointer;
+    }
   }
-  .btn-container > button {
-    flex: 1; 
-    padding: 6px;
-    font-size: 13px;
-  }
-  .btn-container > button:only-child {
-    flex: 0 0 50%; 
+  /* --- ボタン (Oat.UI仕様拡張) --- */
+  button {
+    &.outline:disabled,
+    &[data-variant].outline:disabled {
+      color: var(--grey600);
+      border-color: var(--grey600);
+    }
+    &[data-variant="blue"] {
+      background-color: var(--main-blue);
+      border-color: var(--main-blue);
+      color: #fff;
+      &:hover:not(:disabled) {
+        background-color: color-mix(in srgb, var(--main-blue) 85%, #000);
+      }
+      &.outline {
+        background-color: transparent;
+        color: var(--main-blue);
+        &:hover:not(:disabled) {
+          background-color: color-mix(in srgb, var(--main-blue) 10%, transparent);
+        }
+      }
+    }
+    &[data-variant="green"] {
+      background-color: var(--main-green);
+      border-color: var(--main-green);
+      color: #fff;
+      &:hover:not(:disabled) {
+        background-color: color-mix(in srgb, var(--main-green) 85%, #000);
+      }
+      &.outline {
+        background-color: transparent;
+        color: var(--main-green);
+        &:hover:not(:disabled) {
+          background-color: color-mix(in srgb, var(--main-green) 10%, transparent);
+        }
+      }
+    }
   }
 
-  /* --- ボタンカラー定義 --- */
-  button.btn-blue { background-color: var(--primary-blue); color: white; border: 1px solid var(--primary-blue); }
-  button.btn-green { background-color: var(--primary-green); color: white; border: 1px solid var(--primary-green); }
-  
-  /* サブ(アウトライン)スタイル */
-  button.sub { background-color: transparent; border-width: 1.5px; }
-  button.btn-blue.sub { color: var(--primary-blue); }
-  button.btn-green.sub { color: var(--primary-green); }
-
-  /* 無効状態 */
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  /* --- ダイアログスタイル --- */
-  dialog {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    max-width: 260px;
-    width: 100%;
+  /* --- モーダルダイアログのレイアウト統一 --- */
+  dialog { 
+    width: 280px;
+    padding: 20px;
   }
-  /* 背面の暗転 */
-  dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
-  dialog h3 {
-    margin-top: 0;
-    margin-bottom: 12px;
-    font-size: 15px;
-    color: #333;
+  dialog h3,
+  dialog p,
+  dialog .btn-container {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
   }
+  dialog .btn-container {
+    margin-top: 16px;
+    margin-bottom: 0;
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.3); }
 </style>

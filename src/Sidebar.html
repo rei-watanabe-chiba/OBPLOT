@@ -8,15 +8,14 @@
   <body>
     <!-- ナビゲーション -->
     <nav class="nav-tabs" id="nav">
-      <button class="tab-btn active" data-target="tab1">Data</button>
-      <button class="tab-btn" data-target="tab2" style="color: var(--primary-green);">Chart</button>
+      <button class="tab-btn active blue" data-target="tab1">Data</button>
+      <button class="tab-btn green" data-target="tab2">Chart</button>
     </nav>
 
     <main>
       <!-- 第1タブ -->
       <div id="tab1" class="tab-content active">
-        <fieldset id="tab1Fieldset" style="border: none; padding: 0;">
-          
+        <fieldset id="tab1Fieldset">
           <div id="configAreaContainer">
             <label>モード選択
               <select id="configExacMode" data-field="configExacMode">
@@ -24,37 +23,34 @@
                 <option value="Single">Singleモード</option>
               </select>
             </label>
-            <div id="configStatusBar" class="mt-2"></div>
+            <div id="configStatusBar"></div>
           </div>
           <hr>
           
           <div id="fileAreaContainer">
             <div class="flex-row">
-              <button id="fileLoadBtn" class="btn-blue" onclick="Ctrl.loadFile()">データを取得</button>
+              <button id="fileLoadBtn" data-variant="blue" onclick="Ctrl.loadFile()">データを取得</button>
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
-            <div id="fileStatusBar" class="mt-2"></div>
-            
-            <details id="fileMapArea" style="display: none;" class="map-content">
+            <div id="fileStatusBar"></div>
+            <details id="fileMapArea" style="display: none;">
               <summary>列を選択する</summary>
               <div id="fileMapBox"></div>
             </details>
-            
-            <div id="fileBtnArea" class="btn-container">
-              <button id="fileMakeBtn" class="btn-blue sub" style="display: none;" onclick="Ctrl.makeFileList()" disabled>リスト生成</button>
-              <button id="fileValdBtn" class="btn-blue sub" style="display: none;" onclick="Ctrl.validateFileList()" disabled>検証</button>
+            <div id="fileBtnArea" class="btn-container" style="display: none;">
+              <button id="fileMakeBtn" data-variant="blue" class="outline" onclick="Ctrl.makeFileList()" disabled>リスト生成</button>
+              <button id="fileValdBtn" data-variant="blue" class="outline" onclick="Ctrl.validateFileList()" disabled>検証</button>
             </div>
           </div>
           <hr>
           
           <div id="extractAreaContainer">
             <div class="flex-row">
-              <button id="exacBtn" class="btn-blue" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
+              <button id="exacBtn" data-variant="blue" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
               <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
             </div>
-            <div id="exacStatusBar" class="mt-2"></div>
-            
-            <details id="exacMapBox" style="display: none;" class="map-content">
+            <div id="exacStatusBar"></div>
+            <details id="exacMapBox" style="display: none;">
               <summary>データ属性</summary>
               <div>
                 <label>dataset *必須
@@ -68,9 +64,8 @@
                 </label>
               </div>
             </details>
-            
             <div id="exacBtnArea" class="btn-container">
-              <button id="exacPushBtn" class="btn-blue sub" style="display: none;" onclick="Ctrl.pushExacData()" disabled>PXRFに格納</button>
+              <button id="exacPushBtn" data-variant="blue" class="outline" style="display: none;" onclick="Ctrl.pushExacData()" disabled>PXRFに格納</button>
             </div>
           </div>
         </fieldset>
@@ -78,38 +73,38 @@
 
       <!-- 第2タブ -->
       <div id="tab2" class="tab-content">
-        <fieldset id="tab2Fieldset" style="border: none; padding: 0;">
+        <fieldset id="tab2Fieldset">
           <div id="datasetAreaContainer">
             <label>可視化データ設定</label>
             <div class="btn-container">
-              <button id="datasetLoadBtn" class="btn-green" onclick="Ctrl.getTab2Data('load')">読込</button>
-              <button id="datasetFilterBtn" class="btn-green sub" onclick="Ctrl.getTab2Data('filter')" disabled>確定/更新</button>
+              <button id="datasetLoadBtn" data-variant="green" onclick="Ctrl.getTab2Data('load')">読込</button>
+              <button id="datasetFilterBtn" data-variant="green" class="outline" onclick="Ctrl.getTab2Data('filter')" disabled>確定/更新</button>
             </div>
-            <div id="datasetLoadBar" class="mt-2"></div>
+            <div id="datasetLoadBar"></div>
             
             <details id="dataSetArea">
               <summary>dataset選択</summary>
-              <div id="dataSetBOX" style="max-height: 120px; overflow-y: auto; padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-top: 4px;"></div>
+              <div id="dataSetBOX"></div>
             </details>
           </div>
           <hr>
 
           <div id="symbolAreaContainer">
             <div class="btn-container">
-              <button id="symbolBtn" class="btn-green" onclick="Ctrl.confirmSymbolMapping()" disabled>シンボル確定</button>
+              <button id="symbolBtn" data-variant="green" onclick="Ctrl.confirmSymbolMapping()" disabled>シンボル確定</button>
             </div>
             <details id="symbolMapArea" style="display: none;">
               <summary>マーカー設定 (シンボルマッピング)</summary>
-              <div id="symbolAxisBox" style="margin-bottom: 8px;"></div>
+              <div id="symbolAxisBox"></div>
               <div id="symbolMapBox"></div>
             </details>
           </div> 
           <hr>
           
           <div class="btn-container">
-            <button id="reportOpenBtn" class="btn-green" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
+            <button id="reportOpenBtn" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
           </div>
-          <div id="reportStatusBar" class="mt-2"></div>
+          <div id="reportStatusBar"></div>
         </fieldset>
       </div>
     </main>
@@ -117,10 +112,10 @@
     <!-- HTML5 Native Dialog -->
     <dialog id="universalConfirm">
       <h3 id="uDialogTitle">確認</h3>
-      <p id="uDialogMessage" style="margin: 12px 0; font-size: 13px;"></p>
+      <p id="uDialogMessage"></p>
       <div class="btn-container">
-        <button id="uDialogCancelBtn" class="btn-blue sub">キャンセル</button>
-        <button id="uDialogConfirmBtn" class="btn-blue">OK</button>
+        <button id="uDialogCancelBtn" data-variant="blue" class="outline">キャンセル</button>
+        <button id="uDialogConfirmBtn" data-variant="blue">OK</button>
       </div>
     </dialog>
 

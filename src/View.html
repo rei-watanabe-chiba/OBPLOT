@@ -82,19 +82,17 @@
     static loadingStatsBar(id, status = null) {
       const el = DOM.get(id);
       if (!el) return;
-      let isError = false, text = "処理中...", showProgress = true;
+      let isError = false, text = "処理中...";
       if (status) {
         const className = status[0];
         text = status[1];
-        showProgress = (className === "loading");
         isError = (className === "error" || className === "alert");
       }
       // OatUI仕様のDOM構築
       el.innerHTML = `
-        <div style="font-size: 13px; font-weight: 500; color: ${isError ? 'var(--primary-red)' : 'inherit'}; margin-bottom: 6px;">
+        <div style="font-size: 13px; font-weight: 500; color: ${isError ? 'var(--main-red)' : 'inherit'}; margin-bottom: 6px;">
           ${text}
         </div>
-        ${showProgress ? '<progress style="width: 100%;"></progress>' : ''}
       `;
     }
 
@@ -143,8 +141,8 @@
       const selectors = mapBox?.querySelectorAll('select, input');
       selectors?.forEach((s, idx) => {
         if (errorFlags?.[idx]) {
-          s.style.borderColor = 'var(--primary-red)';
-          s.style.backgroundColor = 'color-mix(in srgb, var(--primary-red) 10%, #fff)';
+          s.style.borderColor = 'var(--main-red)';
+          s.style.backgroundColor = 'color-mix(in srgb, var(--main-red) 10%, #fff)';
         } else {
           s.style.borderColor = '';
           s.style.backgroundColor = '';
@@ -165,11 +163,11 @@
       State.set("Tab1ST.file.cachedStatus", State.get("Tab1ST.file.status"));
       const currentMode = State.get("Tab1ST.config.mode");
       const loadText = phase === TAB1_PHASE.INIT.val ? "データを取得" : "データを再取得";
-      const valdClass = phase === TAB1_PHASE.INVALID.val ? "btn-blue" : "btn-blue sub";
+      const valdClass = phase === TAB1_PHASE.INVALID.val ? "" : "outline";
       // ファイル層UI適用
       DOM.get(Tab1UI.fileValdBtn).className = valdClass;
       DOM.setDOM(Tab1UI.fileLoadBtn, loadText);
-      [Tab1UI.fileArea, Tab1UI.fileMakeBtn, Tab1UI.fileValdBtn].forEach(id => DOM.toggle(id, config.file.show));
+      [Tab1UI.fileArea, Tab1UI.fileBtnBox].forEach(id => DOM.toggle(id, config.file.show));
       DOM.setDisabled(Tab1UI.fileLoadBtn, false);
       DOM.setDisabled(Tab1UI.fileMakeBtn, config.file.disableMake);
       DOM.setDisabled(Tab1UI.fileValdBtn, config.file.disableVald);
@@ -254,9 +252,9 @@
       if (!box || !values) return;
       const shapes = ['circle', 'triangle', 'square'];
       const colors = [
-        { val: 'var(--primary-blue)', label: 'Blue' }, { val: 'var(--primary-green)', label: 'Green' },
-        { val: 'var(--primary-red)', label: 'Red' }, { val: 'var(--primary-yellow)', label: 'Yellow' },
-        { val: 'var(--sub-color)', label: 'Gray' }
+        { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' },
+        { val: 'var(--main-red)', label: 'Red' }, { val: 'var(--main-yellow)', label: 'Yellow' },
+        { val: 'var(--grey600)', label: 'Gray' }
       ];
       const rows = Array.from({ length: 10 });
       const selectConfigs = [
