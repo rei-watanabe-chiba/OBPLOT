@@ -150,33 +150,27 @@
       const config = {
         [TAB1_PHASE.INIT.val]: { 
           file: { showArea: false, disableMake: true, disableVald: true, secOpen: false, secDisabled: "disabled" }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" },
-          conf: { secOpen: true }
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" }
         },
         [TAB1_PHASE.READY.val]: { 
           file: { showArea: false, disableMake: true, disableVald: true, secOpen: true, secDisabled: null }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" },
-          conf: { secOpen: false }
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" }
         },
         [TAB1_PHASE.LOAD.val]: { 
           file: { showArea: true, disableMake: false, disableVald: true, secOpen: true, secDisabled: null }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" },
-          conf: { secOpen: false }
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" }
         },
         [TAB1_PHASE.INVALID.val]: { 
           file: { showArea: true, disableMake: false, disableVald: false, secOpen: true, secDisabled: null }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" },
-          conf: { secOpen: false }
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" }
         },
         [TAB1_PHASE.VALID.val]: { 
           file: { showArea: true, disableMake: false, disableVald: false, secOpen: false, secDisabled: null }, 
-          exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true, secOpen: true, secDisabled: null },
-          conf: { secOpen: false }
+          exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true, secOpen: true, secDisabled: null }
         },
         [TAB1_PHASE.EXTRACT.val]: { 
           file: { showArea: true, disableMake: false, disableVald: false, secOpen: false, secDisabled: null }, 
-          exac: { showBox: true, showBar: true, showPush: true, disableExac: false, disablePush: false, secOpen: true, secDisabled: null },
-          conf: { secOpen: false }
+          exac: { showBox: true, showBar: true, showPush: true, disableExac: false, disablePush: false, secOpen: true, secDisabled: null }
         }
       }[phase];
       
@@ -201,7 +195,6 @@
       DOM.setDisabled(Tab1UI.exacPushBtn, config.exac.disablePush);
 
       // Section開閉・無効化制御
-      DOM.open(Tab1UI.configSection, config.conf.secOpen);
       DOM.open(Tab1UI.fileSection, config.file.secOpen);
       DOM.open(Tab1UI.exacSection, config.exac.secOpen);
       DOM.setAttribute(Tab1UI.fileSection, "data-type", config.file.secDisabled);

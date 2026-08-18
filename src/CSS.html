@@ -78,6 +78,10 @@
     color: var(--theme-color);
     border-bottom: 2px solid currentColor; 
   }
+  .tab-content { 
+    display: none; 
+    &.active { display: block; }
+  }
 
   /* --- フォーム --- */
   label { 
@@ -240,7 +244,7 @@
   .status-bar[data-status="loading"],
   .status-bar[data-status="message"] {
     background-color: transparent;
-    border-color: var(--grey200);
+    border-color: transparent;
     color: var(--grey600);
   }
   .status-bar[data-status="success"] {

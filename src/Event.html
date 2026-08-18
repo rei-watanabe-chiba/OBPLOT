@@ -95,7 +95,7 @@
       this.switchTab(State.get("GLB.activeTab"));
       State.set({
         "GLB.isLocked": true, 
-        "Tab1ST.config.status": ["alert", "初期設定中..."],
+        "Tab1ST.config.status": ["loading", "初期設定中..."],
         "Tab1ST.phase": TAB1_PHASE.INIT.val
       });
       // グローバル読込
@@ -105,7 +105,10 @@
       } catch (err) {
         State.set("Tab1ST.config.status", ["error", "エラー: GAS通信エラー"]);
       } finally {
-        State.set("GLB.isLocked", false);
+        State.set({
+          "GLB.isLocked": false, 
+          "Tab1ST.config.status": ["hidden", ""]
+        });
       }
       document.addEventListener("click", e => {
         const tabId = e.target?.dataset?.target;

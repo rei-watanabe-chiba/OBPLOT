@@ -16,6 +16,7 @@
       <!-- 第1タブ -->
       <div id="tab1" class="tab-content active">
         <fieldset id="tab1Fieldset">
+          <!-- 設定層 -->
           <details id="configSection" open>
             <summary>設定</summary>
             <div id="configArea">
@@ -24,18 +25,17 @@
                 <option value="Dual">Dualモード</option>
                 <option value="Single">Singleモード</option>
               </select>
-              <div id="configStatusBar" class="status-bar" data-status="hidden"></div>
             </div>
+            <div id="configStatusBar" class="status-bar" data-status="hidden"></div>
           </details>
           <hr>
-          
+          <!-- ファイル層 -->
           <details id="fileSection" data-type="disabled">
             <summary>読込と検証</summary>
             <div class="flex-row">
               <button id="fileLoadBtn" data-type="primary" onclick="Ctrl.loadFile()">データを取得</button>
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
-            <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
             <div id="fileArea" style="display: none;">
               <label>列選択</label>
               <div id="fileBox"></div>
@@ -45,15 +45,15 @@
               <button id="fileValdBtn" data-type="primary" class="outline" onclick="Ctrl.validateFileList()" disabled>検証</button>
             </div>
           </details>
+          <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
           <hr>
-          
+          <!-- 抽出層 -->
           <details id="exacSection" data-type="disabled">
             <summary>抽出と格納</summary>
             <div class="flex-row">
               <button id="exacBtn" data-type="primary" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
               <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
             </div>
-            <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
             <div id="exacArea" style="display: none;">
               <label>データ属性</label>
               <div id="exacBox">
@@ -72,6 +72,7 @@
               <button id="exacPushBtn" data-type="primary" class="outline" style="display: none;" onclick="Ctrl.pushExacData()" disabled>PXRFに格納</button>
             </div>
           </details>
+          <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
         </fieldset>
       </div>
 
