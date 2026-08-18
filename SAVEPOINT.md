@@ -6,7 +6,7 @@
 - **描画エンジン**: Google Visualization API (CoreChart: ScatterChart)
 - **アーキテクチャ**: SPA型 MVMSアーキテクチャ (Model, View, Method, Service)
 - **状態管理**: `AppState` クラスによる Observer（Pub/Sub）パターン。`APP_PHASE` 定数によるフェーズの一元管理。
-- **UI思想**: Google Material Design準拠、CSS Gridレイアウト、モダンなコンポーネントの活用。
+- **UI思想**: Google Material Design準拠、CSS Gridレイアウト、固定カラーパレット。
 - **通信方式**: `google.script.run` を Promise 化してラップ。async/await による厳密な非同期制御。
 - **レポート展開方式**: `Report.html` をGASバックエンド経由で取得し、Blob URLを生成してデプロイ不要で別タブに描画。
 
@@ -23,11 +23,7 @@
 
 ## 3. 次の開発作業
 - Tab2開発に向けて設計書（ECS）のブラッシュアップと論理構成の確認は一時停止する
-- 機能開発はいったん中断し、既存コードのUIのモダン化を優先する
-- 現在の課題: ステータスバーの改修
+- 機能開発はいったん中断し、既存コードのリファクタリングを行う
 
-## 4. UIのモダン化のアプローチ
-- **ブランドカラーの完全維持**: 既存のカラーパレットをCSS変数として堅持し、モダンUIのデザインに調和させる。
+## 4. リファクタリングの注意点
 - **イベント・状態連動の保護**: フォームコントロールのスタイルや構造変更時も、`querySelector` や `dataset.field` などのセレクタ依存部を維持し、リアルタイム変更検知を損なわない。
-- **CSSの保守性維持**: 保守性と可読性を高めるために、paddingやmarginの設定を可能な限り集約・共通化させる。ネスト構文を用いてモダンな記述をする。
-- **300pxサイドバーに調和したUI**: 文字サイズ、gap、padding、marginを縦長の300pxサイドバーと調和させる。
