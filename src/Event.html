@@ -12,7 +12,7 @@
     // --- 設定エリアイベント ---
     static processConfigArea() {
       const selectMode = DOM.get(Tab1UI.configArea)?.querySelector('[data-field="configExacMode"]')?.value;
-      const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "単純抽出";
+      const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
       const currentPhase = State.get("Tab1ST.phase");
       const currentMode = State.get("Tab1ST.config.mode");
       // モード変更判定
@@ -24,7 +24,7 @@
       }
       State.set({
         "Tab1ST.config.mode": selectMode,
-        "Tab1ST.config.status": ["", modeText]
+        "Tab1ST.config.status": ["message", modeText]
       });
     }
 

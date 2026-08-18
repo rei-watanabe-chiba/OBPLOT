@@ -43,6 +43,8 @@
       // 実行確認
       if (State.get("Tab1ST.file.data")) {
         if(!(await UI.confirm("確認", "内部データをリセットしますか？", Tab1UI.fileBar))) return;
+      } else {
+        if(!(await UI.confirm("確認", "Fileシートを読み込みますか？", Tab1UI.fileBar))) return;
       }
       await this.withAsyncLock("Tab1ST.file", async () => {
         const global = State.get("GLB.cachedGlobal");

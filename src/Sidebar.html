@@ -17,13 +17,12 @@
       <div id="tab1" class="tab-content active">
         <fieldset id="tab1Fieldset">
           <div id="configMapArea">
-            <label>モードを選択
-              <select id="configExacMode" data-field="configExacMode">
-                <option value="Dual">Dualモード</option>
-                <option value="Single">Singleモード</option>
-              </select>
-            </label>
-            <div id="configStatusBar"></div>
+            <label>モードを選択</label>
+            <select id="configExacMode" data-field="configExacMode">
+              <option value="Dual">Dualモード</option>
+              <option value="Single">Singleモード</option>
+            </select>
+            <div id="configStatusBar" class="status-bar" data-status="hidden"></div>
           </div>
           <hr>
           
@@ -32,7 +31,7 @@
               <button id="fileLoadBtn" data-type="blue" onclick="Ctrl.loadFile()">データを取得</button>
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
-            <div id="fileStatusBar"></div>
+            <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
             <details id="fileMapArea" style="display: none;">
               <summary>列選択</summary>
               <div id="fileMapBox"></div>
@@ -49,7 +48,7 @@
               <button id="exacBtn" data-type="blue" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
               <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
             </div>
-            <div id="exacStatusBar"></div>
+            <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
             <details id="exacMapBox" style="display: none;">
               <summary>データ属性</summary>
               <div>
@@ -80,7 +79,7 @@
               <button id="datasetLoadBtn" data-type="green" onclick="Ctrl.getTab2Data('load')">読込</button>
               <button id="datasetFilterBtn" data-type="green" class="outline" onclick="Ctrl.getTab2Data('filter')" disabled>確定/更新</button>
             </div>
-            <div id="datasetLoadBar"></div>
+            <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
             
             <details id="dataSetArea">
               <summary>dataset選択</summary>
@@ -90,6 +89,7 @@
           <hr>
 
           <div id="symbolAreaContainer">
+            <label>シンボルを設定</label>
             <div class="btn-container">
               <button id="symbolBtn" data-type="green" onclick="Ctrl.confirmSymbolMapping()" disabled>シンボル確定</button>
             </div>
@@ -104,7 +104,7 @@
           <div class="btn-container">
             <button id="reportOpenBtn" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
           </div>
-          <div id="reportStatusBar"></div>
+          <div id="reportStatusBar" class="status-bar" data-status="hidden"></div>
         </fieldset>
       </div>
     </main>
