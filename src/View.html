@@ -64,7 +64,7 @@
     handle_Tab2ST_symbol_baseKey(newKey) {
       const baseData = State.get("Tab2ST.basePXRF") ?? [];
       const uniqueVals = [...new Set(baseData.map(d => d[newKey]).filter(Boolean))];
-      UIController.renderSymbolRows(uniqueVals, Tab2UI.symbolMapBox);
+      UIController.renderSymbolRows(uniqueVals, Tab2UI.symbolBox);
     }
   }
 
@@ -161,16 +161,16 @@
       DOM.open(Tab1UI.fileArea, State.get("Tab1ST.file.isMapError").some(Boolean));
       if (phase === TAB1_PHASE.LOAD.val) this.updateButtonsByMapError("file");
       // 抽出層UI適用
-      DOM.toggle(Tab1UI.exacBox, config.exac.showBox);
+      DOM.toggle(Tab1UI.exacArea, config.exac.showBox);
       DOM.toggle(Tab1UI.exacBar, config.exac.showBar);
       DOM.toggle(Tab1UI.exacPushBtn, config.exac.showPush);
       DOM.setDisabled(Tab1UI.exacBtn, config.exac.disableExac);
       DOM.setDisabled(Tab1UI.exacPushBtn, config.exac.disablePush);
-      DOM.open(Tab1UI.exacBox, State.get("Tab1ST.exac.isMapError").some(Boolean));
+      DOM.open(Tab1UI.exacArea, State.get("Tab1ST.exac.isMapError").some(Boolean));
       // 特殊条件ステータス更新
       if (phase === TAB1_PHASE.VALID.val) {
         this.updateButtonsByMapError("exac");
-        State.set("Tab1ST.exac.cachedStatus", ["message", `${currentMode}モードでResultsを抽出します`]);
+        State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
       } else if (phase === TAB1_PHASE.EXTRACT.val) {
         State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.file.status"));
       }
@@ -196,22 +196,18 @@
       DOM.setDisabled(Tab2UI.datasetfilterBtn, !isLoaded);
       // 各層UI
       const actions = {
-        [TAB2_PHASE.INIT.val]: () => DOM.open(Tab2UI.dataSetArea, false),
-        [TAB2_PHASE.LOADED.val]: () => { DOM.open(Tab2UI.dataSetArea, true); },
+        [TAB2_PHASE.INIT.val]: () => DOM.open(Tab2UI.datasetArea, false),
+        [TAB2_PHASE.LOADED.val]: () => { DOM.open(Tab2UI.datasetArea, true); },
         [TAB2_PHASE.FILTERED.val]: () => {
-          DOM.toggle(Tab2UI.symbolMapArea, true);
-          DOM.open(Tab2UI.symbolMapArea, true);
-          const opts = ['dataset', 'item', 'Group', 'Source'];
-          this.renderSelectors(opts, Tab2UI.symbolAxisBox, [{ key: "symbolBaseKey", label: "分類軸" }], false);
-          // 初期値セット
-          const select = DOM.get(Tab2UI.symbolAxisBox).querySelector("select");
-          if (select) select.value = State.get("Tab2ST.symbol.baseKey");
+          DOM.toggle(Tab2UI.symbolArea, true);
+          DOM.open(Tab2UI.symbolArea, true);
+          DOM.setDisabled(Tab2UI.symbolAxis, false);
+          DOM.setDisabled(Tab2UI.symbolBtn, false);
           // マッピング行の生成
           const baseData = State.get("Tab2ST.basePXRF") ?? [];
           const baseKey = State.get("Tab2ST.symbol.baseKey");
           const uniqueVals = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
-          this.renderSymbolRows(uniqueVals, Tab2UI.symbolMapBox);
-          DOM.setDisabled(Tab2UI.symbolBtn, false);
+          this.renderSymbolRows(uniqueVals, Tab2UI.symbolBox);
         }
       };
       actions[phase]?.();

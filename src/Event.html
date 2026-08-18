@@ -66,16 +66,16 @@
       // アクション割当
       const actionMap = {
         [Tab1UI.configArea]: () => this.processConfigArea(),
-        [Tab1UI.fileArea]: () => {
+        [Tab1UI.fileBox]: () => {
           State.set("Tab1ST.file.map", { ...State.get("Tab1ST.file.map"), [fieldKey]: target.value });
           this.processFileArea();
         },
-        [Tab1UI.exacArea]: () => this.processExacArea(),
-        [Tab2UI.symbolMapArea]: () => { if (fieldKey === "symbolBaseKey") State.set("Tab2ST.symbol.baseKey", target.value);}
+        [Tab1UI.exacBox]: () => this.processExacArea(),
+        [Tab2UI.symbolAxis]: () => { if (fieldKey === "symbolBaseKey") State.set("Tab2ST.symbol.baseKey", target.value); },
+        [Tab2UI.symbolBox]: () => {}
       };
-      Object.entries(actionMap).some(([id, action]) => target.closest(`#${id}`) && (action(), true));
+      Object.entries(actionMap).some(([id, action]) => (target.id === id || target.closest(`#${id}`)) && (action(), true));
     }
-
     // --- 初期化処理 ---
     static async init() {
       this.switchTab(State.get("GLB.activeTab"));

@@ -16,8 +16,8 @@
       <!-- 第1タブ -->
       <div id="tab1" class="tab-content active">
         <fieldset id="tab1Fieldset">
-          <div id="configMapArea">
-            <label>モードを選択</label>
+          <div id="configArea">
+            <label>モード選択</label>
             <select id="configExacMode" data-field="configExacMode">
               <option value="Dual">Dualモード</option>
               <option value="Single">Singleモード</option>
@@ -26,46 +26,42 @@
           </div>
           <hr>
           
-          <div id="fileAreaContainer">
-            <div class="flex-row">
-              <button id="fileLoadBtn" data-type="blue" onclick="Ctrl.loadFile()">データを取得</button>
-              <span class="txt-btninfo">読込シート「File」</span>
-            </div>
-            <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
-            <details id="fileMapArea" style="display: none;">
-              <summary>列選択</summary>
-              <div id="fileMapBox"></div>
-            </details>
-            <div id="fileBtnArea" class="btn-container" style="display: none;">
-              <button id="fileMakeBtn" data-type="blue" class="outline" onclick="Ctrl.makeFileList()" disabled>リスト生成</button>
-              <button id="fileValdBtn" data-type="blue" class="outline" onclick="Ctrl.validateFileList()" disabled>検証</button>
-            </div>
+          <div class="flex-row">
+            <button id="fileLoadBtn" data-type="blue" onclick="Ctrl.loadFile()">データを取得</button>
+            <span class="txt-btninfo">読込シート「File」</span>
+          </div>
+          <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
+          <details id="fileArea" style="display: none;">
+            <summary>列選択</summary>
+            <div id="fileBox"></div>
+          </details>
+          <div id="fileBtnArea" class="btn-container" style="display: none;">
+            <button id="fileMakeBtn" data-type="blue" class="outline" onclick="Ctrl.makeFileList()" disabled>リスト生成</button>
+            <button id="fileValdBtn" data-type="blue" class="outline" onclick="Ctrl.validateFileList()" disabled>検証</button>
           </div>
           <hr>
           
-          <div id="extractAreaContainer">
-            <div class="flex-row">
-              <button id="exacBtn" data-type="blue" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
-              <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
+          <div class="flex-row">
+            <button id="exacBtn" data-type="blue" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
+            <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
+          </div>
+          <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
+          <details id="exacArea" style="display: none;">
+            <summary>データ属性</summary>
+            <div id="exacBox">
+              <label>dataset *必須
+                <input type="text" data-field="dataset" placeholder="データセット・遺跡名">
+              </label>
+              <label>item
+                <input type="text" data-field="item" placeholder="計測情報（任意）">
+              </label>
+              <label>date
+                <input type="text" data-field="date" placeholder="計測日（任意）">
+              </label>
             </div>
-            <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
-            <details id="exacMapBox" style="display: none;">
-              <summary>データ属性</summary>
-              <div>
-                <label>dataset *必須
-                  <input type="text" data-field="dataset" placeholder="データセット・遺跡名">
-                </label>
-                <label>item
-                  <input type="text" data-field="item" placeholder="計測情報（任意）">
-                </label>
-                <label>date
-                  <input type="text" data-field="date" placeholder="計測日（任意）">
-                </label>
-              </div>
-            </details>
-            <div id="exacBtnArea" class="btn-container">
-              <button id="exacPushBtn" data-type="blue" class="outline" style="display: none;" onclick="Ctrl.pushExacData()" disabled>PXRFに格納</button>
-            </div>
+          </details>
+          <div id="exacBtnArea" class="btn-container">
+            <button id="exacPushBtn" data-type="blue" class="outline" style="display: none;" onclick="Ctrl.pushExacData()" disabled>PXRFに格納</button>
           </div>
         </fieldset>
       </div>
@@ -73,32 +69,32 @@
       <!-- 第2タブ -->
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset">
-          <div id="datasetAreaContainer">
-            <label>データを選択</label>
-            <div class="btn-container">
-              <button id="datasetLoadBtn" data-type="green" onclick="Ctrl.getTab2Data('load')">読込</button>
-              <button id="datasetFilterBtn" data-type="green" class="outline" onclick="Ctrl.getTab2Data('filter')" disabled>確定/更新</button>
-            </div>
-            <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
-            
-            <details id="dataSetArea">
-              <summary>dataset選択</summary>
-              <div id="dataSetBOX"></div>
-            </details>
+          <div class="btn-container">
+            <button id="datasetLoadBtn" data-type="green" onclick="Ctrl.getTab2Data('load')">データを読込</button>
+            <button id="datasetFilterBtn" data-type="green" class="outline" onclick="Ctrl.getTab2Data('filter')" disabled>データを確定</button>
           </div>
+          <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
+          
+          <details id="datasetArea">
+            <summary>dataset選択</summary>
+            <div id="datasetBox"></div>
+          </details>
           <hr>
 
-          <div id="symbolAreaContainer">
-            <label>シンボルを設定</label>
-            <div class="btn-container">
-              <button id="symbolBtn" data-type="green" onclick="Ctrl.confirmSymbolMapping()" disabled>シンボル確定</button>
-            </div>
-            <details id="symbolMapArea" style="display: none;">
-              <summary>マーカー設定 (シンボルマッピング)</summary>
-              <div id="symbolAxisBox"></div>
-              <div id="symbolMapBox"></div>
-            </details>
-          </div> 
+          <label>属性を選択</label>
+          <div class="btn-container">
+            <button id="symbolBtn" data-type="green" onclick="Ctrl.confirmSymbolMapping()" disabled>シンボル確定</button>
+          </div>
+          <select id="symbolAxis" data-field="symbolBaseKey" disabled>
+            <option value="dataset" selected>dataset</option>
+            <option value="item">item</option>
+            <option value="Group">Group</option>
+            <option value="Source">Source</option>
+          </select>
+          <details id="symbolArea" style="display: none;">
+            <summary>シンボル設定</summary>
+            <div id="symbolBox"></div>
+          </details>
           <hr>
           
           <div class="btn-container">

@@ -157,12 +157,12 @@
             "Tab2ST.phase": TAB2_PHASE.LOADED.val
           });
           const datasets = [...new Set(mergedPXRF.map(d => d.dataset).filter(Boolean))];
-          UI.renderCheckboxes(datasets, Tab2UI.dataSetBOX);
+          UI.renderCheckboxes(datasets, Tab2UI.datasetBox);
           State.set("Tab2ST.datasetload.status", ["success", `読込完了: dataset ${datasets.length}件`]);
         } 
         // 2. フィルタリングモード
         else if (mode === "filter") {
-          const container = DOM.get(Tab2UI.dataSetBOX);
+          const container = DOM.get(Tab2UI.datasetBox);
           const checkedVals = [...container.querySelectorAll('.dataset-cb:checked')].map(cb => cb.value);
           if (checkedVals.length === 0) throw new Error("Dataset未選択");
           const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
@@ -177,7 +177,7 @@
             "Tab2ST.correctionLogic": {}
           });
           State.set("Tab2ST.datasetload.status", ["success", "データ設定を更新しました"]);
-          DOM.open(Tab2UI.dataSetArea, false);
+          DOM.open(Tab2UI.datasetArea, false);
         }
       });
     }
@@ -185,7 +185,7 @@
     // --- Tab2 シンボルマッピング確定 ---
     static async confirmSymbolMapping() {
       await this.withAsyncLock("Tab2ST.symbol", async () => {
-        const box = DOM.get(Tab2UI.symbolMapBox);
+        const box = DOM.get(Tab2UI.symbolBox);
         if (!box) return;
         const mapping = {};
         // 設定値の取得と構築
