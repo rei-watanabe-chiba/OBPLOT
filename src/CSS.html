@@ -1,6 +1,6 @@
 <!-- CSS.html -->
 <style>
-  /* --- 1. カラーパレットとベース設定 --- */
+  /* --- カラーパレット --- */
   :root {
     --main-blue: #1A73E8;
     --main-blue-hover: #1F41B6;
@@ -15,6 +15,17 @@
     --bg-color-hover: #F5F5F5;
     --text-main: #202124;
     --transition-speed: 0.2s;
+    --theme-color: var(--main-blue);
+    --theme-hover: var(--main-blue-hover);
+  }
+  /* --- テーマ設定 --- */
+  body[data-theme="tab1"] {
+    --theme-color: var(--main-blue);
+    --theme-hover: var(--main-blue-hover);
+  }
+  body[data-theme="tab2"] {
+    --theme-color: var(--main-green);
+    --theme-hover: var(--main-green-hover);
   }
 
   /* --- 基本レイアウト --- */
@@ -64,13 +75,9 @@
     background-color: var(--bg-color-hover);
   }
   .tab-btn.active { 
-    color: var(--grey600);
+    color: var(--theme-color);
     border-bottom: 2px solid currentColor; 
   }
-  .tab-btn.active.blue { color: var(--main-blue); }
-  .tab-btn.active.green { color: var(--main-green); }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
 
   /* --- フォーム --- */
   label { 
@@ -94,20 +101,26 @@
     &:focus { box-shadow: none; outline: none; }
   }
 
-  /* --- アコーディオン --- */
+  /* --- アコーディオン (セクション管理) --- */
   details {
-    border: 1px solid var(--grey400);
-    border-radius: 4px;
-    padding: 6px 12px;
-    margin: 8px 0; 
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 4px 0; 
+    transition: opacity var(--transition-speed);
+  }
+  details[data-type="disabled"] {
+    pointer-events: none;
+    opacity: 0.5;
   }
   summary { 
     color: var(--text-main);
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer; 
     border-radius: 4px;
     transition: color var(--transition-speed);
-    padding: 3px 0px;  
+    padding: 6px 0;  
     user-select: none;
     list-style: none;
     display: flex;
@@ -124,10 +137,10 @@
       transform: rotate(45deg);
       transition: transform 0.2s ease;
     }
-    input, select { margin: 2px; }
   }
   details[open] summary {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
+    color: var(--theme-color);
     &::after { transform: rotate(-135deg); }
   }
 
@@ -148,10 +161,9 @@
     cursor: pointer;
     transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
     &:only-child { flex: 1 1 100%; }
-    &[data-type="blue"] { background-color: var(--main-blue); color: #fff; }
-    &[data-type="blue"]:hover:not(:disabled) { background-color: var(--main-blue-hover); }
-    &[data-type="green"] { background-color: var(--main-green); color: #fff; }
-    &[data-type="green"]:hover:not(:disabled) { background-color: var(--main-green-hover); }
+    /* テーマ変数連動 */
+    &[data-type="primary"] { background-color: var(--theme-color); color: #fff; }
+    &[data-type="primary"]:hover:not(:disabled) { background-color: var(--theme-hover); }
     &[data-type]:disabled {
       background-color: var(--grey200);
       color: #fff;
@@ -162,8 +174,7 @@
   button.outline {
     background-color: transparent;
     border: 1px solid currentColor;
-    &[data-type="blue"] { color: var(--main-blue); }
-    &[data-type="green"] { color: var(--main-green); }
+    &[data-type="primary"] { color: var(--theme-color); }
     &:disabled {
       background-color: transparent;
       color: var(--grey400);
@@ -222,7 +233,7 @@
     width: 14px;
     height: 14px;
     border: 2px solid var(--grey200);
-    border-top-color: var(--main-blue);
+    border-top-color: var(--theme-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }

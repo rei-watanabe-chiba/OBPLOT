@@ -5,102 +5,119 @@
     <base target="_top">
     <?!= include("CSS"); ?>
   </head>
-  <body>
+  <body data-theme="tab1">
     <!-- ナビゲーション -->
     <nav class="nav-tabs" id="nav">
-      <button class="tab-btn active blue" data-target="tab1">データ抽出</button>
-      <button class="tab-btn green" data-target="tab2">グラフ作成</button>
+      <button class="tab-btn active" data-target="tab1">データ抽出</button>
+      <button class="tab-btn" data-target="tab2">グラフ作成</button>
     </nav>
 
     <main>
       <!-- 第1タブ -->
       <div id="tab1" class="tab-content active">
         <fieldset id="tab1Fieldset">
-          <div id="configArea">
-            <label>モード選択</label>
-            <select id="configExacMode" data-field="configExacMode">
-              <option value="Dual">Dualモード</option>
-              <option value="Single">Singleモード</option>
-            </select>
-            <div id="configStatusBar" class="status-bar" data-status="hidden"></div>
-          </div>
-          <hr>
-          
-          <div class="flex-row">
-            <button id="fileLoadBtn" data-type="blue" onclick="Ctrl.loadFile()">データを取得</button>
-            <span class="txt-btninfo">読込シート「File」</span>
-          </div>
-          <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
-          <details id="fileArea" style="display: none;">
-            <summary>列選択</summary>
-            <div id="fileBox"></div>
-          </details>
-          <div id="fileBtnArea" class="btn-container" style="display: none;">
-            <button id="fileMakeBtn" data-type="blue" class="outline" onclick="Ctrl.makeFileList()" disabled>リスト生成</button>
-            <button id="fileValdBtn" data-type="blue" class="outline" onclick="Ctrl.validateFileList()" disabled>検証</button>
-          </div>
-          <hr>
-          
-          <div class="flex-row">
-            <button id="exacBtn" data-type="blue" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
-            <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
-          </div>
-          <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
-          <details id="exacArea" style="display: none;">
-            <summary>データ属性</summary>
-            <div id="exacBox">
-              <label>dataset *必須
-                <input type="text" data-field="dataset" placeholder="データセット・遺跡名">
-              </label>
-              <label>item
-                <input type="text" data-field="item" placeholder="計測情報（任意）">
-              </label>
-              <label>date
-                <input type="text" data-field="date" placeholder="計測日（任意）">
-              </label>
+          <details id="configSection" open>
+            <summary>設定</summary>
+            <div id="configArea">
+              <select id="configExacMode" data-field="configExacMode">
+                <option value="" selected disabled hidden>モードを選択してください</option>
+                <option value="Dual">Dualモード</option>
+                <option value="Single">Singleモード</option>
+              </select>
+              <div id="configStatusBar" class="status-bar" data-status="hidden"></div>
             </div>
           </details>
-          <div id="exacBtnArea" class="btn-container">
-            <button id="exacPushBtn" data-type="blue" class="outline" style="display: none;" onclick="Ctrl.pushExacData()" disabled>PXRFに格納</button>
-          </div>
+          <hr>
+          
+          <details id="fileSection" data-type="disabled">
+            <summary>読込と検証</summary>
+            <div class="flex-row">
+              <button id="fileLoadBtn" data-type="primary" onclick="Ctrl.loadFile()">データを取得</button>
+              <span class="txt-btninfo">読込シート「File」</span>
+            </div>
+            <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
+            <div id="fileArea" style="display: none;">
+              <label>列選択</label>
+              <div id="fileBox"></div>
+            </div>
+            <div id="fileBtnArea" class="btn-container" style="display: none;">
+              <button id="fileMakeBtn" data-type="primary" class="outline" onclick="Ctrl.makeFileList()" disabled>リスト生成</button>
+              <button id="fileValdBtn" data-type="primary" class="outline" onclick="Ctrl.validateFileList()" disabled>検証</button>
+            </div>
+          </details>
+          <hr>
+          
+          <details id="exacSection" data-type="disabled">
+            <summary>抽出と格納</summary>
+            <div class="flex-row">
+              <button id="exacBtn" data-type="primary" onclick="Ctrl.extractFile()" disabled>データを抽出</button>
+              <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
+            </div>
+            <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
+            <div id="exacArea" style="display: none;">
+              <label>データ属性</label>
+              <div id="exacBox">
+                <label>dataset *必須
+                  <input type="text" data-field="dataset" placeholder="データセット・遺跡名">
+                </label>
+                <label>item
+                  <input type="text" data-field="item" placeholder="計測情報（任意）">
+                </label>
+                <label>date
+                  <input type="text" data-field="date" placeholder="計測日（任意）">
+                </label>
+              </div>
+            </div>
+            <div id="exacBtnArea" class="btn-container">
+              <button id="exacPushBtn" data-type="primary" class="outline" style="display: none;" onclick="Ctrl.pushExacData()" disabled>PXRFに格納</button>
+            </div>
+          </details>
         </fieldset>
       </div>
 
       <!-- 第2タブ -->
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset">
-          <div class="btn-container">
-            <button id="datasetLoadBtn" data-type="green" onclick="Ctrl.getTab2Data('load')">データを読込</button>
-            <button id="datasetFilterBtn" data-type="green" class="outline" onclick="Ctrl.getTab2Data('filter')" disabled>データを確定</button>
-          </div>
-          <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
-          
-          <details id="datasetArea">
-            <summary>dataset選択</summary>
-            <div id="datasetBox"></div>
+          <details id="datasetSection" open>
+            <summary>データ読込・選択</summary>
+            <div class="btn-container">
+              <button id="datasetLoadBtn" data-type="primary" onclick="Ctrl.getTab2Data('load')">データを読込</button>
+              <button id="datasetFilterBtn" data-type="primary" class="outline" onclick="Ctrl.getTab2Data('filter')" disabled>データを確定</button>
+            </div>
+            <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
+            <div id="datasetArea" style="display: none;">
+              <label>dataset選択</label>
+              <div id="datasetBox"></div>
+            </div>
           </details>
           <hr>
 
-          <label>属性を選択</label>
-          <div class="btn-container">
-            <button id="symbolBtn" data-type="green" onclick="Ctrl.confirmSymbolMapping()" disabled>シンボル確定</button>
-          </div>
-          <select id="symbolAxis" data-field="symbolBaseKey" disabled>
-            <option value="dataset" selected>dataset</option>
-            <option value="item">item</option>
-            <option value="Group">Group</option>
-            <option value="Source">Source</option>
-          </select>
-          <details id="symbolArea" style="display: none;">
-            <summary>シンボル設定</summary>
-            <div id="symbolBox"></div>
+          <details id="symbolSection" data-type="disabled">
+            <summary>属性・シンボル設定</summary>
+            <label>属性を選択</label>
+            <div class="btn-container">
+              <button id="symbolBtn" data-type="primary" onclick="Ctrl.confirmSymbolMapping()" disabled>シンボル確定</button>
+            </div>
+            <select id="symbolAxis" data-field="symbolBaseKey" disabled>
+              <option value="dataset" selected>dataset</option>
+              <option value="item">item</option>
+              <option value="Group">Group</option>
+              <option value="Source">Source</option>
+            </select>
+            <div id="symbolArea" style="display: none;">
+              <label style="margin-top: 12px;">シンボル設定</label>
+              <div id="symbolBox"></div>
+            </div>
           </details>
           <hr>
           
-          <div class="btn-container">
-            <button id="reportOpenBtn" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
-          </div>
-          <div id="reportStatusBar" class="status-bar" data-status="hidden"></div>
+          <details id="reportSection" data-type="disabled">
+            <summary>レポート作成</summary>
+            <div class="btn-container">
+              <button id="reportOpenBtn" data-type="primary" onclick="Ctrl.openReport()">PDF用レポートを作成</button>
+            </div>
+            <div id="reportStatusBar" class="status-bar" data-status="hidden"></div>
+          </details>
         </fieldset>
       </div>
     </main>
@@ -110,8 +127,8 @@
       <h3 id="uDialogTitle">確認</h3>
       <p id="uDialogMessage"></p>
       <div class="btn-container">
-        <button id="uDialogCancelBtn" data-type="blue" class="outline">キャンセル</button>
-        <button id="uDialogConfirmBtn" data-type="blue">OK</button>
+        <button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button>
+        <button id="uDialogConfirmBtn" data-type="primary">OK</button>
       </div>
     </dialog>
 

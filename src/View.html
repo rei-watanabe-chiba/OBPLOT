@@ -9,12 +9,12 @@
       const el = this.get(id);
       if (el && text !== undefined) el.innerText = text;
     }
-    // --- 共通：DOM表示切替 ---
+    // --- 共通：DOM表示切替 (非表示<=>表示 固定化対応) ---
     static toggle(id, isShow) {
       const el = this.get(id);
-      el?.style.setProperty('display', isShow ? "" : "none");
+      if (el) el.style.display = isShow ? "" : "none";
     }
-    // --- 共通：コンテナ開閉 ---
+    // --- 共通：コンテナ開閉 (details専用) ---
     static open(id, isOpen) {
       const el = this.get(id);
       if (el?.tagName === "DETAILS") el.open = isOpen;
@@ -23,6 +23,14 @@
     static setDisabled(id, isDisabled) {
       const el = this.get(id);
       if (el) el.disabled = isDisabled;
+    }
+    // --- 共通：カスタム属性付与/削除 ---
+    static setAttribute(id, attr, value) {
+      const el = this.get(id);
+      if (el) {
+        if (value) el.setAttribute(attr, value);
+        else el.removeAttribute(attr);
+      }
     }
   }
 
@@ -140,33 +148,65 @@
     // --- Tab1 フェーズ連動UI更新 ---
     static updateTab1PhaseUI(phase) {
       const config = {
-        [TAB1_PHASE.INIT.val]: { file: { show: false, disableMake: true, disableVald: true }, exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true } },
-        [TAB1_PHASE.LOAD.val]: { file: { show: true, disableMake: false, disableVald: true }, exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true } },
-        [TAB1_PHASE.INVALID.val]: { file: { show: true, disableMake: false, disableVald: false }, exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true } },
-        [TAB1_PHASE.VALID.val]: { file: { show: true, disableMake: false, disableVald: false }, exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true } },
-        [TAB1_PHASE.EXTRACT.val]: { file: { show: true, disableMake: false, disableVald: false }, exac: { showBox: true, showBar: true, showPush: true, disableExac: false, disablePush: false } }
+        [TAB1_PHASE.INIT.val]: { 
+          file: { showArea: false, disableMake: true, disableVald: true, secOpen: false, secDisabled: "disabled" }, 
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" },
+          conf: { secOpen: true }
+        },
+        [TAB1_PHASE.READY.val]: { 
+          file: { showArea: false, disableMake: true, disableVald: true, secOpen: true, secDisabled: null }, 
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" },
+          conf: { secOpen: false }
+        },
+        [TAB1_PHASE.LOAD.val]: { 
+          file: { showArea: true, disableMake: false, disableVald: true, secOpen: true, secDisabled: null }, 
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" },
+          conf: { secOpen: false }
+        },
+        [TAB1_PHASE.INVALID.val]: { 
+          file: { showArea: true, disableMake: false, disableVald: false, secOpen: true, secDisabled: null }, 
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" },
+          conf: { secOpen: false }
+        },
+        [TAB1_PHASE.VALID.val]: { 
+          file: { showArea: true, disableMake: false, disableVald: false, secOpen: false, secDisabled: null }, 
+          exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true, secOpen: true, secDisabled: null },
+          conf: { secOpen: false }
+        },
+        [TAB1_PHASE.EXTRACT.val]: { 
+          file: { showArea: true, disableMake: false, disableVald: false, secOpen: false, secDisabled: null }, 
+          exac: { showBox: true, showBar: true, showPush: true, disableExac: false, disablePush: false, secOpen: true, secDisabled: null },
+          conf: { secOpen: false }
+        }
       }[phase];
+      
       // ステータス保存
       State.set("Tab1ST.file.cachedStatus", State.get("Tab1ST.file.status"));
-      const currentMode = State.get("Tab1ST.config.mode");
-      const loadText = phase === TAB1_PHASE.INIT.val ? "データを取得" : "データを再取得";
+      const loadText = phase <= TAB1_PHASE.READY.val ? "データを取得" : "データを再取得";
       const valdClass = phase === TAB1_PHASE.INVALID.val ? "" : "outline";
       // ファイル層UI適用
-      DOM.get(Tab1UI.fileValdBtn).className = valdClass;
       DOM.setDOM(Tab1UI.fileLoadBtn, loadText);
-      [Tab1UI.fileArea, Tab1UI.fileBtnBox].forEach(id => DOM.toggle(id, config.file.show));
+      DOM.get(Tab1UI.fileValdBtn).className = valdClass;
       DOM.setDisabled(Tab1UI.fileLoadBtn, false);
       DOM.setDisabled(Tab1UI.fileMakeBtn, config.file.disableMake);
       DOM.setDisabled(Tab1UI.fileValdBtn, config.file.disableVald);
-      DOM.open(Tab1UI.fileArea, State.get("Tab1ST.file.isMapError").some(Boolean));
+      [Tab1UI.fileArea, Tab1UI.fileBtnBox].forEach(id => DOM.toggle(id, config.file.showArea));
       if (phase === TAB1_PHASE.LOAD.val) this.updateButtonsByMapError("file");
+
       // 抽出層UI適用
       DOM.toggle(Tab1UI.exacArea, config.exac.showBox);
       DOM.toggle(Tab1UI.exacBar, config.exac.showBar);
       DOM.toggle(Tab1UI.exacPushBtn, config.exac.showPush);
       DOM.setDisabled(Tab1UI.exacBtn, config.exac.disableExac);
       DOM.setDisabled(Tab1UI.exacPushBtn, config.exac.disablePush);
-      DOM.open(Tab1UI.exacArea, State.get("Tab1ST.exac.isMapError").some(Boolean));
+
+      // Section開閉・無効化制御
+      DOM.open(Tab1UI.configSection, config.conf.secOpen);
+      DOM.open(Tab1UI.fileSection, config.file.secOpen);
+      DOM.open(Tab1UI.exacSection, config.exac.secOpen);
+      DOM.setAttribute(Tab1UI.fileSection, "data-type", config.file.secDisabled);
+      DOM.setAttribute(Tab1UI.exacSection, "data-type", config.exac.secDisabled);
+
       // 特殊条件ステータス更新
       if (phase === TAB1_PHASE.VALID.val) {
         this.updateButtonsByMapError("exac");
@@ -194,20 +234,40 @@
       const isLoaded = phase >= TAB2_PHASE.LOADED.val;
       DOM.setDisabled(Tab2UI.datasetLoadBtn, false);
       DOM.setDisabled(Tab2UI.datasetfilterBtn, !isLoaded);
-      // 各層UI
+
+      // 各層UIとSection自動開閉・排他制御
       const actions = {
-        [TAB2_PHASE.INIT.val]: () => DOM.open(Tab2UI.datasetArea, false),
-        [TAB2_PHASE.LOADED.val]: () => { DOM.open(Tab2UI.datasetArea, true); },
+        [TAB2_PHASE.INIT.val]: () => {
+          DOM.open(Tab2UI.datasetSection, true);
+          DOM.open(Tab2UI.symbolSection, false);
+          DOM.open(Tab2UI.reportSection, false);
+          DOM.setAttribute(Tab2UI.symbolSection, "data-type", "disabled");
+          DOM.setAttribute(Tab2UI.reportSection, "data-type", "disabled");
+        },
+        [TAB2_PHASE.LOADED.val]: () => { 
+          DOM.open(Tab2UI.datasetSection, true);
+          DOM.open(Tab2UI.symbolSection, false);
+          DOM.setAttribute(Tab2UI.symbolSection, "data-type", "disabled");
+          DOM.toggle(Tab2UI.datasetArea, true); 
+        },
         [TAB2_PHASE.FILTERED.val]: () => {
+          DOM.open(Tab2UI.datasetSection, false);
+          DOM.open(Tab2UI.symbolSection, true);
+          DOM.setAttribute(Tab2UI.symbolSection, "data-type", null); // 有効化
           DOM.toggle(Tab2UI.symbolArea, true);
-          DOM.open(Tab2UI.symbolArea, true);
           DOM.setDisabled(Tab2UI.symbolAxis, false);
           DOM.setDisabled(Tab2UI.symbolBtn, false);
+          
           // マッピング行の生成
           const baseData = State.get("Tab2ST.basePXRF") ?? [];
           const baseKey = State.get("Tab2ST.symbol.baseKey");
           const uniqueVals = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
           this.renderSymbolRows(uniqueVals, Tab2UI.symbolBox);
+        },
+        [TAB2_PHASE.MAPPED.val]: () => {
+          DOM.open(Tab2UI.symbolSection, false);
+          DOM.open(Tab2UI.reportSection, true);
+          DOM.setAttribute(Tab2UI.reportSection, "data-type", null); // 有効化
         }
       };
       actions[phase]?.();
@@ -236,7 +296,7 @@
       const shapes = ['circle', 'triangle', 'square'];
       const colors = [
         { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' },
-        { val: 'var(--main-red)', label: 'Red' }, { val: 'var(--main-yellow)', label: 'Yellow' },
+        { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' },
         { val: 'var(--grey600)', label: 'Gray' }
       ];
       const rows = Array.from({ length: 10 });

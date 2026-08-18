@@ -7,20 +7,34 @@
       document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
       document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
       DOM.get(tabId)?.classList.add("active");
+      document.body.dataset.theme = tabId;
       State.set("GLB.activeTab", tabId);
     }
     // --- 設定エリアイベント ---
     static processConfigArea() {
       const selectMode = DOM.get(Tab1UI.configArea)?.querySelector('[data-field="configExacMode"]')?.value;
+      if (!selectMode) return;
       const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
       const currentPhase = State.get("Tab1ST.phase");
       const currentMode = State.get("Tab1ST.config.mode");
-      // モード変更判定
-      if (selectMode !== currentMode && currentPhase >= TAB1_PHASE.VALID.val) {
+      // 初回モード選択でREADYフェーズへ移行
+      if (currentPhase === TAB1_PHASE.INIT.val && selectMode) {
         State.set({
+          "Tab1ST.config.mode": selectMode,
+          "Tab1ST.config.status": ["message", modeText],
+          "Tab1ST.phase": TAB1_PHASE.READY.val
+        });
+        return;
+      }
+      // モード変更判定 (ダウングレード)
+      if (selectMode !== currentMode && currentPhase >= TAB1_PHASE.INVALID.val) {
+        State.set({
+          "Tab1ST.config.mode": selectMode,
           "Tab1ST.file.status": ["error", "モード変更検知: 再検証"],
+          "Tab1ST.config.status": ["message", modeText],
           "Tab1ST.phase": TAB1_PHASE.INVALID.val
         });
+        return;
       }
       State.set({
         "Tab1ST.config.mode": selectMode,

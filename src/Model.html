@@ -3,8 +3,10 @@
   // --- htmlID ---
   const Tab1UI = {
     tabSet: "tab1Fieldset", // タブ全体UI
+    configSection: "configSection", // 設定セクション
     configBar: "configStatusBar", // 設定コンソール
     configArea: "configArea",  // 設定入力エリア
+    fileSection: "fileSection", // ファイルセクション
     fileLoadBtn: "fileLoadBtn", // 読込ボタン
     fileBar: "fileStatusBar", // ファイルコンソール
     fileArea: "fileArea",  // ファイル入力エリア
@@ -12,6 +14,7 @@
     fileBtnBox:"fileBtnArea", // ファイルボタンエリア
     fileMakeBtn: "fileMakeBtn", // リスト生成ボタン
     fileValdBtn: "fileValdBtn", // 検証ボタン
+    exacSection: "exacSection", // 抽出セクション
     exacBar: "exacStatusBar", // 抽出コンソール
     exacBtn: "exacBtn", // 抽出ボタン
     exacArea: "exacArea", // 抽出入力エリア
@@ -21,26 +24,30 @@
 
   const Tab2UI = {
     tabSet: "tab2Fieldset", // タブ全体UI
+    datasetSection: "datasetSection", // データ読込セクション
     datasetLoadBtn: "datasetLoadBtn", // 読込ボタン
     datasetfilterBtn: "datasetFilterBtn", // 確定/更新ボタン
     datasetloadBar: "datasetLoadBar", // ステータスバー
-    datasetArea: "datasetArea", // アコーディオン全体
+    datasetArea: "datasetArea", // 入力エリア
     datasetBox: "datasetBox", // チェックボックスコンテナ
-    symbolArea: "symbolArea", // シンボル設定アコーディオン
+    symbolSection: "symbolSection", // シンボル設定セクション
+    symbolArea: "symbolArea", // シンボル設定エリア
     symbolAxis: "symbolAxis", // 分類軸セレクト
     symbolBox: "symbolBox", // マッピング行コンテナ
     symbolBtn: "symbolBtn", // シンボル確定ボタン
+    reportSection: "reportSection", // レポート作成セクション
     reppBtn: "reportOpenBtn", // 展開ボタン
     repoBar: "reportStatusBar"  // 状態表示
   }
 
   // --- フェーズ定義 ---
   const TAB1_PHASE = {
-    INIT: { val: 1, name: 'init' },       // 初期状態・リセット時
-    LOAD: { val: 2, name: 'load' },       // データ取得成功
-    INVALID: { val: 3, name: 'invalid' }, // 要検証
-    VALID: { val: 4, name: 'valid' },     // 検証成功（抽出可能）
-    EXTRACT: { val: 5, name: 'extract' }  // 抽出成功（PXRF格納可能）
+    INIT: { val: 1, name: 'init' },       // モード未選択・初期状態
+    READY: { val: 2, name: 'ready' },     // モード選択済・File解放
+    LOAD: { val: 3, name: 'load' },       // データ取得成功
+    INVALID: { val: 4, name: 'invalid' }, // 要検証
+    VALID: { val: 5, name: 'valid' },     // 検証成功・抽出解放
+    EXTRACT: { val: 6, name: 'extract' }  // 抽出成功
   };
   const TAB2_PHASE = {
     INIT: { val: 1, name: 'init' },
@@ -64,7 +71,7 @@
           phase: TAB1_PHASE.INIT.val,
           config: {
             status: [],
-            mode: "Dual"
+            mode: ""
           },
           file: {
             data: null,
