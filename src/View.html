@@ -16,9 +16,11 @@
     }
     // --- 共通：コンテナ開閉 (details専用) ---
     static open(id, isOpen) {
-      const el = this.get(id);
-      if (el?.tagName === "DETAILS") el.open = isOpen;
+    const el = this.get(id);
+    if (el?.tagName === "DETAILS") {
+      setTimeout(() => { el.open = isOpen; }, 100);
     }
+  }
     // --- 共通：無効/有効切替 ---
     static setDisabled(id, isDisabled) {
       const el = this.get(id);
@@ -149,28 +151,28 @@
     static updateTab1PhaseUI(phase) {
       const config = {
         [TAB1_PHASE.INIT.val]: { 
-          file: { showArea: false, disableMake: true, disableVald: true, secOpen: false, secDisabled: "disabled" }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" }
+          file: { showArea: false, disableMake: true, disableVald: true }, 
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
         },
         [TAB1_PHASE.READY.val]: { 
-          file: { showArea: false, disableMake: true, disableVald: true, secOpen: true, secDisabled: null }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" }
+          file: { showArea: false, disableMake: true, disableVald: true }, 
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
         },
         [TAB1_PHASE.LOAD.val]: { 
-          file: { showArea: true, disableMake: false, disableVald: true, secOpen: true, secDisabled: null }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" }
+          file: { showArea: true, disableMake: false, disableVald: true }, 
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
         },
         [TAB1_PHASE.INVALID.val]: { 
-          file: { showArea: true, disableMake: false, disableVald: false, secOpen: true, secDisabled: null }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true, secOpen: false, secDisabled: "disabled" }
+          file: { showArea: true, disableMake: false, disableVald: false }, 
+          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
         },
         [TAB1_PHASE.VALID.val]: { 
-          file: { showArea: true, disableMake: false, disableVald: false, secOpen: false, secDisabled: null }, 
-          exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true, secOpen: true, secDisabled: null }
+          file: { showArea: true, disableMake: false, disableVald: false }, 
+          exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true }
         },
         [TAB1_PHASE.EXTRACT.val]: { 
-          file: { showArea: true, disableMake: false, disableVald: false, secOpen: false, secDisabled: null }, 
-          exac: { showBox: true, showBar: true, showPush: true, disableExac: false, disablePush: false, secOpen: true, secDisabled: null }
+          file: { showArea: true, disableMake: false, disableVald: false }, 
+          exac: { showBox: true, showBar: true, showPush: true, disableExac: false }
         }
       }[phase];
       
@@ -178,6 +180,11 @@
       State.set("Tab1ST.file.cachedStatus", State.get("Tab1ST.file.status"));
       const loadText = phase <= TAB1_PHASE.READY.val ? "データを取得" : "データを再取得";
       const valdClass = phase === TAB1_PHASE.INVALID.val ? "" : "outline";
+      const sectionStates = {
+        config: { id: Tab1UI.configSection, open: phase >= TAB1_PHASE.INIT, disabled: false },
+        file:   { id: Tab1UI.fileSection, open: phase >= TAB1_PHASE.READY.val && phase < TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.READY.val },
+        exac:   { id: Tab1UI.exacSection, open: phase >= TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.VALID.val }
+      };
       // ファイル層UI適用
       DOM.setDOM(Tab1UI.fileLoadBtn, loadText);
       DOM.get(Tab1UI.fileValdBtn).className = valdClass;
@@ -186,19 +193,19 @@
       DOM.setDisabled(Tab1UI.fileValdBtn, config.file.disableVald);
       [Tab1UI.fileArea, Tab1UI.fileBtnBox].forEach(id => DOM.toggle(id, config.file.showArea));
       if (phase === TAB1_PHASE.LOAD.val) this.updateButtonsByMapError("file");
-
       // 抽出層UI適用
       DOM.toggle(Tab1UI.exacArea, config.exac.showBox);
       DOM.toggle(Tab1UI.exacBar, config.exac.showBar);
       DOM.toggle(Tab1UI.exacPushBtn, config.exac.showPush);
       DOM.setDisabled(Tab1UI.exacBtn, config.exac.disableExac);
       DOM.setDisabled(Tab1UI.exacPushBtn, config.exac.disablePush);
-
-      // Section開閉・無効化制御
-      DOM.open(Tab1UI.fileSection, config.file.secOpen);
-      DOM.open(Tab1UI.exacSection, config.exac.secOpen);
-      DOM.setAttribute(Tab1UI.fileSection, "data-type", config.file.secDisabled);
-      DOM.setAttribute(Tab1UI.exacSection, "data-type", config.exac.secDisabled);
+      // セクション制御
+      Object.entries(sectionStates).forEach(([key, s]) => {
+        const el = DOM.get(s.id);
+        if (key !== "config") DOM.open(s.id, s.open);
+        el.setAttribute("data-state", s.open ? "active" : "");
+        el.setAttribute("data-type", s.disabled ? "disabled" : "");
+      });
 
       // 特殊条件ステータス更新
       if (phase === TAB1_PHASE.VALID.val) {

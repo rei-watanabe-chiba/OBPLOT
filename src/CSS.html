@@ -17,6 +17,7 @@
     --transition-speed: 0.2s;
     --theme-color: var(--main-blue);
     --theme-hover: var(--main-blue-hover);
+    interpolate-size: allow-keywords;
   }
   /* --- テーマ設定 --- */
   body[data-theme="tab1"] {
@@ -112,10 +113,13 @@
     padding: 0;
     margin: 4px 0; 
     transition: opacity var(--transition-speed);
-  }
-  details[data-type="disabled"] {
-    pointer-events: none;
-    opacity: 0.5;
+    &::details-content {
+      height: 0;
+      overflow: clip;
+      opacity: 0;
+      transition: height 0.4s ease, opacity 0.4s ease,
+        content-visibility 0.4s ease allow-discrete;
+    }
   }
   summary { 
     color: var(--text-main);
@@ -142,10 +146,14 @@
       transition: transform 0.2s ease;
     }
   }
-  details[open] summary {
-    margin-bottom: 8px;
-    color: var(--theme-color);
-    &::after { transform: rotate(-135deg); }
+  details[data-type="disabled"] { pointer-events: none; opacity: 0.5;}
+  details[data-state="active"] summary { color: var(--theme-color); }
+  details[data-state="disabled"] summary { cursor: not-allowed; }
+  details[open] summary::after { transform: rotate(-135deg); }
+  details[open]::details-content {
+    height: auto;
+    height: calc-size(auto, size);
+    opacity: 1;
   }
 
   /* --- ボタン --- */
