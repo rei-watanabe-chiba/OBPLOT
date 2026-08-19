@@ -95,14 +95,14 @@
     }
 
     // --- 共通：シンボル設定行生成 ---
-    static renderSymbolRows(values, objID) {
+    static renderSymbolRows(values, objID, rawNum) {
       const shapes = ['circle', 'triangle', 'square'];
       const colors = [
         { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' },
         { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' },
         { val: 'var(--grey600)', label: 'Gray' }
       ];
-      this.#renderTemplateList("symbolRowTemplate", Array.from({ length: 10 }), objID, (clone, _, i) => {
+      this.#renderTemplateList("symbolRowTemplate", Array.from({ length: rawNum }), objID, (clone, _, i) => {
         clone.querySelectorAll("select").forEach(s => s.dataset.symbolIdx = i);
         clone.querySelector('[data-symbol-type="target"]').append(...values.map(v => new Option(v, v)));
         clone.querySelector('[data-symbol-type="shape"]').append(...shapes.map(s => new Option(s, s)));
@@ -144,7 +144,7 @@
       // UIルールマップ定義 
       const rules = {
         [Tab1UI.fileLoadBtn]:   { text: phase <= TAB1_PHASE.READY.val ? "データを取得" : "データを再取得", disabled: false },
-        [Tab1UI.fileMakeBtn]:   { disabled: phase < TAB1_PHASE.LOAD.val || fileErr },
+        [Tab1UI.fileMakeBtn]:   { disabled: phase < TAB1_PHASE.READY.val },
         [Tab1UI.fileValdBtn]:   { disabled: phase < TAB1_PHASE.INVALID.val || fileErr, className: phase === TAB1_PHASE.INVALID.val ? "" : "outline" },
         [Tab1UI.fileArea]:      { show: phase >= TAB1_PHASE.LOAD.val },
         [Tab1UI.fileBtnBox]:    { show: phase >= TAB1_PHASE.LOAD.val },
@@ -154,7 +154,7 @@
         [Tab1UI.exacPushBtn]:   { show: phase >= TAB1_PHASE.EXTRACT.val, disabled: phase < TAB1_PHASE.EXTRACT.val },
         [Tab1UI.configSection]: { open: phase === TAB1_PHASE.INIT.val, disabled: false },
         [Tab1UI.fileSection]:   { open: phase >= TAB1_PHASE.READY.val && phase < TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.READY.val },
-        [Tab1UI.exacSection]:   { open: phase >= TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.VALID.val }
+        [Tab1UI.exacSection]:   { open: phase >= TAB1_PHASE.VALID.val && phase < TAB1_PHASE.OUTPUT.val, disabled: phase < TAB1_PHASE.VALID.val }
       };
       this.#applyRules(rules);
       if (phase === TAB1_PHASE.VALID.val) {
@@ -186,7 +186,7 @@
       if (phase === TAB2_PHASE.FILTERED.val) {
         const baseData = State.get("Tab2ST.basePXRF") ?? [];
         const baseKey = State.get("Tab2ST.symbol.baseKey");
-        UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox);
+        UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox, 5);
       }
     }
   }
@@ -214,7 +214,7 @@
         },
         "Tab2ST.symbol.baseKey": (key) => {
           const baseData = State.get("Tab2ST.basePXRF") ?? [];
-          UIController.renderSymbolRows([...new Set(baseData.map(d => d[key]).filter(Boolean))], Tab2UI.symbolBox);
+          UIController.renderSymbolRows([...new Set(baseData.map(d => d[key]).filter(Boolean))], Tab2UI.symbolBox, 5);
         }
       };
       Object.entries(stateMap).forEach(([path, callback]) => State.subscribe(path, callback));

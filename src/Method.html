@@ -13,21 +13,17 @@
     // --- セレクタ配列判定 ---
     static validateSelect(values, quota = values.length) {
       const checkVals = values.slice(0, quota);
-      // 空欄、または同一配列内での重複を判定
       return values.map((v, i) => i < quota ? (!v || checkVals.indexOf(v) !== checkVals.lastIndexOf(v)) : false);
     }
   }
 
   // --- Tab1 ファイルリスト検証ロジック ---
   class FileValidator {
-    // --- インデックスと計測ID生成 ---
     static #COL = { FILE: 0, MODE: 1, ID: 2, SUB_ID: 3, INFO: 4 };
     static #getScanID = (id, sub_id) => sub_id ? `${id}_${sub_id}` : `${id}`;
-    // --- 実行 ---
     static run(sheetData, outHeader, validModes, exacMode) {
       if (!sheetData?.length) return [];
       const [, ...body] = sheetData;
-      // 事前集計
       const stats = body.reduce((acc, row) => {
         const scan_id = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
         acc.file[row[this.#COL.FILE]] = (acc.file[row[this.#COL.FILE]] || 0) + 1;
@@ -35,7 +31,6 @@
         acc.scan[scan_id].count++;
         return acc;
       }, { scan: {}, file: {} });
-      // ルール定義と判定
       const rules = [
         { check: r => !/^\d+$/.test(r[this.#COL.FILE] ?? ""), err: " file形式" },
         { check: r => !validModes.includes(r[this.#COL.MODE]), err: " mode形式" },
@@ -44,12 +39,10 @@
         { check: r => {
             const s = stats.scan[this.#getScanID(r[this.#COL.ID], r[this.#COL.SUB_ID])];
             if (exacMode === "Single") return s.count > 1;
-            const isValidDual = s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian');
-            return !isValidDual;
+            return !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
           }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式"
         }
       ];
-      // 配列返却
       return [[...outHeader, "error"], ...body.map(row => [
         ...row, 
         this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]), 
@@ -63,33 +56,26 @@
     static run(fileDT, resultDT, exacMap, global) {
       if (!fileDT?.length || !resultDT?.length) return [];
       const resultMap = new Map(resultDT.slice(1).map(r => [String(r[0]), r]));
-      // ID単位グループ化
       const scanIDMap = fileDT.slice(1).reduce((map, [file, mode, id, , , scanId]) => {
         const entry = map.get(scanId) ?? { id, files: {} };
         entry.files[String(mode).toLowerCase()] = file;
         return map.set(scanId, entry);
       }, new Map());
-      // 計測モード別ソート
       const sortKeys = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
       const [obKeys, mdKeys] = [sortKeys(global.obsidianIndex), sortKeys(global.mudrockIndex)];
-      // 値の変換処理
       const formatVal = val => {
         if (val === "" || val === null || val === undefined) return "";
         if (String(val).trim() === "< LOD") return val;
         const num = Number(val);
         return !isNaN(num) ? num * 10000 : val;
       };
-      // 抽出クロージャ
       const extract = (fileName, keys, idxObj) => keys.reduce((acc, k) => {
         const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
         const row = resultMap.get(String(fileName ?? ""));
-        const rawVal = idx !== null ? (row?.[idx] ?? "") : "";
-        const rawErr = idx !== null ? (row?.[idx + 1] ?? "") : "";
-        acc.vals.push(formatVal(rawVal));
-        acc.errs.push(formatVal(rawErr));
+        acc.vals.push(formatVal(idx !== null ? (row?.[idx] ?? "") : ""));
+        acc.errs.push(formatVal(idx !== null ? (row?.[idx + 1] ?? "") : ""));
         return acc;
       }, { vals: [], errs: [] });
-      // 配列返却
       return [
         ['計測ID', 'ID', 'dataset', 'item', 'date', ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`), ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)],
         ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
@@ -105,10 +91,8 @@
   class PxrfValidator {
     static run(existingDT, newDT) {
       if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
-      // 検索キー設定とフィルタ
       const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
       const filteredEx = existingDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
-      // データ長から重複判定
       return filteredEx.length !== existingDT.length - 1 
         ? { isDup: true, data: [existingDT[0], ...filteredEx, ...newDT.slice(1)] } 
         : { isDup: false, data: null };
@@ -117,7 +101,6 @@
 
   // --- Tab2 データ取得ロジック ---
   class DataMerger {
-    // --- 行指向オブジェクト配列に変換 ---
     static #toObjArray(data) {
       const [header, ...body] = data;
       return body.map(row => header.reduce((obj, h, i) => {
@@ -125,33 +108,23 @@
         return obj;
       }, {}));
     }
-    // --- ロードフェーズ: WDXRF属性結合とdataset抽出 ---
     static load(pxrfData, wdxrfData) {
       const pxrfObjs = this.#toObjArray(pxrfData);
       const wdxrfObjs = this.#toObjArray(wdxrfData);    
-      // --- キー正規化 ---
       const normalizeKey = (dataset, id) => {
         const clean = str => String(str ?? "").replace(/\s+/g, "").toUpperCase();
         return `${clean(dataset)}_${clean(id)}`;
       };
-      // WDXRFを結合用キー (dataset_id) でマップ化
       const wdxrfMap = new Map(wdxrfObjs.map(obj => [normalizeKey(obj.dataset, obj.ID || obj.id), obj]));
       const datasetSet = new Set();
-      // PXRFデータにGroupとSourceを付与
       pxrfObjs.forEach(pObj => {
-        const key = normalizeKey(pObj.dataset, pObj.ID || pObj.id);
-        const wObj = wdxrfMap.get(key);
+        const wObj = wdxrfMap.get(normalizeKey(pObj.dataset, pObj.ID || pObj.id));
         pObj.Group = wObj?.Group ?? "Unknown";
         pObj.Source = wObj?.Source ?? "Unknown";
         if (pObj.dataset) datasetSet.add(pObj.dataset);
       });
-      return {
-        mergedPXRF: pxrfObjs,
-        wdxrfObjs: wdxrfObjs,
-        datasets: [...datasetSet]
-      };
+      return { mergedPXRF: pxrfObjs, wdxrfObjs: wdxrfObjs, datasets: [...datasetSet] };
     }
-    // --- フィルターフェーズ: 対象datasetのみ抽出 ---
     static filter(mergedPXRF, wdxrfObjs, selectedDatasets) {
       const targetSet = new Set(selectedDatasets);
       return {
@@ -160,7 +133,32 @@
       };
     }
   }
+
+  // --- Tab2 DOM抽出ヘルパー ---
+  class GetUIinput {
+    static getCheckedDatasets(boxId) {
+      return [...(document.getElementById(boxId)?.querySelectorAll('.dataset-cb:checked') || [])].map(cb => cb.value);
+    }
+    static getSymbolMapping(boxId) {
+      const box = document.getElementById(boxId);
+      if (!box) return {};
+      return Array.from({ length: 10 }).reduce((map, _, i) => {
+        const target = box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="target"]`)?.value;
+        if (target) {
+          map[target] = {
+            shape: box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="shape"]`)?.value,
+            color: box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="color"]`)?.value
+          };
+        }
+        return map;
+      }, {});
+    }
+  }
   
-  // 他層からの呼び出し
-  const Mtd = { Utils: DataUtils, FileValidator, DataExtractor, PxrfValidator, DataMerger };
+  // --- 名前空間と公開インターフェース ---
+  const Mtd = {
+    Utils: DataUtils,
+    Tab1: { FileValidator, DataExtractor, PxrfValidator },
+    Tab2: { DataMerger, GetUIinput }
+  };
 </script>

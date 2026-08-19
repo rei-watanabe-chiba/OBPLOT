@@ -33,15 +33,15 @@
           <details id="fileSection" data-type="disabled">
             <summary>読込と検証</summary>
             <div class="flex-row">
-              <button id="fileLoadBtn" data-type="primary" data-action="loadFile">データを取得</button>
+              <button id="fileLoadBtn" data-type="primary" data-action="Tab1.loadFile">データを取得</button>
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
             <div id="fileArea" style="display: none;">
               <div id="fileBox"></div>
             </div>
             <div id="fileBtnArea" class="btn-container" style="display: none;">
-              <button id="fileMakeBtn" data-type="primary" class="outline" data-action="makeFileList" disabled>リスト生成</button>
-              <button id="fileValdBtn" data-type="primary" class="outline" data-action="validateFileList" disabled>検証</button>
+              <button id="fileMakeBtn" data-type="primary" class="outline" data-action="Tab1.makeFileList" disabled>リスト生成</button>
+              <button id="fileValdBtn" data-type="primary" class="outline" data-action="Tab1.validateFileList" disabled>検証</button>
             </div>
           </details>
           <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
@@ -50,7 +50,7 @@
           <details id="exacSection" data-type="disabled">
             <summary>抽出と格納</summary>
             <div class="flex-row">
-              <button id="exacBtn" data-type="primary" data-action="extractFile" disabled>データを抽出</button>
+              <button id="exacBtn" data-type="primary" data-action="Tab1.extractFile" disabled>データを抽出</button>
               <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
             </div>
             <div id="exacArea" style="display: none;">
@@ -67,7 +67,7 @@
               </div>
             </div>
             <div id="exacBtnArea" class="btn-container">
-              <button id="exacPushBtn" data-type="primary" class="outline" style="display: none;" data-action="pushExacData" disabled>PXRFに格納</button>
+              <button id="exacPushBtn" data-type="primary" class="outline" style="display: none;" data-action="Tab1.pushExacData" disabled>PXRFに格納</button>
             </div>
           </details>
           <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
@@ -77,11 +77,12 @@
       <!-- 第2タブ -->
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset">
+          <!-- dataset層 -->
           <details id="datasetSection" open>
             <summary>データ読込・選択</summary>
             <div class="btn-container">
-              <button id="datasetLoadBtn" data-type="primary" data-action="getTab2Data" data-arg="load">データを読込</button>
-              <button id="datasetFilterBtn" data-type="primary" class="outline" data-action="getTab2Data" data-arg="filter" disabled>データを確定</button>
+              <button id="datasetLoadBtn" data-type="primary" data-action="Tab2.loadData">データを読込</button>
+              <button id="datasetFilterBtn" data-type="primary" class="outline" data-action="Tab2.filterData" disabled>データを確定</button>
             </div>
             <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
             <div id="datasetArea" style="display: none;">
@@ -90,11 +91,11 @@
             </div>
           </details>
           <hr>
-
+          <!-- シンボル層 -->
           <details id="symbolSection" data-type="disabled">
-            <summary>属性・シンボル設定</summary>
+            <summary>シンボル設定</summary>
             <div class="btn-container">
-              <button id="symbolBtn" data-type="primary" data-action="confirmSymbolMapping" disabled>シンボル確定</button>
+              <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
             </div>
             <select id="symbolAxis" data-bind="Tab2ST.symbol.baseKey" disabled>
               <option value="dataset" selected>dataset</option>
@@ -112,7 +113,7 @@
           <details id="reportSection" data-type="disabled">
             <summary>レポート作成</summary>
             <div class="btn-container">
-              <button id="reportOpenBtn" data-type="primary" data-action="openReport">PDF用レポートを作成</button>
+              <button id="reportOpenBtn" data-type="primary" data-action="Tab2.openReport">PDF用レポートを作成</button>
             </div>
             <div id="reportStatusBar" class="status-bar" data-status="hidden"></div>
           </details>
@@ -148,7 +149,7 @@
 
     <template id="symbolRowTemplate">
       <div style="display:flex; gap:4px; margin-bottom:6px; align-items:center;">
-        <select data-symbol-type="target" style="flex:1; padding:4px;">
+        <select data-symbol-type="target" style="flex:2; padding:4px;">
           <option value="" selected>未選択</option>
         </select>
         <select data-symbol-type="shape" style="flex:1; padding:4px;"></select>
