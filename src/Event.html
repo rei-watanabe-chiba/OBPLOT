@@ -17,22 +17,6 @@
           Controllers[namespace][methodName]();
         }
       }
-      // 「全て選択」の処理 (Event Delegation)
-      if (target.id === "selectAll") {
-        const container = target.closest("#datasetBox");
-        const items = container.querySelectorAll(".dataset-cb");
-        items.forEach(cb => cb.checked = target.checked);
-        return;
-      }
-
-      // 個別チェックボックスの処理 (連動解除)
-      if (target.classList.contains("dataset-cb")) {
-        const container = target.closest("#datasetBox");
-        const selectAll = container.querySelector("#selectAll");
-        const items = container.querySelectorAll(".dataset-cb");
-        selectAll.checked = Array.from(items).every(i => i.checked);
-        return;
-      }
     }
 
     // --- 変更監視 ---
@@ -44,11 +28,16 @@
         State.set(bindPath, target.value);
         return; 
       }
-      // FileArea 動的生成要素のバインディング
+      // FileAreaの処理移譲
       const fieldKey = target.dataset.field;
       if (fieldKey && target.closest('#fileBox')) {
         State.set(`Tab1ST.file.map.${fieldKey}`, target.value);
         this.validateFileMap();
+      }
+      // datasetBoxの処理移譲
+      if (target.closest("#datasetBox")) {
+        this.handleDatasetSelection(target);
+        return;
       }
     }
 
@@ -71,6 +60,16 @@
         "Tab1ST.exac.isMapError": [isErr, false, false],
         "Tab1ST.exac.status": isErr ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus")
       });
+    }
+
+    // --- リアクティブ状態監視：データセット選択 ---
+    static handleDatasetSelection(target) {
+      const container = target.closest("#datasetBox");
+      if (target.id === "selectAll") {
+        container.querySelectorAll(".dataset-cb").forEach(cb => cb.checked = target.checked);
+      } else if (target.classList.contains("dataset-cb")) {
+        container.querySelector("#selectAll").checked = [...container.querySelectorAll(".dataset-cb")].every(i => i.checked);
+      }
     }
 
     // --- タブ切替 UI制御 ---

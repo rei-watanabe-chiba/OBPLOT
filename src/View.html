@@ -79,14 +79,14 @@
         container.innerHTML = '<div class="txt-btninfo">データがありません</div>';
         return;
       }
-      container.innerHTML = "";
-      container.appendChild(DOM.get("selectAllTemplate").content.cloneNode(true));
-      this.#renderTemplateList("checkboxTemplate", arr, objID, (clone, item) => {
-        const cb = clone.querySelector(".dataset-cb");
-        cb.value = item;
+      const template = DOM.get("checkboxTemplate");
+      const items = arr.map(item => {
+        const clone = template.content.cloneNode(true);
+        clone.querySelector(".dataset-cb").value = item;
         clone.querySelector(".cb-text").textContent = item;
         return clone;
       });
+      container.replaceChildren(DOM.get("selectAllTemplate").content.cloneNode(true), ...items);
     }
 
     // --- シンボル設定行生成 ---
