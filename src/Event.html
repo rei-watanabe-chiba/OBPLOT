@@ -89,6 +89,8 @@
         "Tab1ST.config.status": ["hidden", ""],
         "Tab1ST.phase": TAB1_PHASE.INIT
       });
+      UIPhase.updateTab1PhaseUI(State.get("Tab1ST.phase"));
+      UIPhase.updateTab2PhaseUI(State.get("Tab2ST.phase"));
       document.addEventListener("click", this.#handleClick.bind(this));
       document.addEventListener("change", this.#handleChange.bind(this));
     }

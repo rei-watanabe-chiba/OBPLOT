@@ -115,11 +115,11 @@
       Object.entries(rules).forEach(([id, r]) => {
         if (r.show !== undefined) DOM.toggle(id, r.show);
         if (r.disabled !== undefined) DOM.setDisabled(id, r.disabled);
-        if (r.open !== undefined) DOM.open(id, r.open);
+        if (!id.includes('configSection') && r.active !== undefined) DOM.open(id, r.active);
         if (r.text !== undefined) DOM.setDOM(id, r.text);
         if (r.className !== undefined && DOM.get(id)) DOM.get(id).className = r.className;
         if (id.includes('Section')) {
-          DOM.setAttr(id, "data-state", r.open ? "active" : null);
+          DOM.setAttr(id, "data-state", r.active ? "active" : null);
           DOM.setAttr(id, "data-type", r.disabled ? "disabled" : null);
         }
       });
@@ -140,9 +140,9 @@
         [Tab1UI.exacBar]:       { show: phase >= p.VALID },
         [Tab1UI.exacBtn]:       { disabled: phase < p.VALID || exacErr },
         [Tab1UI.exacPushBtn]:   { show: phase >= p.EXTRACT, disabled: phase < p.EXTRACT },
-        [Tab1UI.configSection]: { open: phase === p.INIT, disabled: false },
-        [Tab1UI.fileSection]:   { open: phase >= p.READY && phase < p.VALID, disabled: phase < p.READY },
-        [Tab1UI.exacSection]:   { open: phase >= p.VALID && phase < p.OUTPUT, disabled: phase < p.VALID }
+        [Tab1UI.configSection]: { active: phase === p.INIT, disabled: false },
+        [Tab1UI.fileSection]:   { active: phase >= p.READY && phase < p.VALID, disabled: phase < p.READY },
+        [Tab1UI.exacSection]:   { active: phase >= p.VALID && phase < p.OUTPUT, disabled: phase < p.VALID }
       };
       this.#applyRules(rules);
       if (phase >= p.VALID && phase < p.EXTRACT) State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
@@ -159,9 +159,9 @@
         [Tab2UI.symbolArea]:       { show: phase >= p.FILTERED },
         [Tab2UI.symbolAxis]:       { disabled: phase < p.FILTERED },
         [Tab2UI.symbolBtn]:        { disabled: phase < p.FILTERED },
-        [Tab2UI.datasetSection]:   { open: phase < p.FILTERED, disabled: false },
-        [Tab2UI.symbolSection]:    { open: phase >= p.FILTERED && phase < p.MAPPED, disabled: phase < p.FILTERED },
-        [Tab2UI.reportSection]:    { open: phase >= p.MAPPED, disabled: phase < p.MAPPED }
+        [Tab2UI.datasetSection]:   { active: phase < p.FILTERED, disabled: false },
+        [Tab2UI.symbolSection]:    { active: phase >= p.FILTERED && phase < p.MAPPED, disabled: phase < p.FILTERED },
+        [Tab2UI.reportSection]:    { active: phase >= p.MAPPED, disabled: phase < p.MAPPED }
       };
       this.#applyRules(rules);
       if (phase === p.FILTERED) {
