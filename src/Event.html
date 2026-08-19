@@ -32,8 +32,29 @@
       const fieldKey = target.dataset.field;
       if (fieldKey && target.closest('#fileBox')) {
         State.set(`Tab1ST.file.map.${fieldKey}`, target.value);
-        Controllers.Tab1.validateFileMap();
+        this.validateFileMap();
       }
+    }
+
+    // --- リアクティブ状態監視：ファイルマップ ---
+    static validateFileMap() {
+      const [map, global] = State.get(["Tab1ST.file.map", "GLB.cachedGlobal"]);
+      if (!global) return;
+      const flags = Mtd.Utils.validateSelect(global.fileFields.map(f => map[f.key] || ""), 3);
+      const isErr = flags.some(Boolean);
+      State.set({
+        "Tab1ST.file.isMapError": flags,
+        "Tab1ST.file.status": [isErr ? "error" : "success", isErr ? "エラー: 列選択" : State.get("Tab1ST.file.cachedStatus")[1]]
+      });
+    }
+
+    // --- リアクティブ状態監視：抽出マップ ---
+    static validateExacMap() {
+      const isErr = !(State.get("Tab1ST.exac.map.dataset")?.trim());
+      State.set({
+        "Tab1ST.exac.isMapError": [isErr, false, false],
+        "Tab1ST.exac.status": isErr ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus")
+      });
     }
 
     // --- タブ切替 UI制御 ---
@@ -74,4 +95,5 @@
 
   // DOM構築完了後に初期化
   window.addEventListener("DOMContentLoaded", () => EventManager.init());
+  const Evt = EventManager;
 </script>

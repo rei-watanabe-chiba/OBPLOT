@@ -25,7 +25,7 @@
         }
       });
       // 抽出Dataset入力の監視
-      State.subscribe("Tab1ST.exac.map.dataset", () => Tab1Controller.validateExacMap());
+      State.subscribe("Tab1ST.exac.map.dataset", () => Evt.validateExacMap());
     }
 
     // --- 非同期ラッパー（高階関数化・ステータス自動解決） ---
@@ -47,28 +47,6 @@
 
   // --- コントローラー層 (Tab1) ---
   class Tab1Controller {
-    // --- リアルタイム検証：ファイルマップ ---
-    static validateFileMap() {
-      const map = State.get("Tab1ST.file.map");
-      const global = State.get("GLB.cachedGlobal");
-      if (!global) return;
-      const errorFlags = Mtd.Utils.validateSelect(global.fileFields.map(f => map[f.key] || ""), 3);
-      const isError = errorFlags.some(Boolean);
-      State.set({
-        "Tab1ST.file.isMapError": errorFlags,
-        "Tab1ST.file.status": [isError ? "error" : "success", isError ? "エラー: 列選択" : State.get("Tab1ST.file.cachedStatus")[1]]
-      });
-    }
-
-    // --- リアルタイム検証：抽出マップ ---
-    static validateExacMap() {
-      const isError = !(State.get("Tab1ST.exac.map.dataset")?.trim());
-      State.set({
-        "Tab1ST.exac.isMapError": [isError, false, false],
-        "Tab1ST.exac.status": isError ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus")
-      });
-    }
-
     // --- Fileシート取得 ---
     static async loadFile() {
       if (!(await UI.confirm("確認", State.get("Tab1ST.file.data") ? "内部データをリセットしますか？" : "Fileシートを読み込みますか？", Tab1UI.fileBar))) return;
@@ -83,7 +61,7 @@
           "Tab1ST.file.cachedStatus": ["success", message],
           "Tab1ST.phase": TAB1_PHASE.LOAD.val
         });
-        this.validateFileMap();
+        Evt.validateFileMap();
         return message; 
       });
     }
@@ -104,13 +82,13 @@
         "Tab1ST.file.cachedStatus": Array.isArray(statusRes) ? statusRes : ["success", statusRes],
         "Tab1ST.phase": isAlert ? TAB1_PHASE.INVALID.val : TAB1_PHASE.VALID.val
       });
-      if (!isAlert) this.validateExacMap();
+      if (!isAlert) Evt.validateExacMap();
       return statusRes;
     }
 
     // --- ファイルリストリスト生成処理 ---
     static async makeFileList() {
-      this.validateFileMap();
+      Evt.validateFileMap();
       if (State.get("Tab1ST.file.isMapError").some(Boolean)) return;
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
       await CoreController.withAsyncLock("Tab1ST.file.status", async () => {
@@ -125,7 +103,7 @@
       await CoreController.withAsyncLock("Tab1ST.file.status", async () => this.processFileList("validate", null, State.get("GLB.cachedGlobal")));
     }
 
-    // --- File - Results突合抽出処理 ---
+    // --- 突合抽出処理 ---
     static async extractFile() {
       const global = State.get("GLB.cachedGlobal");
       if (!await UI.confirm("確認", "既存の「抽出データ」シートを上書きしますか？", Tab1UI.exacBar)) return;

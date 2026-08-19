@@ -2,72 +2,64 @@
 <script>
   // --- UI utilities ---
   class DOM {
-    // --- 共通：DOM取得 ---
-    static get(id) { return document.getElementById(id); }
-    // --- 共通：DOMテキスト ---
-    static setDOM(id, text) { if (text !== undefined && this.get(id)) this.get(id).innerText = text; }
-    // --- 共通：DOM表示切替 (非表示<=>表示 固定化対応) ---
-    static toggle(id, isShow) { if (this.get(id)) this.get(id).style.display = isShow ? "" : "none"; }
-    // --- 共通：コンテナ開閉 (details専用) ---
-    static open(id, isOpen) { if (this.get(id)?.tagName === "DETAILS") setTimeout(() => { this.get(id).open = isOpen; }, 200); }
-    // --- 共通：無効/有効切替 ---
-    static setDisabled(id, isDisabled) { if (this.get(id)) this.get(id).disabled = isDisabled; }
-    // --- 共通：カスタム属性付与/削除 ---
-    static setAttribute(id, attr, value) { value ? this.get(id)?.setAttribute(attr, value) : this.get(id)?.removeAttribute(attr); }
+    // --- DOM取得 ---
+    static get = id => document.getElementById(id);
+    // --- DOMテキスト更新 ---
+    static setDOM = (id, text) => { if (text !== undefined && this.get(id)) this.get(id).innerText = text; };
+    // --- 表示切替 ---
+    static toggle = (id, isShow) => { if (this.get(id)) this.get(id).style.display = isShow ? "" : "none"; };
+    // --- details開閉 ---
+    static open = (id, isOpen) => { if (this.get(id)?.tagName === "DETAILS") setTimeout(() => { this.get(id).open = isOpen; }, 200); };
+    // --- 無効化切替 ---
+    static setDisabled = (id, isDisabled) => { if (this.get(id)) this.get(id).disabled = isDisabled; };
+    // --- カスタム属性設定 ---
+    static setAttr = (id, attr, val) => val ? this.get(id)?.setAttribute(attr, val) : this.get(id)?.removeAttribute(attr);
   }
 
   // --- UI更新・生成処理群 ---
   class UIController {
-    // --- 共通：ステータスバー更新 ---
+    // --- ステータスバー更新 ---
     static loadingStatsBar(id, status = null) {
       const el = DOM.get(id);
       if (!el) return;
-      if (!status || status.length === 0) {
+      if (!status?.length) {
         el.dataset.status = "hidden";
         el.innerText = "";
         return;
       }
-      el.dataset.status = status[0];
-      el.innerText = status[1];
+      [el.dataset.status, el.innerText] = status;
     }
 
-    // --- 共通：HTML5ネイティブ ダイアログ生成 ---
+    // --- ダイアログ生成 ---
     static confirm(title, msg, barObj = null) {
       const prefix = String(barObj).split("StatusBar")[0];
       const saveStatus = State.get(`Tab1ST.${prefix}.status`);
-      if(barObj) this.loadingStatsBar(barObj, ["loading", "実行中..."]);
+      if (barObj) this.loadingStatsBar(barObj, ["loading", "実行中..."]);
       // ダイアログ生成
       return new Promise((resolve) => {
         const dialog = DOM.get("universalConfirm");
         DOM.setDOM("uDialogTitle", title);
         DOM.setDOM("uDialogMessage", msg);
         dialog.showModal(); 
-        const confirmBtn = DOM.get("uDialogConfirmBtn");
-        const cancelBtn = DOM.get("uDialogCancelBtn");
-        // ボタン処理
-        confirmBtn.onclick = () => { dialog.close(); resolve(true); };
-        cancelBtn.onclick = () => {
+        // ボタン処理定義
+        DOM.get("uDialogConfirmBtn").onclick = () => { dialog.close(); resolve(true); };
+        DOM.get("uDialogCancelBtn").onclick = () => {
           dialog.close();
-          if(barObj) this.loadingStatsBar(barObj, saveStatus);
+          if (barObj) this.loadingStatsBar(barObj, saveStatus);
           resolve(false);
         };
       });
     }
 
-    // --- 共通：テンプレートリスト生成 ---
+    // --- テンプレート生成 ---
     static #renderTemplateList(templateId, items, containerId, mapper) {
       const container = DOM.get(containerId);
       const template = DOM.get(templateId);
       if (!container || !template || !items?.length) return;
-      container.replaceChildren(
-        items.reduce((frag, item, index) => {
-          frag.appendChild(mapper(template.content.cloneNode(true), item, index));
-          return frag;
-        }, document.createDocumentFragment())
-      );
+      container.replaceChildren(...items.map((item, index) => mapper(template.content.cloneNode(true), item, index)));
     }
 
-    // --- 共通：列選択動的生成 ---
+    // --- 列選択動的生成 ---
     static renderSelectors(arr, objID, fields, hasEmpty = true) {
       this.#renderTemplateList("selectorTemplate", fields, objID, (clone, field) => {
         clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
@@ -79,7 +71,7 @@
       });
     }
 
-    // --- 共通：チェックボックス群動的生成 ---
+    // --- チェックボックス生成 ---
     static renderCheckboxes(arr, objID) {
       const container = DOM.get(objID);
       if (!container) return;
@@ -94,7 +86,7 @@
       });
     }
 
-    // --- 共通：シンボル設定行生成 ---
+    // --- シンボル設定行生成 ---
     static renderSymbolRows(values, objID, rawNum) {
       const shapes = ['circle', 'triangle', 'square'];
       const colors = [
@@ -111,10 +103,9 @@
       });
     }
 
-    // --- 共通：セレクタスタイル更新 ---
+    // --- セレクタ・インプットUI更新 ---
     static updateInputs(mapBoxId, errorFlags) {
-      const mapBox = DOM.get(mapBoxId);
-      mapBox?.querySelectorAll('select, input').forEach((s, idx) => {
+      DOM.get(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => {
         s.classList.toggle('has-error', !!errorFlags?.[idx]);
       });
     }
@@ -122,7 +113,7 @@
 
   // --- フェーズ連動UI制御 ---
   class UIPhase {
-    // --- Phase状態一括反映ヘルパー ---
+    // --- 状態一括反映 ---
     static #applyRules(rules) {
       Object.entries(rules).forEach(([id, r]) => {
         if (r.show !== undefined) DOM.toggle(id, r.show);
@@ -131,45 +122,52 @@
         if (r.text !== undefined) DOM.setDOM(id, r.text);
         if (r.className !== undefined && DOM.get(id)) DOM.get(id).className = r.className;
         if (id.includes('Section')) {
-          DOM.setAttribute(id, "data-state", r.open ? "active" : null);
-          DOM.setAttribute(id, "data-type", r.disabled ? "disabled" : null);
+          DOM.setAttr(id, "data-state", r.open ? "active" : null);
+          DOM.setAttr(id, "data-type", r.disabled ? "disabled" : null);
         }
       });
     }
 
-    // --- Tab1 フェーズ連動UI更新 ---
+    // --- Tab1 フェーズUI更新 ---
     static updateTab1PhaseUI(phase) {
+      const p = TAB1_PHASE;
       const fileErr = State.get("Tab1ST.file.isMapError").some(Boolean);
       const exacErr = State.get("Tab1ST.exac.isMapError").some(Boolean);
-      // UIルールマップ定義 
+      const isInit = phase === p.INIT.val;
+      const isReady = phase >= p.READY.val;
+      const isLoad = phase >= p.LOAD.val;
+      const isInvalid = phase === p.INVALID.val;
+      const isValid = phase >= p.VALID.val;
+      const isExtract = phase >= p.EXTRACT.val;
+      const isOutput = phase >= p.OUTPUT.val;
+      // マップ定義
       const rules = {
-        [Tab1UI.fileLoadBtn]:   { text: phase <= TAB1_PHASE.READY.val ? "データを取得" : "データを再取得", disabled: false },
-        [Tab1UI.fileMakeBtn]:   { disabled: phase < TAB1_PHASE.READY.val },
-        [Tab1UI.fileValdBtn]:   { disabled: phase < TAB1_PHASE.INVALID.val || fileErr, className: phase === TAB1_PHASE.INVALID.val ? "" : "outline" },
-        [Tab1UI.fileArea]:      { show: phase >= TAB1_PHASE.LOAD.val },
-        [Tab1UI.fileBtnBox]:    { show: phase >= TAB1_PHASE.LOAD.val },
-        [Tab1UI.exacArea]:      { show: phase >= TAB1_PHASE.VALID.val },
-        [Tab1UI.exacBar]:       { show: phase >= TAB1_PHASE.VALID.val },
-        [Tab1UI.exacBtn]:       { disabled: phase < TAB1_PHASE.VALID.val || exacErr },
-        [Tab1UI.exacPushBtn]:   { show: phase >= TAB1_PHASE.EXTRACT.val, disabled: phase < TAB1_PHASE.EXTRACT.val },
-        [Tab1UI.configSection]: { open: phase === TAB1_PHASE.INIT.val, disabled: false },
-        [Tab1UI.fileSection]:   { open: phase >= TAB1_PHASE.READY.val && phase < TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.READY.val },
-        [Tab1UI.exacSection]:   { open: phase >= TAB1_PHASE.VALID.val && phase < TAB1_PHASE.OUTPUT.val, disabled: phase < TAB1_PHASE.VALID.val }
+        [Tab1UI.fileLoadBtn]:   { text: phase <= p.READY.val ? "データを取得" : "データを再取得", disabled: false },
+        [Tab1UI.fileMakeBtn]:   { disabled: !isReady },
+        [Tab1UI.fileValdBtn]:   { disabled: phase < p.INVALID.val || fileErr, className: isInvalid ? "" : "outline" },
+        [Tab1UI.fileArea]:      { show: isLoad },
+        [Tab1UI.fileBtnBox]:    { show: isLoad },
+        [Tab1UI.exacArea]:      { show: isValid },
+        [Tab1UI.exacBar]:       { show: isValid },
+        [Tab1UI.exacBtn]:       { disabled: !isValid || exacErr },
+        [Tab1UI.exacPushBtn]:   { show: isExtract, disabled: !isExtract },
+        [Tab1UI.configSection]: { open: isInit, disabled: false },
+        [Tab1UI.fileSection]:   { open: isReady && !isValid, disabled: !isReady },
+        [Tab1UI.exacSection]:   { open: isValid && !isOutput, disabled: !isValid }
       };
       this.#applyRules(rules);
-      if (phase === TAB1_PHASE.VALID.val) {
-        State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
-      } else if (phase === TAB1_PHASE.EXTRACT.val) {
-        State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
-      }
+      // ステータス表示の切替
+      if (isValid && !isExtract) State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
+      if (isExtract) State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
     }
 
-    // --- Tab2 フェーズ連動UI更新 ---
+    // --- Tab2 フェーズUI更新 ---
     static updateTab2PhaseUI(phase) {
-      const isLoaded = phase >= TAB2_PHASE.LOADED.val;
-      const isFiltered = phase >= TAB2_PHASE.FILTERED.val;
-      const isMapped = phase >= TAB2_PHASE.MAPPED.val;
-      // UIルールマップ定義
+      const p = TAB2_PHASE;
+      const isLoaded = phase >= p.LOADED.val;
+      const isFiltered = phase >= p.FILTERED.val;
+      const isMapped = phase >= p.MAPPED.val;
+      // マップ定義
       const rules = {
         [Tab2UI.datasetLoadBtn]:   { disabled: false },
         [Tab2UI.datasetfilterBtn]: { disabled: !isLoaded },
@@ -182,8 +180,8 @@
         [Tab2UI.reportSection]:    { open: isMapped, disabled: !isMapped }
       };
       this.#applyRules(rules);
-      // マッピング行の生成 (FILTERED突入時のみ)
-      if (phase === TAB2_PHASE.FILTERED.val) {
+      // マッピング行の初期化
+      if (phase === p.FILTERED.val) {
         const baseData = State.get("Tab2ST.basePXRF") ?? [];
         const baseKey = State.get("Tab2ST.symbol.baseKey");
         UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox, 5);
@@ -193,31 +191,31 @@
 
   // --- UI更新 - state同期 ---
   class UIStateUpdater {
-    // --- 状態マッピングと購読 ---
     constructor() {
+      // 状態変更のバインディング
       const stateMap = {
-        "GLB.isLocked": (v) => DOM.setDisabled(Tab1UI.tabSet, v),
-        "Tab1ST.config.status": (v) => UIController.loadingStatsBar(Tab1UI.configBar, v),
-        "Tab1ST.file.status": (v) => UIController.loadingStatsBar(Tab1UI.fileBar, v),
-        "Tab1ST.exac.status": (v) => UIController.loadingStatsBar(Tab1UI.exacBar, v),
-        "Tab2ST.datasetload.status": (v) => UIController.loadingStatsBar(Tab2UI.datasetloadBar, v),
-        "Tab2ST.repoStatus": (v) => UIController.loadingStatsBar(Tab2UI.repoBar, v),
-        "Tab1ST.phase": (v) => UIPhase.updateTab1PhaseUI(v),
-        "Tab2ST.phase": (v) => UIPhase.updateTab2PhaseUI(v),
-        "Tab1ST.file.isMapError": (flags) => {
+        "GLB.isLocked": v => DOM.setDisabled(Tab1UI.tabSet, v),
+        "Tab1ST.config.status": v => UIController.loadingStatsBar(Tab1UI.configBar, v),
+        "Tab1ST.file.status": v => UIController.loadingStatsBar(Tab1UI.fileBar, v),
+        "Tab1ST.exac.status": v => UIController.loadingStatsBar(Tab1UI.exacBar, v),
+        "Tab2ST.datasetload.status": v => UIController.loadingStatsBar(Tab2UI.datasetloadBar, v),
+        "Tab2ST.repoStatus": v => UIController.loadingStatsBar(Tab2UI.repoBar, v),
+        "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
+        "Tab2ST.phase": v => UIPhase.updateTab2PhaseUI(v),
+        "Tab1ST.file.isMapError": flags => {
           UIController.updateInputs(Tab1UI.fileBox, flags);
           if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD.val);
         },
-        "Tab1ST.exac.isMapError": (flags) => {
+        "Tab1ST.exac.isMapError": flags => {
           UIController.updateInputs(Tab1UI.exacBox, flags);
           if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) UIPhase.updateTab1PhaseUI(TAB1_PHASE.VALID.val);
         },
-        "Tab2ST.symbol.baseKey": (key) => {
+        "Tab2ST.symbol.baseKey": key => {
           const baseData = State.get("Tab2ST.basePXRF") ?? [];
           UIController.renderSymbolRows([...new Set(baseData.map(d => d[key]).filter(Boolean))], Tab2UI.symbolBox, 5);
         }
       };
-      Object.entries(stateMap).forEach(([path, callback]) => State.subscribe(path, callback));
+      Object.entries(stateMap).forEach(([path, cb]) => State.subscribe(path, cb));
     }
   }
 

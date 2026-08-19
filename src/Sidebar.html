@@ -87,7 +87,7 @@
             <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
             <div id="datasetArea" style="display: none;">
               <label>dataset選択</label>
-              <div id="datasetBox"></div>
+              <div id="datasetBox" class="checkbox-container"></div>
             </div>
           </details>
           <hr>
@@ -141,9 +141,9 @@
     </template>
 
     <template id="checkboxTemplate">
-      <label style="display:flex; align-items:center; margin-bottom:4px; cursor:pointer;">
-        <input type="checkbox" class="dataset-cb" style="margin-right: 8px;" checked>
-        <span class="cb-text"></span>
+      <label style="display:flex; margin-bottom:6px; align-items: baseline; cursor:pointer;">
+        <input type="checkbox" class="dataset-cb" style="flex:1; cursor: pointer; " checked>
+        <span class="cb-text" style="flex:5;"></span>
       </label>
     </template>
 

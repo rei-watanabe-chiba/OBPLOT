@@ -52,7 +52,7 @@
   fieldset { border: none; }
   .flex-row { display: flex; align-items: center; gap: 0; }
   .txt-btninfo { font-size: 11px; color: var(--grey600); margin-left: 8px; }
-  hr { border: none; border-top: 1px solid var(--grey200); margin: 12px 0; }
+  hr { border: none; border-top: 1.5px solid var(--grey200); margin: 12px 0; }
 
   /* --- タブ --- */
   .nav-tabs { 
@@ -87,8 +87,9 @@
   /* --- フォーム --- */
   label { 
     display: block; 
-    margin-bottom: 4px;
-    font-weight: 500;
+    margin: 4px 2px;
+    color: var(--grey600);
+    font-weight: 400;
   }
   input, select { 
     width: 100%; 
@@ -110,6 +111,10 @@
     }
   }
   input:not(:disabled) { cursor: text; }
+  .checkbox-container {
+    max-height: 120px;
+    overflow-y: auto;
+  }
 
   /* --- アコーディオン (セクション) --- */
   details {
