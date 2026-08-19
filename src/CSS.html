@@ -90,6 +90,7 @@
     margin: 4px 2px;
     color: var(--grey600);
     font-weight: 400;
+    user-select: none;
   }
   input, select { 
     width: 100%; 
@@ -114,8 +115,9 @@
   .checkbox-container { max-height: 120px; overflow-y: auto; }
   .checkbox-item {
     display:flex;
+    margin: 0 !important;
     padding: 4px 0;
-    align-items: baseline;
+    align-items: center;
     border-bottom: 1px solid var(--grey200);
     cursor:pointer;
     &:last-child { border-bottom: none; }
