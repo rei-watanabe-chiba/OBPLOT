@@ -79,8 +79,11 @@
         container.innerHTML = '<div class="txt-btninfo">データがありません</div>';
         return;
       }
+      container.innerHTML = "";
+      container.appendChild(DOM.get("selectAllTemplate").content.cloneNode(true));
       this.#renderTemplateList("checkboxTemplate", arr, objID, (clone, item) => {
-        clone.querySelector("input").value = item;
+        const cb = clone.querySelector(".dataset-cb");
+        cb.value = item;
         clone.querySelector(".cb-text").textContent = item;
         return clone;
       });
