@@ -111,9 +111,14 @@
     }
   }
   input:not(:disabled) { cursor: text; }
-  .checkbox-container {
-    max-height: 120px;
-    overflow-y: auto;
+  .checkbox-container { max-height: 120px; overflow-y: auto; }
+  .checkbox-item {
+    display:flex;
+    padding: 4px 0;
+    align-items: baseline;
+    border-bottom: 1px solid var(--grey200);
+    cursor:pointer;
+    &:last-child { border-bottom: none; }
   }
 
   /* --- アコーディオン (セクション) --- */
