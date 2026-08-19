@@ -2,106 +2,62 @@
 <script>
   // --- イベント管理・初期化クラス ---
   class EventManager {
-    // --- タブ切替 ---
+    // --- グローバル クリック監視 (イベント移譲) ---
+    static #handleClick(e) {
+      const target = e.target;
+      // タブ切替処理
+      const tabBtn = target.closest('.tab-btn');
+      if (tabBtn) { this.switchTab(tabBtn.dataset.target); return; }
+      // data-action のルーティング
+      const actionBtn = target.closest('[data-action]');
+      if (actionBtn) {
+        const action = actionBtn.dataset.action;
+        const arg = actionBtn.dataset.arg;
+        if (typeof AppController[action] === 'function') {
+          arg ? AppController[action](arg) : AppController[action]();
+        }
+      }
+    }
+
+    // --- グローバル 変更監視 (イベント移譲) ---
+    static #handleChange(e) {
+      const target = e.target;
+      // データバインディング
+      const bindPath = target.dataset.bind;
+      if (bindPath) {
+        State.set(bindPath, target.value);
+        return; 
+      }
+      // FileArea 動的生成要素のバインディング
+      const fieldKey = target.dataset.field;
+      if (fieldKey && target.closest('#fileBox')) {
+        State.set(`Tab1ST.file.map.${fieldKey}`, target.value);
+        AppController.validateFileMap();
+      }
+    }
+
+    // --- タブ切替 UI制御 ---
     static switchTab(tabId) {
       document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
       document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
-      DOM.get(tabId)?.classList.add("active");
+      document.getElementById(tabId)?.classList.add("active");
       document.body.dataset.theme = tabId;
       State.set("GLB.activeTab", tabId);
     }
-    // --- 設定エリアイベント ---
-    static processConfigArea() {
-      const selectMode = DOM.get(Tab1UI.configArea)?.querySelector('[data-field="configExacMode"]')?.value;
-      if (!selectMode) return;
-      const modeText = selectMode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
-      const currentPhase = State.get("Tab1ST.phase");
-      const currentMode = State.get("Tab1ST.config.mode");
-      // 初回モード選択でREADYフェーズへ移行
-      if (currentPhase === TAB1_PHASE.INIT.val && selectMode) {
-        State.set({
-          "Tab1ST.config.mode": selectMode,
-          "Tab1ST.config.status": ["message", modeText],
-          "Tab1ST.phase": TAB1_PHASE.READY.val
-        });
-        return;
-      }
-      // モード変更判定 (ダウングレード)
-      if (selectMode !== currentMode && currentPhase >= TAB1_PHASE.INVALID.val) {
-        State.set({
-          "Tab1ST.config.mode": selectMode,
-          "Tab1ST.file.status": ["error", "モード変更検知: 再検証"],
-          "Tab1ST.config.status": ["message", modeText],
-          "Tab1ST.phase": TAB1_PHASE.INVALID.val
-        });
-        return;
-      }
-      State.set({
-        "Tab1ST.config.mode": selectMode,
-        "Tab1ST.config.status": ["message", modeText]
-      });
-    }
 
-    // --- Fileエリアイベント ---
-    static processFileArea() {
-      // 標準selectタグで取得
-      const selectors = [...DOM.get(Tab1UI.fileBox).querySelectorAll("select")];
-      // 必須項目３で判定
-      const errorFlags = Mtd.Utils.validateSelect(selectors.map(s => s.value), 3);
-      const isError = errorFlags.some(Boolean);
-      State.set({
-        "Tab1ST.file.isMapError": errorFlags,
-        "Tab1ST.file.status": [
-          isError ? "error" : "success", 
-          isError ? "エラー: 選択項目" : State.get("Tab1ST.file.cachedStatus")[1]
-        ]
-      });
-    }
-
-    // --- 抽出エリアイベント ---
-    static processExacArea() {
-      // 標準inputタグで取得
-      const inputs = [...DOM.get(Tab1UI.exacBox).querySelectorAll('input')];
-      // dataset入力を判定
-      const exacMap = Object.fromEntries(inputs.map(i => [i.dataset.field, i.value]));
-      const isError = !(exacMap.dataset?.trim());
-      State.set({
-        "Tab1ST.exac.map": exacMap,
-        "Tab1ST.exac.isMapError": [isError, false, false],
-        "Tab1ST.exac.status": isError ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus")
-      });
-    }
-
-    // --- 変更イベントハンドラ ---
-    static #handleChange(e) {
-      const target = e.target;
-      const fieldKey = target?.dataset?.field;
-      if (!fieldKey) return; 
-      // アクション割当
-      const actionMap = {
-        [Tab1UI.configArea]: () => this.processConfigArea(),
-        [Tab1UI.fileBox]: () => {
-          State.set("Tab1ST.file.map", { ...State.get("Tab1ST.file.map"), [fieldKey]: target.value });
-          this.processFileArea();
-        },
-        [Tab1UI.exacBox]: () => this.processExacArea(),
-        [Tab2UI.symbolAxis]: () => { if (fieldKey === "symbolBaseKey") State.set("Tab2ST.symbol.baseKey", target.value); },
-        [Tab2UI.symbolBox]: () => {}
-      };
-      Object.entries(actionMap).some(([id, action]) => (target.id === id || target.closest(`#${id}`)) && (action(), true));
-    }
-    // --- 初期化処理 ---
+    // --- アプリケーション初期化 ---
     static async init() {
+      // イベント監視起動
+      AppController.init(); 
       this.switchTab(State.get("GLB.activeTab"));
       State.set({
         "GLB.isLocked": true, 
         "Tab1ST.config.status": ["loading", "初期設定中..."],
         "Tab1ST.phase": TAB1_PHASE.INIT.val
       });
-      // グローバル読込
+      // グローバル設定
       try {
         State.set("GLB.cachedGlobal", await API.getGlobal());
-        this.processConfigArea();
       } catch (err) {
         State.set("Tab1ST.config.status", ["error", "エラー: GAS通信エラー"]);
       } finally {
@@ -110,20 +66,12 @@
           "Tab1ST.config.status": ["hidden", ""]
         });
       }
-      document.addEventListener("click", e => {
-        const tabId = e.target?.dataset?.target;
-        if (tabId && e.target.classList.contains("tab-btn")) this.switchTab(tabId);
-      });
+      // リスナーの登録
+      document.addEventListener("click", this.#handleClick.bind(this));
       document.addEventListener("change", this.#handleChange.bind(this));
     }
   }
 
-  // --- 呼び出し短縮と初期化 ---
-  const Evt = {
-    switchTab: EventManager.switchTab.bind(EventManager),
-    configArea: EventManager.processConfigArea.bind(EventManager),
-    fileArea: EventManager.processFileArea.bind(EventManager),
-    exacArea: EventManager.processExacArea.bind(EventManager)
-  };
+  // DOM構築完了後に初期化
   window.addEventListener("DOMContentLoaded", () => EventManager.init());
 </script>

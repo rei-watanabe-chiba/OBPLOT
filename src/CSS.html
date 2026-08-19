@@ -104,9 +104,13 @@
     &:not(:disabled) { cursor: pointer; }
     &:hover { filter: brightness(0.9); }
     &:focus { box-shadow: none; outline: none; }
+    &.has-error {
+        border-color: var(--main-red);
+        background-color: color-mix(in srgb, var(--main-red) 10%, #fff);
+    }
   }
 
-  /* --- アコーディオン (セクション管理) --- */
+  /* --- アコーディオン (セクション) --- */
   details {
     border: none;
     border-radius: 0;
@@ -128,7 +132,7 @@
     cursor: pointer; 
     border-radius: 4px;
     transition: color var(--transition-speed);
-    padding: 6px 0;  
+    padding: 0 0 6px 0;  
     user-select: none;
     list-style: none;
     display: flex;
@@ -164,7 +168,7 @@
     margin: 12px 0;
   }
   button {
-    flex: 0 0 50%;
+    flex: 1 1 calc(50% - 4px);
     font-size: 13px;
     font-weight: 500;
     padding: 8px 0px;
@@ -173,7 +177,6 @@
     cursor: pointer;
     transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
     &:only-child { flex: 1 1 100%; }
-    /* テーマ変数連動 */
     &[data-type="primary"] { background-color: var(--theme-color); color: #fff; }
     &[data-type="primary"]:hover:not(:disabled) { background-color: var(--theme-hover); }
     &[data-type]:disabled {

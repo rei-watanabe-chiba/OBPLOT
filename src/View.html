@@ -5,77 +5,15 @@
     // --- 共通：DOM取得 ---
     static get(id) { return document.getElementById(id); }
     // --- 共通：DOMテキスト ---
-    static setDOM(id, text) {
-      const el = this.get(id);
-      if (el && text !== undefined) el.innerText = text;
-    }
+    static setDOM(id, text) { if (text !== undefined && this.get(id)) this.get(id).innerText = text; }
     // --- 共通：DOM表示切替 (非表示<=>表示 固定化対応) ---
-    static toggle(id, isShow) {
-      const el = this.get(id);
-      if (el) el.style.display = isShow ? "" : "none";
-    }
+    static toggle(id, isShow) { if (this.get(id)) this.get(id).style.display = isShow ? "" : "none"; }
     // --- 共通：コンテナ開閉 (details専用) ---
-    static open(id, isOpen) {
-    const el = this.get(id);
-    if (el?.tagName === "DETAILS") {
-      setTimeout(() => { el.open = isOpen; }, 100);
-    }
-  }
+    static open(id, isOpen) { if (this.get(id)?.tagName === "DETAILS") setTimeout(() => { this.get(id).open = isOpen; }, 200); }
     // --- 共通：無効/有効切替 ---
-    static setDisabled(id, isDisabled) {
-      const el = this.get(id);
-      if (el) el.disabled = isDisabled;
-    }
+    static setDisabled(id, isDisabled) { if (this.get(id)) this.get(id).disabled = isDisabled; }
     // --- 共通：カスタム属性付与/削除 ---
-    static setAttribute(id, attr, value) {
-      const el = this.get(id);
-      if (el) {
-        if (value) el.setAttribute(attr, value);
-        else el.removeAttribute(attr);
-      }
-    }
-  }
-
-  // --- UI更新 - state同期 ---
-  class UIStateUpdater {
-    // --- 状態更新の接続（命名規則からパス作成） ---
-    constructor() {
-      const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(this));
-      methods.forEach(method => {
-        const match = method.match(/^handle_([^_]+)_(.+)$/);
-        if (match) {
-          const [, group, key] = match;
-          // State変更の監視登録
-          State.subscribe(`${group}.${key.replace(/_/g, '.')}`, this[method].bind(this));
-        }
-      });
-    }
-    // --- 共通ハンドラ ---
-    handle_GLB_isLocked(isLocked) { DOM.get(Tab1UI.tabSet).disabled = isLocked; }
-    // --- 各種ステータスバーハンドラ ---
-    handle_Tab1ST_config_status(v) { UIController.loadingStatsBar(Tab1UI.configBar, v); }
-    handle_Tab1ST_file_status(v) { UIController.loadingStatsBar(Tab1UI.fileBar, v); }
-    handle_Tab1ST_exac_status(v) { UIController.loadingStatsBar(Tab1UI.exacBar, v); }
-    handle_Tab2ST_datasetload_status(v) { UIController.loadingStatsBar(Tab2UI.datasetloadBar, v); }
-    handle_Tab2ST_repoStatus(v) { UIController.loadingStatsBar(Tab2UI.repoBar, v); }
-    // --- 入力エラーUI連動ハンドラ ---
-    handle_Tab1ST_file_isMapError(errorFlags) {
-      UIController.updateInputs(Tab1UI.fileBox, errorFlags);
-      if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) UIController.updateButtonsByMapError("file");
-    }
-    handle_Tab1ST_exac_isMapError(errorFlags) {
-      UIController.updateInputs(Tab1UI.exacBox, errorFlags);
-      if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) UIController.updateButtonsByMapError("exac");
-    }
-    // --- フェーズ管理ハンドラ ---
-    handle_Tab1ST_phase(phaseVal) { UIController.updateTab1PhaseUI(phaseVal); }
-    handle_Tab2ST_phase(phaseVal) { UIController.updateTab2PhaseUI(phaseVal); }
-    // --- Tab2 シンボル変更ハンドラ ---
-    handle_Tab2ST_symbol_baseKey(newKey) {
-      const baseData = State.get("Tab2ST.basePXRF") ?? [];
-      const uniqueVals = [...new Set(baseData.map(d => d[newKey]).filter(Boolean))];
-      UIController.renderSymbolRows(uniqueVals, Tab2UI.symbolBox);
-    }
+    static setAttribute(id, attr, value) { value ? this.get(id)?.setAttribute(attr, value) : this.get(id)?.removeAttribute(attr); }
   }
 
   // --- UI更新・生成処理群 ---
@@ -120,7 +58,6 @@
     static renderSelectors(arr, objID, fields, hasEmpty = true) {
       const mapBox = DOM.get(objID);
       if (!mapBox || !arr || !fields) return;
-      // 空オプション
       const emptyOpt = hasEmpty ? '<option value="" selected>---未選択---</option>' : '';
       mapBox.innerHTML = fields.map(field => `
         <label>${field.label}
@@ -135,142 +72,77 @@
     // --- 共通：セレクタスタイル更新 ---
     static updateInputs(mapBoxId, errorFlags) {
       const mapBox = DOM.get(mapBoxId);
-      const selectors = mapBox?.querySelectorAll('select, input');
-      selectors?.forEach((s, idx) => {
-        if (errorFlags?.[idx]) {
-          s.style.borderColor = 'var(--main-red)';
-          s.style.backgroundColor = 'color-mix(in srgb, var(--main-red) 10%, #fff)';
-        } else {
-          s.style.borderColor = '';
-          s.style.backgroundColor = '';
+      mapBox?.querySelectorAll('select, input').forEach((s, idx) => {
+        s.classList.toggle('has-error', !!errorFlags?.[idx]);
+      });
+    }
+
+    // --- ルール一括適用 (UI状態の宣言的反映) ---
+    static #applyRules(rules) {
+      Object.entries(rules).forEach(([id, r]) => {
+        if (r.show !== undefined) DOM.toggle(id, r.show);
+        if (r.disabled !== undefined) DOM.setDisabled(id, r.disabled);
+        if (r.open !== undefined) DOM.open(id, r.open);
+        if (r.text !== undefined) DOM.setDOM(id, r.text);
+        if (r.className !== undefined && DOM.get(id)) DOM.get(id).className = r.className;
+        if (id.includes('Section')) {
+          DOM.setAttribute(id, "data-state", r.open ? "active" : null);
+          DOM.setAttribute(id, "data-type", r.disabled ? "disabled" : null);
         }
       });
     }
 
     // --- Tab1 フェーズ連動UI更新 ---
     static updateTab1PhaseUI(phase) {
-      const config = {
-        [TAB1_PHASE.INIT.val]: { 
-          file: { showArea: false, disableMake: true, disableVald: true }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
-        },
-        [TAB1_PHASE.READY.val]: { 
-          file: { showArea: false, disableMake: true, disableVald: true }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
-        },
-        [TAB1_PHASE.LOAD.val]: { 
-          file: { showArea: true, disableMake: false, disableVald: true }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
-        },
-        [TAB1_PHASE.INVALID.val]: { 
-          file: { showArea: true, disableMake: false, disableVald: false }, 
-          exac: { showBox: false, showBar: false, showPush: false, disableExac: true, disablePush: true }
-        },
-        [TAB1_PHASE.VALID.val]: { 
-          file: { showArea: true, disableMake: false, disableVald: false }, 
-          exac: { showBox: true, showBar: true, showPush: false, disableExac: false, disablePush: true }
-        },
-        [TAB1_PHASE.EXTRACT.val]: { 
-          file: { showArea: true, disableMake: false, disableVald: false }, 
-          exac: { showBox: true, showBar: true, showPush: true, disableExac: false }
-        }
-      }[phase];
-      
-      // ステータス保存
-      State.set("Tab1ST.file.cachedStatus", State.get("Tab1ST.file.status"));
-      const loadText = phase <= TAB1_PHASE.READY.val ? "データを取得" : "データを再取得";
-      const valdClass = phase === TAB1_PHASE.INVALID.val ? "" : "outline";
-      const sectionStates = {
-        config: { id: Tab1UI.configSection, open: phase >= TAB1_PHASE.INIT, disabled: false },
-        file:   { id: Tab1UI.fileSection, open: phase >= TAB1_PHASE.READY.val && phase < TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.READY.val },
-        exac:   { id: Tab1UI.exacSection, open: phase >= TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.VALID.val }
+      const fileErr = State.get("Tab1ST.file.isMapError").some(Boolean);
+      const exacErr = State.get("Tab1ST.exac.isMapError").some(Boolean);
+      // UIルールマップ定義 
+      const rules = {
+        [Tab1UI.fileLoadBtn]:   { text: phase <= TAB1_PHASE.READY.val ? "データを取得" : "データを再取得", disabled: false },
+        [Tab1UI.fileMakeBtn]:   { disabled: phase < TAB1_PHASE.LOAD.val || fileErr },
+        [Tab1UI.fileValdBtn]:   { disabled: phase < TAB1_PHASE.INVALID.val || fileErr, className: phase === TAB1_PHASE.INVALID.val ? "" : "outline" },
+        [Tab1UI.fileArea]:      { show: phase >= TAB1_PHASE.LOAD.val },
+        [Tab1UI.fileBtnBox]:    { show: phase >= TAB1_PHASE.LOAD.val },
+        [Tab1UI.exacArea]:      { show: phase >= TAB1_PHASE.VALID.val },
+        [Tab1UI.exacBar]:       { show: phase >= TAB1_PHASE.VALID.val },
+        [Tab1UI.exacBtn]:       { disabled: phase < TAB1_PHASE.VALID.val || exacErr },
+        [Tab1UI.exacPushBtn]:   { show: phase >= TAB1_PHASE.EXTRACT.val, disabled: phase < TAB1_PHASE.EXTRACT.val },
+        [Tab1UI.configSection]: { open: phase === TAB1_PHASE.INIT.val, disabled: false },
+        [Tab1UI.fileSection]:   { open: phase >= TAB1_PHASE.READY.val && phase < TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.READY.val },
+        [Tab1UI.exacSection]:   { open: phase >= TAB1_PHASE.VALID.val, disabled: phase < TAB1_PHASE.VALID.val }
       };
-      // ファイル層UI適用
-      DOM.setDOM(Tab1UI.fileLoadBtn, loadText);
-      DOM.get(Tab1UI.fileValdBtn).className = valdClass;
-      DOM.setDisabled(Tab1UI.fileLoadBtn, false);
-      DOM.setDisabled(Tab1UI.fileMakeBtn, config.file.disableMake);
-      DOM.setDisabled(Tab1UI.fileValdBtn, config.file.disableVald);
-      [Tab1UI.fileArea, Tab1UI.fileBtnBox].forEach(id => DOM.toggle(id, config.file.showArea));
-      if (phase === TAB1_PHASE.LOAD.val) this.updateButtonsByMapError("file");
-      // 抽出層UI適用
-      DOM.toggle(Tab1UI.exacArea, config.exac.showBox);
-      DOM.toggle(Tab1UI.exacBar, config.exac.showBar);
-      DOM.toggle(Tab1UI.exacPushBtn, config.exac.showPush);
-      DOM.setDisabled(Tab1UI.exacBtn, config.exac.disableExac);
-      DOM.setDisabled(Tab1UI.exacPushBtn, config.exac.disablePush);
-      // セクション制御
-      Object.entries(sectionStates).forEach(([key, s]) => {
-        const el = DOM.get(s.id);
-        if (key !== "config") DOM.open(s.id, s.open);
-        el.setAttribute("data-state", s.open ? "active" : "");
-        el.setAttribute("data-type", s.disabled ? "disabled" : "");
-      });
-
-      // 特殊条件ステータス更新
+      this.#applyRules(rules);
       if (phase === TAB1_PHASE.VALID.val) {
-        this.updateButtonsByMapError("exac");
         State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
       } else if (phase === TAB1_PHASE.EXTRACT.val) {
-        State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.file.status"));
-      }
-    }
-
-    // --- 入力マップstate - UI更新 ---
-    static updateButtonsByMapError(type) {
-      if (type === "file") {
-        const isError = State.get("Tab1ST.file.isMapError").some(Boolean);
-        const isListed = State.get("Tab1ST.phase") >= TAB1_PHASE.INVALID.val;
-        DOM.setDisabled(Tab1UI.fileMakeBtn, isError);
-        if (isListed) DOM.setDisabled(Tab1UI.fileValdBtn, isError);
-      } else if (type === "exac") {
-        const isError = State.get("Tab1ST.exac.isMapError").some(Boolean);
-        DOM.setDisabled(Tab1UI.exacBtn, isError);
+        State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
       }
     }
 
     // --- Tab2 フェーズ連動UI更新 ---
     static updateTab2PhaseUI(phase) {
       const isLoaded = phase >= TAB2_PHASE.LOADED.val;
-      DOM.setDisabled(Tab2UI.datasetLoadBtn, false);
-      DOM.setDisabled(Tab2UI.datasetfilterBtn, !isLoaded);
-
-      // 各層UIとSection自動開閉・排他制御
-      const actions = {
-        [TAB2_PHASE.INIT.val]: () => {
-          DOM.open(Tab2UI.datasetSection, true);
-          DOM.open(Tab2UI.symbolSection, false);
-          DOM.open(Tab2UI.reportSection, false);
-          DOM.setAttribute(Tab2UI.symbolSection, "data-type", "disabled");
-          DOM.setAttribute(Tab2UI.reportSection, "data-type", "disabled");
-        },
-        [TAB2_PHASE.LOADED.val]: () => { 
-          DOM.open(Tab2UI.datasetSection, true);
-          DOM.open(Tab2UI.symbolSection, false);
-          DOM.setAttribute(Tab2UI.symbolSection, "data-type", "disabled");
-          DOM.toggle(Tab2UI.datasetArea, true); 
-        },
-        [TAB2_PHASE.FILTERED.val]: () => {
-          DOM.open(Tab2UI.datasetSection, false);
-          DOM.open(Tab2UI.symbolSection, true);
-          DOM.setAttribute(Tab2UI.symbolSection, "data-type", null); // 有効化
-          DOM.toggle(Tab2UI.symbolArea, true);
-          DOM.setDisabled(Tab2UI.symbolAxis, false);
-          DOM.setDisabled(Tab2UI.symbolBtn, false);
-          
-          // マッピング行の生成
-          const baseData = State.get("Tab2ST.basePXRF") ?? [];
-          const baseKey = State.get("Tab2ST.symbol.baseKey");
-          const uniqueVals = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
-          this.renderSymbolRows(uniqueVals, Tab2UI.symbolBox);
-        },
-        [TAB2_PHASE.MAPPED.val]: () => {
-          DOM.open(Tab2UI.symbolSection, false);
-          DOM.open(Tab2UI.reportSection, true);
-          DOM.setAttribute(Tab2UI.reportSection, "data-type", null); // 有効化
-        }
+      const isFiltered = phase >= TAB2_PHASE.FILTERED.val;
+      const isMapped = phase >= TAB2_PHASE.MAPPED.val;
+      // UIルールマップ定義
+      const rules = {
+        [Tab2UI.datasetLoadBtn]:   { disabled: false },
+        [Tab2UI.datasetfilterBtn]: { disabled: !isLoaded },
+        [Tab2UI.datasetArea]:      { show: isLoaded },
+        [Tab2UI.symbolArea]:       { show: isFiltered },
+        [Tab2UI.symbolAxis]:       { disabled: !isFiltered },
+        [Tab2UI.symbolBtn]:        { disabled: !isFiltered },
+        [Tab2UI.datasetSection]:   { open: !isFiltered, disabled: false },
+        [Tab2UI.symbolSection]:    { open: isFiltered && !isMapped, disabled: !isFiltered },
+        [Tab2UI.reportSection]:    { open: isMapped, disabled: !isMapped }
       };
-      actions[phase]?.();
+      this.#applyRules(rules);
+      // マッピング行の生成 (FILTERED突入時のみ)
+      if (phase === TAB2_PHASE.FILTERED.val) {
+        const baseData = State.get("Tab2ST.basePXRF") ?? [];
+        const baseKey = State.get("Tab2ST.symbol.baseKey");
+        UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox);
+      }
     }
 
     // --- チェックボックス動的生成 ---
@@ -299,13 +171,12 @@
         { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' },
         { val: 'var(--grey600)', label: 'Gray' }
       ];
-      const rows = Array.from({ length: 10 });
       const selectConfigs = [
         { type: 'target', options: values.map(v => `<option value="${v}">${v}</option>`), hasDefault: true },
         { type: 'shape',  options: shapes.map(s => `<option value="${s}">${s}</option>`),  hasDefault: false },
         { type: 'color',  options: colors.map(c => `<option value="${c.val}">${c.label}</option>`), hasDefault: false }
       ];
-      box.innerHTML = rows.map((_, i) => `
+      box.innerHTML = Array.from({ length: 10 }).map((_, i) => `
         <div style="display:flex; gap:4px; margin-bottom:6px; align-items:center;">
           ${selectConfigs.map(config => `
             <select data-symbol-idx="${i}" data-symbol-type="${config.type}" style="flex:1; padding:4px;">
@@ -318,7 +189,37 @@
     }
   }
 
+  // --- UI更新 - state同期 ---
+  class UIStateUpdater {
+    // --- 状態マッピングと購読 ---
+    constructor() {
+      const stateMap = {
+        "GLB.isLocked": (v) => DOM.setDisabled(Tab1UI.tabSet, v),
+        "Tab1ST.config.status": (v) => UIController.loadingStatsBar(Tab1UI.configBar, v),
+        "Tab1ST.file.status": (v) => UIController.loadingStatsBar(Tab1UI.fileBar, v),
+        "Tab1ST.exac.status": (v) => UIController.loadingStatsBar(Tab1UI.exacBar, v),
+        "Tab2ST.datasetload.status": (v) => UIController.loadingStatsBar(Tab2UI.datasetloadBar, v),
+        "Tab2ST.repoStatus": (v) => UIController.loadingStatsBar(Tab2UI.repoBar, v),
+        "Tab1ST.phase": (v) => UIController.updateTab1PhaseUI(v),
+        "Tab2ST.phase": (v) => UIController.updateTab2PhaseUI(v),
+        "Tab1ST.file.isMapError": (flags) => {
+          UIController.updateInputs(Tab1UI.fileBox, flags);
+          if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) UIController.updateTab1PhaseUI(TAB1_PHASE.LOAD.val);
+        },
+        "Tab1ST.exac.isMapError": (flags) => {
+          UIController.updateInputs(Tab1UI.exacBox, flags);
+          if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) UIController.updateTab1PhaseUI(TAB1_PHASE.VALID.val);
+        },
+        "Tab2ST.symbol.baseKey": (key) => {
+          const baseData = State.get("Tab2ST.basePXRF") ?? [];
+          UIController.renderSymbolRows([...new Set(baseData.map(d => d[key]).filter(Boolean))], Tab2UI.symbolBox);
+        }
+      };
+      Object.entries(stateMap).forEach(([path, callback]) => State.subscribe(path, callback));
+    }
+  }
+
   // --- 初期化と短縮 ---
-  const UIState = new UIStateUpdater();
   const UI = UIController;
+  const UIState = new UIStateUpdater();
 </script>
