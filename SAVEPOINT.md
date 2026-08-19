@@ -18,7 +18,7 @@
 - `View.html`: DOM操作・state連動によるUI制御
 - `Method.html`: 純粋関数ベースのデータ加工・バリデーション・データ抽出
 - `Controller.html`: 非同期通信・ビジネスロジック制御、リアクティブな状態監視とフェーズ進行のメイン
-- `Event.html`: グローバルなイベント移譲（Event Delegation）によるイベントディスパッチ・自動データバインド処理
+- `Event.html`: グローバルなイベント移譲（Event Delegation）によるイベントディスパッチ・自動データバインド処理・リアルタイムイベント監視
 - `Report.html`: 別タブで展開されるレポート画面（Google Visualization API によるサンプル散布図描画）
 
 ## 3. 次の開発作業
