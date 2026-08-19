@@ -54,19 +54,78 @@
       });
     }
 
+    // --- 共通：テンプレートリスト生成 ---
+    static #renderTemplateList(templateId, items, containerId, mapper) {
+      const container = DOM.get(containerId);
+      const template = DOM.get(templateId);
+      if (!container || !template || !items?.length) return;
+      container.innerHTML = "";
+      const fragment = document.createDocumentFragment();
+      items.forEach((item, index) => {
+        const clone = template.content.cloneNode(true);
+        mapper(clone, item, index);
+        fragment.appendChild(clone);
+      });
+      container.appendChild(fragment);
+    }
+
     // --- 共通：列選択動的生成 ---
     static renderSelectors(arr, objID, fields, hasEmpty = true) {
-      const mapBox = DOM.get(objID);
-      if (!mapBox || !arr || !fields) return;
-      const emptyOpt = hasEmpty ? '<option value="" selected>---未選択---</option>' : '';
-      mapBox.innerHTML = fields.map(field => `
-        <label>${field.label}
-          <select data-field="${field.key}">
-            ${emptyOpt}
-            ${arr.map(h => `<option value="${h}">${h}</option>`).join("")}
-          </select>
-        </label>
-      `).join("");
+      const container = DOM.get(objID);
+      if (!container || !arr || !fields) return;
+      this.#renderTemplateList("selectorTemplate", fields, objID, (clone, field) => {
+        clone.querySelector(".field-label").childNodes[0].nodeValue = `${field.label} `;
+        const select = clone.querySelector("select");
+        select.dataset.field = field.key;
+        if (!hasEmpty) select.querySelector(".empty-opt")?.remove();
+        arr.forEach(h => {
+          const opt = document.createElement("option");
+          opt.value = h;
+          opt.textContent = h;
+          select.appendChild(opt);
+        });
+      });
+    }
+
+    // --- 共通：チェックボックス群動的生成 ---
+    static renderCheckboxes(arr, objID) {
+      const container = DOM.get(objID);
+      if (!container) return;
+      if (!arr || arr.length === 0) {
+        container.innerHTML = '<div class="txt-btninfo">データがありません</div>';
+        return;
+      }
+      this.#renderTemplateList("checkboxTemplate", arr, objID, (clone, item) => {
+        clone.querySelector("input").value = item;
+        clone.querySelector(".cb-text").textContent = item;
+      });
+    }
+
+    // --- 共通：シンボル設定行生成 ---
+    static renderSymbolRows(values, objID) {
+      const container = DOM.get(objID);
+      if (!container || !values) return;
+      const appendOpt = (select, value, text) => {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = text;
+        select.appendChild(opt);
+      };
+      const shapes = ['circle', 'triangle', 'square'];
+      const colors = [
+        { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' },
+        { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' },
+        { val: 'var(--grey600)', label: 'Gray' }
+      ];
+      this.#renderTemplateList("symbolRowTemplate", Array.from({ length: 10 }), objID, (clone, _, i) => {
+        clone.querySelectorAll("select").forEach(s => s.dataset.symbolIdx = i);
+        const targetSelect = clone.querySelector('[data-symbol-type="target"]');
+        values.forEach(v => appendOpt(targetSelect, v, v));
+        const shapeSelect = clone.querySelector('[data-symbol-type="shape"]');
+        shapes.forEach(s => appendOpt(shapeSelect, s, s));
+        const colorSelect = clone.querySelector('[data-symbol-type="color"]');
+        colors.forEach(c => appendOpt(colorSelect, c.val, c.label));
+      });
     }
 
     // --- 共通：セレクタスタイル更新 ---
@@ -77,7 +136,7 @@
       });
     }
 
-    // --- ルール一括適用 (UI状態の宣言的反映) ---
+    // --- 共通：PhaseUI一括反映 ---
     static #applyRules(rules) {
       Object.entries(rules).forEach(([id, r]) => {
         if (r.show !== undefined) DOM.toggle(id, r.show);
@@ -143,49 +202,6 @@
         const baseKey = State.get("Tab2ST.symbol.baseKey");
         UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox);
       }
-    }
-
-    // --- チェックボックス動的生成 ---
-    static renderCheckboxes(arr, objID) {
-      const container = DOM.get(objID);
-      if (!container) return;
-      if (!arr || arr.length === 0) {
-        container.innerHTML = '<div class="txt-btninfo">データがありません</div>';
-        return;
-      }
-      container.innerHTML = arr.map(item => `
-        <label style="display:flex; align-items:center; margin-bottom:4px; cursor:pointer;">
-          <input type="checkbox" value="${item}" class="dataset-cb" style="margin-right: 8px;" checked>
-          ${item}
-        </label>
-      `).join("");
-    }
-
-    // --- シンボル設定行生成 ---
-    static renderSymbolRows(values, objID) {
-      const box = DOM.get(objID);
-      if (!box || !values) return;
-      const shapes = ['circle', 'triangle', 'square'];
-      const colors = [
-        { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' },
-        { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' },
-        { val: 'var(--grey600)', label: 'Gray' }
-      ];
-      const selectConfigs = [
-        { type: 'target', options: values.map(v => `<option value="${v}">${v}</option>`), hasDefault: true },
-        { type: 'shape',  options: shapes.map(s => `<option value="${s}">${s}</option>`),  hasDefault: false },
-        { type: 'color',  options: colors.map(c => `<option value="${c.val}">${c.label}</option>`), hasDefault: false }
-      ];
-      box.innerHTML = Array.from({ length: 10 }).map((_, i) => `
-        <div style="display:flex; gap:4px; margin-bottom:6px; align-items:center;">
-          ${selectConfigs.map(config => `
-            <select data-symbol-idx="${i}" data-symbol-type="${config.type}" style="flex:1; padding:4px;">
-              ${config.hasDefault ? '<option value="" selected>未選択</option>' : ''}
-              ${config.options.join('')}
-            </select>
-          `).join('')}
-        </div>
-      `).join("");
     }
   }
 

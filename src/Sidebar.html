@@ -132,6 +132,32 @@
       </div>
     </dialog>
 
+    <!-- 動的生成要素 -->
+    <template id="checkboxTemplate">
+      <label style="display:flex; align-items:center; margin-bottom:4px; cursor:pointer;">
+        <input type="checkbox" class="dataset-cb" style="margin-right: 8px;" checked>
+        <span class="cb-text"></span>
+      </label>
+    </template>
+
+    <template id="selectorTemplate">
+      <label class="field-label">
+        <select class="field-select">
+          <option value="" class="empty-opt" selected>---未選択---</option>
+        </select>
+      </label>
+    </template>
+
+    <template id="symbolRowTemplate">
+      <div style="display:flex; gap:4px; margin-bottom:6px; align-items:center;">
+        <select data-symbol-type="target" style="flex:1; padding:4px;">
+          <option value="" selected>未選択</option>
+        </select>
+        <select data-symbol-type="shape" style="flex:1; padding:4px;"></select>
+        <select data-symbol-type="color" style="flex:1; padding:4px;"></select>
+      </div>
+    </template>
+
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>
     <?!= include('View'); ?>
