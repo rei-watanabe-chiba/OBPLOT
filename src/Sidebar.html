@@ -37,7 +37,6 @@
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
             <div id="fileArea" style="display: none;">
-              <!-- 動的生成要素にはdata-bindなし -->
               <div id="fileBox"></div>
             </div>
             <div id="fileBtnArea" class="btn-container" style="display: none;">
@@ -55,7 +54,6 @@
               <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
             </div>
             <div id="exacArea" style="display: none;">
-              <label>データ属性</label>
               <div id="exacBox">
                 <label>dataset *必須
                   <input type="text" data-bind="Tab1ST.exac.map.dataset" placeholder="データセット・遺跡名">
@@ -133,18 +131,18 @@
     </dialog>
 
     <!-- 動的生成要素 -->
-    <template id="checkboxTemplate">
-      <label style="display:flex; align-items:center; margin-bottom:4px; cursor:pointer;">
-        <input type="checkbox" class="dataset-cb" style="margin-right: 8px;" checked>
-        <span class="cb-text"></span>
-      </label>
-    </template>
-
     <template id="selectorTemplate">
       <label class="field-label">
         <select class="field-select">
           <option value="" class="empty-opt" selected>---未選択---</option>
         </select>
+      </label>
+    </template>
+
+    <template id="checkboxTemplate">
+      <label style="display:flex; align-items:center; margin-bottom:4px; cursor:pointer;">
+        <input type="checkbox" class="dataset-cb" style="margin-right: 8px;" checked>
+        <span class="cb-text"></span>
       </label>
     </template>
 

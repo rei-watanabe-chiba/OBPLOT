@@ -59,31 +59,23 @@
       const container = DOM.get(containerId);
       const template = DOM.get(templateId);
       if (!container || !template || !items?.length) return;
-      container.innerHTML = "";
-      const fragment = document.createDocumentFragment();
-      items.forEach((item, index) => {
-        const clone = template.content.cloneNode(true);
-        mapper(clone, item, index);
-        fragment.appendChild(clone);
-      });
-      container.appendChild(fragment);
+      container.replaceChildren(
+        items.reduce((frag, item, index) => {
+          frag.appendChild(mapper(template.content.cloneNode(true), item, index));
+          return frag;
+        }, document.createDocumentFragment())
+      );
     }
 
     // --- 共通：列選択動的生成 ---
     static renderSelectors(arr, objID, fields, hasEmpty = true) {
-      const container = DOM.get(objID);
-      if (!container || !arr || !fields) return;
       this.#renderTemplateList("selectorTemplate", fields, objID, (clone, field) => {
-        clone.querySelector(".field-label").childNodes[0].nodeValue = `${field.label} `;
+        clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
         const select = clone.querySelector("select");
         select.dataset.field = field.key;
         if (!hasEmpty) select.querySelector(".empty-opt")?.remove();
-        arr.forEach(h => {
-          const opt = document.createElement("option");
-          opt.value = h;
-          opt.textContent = h;
-          select.appendChild(opt);
-        });
+        select.append(...arr.map(h => new Option(h, h)));
+        return clone;
       });
     }
 
@@ -91,26 +83,19 @@
     static renderCheckboxes(arr, objID) {
       const container = DOM.get(objID);
       if (!container) return;
-      if (!arr || arr.length === 0) {
+      if (!arr?.length) {
         container.innerHTML = '<div class="txt-btninfo">データがありません</div>';
         return;
       }
       this.#renderTemplateList("checkboxTemplate", arr, objID, (clone, item) => {
         clone.querySelector("input").value = item;
         clone.querySelector(".cb-text").textContent = item;
+        return clone;
       });
     }
 
     // --- 共通：シンボル設定行生成 ---
     static renderSymbolRows(values, objID) {
-      const container = DOM.get(objID);
-      if (!container || !values) return;
-      const appendOpt = (select, value, text) => {
-        const opt = document.createElement("option");
-        opt.value = value;
-        opt.textContent = text;
-        select.appendChild(opt);
-      };
       const shapes = ['circle', 'triangle', 'square'];
       const colors = [
         { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' },
@@ -119,12 +104,10 @@
       ];
       this.#renderTemplateList("symbolRowTemplate", Array.from({ length: 10 }), objID, (clone, _, i) => {
         clone.querySelectorAll("select").forEach(s => s.dataset.symbolIdx = i);
-        const targetSelect = clone.querySelector('[data-symbol-type="target"]');
-        values.forEach(v => appendOpt(targetSelect, v, v));
-        const shapeSelect = clone.querySelector('[data-symbol-type="shape"]');
-        shapes.forEach(s => appendOpt(shapeSelect, s, s));
-        const colorSelect = clone.querySelector('[data-symbol-type="color"]');
-        colors.forEach(c => appendOpt(colorSelect, c.val, c.label));
+        clone.querySelector('[data-symbol-type="target"]').append(...values.map(v => new Option(v, v)));
+        clone.querySelector('[data-symbol-type="shape"]').append(...shapes.map(s => new Option(s, s)));
+        clone.querySelector('[data-symbol-type="color"]').append(...colors.map(c => new Option(c.label, c.val)));
+        return clone;
       });
     }
 
@@ -135,8 +118,11 @@
         s.classList.toggle('has-error', !!errorFlags?.[idx]);
       });
     }
+  }
 
-    // --- 共通：PhaseUI一括反映 ---
+  // --- フェーズ連動UI制御 ---
+  class UIPhase {
+    // --- Phase状態一括反映ヘルパー ---
     static #applyRules(rules) {
       Object.entries(rules).forEach(([id, r]) => {
         if (r.show !== undefined) DOM.toggle(id, r.show);
@@ -216,15 +202,15 @@
         "Tab1ST.exac.status": (v) => UIController.loadingStatsBar(Tab1UI.exacBar, v),
         "Tab2ST.datasetload.status": (v) => UIController.loadingStatsBar(Tab2UI.datasetloadBar, v),
         "Tab2ST.repoStatus": (v) => UIController.loadingStatsBar(Tab2UI.repoBar, v),
-        "Tab1ST.phase": (v) => UIController.updateTab1PhaseUI(v),
-        "Tab2ST.phase": (v) => UIController.updateTab2PhaseUI(v),
+        "Tab1ST.phase": (v) => UIPhase.updateTab1PhaseUI(v),
+        "Tab2ST.phase": (v) => UIPhase.updateTab2PhaseUI(v),
         "Tab1ST.file.isMapError": (flags) => {
           UIController.updateInputs(Tab1UI.fileBox, flags);
-          if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) UIController.updateTab1PhaseUI(TAB1_PHASE.LOAD.val);
+          if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD.val);
         },
         "Tab1ST.exac.isMapError": (flags) => {
           UIController.updateInputs(Tab1UI.exacBox, flags);
-          if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) UIController.updateTab1PhaseUI(TAB1_PHASE.VALID.val);
+          if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) UIPhase.updateTab1PhaseUI(TAB1_PHASE.VALID.val);
         },
         "Tab2ST.symbol.baseKey": (key) => {
           const baseData = State.get("Tab2ST.basePXRF") ?? [];
