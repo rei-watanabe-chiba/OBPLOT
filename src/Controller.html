@@ -4,6 +4,7 @@
   class CoreController {
     // --- 初期化処理 ---
     static init() {
+      // モード変更処理登録
       State.subscribe("Tab1ST.config.mode", (mode) => {
         if (!mode) return;
         const modeText = mode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
@@ -19,12 +20,12 @@
       State.subscribe("Tab1ST.exac.map.dataset", () => Evt.validateExacMap());
     }
 
-    // --- 非同期ラッパー ---
+    // --- 共通：非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
       try {
         const res = await processFn();
-        // 戻り値の型でステータスを自動更新 (文字列はsuccess、配列はそのまま)
+        // 戻り値の型で判定
         if (typeof res === "string") State.set(statusPath, ["success", res]);
         else if (Array.isArray(res)) State.set(statusPath, res);
       } catch (err) {
@@ -101,6 +102,7 @@
         const [{ data: fileDT }, { data: resultDT }] = await Promise.all([
           API.fetchData(GLOBAL_CONFIG.filelistSheetName, 6, 6), API.fetchData(GLOBAL_CONFIG.resultsSheetName)
         ]);
+        // 戻り値の型で判定
         const outData = Mtd.Tab1.DataExtractor.run(fileDT, resultDT, State.get("Tab1ST.exac.map"));
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
         await API.writeData(GLOBAL_CONFIG.extractSheetName, outData);
@@ -136,7 +138,6 @@
         ]);
         if (!pxrfData || pxrfData.length <= 1) throw new Error("PXRFデータ不足");
         if (!wdxrfData || wdxrfData.length <= 1) throw new Error("WDXRFデータ不足");
-        
         const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataMerger.load(pxrfData, wdxrfData);
         State.set({ "Tab2ST.rawData": { correction: corrData, mergedPXRF, wdxrfObjs }, "Tab2ST.phase": TAB2_PHASE.LOADED });
         UI.renderCheckboxes(datasets, Tab2UI.datasetBox);

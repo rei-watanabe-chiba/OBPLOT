@@ -8,7 +8,7 @@
       // タブ切替処理
       const tabBtn = target.closest('.tab-btn');
       if (tabBtn) { this.switchTab(tabBtn.dataset.target); return; }
-      // data-action のルーティング
+      // data-action の登録
       const actionBtn = target.closest('[data-action]');
       if (actionBtn) {
         const actionPath = actionBtn.dataset.action;

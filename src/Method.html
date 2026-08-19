@@ -115,6 +115,7 @@
   class PxrfValidator {
     static run(existingDT, newDT) {
       if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
+      // dataset_IDをキーで突合
       const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
       const filteredEx = existingDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
       return filteredEx.length !== existingDT.length - 1 
@@ -125,6 +126,7 @@
 
   // --- Tab2 データ取得ロジック ---
   class DataMerger {
+    // 行列変換
     static #toObjArray(data) {
       const [header, ...body] = data;
       return body.map(row => header.reduce((obj, h, i) => {
@@ -132,6 +134,7 @@
         return obj;
       }, {}));
     }
+    // 読み込みロジック
     static load(pxrfData, wdxrfData) {
       const pxrfObjs = this.#toObjArray(pxrfData);
       const wdxrfObjs = this.#toObjArray(wdxrfData);    
@@ -149,6 +152,7 @@
       });
       return { mergedPXRF: pxrfObjs, wdxrfObjs: wdxrfObjs, datasets: [...datasetSet] };
     }
+    // フィルターロジック
     static filter(mergedPXRF, wdxrfObjs, selectedDatasets) {
       const targetSet = new Set(selectedDatasets);
       return { basePXRF: mergedPXRF.filter(obj => targetSet.has(obj.dataset)), baseWDXRF: wdxrfObjs.filter(obj => targetSet.has(obj.dataset)) };

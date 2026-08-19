@@ -80,7 +80,7 @@
         clone.querySelector(".cb-text").textContent = item;
         return clone;
       });
-      container.replaceChildren(DOM.get("selectAllTemplate").content.cloneNode(true), ...items);
+      container.replaceChildren(DOM.get("checkAllTemplate").content.cloneNode(true), ...items);
     }
 
     // --- シンボル設定行生成 ---
