@@ -1,5 +1,29 @@
 <!-- Model.html *必ず先頭include -->
 <script>
+  // --- global ---
+  const GLOBAL_CONFIG = {
+    fileSheetName: "File",
+    fileHeader: ['file', 'mode', 'id', 'sub_id', 'info'],
+    resultsSheetName: "Results",
+    filelistSheetName: "ファイルリスト",
+    filelistHeader: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'],
+    extractSheetName: "抽出データ",
+    pxrfSheetName: "PXRF",
+    wdxrfSheetName: "WDXRF",
+    correctionSheetName: "Correction",
+    validModes: ["mudrock", "obsidian"],
+    propFileEdited: "isFileListEdited",
+    fileFields: [
+      { key: "file", label: "file *必須", required: true },
+      { key: "mode", label: "mode *必須", required: true },
+      { key: "id", label: "id *必須", required: true },
+      { key: "sub_id", label: "sub_id", required: false },
+      { key: "info", label: "info", required: false }
+    ],
+    obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
+    mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 }
+  };
+  
   // --- htmlID ---
   const Tab1UI = {
     tabSet: "tab1Fieldset", // タブ全体UI
@@ -41,21 +65,8 @@
   }
 
   // --- フェーズ定義 ---
-  const TAB1_PHASE = {
-    INIT: { val: 1, name: 'init' },       // モード未選択・初期状態
-    READY: { val: 2, name: 'ready' },     // モード選択済・File解放
-    LOAD: { val: 3, name: 'load' },       // データ取得成功
-    INVALID: { val: 4, name: 'invalid' }, // 要検証
-    VALID: { val: 5, name: 'valid' },     // 検証成功・抽出解放
-    EXTRACT: { val: 6, name: 'extract' }, // 抽出成功
-    OUTPUT: { val: 7, name: 'output' }    // 格納完了
-  };
-  const TAB2_PHASE = {
-    INIT: { val: 1, name: 'init' },
-    LOADED: { val: 2, name: 'loaded' },
-    FILTERED: { val: 3, name: 'filtered' },
-    MAPPED: { val: 4, name: 'mapped' }
-  };
+  const TAB1_PHASE = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
+  const TAB2_PHASE = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4 };
 
   // --- 状態管理クラス定義 ---
   class AppState {
@@ -63,63 +74,33 @@
     #listeners; // 登録されたコールバック群  
     constructor() {
       this.#state = {
-        GLB: {
-          activeTab: "tab1",
-          isLocked: false,
-          cachedGlobal: null,
-        },
+        GLB: { activeTab: "tab1", isLocked: false },
         Tab1ST: {
-          phase: TAB1_PHASE.INIT.val,
-          config: {
-            status: [],
-            mode: ""
-          },
-          file: {
-            data: null,
-            status: [],
-            cachedStatus: [],
-            map: {},
-            isMapError: [true, true, true, false, false]
-          },
-          exac: {
-            status: [],
-            cachedStatus: [],
-            map: { dataset: "", item: "", date: "" },
-            isMapError: [true, false, false]
-          }
+          phase: TAB1_PHASE.INIT,
+          config: { status: [], mode: "" },
+          file: { data: null, status: [], cachedStatus: [], map: {}, isMapError: [true, true, true, false, false] },
+          exac: { status: [], cachedStatus: [], map: { dataset: "", item: "", date: "" }, isMapError: [true, false, false] }
         },
         Tab2ST: {
-          phase: TAB2_PHASE.INIT.val,
+          phase: TAB2_PHASE.INIT,
           rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null },
-          basePXRF: null,
-          baseWDXRF: null,
-          filter: { datasets: [] },
-          symbol: { baseKey: "dataset", mapping: {} },
-          modeMap: {},
-          preview: { value: "", correction: "rawdata" },
-          correctionLogic: {},
-          report: { values: [], corrections: [] },
+          basePXRF: null, baseWDXRF: null, filter: { datasets: [] }, symbol: { baseKey: "dataset", mapping: {} },
+          modeMap: {}, preview: { value: "", correction: "rawdata" }, correctionLogic: {}, report: { values: [], corrections: [] },
           repoStatus: []
         }
       };
       this.#listeners = {};
     }
-
-    // --- 状態取得 ---
+    // state取得
     get(paths) {
-      // 文字列/配列判定
       const resolve = p => (Array.isArray(p) ? p : p.split('.')).reduce((o, k) => o?.[k], this.#state);
-      // 共通処理
       return Array.isArray(paths) ? paths.map(resolve) : resolve(paths);
     }
-    
-    // --- 状態更新 ---
+    // state更新
     set(updates, value) {
-      // 文字列/オブジェクト判定
       if (typeof updates === 'object' && !Array.isArray(updates)) {
         return Object.entries(updates).forEach(([k, v]) => this.set(k, v));
       }
-      // 共通処理
       const keys = Array.isArray(updates) ? updates : updates.split('.');
       const last = keys.pop();
       const target = keys.reduce((o, k) => o[k] ??= {}, this.#state);
@@ -128,8 +109,7 @@
         this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(value));
       }
     }
-    
-    // --- 変更の監視登録 ---
+    // state監視登録
     subscribe(path, callback) {
       const key = Array.isArray(path) ? path.join('.') : path;
       (this.#listeners[key] ??= []).push(callback);
@@ -146,8 +126,6 @@
           [funcName](...args);
       });
     }
-    // 通信関数定義
-    static getGlobal() { return this.#serverCall("getGlobal"); }
     static fetchData(sheet, quotaCol = null, loadCol = null) { return this.#serverCall("fetchData", sheet, quotaCol, loadCol); }
     static writeData(sheet, data, options = "clear") { return this.#serverCall("writeData", sheet, data, options); }
     static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }
@@ -155,7 +133,7 @@
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
   }
 
-  // --- 初期化と短縮 ---
+  // --- 外部参照用 ---
   const API = GasService;
   const State = new AppState();
 </script>

@@ -13,8 +13,8 @@
       if (actionBtn) {
         const actionPath = actionBtn.dataset.action;
         const [namespace, methodName] = actionPath.split('.');
-        if (Controllers[namespace] && typeof Controllers[namespace][methodName] === 'function') {
-          Controllers[namespace][methodName]();
+        if (Ctrl[namespace] && typeof Ctrl[namespace][methodName] === 'function') {
+          Ctrl[namespace][methodName]();
         }
       }
     }
@@ -43,9 +43,8 @@
 
     // --- リアクティブ状態監視：ファイルマップ ---
     static validateFileMap() {
-      const [map, global] = State.get(["Tab1ST.file.map", "GLB.cachedGlobal"]);
-      if (!global) return;
-      const flags = Mtd.Utils.validateSelect(global.fileFields.map(f => map[f.key] || ""), 3);
+      const map = State.get("Tab1ST.file.map");
+      const flags = Mtd.Utils.validateSelect(GLOBAL_CONFIG.fileFields.map(f => map[f.key] || ""), 3);
       const isErr = flags.some(Boolean);
       State.set({
         "Tab1ST.file.isMapError": flags,
@@ -83,26 +82,13 @@
 
     // --- アプリケーション初期化 ---
     static async init() {
-      // イベント監視起動
-      Controllers.Core.init(); 
+      Ctrl.Core.init(); 
       this.switchTab(State.get("GLB.activeTab"));
       State.set({
-        "GLB.isLocked": true, 
-        "Tab1ST.config.status": ["loading", "初期設定中..."],
-        "Tab1ST.phase": TAB1_PHASE.INIT.val
+        "GLB.isLocked": false, 
+        "Tab1ST.config.status": ["hidden", ""],
+        "Tab1ST.phase": TAB1_PHASE.INIT
       });
-      // グローバル設定
-      try {
-        State.set("GLB.cachedGlobal", await API.getGlobal());
-      } catch (err) {
-        State.set("Tab1ST.config.status", ["error", "エラー: GAS通信エラー"]);
-      } finally {
-        State.set({
-          "GLB.isLocked": false, 
-          "Tab1ST.config.status": ["hidden", ""]
-        });
-      }
-      // リスナーの登録
       document.addEventListener("click", this.#handleClick.bind(this));
       document.addEventListener("change", this.#handleChange.bind(this));
     }
@@ -110,5 +96,6 @@
 
   // DOM構築完了後に初期化
   window.addEventListener("DOMContentLoaded", () => EventManager.init());
+  // --- 外部参照用 ---
   const Evt = EventManager;
 </script>

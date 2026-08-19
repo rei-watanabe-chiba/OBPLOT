@@ -4,31 +4,22 @@
   class CoreController {
     // --- 初期化処理 ---
     static init() {
-      // Configモード変更の監視
       State.subscribe("Tab1ST.config.mode", (mode) => {
         if (!mode) return;
         const modeText = mode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
         const phase = State.get("Tab1ST.phase");
-        if (phase === TAB1_PHASE.INIT.val) {
-          State.set({
-            "Tab1ST.config.status": ["message", modeText],
-            "Tab1ST.phase": TAB1_PHASE.READY.val
-          });
-        } else if (phase >= TAB1_PHASE.INVALID.val) {
-          State.set({
-            "Tab1ST.file.status": ["error", "モード変更検知: 再検証"],
-            "Tab1ST.config.status": ["message", modeText],
-            "Tab1ST.phase": TAB1_PHASE.INVALID.val
-          });
+        if (phase === TAB1_PHASE.INIT) {
+          State.set({ "Tab1ST.config.status": ["message", modeText], "Tab1ST.phase": TAB1_PHASE.READY });
+        } else if (phase >= TAB1_PHASE.INVALID) {
+          State.set({ "Tab1ST.file.status": ["error", "モード変更検知: 再検証"], "Tab1ST.config.status": ["message", modeText], "Tab1ST.phase": TAB1_PHASE.INVALID });
         } else {
           State.set("Tab1ST.config.status", ["message", modeText]);
         }
       });
-      // 抽出Dataset入力の監視
       State.subscribe("Tab1ST.exac.map.dataset", () => Evt.validateExacMap());
     }
 
-    // --- 非同期ラッパー（高階関数化・ステータス自動解決） ---
+    // --- 非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
       try {
@@ -51,15 +42,12 @@
     static async loadFile() {
       if (!(await UI.confirm("確認", State.get("Tab1ST.file.data") ? "内部データをリセットしますか？" : "Fileシートを読み込みますか？", Tab1UI.fileBar))) return;
       await CoreController.withAsyncLock("Tab1ST.file.status", async () => {
-        const global = State.get("GLB.cachedGlobal");
-        const { data, message } = await API.fetchData(global.fileSheetName, 5);
-        UI.renderSelectors(data[0], Tab1UI.fileBox, global.fileFields);
+        const { data, message } = await API.fetchData(GLOBAL_CONFIG.fileSheetName, 5);
+        UI.renderSelectors(data[0], Tab1UI.fileBox, GLOBAL_CONFIG.fileFields);
         State.set({
-          "Tab1ST.file.data": data,
-          "Tab1ST.file.map": Object.fromEntries(global.fileFields.map(f => [f.key, ""])),
-          "Tab1ST.file.isMapError": [true, true, true, false, false],
-          "Tab1ST.file.cachedStatus": ["success", message],
-          "Tab1ST.phase": TAB1_PHASE.LOAD.val
+          "Tab1ST.file.data": data, "Tab1ST.file.map": Object.fromEntries(GLOBAL_CONFIG.fileFields.map(f => [f.key, ""])),
+          "Tab1ST.file.isMapError": [true, true, true, false, false], "Tab1ST.file.cachedStatus": ["success", message],
+          "Tab1ST.phase": TAB1_PHASE.LOAD
         });
         Evt.validateFileMap();
         return message; 
@@ -67,20 +55,18 @@
     }
 
     // --- ファイルリスト共通処理 ---
-    static async processFileList(actionType, fileDT, global) {
-      if (actionType === "validate") ({ data: fileDT } = await API.fetchData(global.filelistSheetName, 5, 5));
-      const outData = Mtd.Tab1.FileValidator.run(fileDT, global.filelistHeader, global.validModes, State.get("Tab1ST.config.mode"));
+    static async processFileList(actionType, fileDT) {
+      if (actionType === "validate") ({ data: fileDT } = await API.fetchData(GLOBAL_CONFIG.filelistSheetName, 5, 5));
+      const outData = Mtd.Tab1.FileValidator.run(fileDT, GLOBAL_CONFIG.filelistHeader, GLOBAL_CONFIG.validModes, State.get("Tab1ST.config.mode"));
       const isAlert = outData.slice(1).some(row => row.at(-1) !== ""); 
-      
       await Promise.all([
-        API.writeData(global.filelistSheetName, outData, "rule"),
-        API.clearUserProperty(global.propFileEdited)
+        API.writeData(GLOBAL_CONFIG.filelistSheetName, outData, "rule"),
+        API.clearUserProperty(GLOBAL_CONFIG.propFileEdited)
       ]);
-      
       const statusRes = isAlert ? ["alert", "出力完了, errorあり"] : "出力完了, errorなし";
       State.set({
         "Tab1ST.file.cachedStatus": Array.isArray(statusRes) ? statusRes : ["success", statusRes],
-        "Tab1ST.phase": isAlert ? TAB1_PHASE.INVALID.val : TAB1_PHASE.VALID.val
+        "Tab1ST.phase": isAlert ? TAB1_PHASE.INVALID : TAB1_PHASE.VALID
       });
       if (!isAlert) Evt.validateExacMap();
       return statusRes;
@@ -92,53 +78,48 @@
       if (State.get("Tab1ST.file.isMapError").some(Boolean)) return;
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
       await CoreController.withAsyncLock("Tab1ST.file.status", async () => {
-        const [global, fileDT, fileMap] = State.get(["GLB.cachedGlobal", "Tab1ST.file.data", "Tab1ST.file.map"]);
-        return await this.processFileList("make", Mtd.Utils.remapArry(fileDT, global.fileFields.map(f => fileMap[f.key] ? fileDT[0].indexOf(fileMap[f.key]) : -1), global.fileHeader), global);
+        const [fileDT, fileMap] = State.get(["Tab1ST.file.data", "Tab1ST.file.map"]);
+        const remapped = Mtd.Utils.remapArry(fileDT, GLOBAL_CONFIG.fileFields.map(f => fileMap[f.key] ? fileDT[0].indexOf(fileMap[f.key]) : -1), GLOBAL_CONFIG.fileHeader);
+        return await this.processFileList("make", remapped);
       });
     }
 
     // --- リスト検証処理 ---
     static async validateFileList() {
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
-      await CoreController.withAsyncLock("Tab1ST.file.status", async () => this.processFileList("validate", null, State.get("GLB.cachedGlobal")));
+      await CoreController.withAsyncLock("Tab1ST.file.status", async () => this.processFileList("validate", null));
     }
 
     // --- 突合抽出処理 ---
     static async extractFile() {
-      const global = State.get("GLB.cachedGlobal");
       if (!await UI.confirm("確認", "既存の「抽出データ」シートを上書きしますか？", Tab1UI.exacBar)) return;
       await CoreController.withAsyncLock("Tab1ST.exac.status", async () => {
-        if (await API.checkUserProperty(global.propFileEdited)) {
-          State.set({ "Tab1ST.file.status": ["error", "シート編集検知: 再検証"], "Tab1ST.phase": TAB1_PHASE.INVALID.val });
+        if (await API.checkUserProperty(GLOBAL_CONFIG.propFileEdited)) {
+          State.set({ "Tab1ST.file.status": ["error", "シート編集検知: 再検証"], "Tab1ST.phase": TAB1_PHASE.INVALID });
           return;
         }
         const [{ data: fileDT }, { data: resultDT }] = await Promise.all([
-          API.fetchData(global.filelistSheetName, 6, 6),
-          API.fetchData(global.resultsSheetName)
+          API.fetchData(GLOBAL_CONFIG.filelistSheetName, 6, 6), API.fetchData(GLOBAL_CONFIG.resultsSheetName)
         ]);
-        const outData = Mtd.Tab1.DataExtractor.run(fileDT, resultDT, State.get("Tab1ST.exac.map"), global);
+        const outData = Mtd.Tab1.DataExtractor.run(fileDT, resultDT, State.get("Tab1ST.exac.map"));
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
-        
-        await API.writeData(global.extractSheetName, outData);
-        State.set("Tab1ST.phase", TAB1_PHASE.EXTRACT.val);
+        await API.writeData(GLOBAL_CONFIG.extractSheetName, outData);
+        State.set("Tab1ST.phase", TAB1_PHASE.EXTRACT);
         return `抽出: ${outData.length - 1} 件`;
       });
     }
 
     // --- PXRF格納処理 ---
     static async pushExacData() {
-      const global = State.get("GLB.cachedGlobal");
       if (!await UI.confirm("確認", "「抽出データ」をPXRFシートに格納しますか？", Tab1UI.exacBar)) return;
       await CoreController.withAsyncLock("Tab1ST.exac.status", async () => {
         const [{ data: extractData }, { data: pxrfData }] = await Promise.all([
-          API.fetchData(global.extractSheetName),
-          API.fetchData(global.pxrfSheetName)
+          API.fetchData(GLOBAL_CONFIG.extractSheetName), API.fetchData(GLOBAL_CONFIG.pxrfSheetName)
         ]);
         const { isDup, data: mergedData } = Mtd.Tab1.PxrfValidator.run(pxrfData, extractData);
         if (isDup && !await UI.confirm("確認", "重複dataset・IDが存在します。上書きしますか？", Tab1UI.exacBar)) return;
-        
-        await API.writeData(global.pxrfSheetName, isDup ? mergedData : extractData.slice(1), isDup ? "clear" : ["append"]);
-        State.set("Tab1ST.phase", TAB1_PHASE.OUTPUT.val);
+        await API.writeData(GLOBAL_CONFIG.pxrfSheetName, isDup ? mergedData : extractData.slice(1), isDup ? "clear" : ["append"]);
+        State.set("Tab1ST.phase", TAB1_PHASE.OUTPUT);
         return `PXRF格納完了: ${extractData.length - 1} 件`;
       });
     }
@@ -150,19 +131,14 @@
     static async loadData() {
       await CoreController.withAsyncLock("Tab2ST.datasetload.status", async () => {
         State.set("Tab2ST.datasetload.status", ["loading", "処理中..."]);
-        const global = State.get("GLB.cachedGlobal");
         const [{ data: pxrfData }, { data: wdxrfData }, { data: corrData = [] }] = await Promise.all([
-          API.fetchData(global.pxrfSheetName),
-          API.fetchData(global.wdxrfSheetName),
-          API.fetchData(global.correctionSheetName).catch(() => ({ data: [] }))
+          API.fetchData(GLOBAL_CONFIG.pxrfSheetName), API.fetchData(GLOBAL_CONFIG.wdxrfSheetName), API.fetchData(GLOBAL_CONFIG.correctionSheetName).catch(() => ({ data: [] }))
         ]);
         if (!pxrfData || pxrfData.length <= 1) throw new Error("PXRFデータ不足");
         if (!wdxrfData || wdxrfData.length <= 1) throw new Error("WDXRFデータ不足");
+        
         const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataMerger.load(pxrfData, wdxrfData);
-        State.set({
-          "Tab2ST.rawData": { correction: corrData, mergedPXRF, wdxrfObjs },
-          "Tab2ST.phase": TAB2_PHASE.LOADED.val
-        });
+        State.set({ "Tab2ST.rawData": { correction: corrData, mergedPXRF, wdxrfObjs }, "Tab2ST.phase": TAB2_PHASE.LOADED });
         UI.renderCheckboxes(datasets, Tab2UI.datasetBox);
         return `読込完了: dataset ${datasets.length}件`;
       });
@@ -176,13 +152,8 @@
         const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
         const { basePXRF, baseWDXRF } = Mtd.Tab2.DataMerger.filter(mergedPXRF, wdxrfObjs, checkedVals);
         State.set({
-          "Tab2ST.filter.datasets": checkedVals,
-          "Tab2ST.basePXRF": basePXRF,
-          "Tab2ST.baseWDXRF": baseWDXRF,
-          "Tab2ST.phase": TAB2_PHASE.FILTERED.val,
-          "Tab2ST.symbol.mapping": {},
-          "Tab2ST.modeMap": {},
-          "Tab2ST.correctionLogic": {}
+          "Tab2ST.filter.datasets": checkedVals, "Tab2ST.basePXRF": basePXRF, "Tab2ST.baseWDXRF": baseWDXRF,
+          "Tab2ST.phase": TAB2_PHASE.FILTERED, "Tab2ST.symbol.mapping": {}, "Tab2ST.modeMap": {}, "Tab2ST.correctionLogic": {}
         });
         return "データ設定を更新しました";
       });
@@ -191,13 +162,9 @@
     // --- Tab2 シンボルマッピング確定 ---
     static async setSymbolMap() {
       await CoreController.withAsyncLock("Tab2ST.symbol.status", async () => {
-        State.set({
-          "Tab2ST.symbol.mapping": Mtd.Tab2.GetUIinput.getSymbolMapping(Tab2UI.symbolBox),
-          "Tab2ST.phase": TAB2_PHASE.MAPPED.val
-        });
+        State.set({ "Tab2ST.symbol.mapping": Mtd.Tab2.GetUIinput.getSymbolMapping(Tab2UI.symbolBox), "Tab2ST.phase": TAB2_PHASE.MAPPED });
       });
     }
-
     // --- レポート画面展開 ---
     static async openReport() {
       await CoreController.withAsyncLock("Tab2ST.repoStatus", async () => {
@@ -209,10 +176,6 @@
     }
   }
 
-  // --- ルーティング管理オブジェクト ---
-  const Controllers = {
-    Core: CoreController,
-    Tab1: Tab1Controller,
-    Tab2: Tab2Controller
-  };
+  // --- 外部参照用 ---
+  const Ctrl = { Core: CoreController, Tab1: Tab1Controller, Tab2: Tab2Controller };
 </script>

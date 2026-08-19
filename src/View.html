@@ -35,13 +35,11 @@
       const prefix = String(barObj).split("StatusBar")[0];
       const saveStatus = State.get(`Tab1ST.${prefix}.status`);
       if (barObj) this.loadingStatsBar(barObj, ["loading", "実行中..."]);
-      // ダイアログ生成
       return new Promise((resolve) => {
         const dialog = DOM.get("universalConfirm");
         DOM.setDOM("uDialogTitle", title);
         DOM.setDOM("uDialogMessage", msg);
         dialog.showModal(); 
-        // ボタン処理定義
         DOM.get("uDialogConfirmBtn").onclick = () => { dialog.close(); resolve(true); };
         DOM.get("uDialogCancelBtn").onclick = () => {
           dialog.close();
@@ -50,7 +48,6 @@
         };
       });
     }
-
     // --- テンプレート生成 ---
     static #renderTemplateList(templateId, items, containerId, mapper) {
       const container = DOM.get(containerId);
@@ -75,10 +72,7 @@
     static renderCheckboxes(arr, objID) {
       const container = DOM.get(objID);
       if (!container) return;
-      if (!arr?.length) {
-        container.innerHTML = '<div class="txt-btninfo">データがありません</div>';
-        return;
-      }
+      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データがありません</div>'; return; }
       const template = DOM.get("checkboxTemplate");
       const items = arr.map(item => {
         const clone = template.content.cloneNode(true);
@@ -136,55 +130,41 @@
       const p = TAB1_PHASE;
       const fileErr = State.get("Tab1ST.file.isMapError").some(Boolean);
       const exacErr = State.get("Tab1ST.exac.isMapError").some(Boolean);
-      const isInit = phase === p.INIT.val;
-      const isReady = phase >= p.READY.val;
-      const isLoad = phase >= p.LOAD.val;
-      const isInvalid = phase === p.INVALID.val;
-      const isValid = phase >= p.VALID.val;
-      const isExtract = phase >= p.EXTRACT.val;
-      const isOutput = phase >= p.OUTPUT.val;
-      // マップ定義
       const rules = {
-        [Tab1UI.fileLoadBtn]:   { text: phase <= p.READY.val ? "データを取得" : "データを再取得", disabled: false },
-        [Tab1UI.fileMakeBtn]:   { disabled: !isReady },
-        [Tab1UI.fileValdBtn]:   { disabled: phase < p.INVALID.val || fileErr, className: isInvalid ? "" : "outline" },
-        [Tab1UI.fileArea]:      { show: isLoad },
-        [Tab1UI.fileBtnBox]:    { show: isLoad },
-        [Tab1UI.exacArea]:      { show: isValid },
-        [Tab1UI.exacBar]:       { show: isValid },
-        [Tab1UI.exacBtn]:       { disabled: !isValid || exacErr },
-        [Tab1UI.exacPushBtn]:   { show: isExtract, disabled: !isExtract },
-        [Tab1UI.configSection]: { open: isInit, disabled: false },
-        [Tab1UI.fileSection]:   { open: isReady && !isValid, disabled: !isReady },
-        [Tab1UI.exacSection]:   { open: isValid && !isOutput, disabled: !isValid }
+        [Tab1UI.fileLoadBtn]:   { text: phase <= p.READY ? "データを取得" : "データを再取得", disabled: false },
+        [Tab1UI.fileMakeBtn]:   { disabled: phase < p.READY },
+        [Tab1UI.fileValdBtn]:   { disabled: phase < p.INVALID || fileErr, className: phase === p.INVALID ? "" : "outline" },
+        [Tab1UI.fileArea]:      { show: phase >= p.LOAD },
+        [Tab1UI.fileBtnBox]:    { show: phase >= p.LOAD },
+        [Tab1UI.exacArea]:      { show: phase >= p.VALID },
+        [Tab1UI.exacBar]:       { show: phase >= p.VALID },
+        [Tab1UI.exacBtn]:       { disabled: phase < p.VALID || exacErr },
+        [Tab1UI.exacPushBtn]:   { show: phase >= p.EXTRACT, disabled: phase < p.EXTRACT },
+        [Tab1UI.configSection]: { open: phase === p.INIT, disabled: false },
+        [Tab1UI.fileSection]:   { open: phase >= p.READY && phase < p.VALID, disabled: phase < p.READY },
+        [Tab1UI.exacSection]:   { open: phase >= p.VALID && phase < p.OUTPUT, disabled: phase < p.VALID }
       };
       this.#applyRules(rules);
-      // ステータス表示の切替
-      if (isValid && !isExtract) State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
-      if (isExtract) State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
+      if (phase >= p.VALID && phase < p.EXTRACT) State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
+      if (phase >= p.EXTRACT) State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
     }
 
     // --- Tab2 フェーズUI更新 ---
     static updateTab2PhaseUI(phase) {
       const p = TAB2_PHASE;
-      const isLoaded = phase >= p.LOADED.val;
-      const isFiltered = phase >= p.FILTERED.val;
-      const isMapped = phase >= p.MAPPED.val;
-      // マップ定義
       const rules = {
         [Tab2UI.datasetLoadBtn]:   { disabled: false },
-        [Tab2UI.datasetfilterBtn]: { disabled: !isLoaded },
-        [Tab2UI.datasetArea]:      { show: isLoaded },
-        [Tab2UI.symbolArea]:       { show: isFiltered },
-        [Tab2UI.symbolAxis]:       { disabled: !isFiltered },
-        [Tab2UI.symbolBtn]:        { disabled: !isFiltered },
-        [Tab2UI.datasetSection]:   { open: !isFiltered, disabled: false },
-        [Tab2UI.symbolSection]:    { open: isFiltered && !isMapped, disabled: !isFiltered },
-        [Tab2UI.reportSection]:    { open: isMapped, disabled: !isMapped }
+        [Tab2UI.datasetfilterBtn]: { disabled: phase < p.LOADED },
+        [Tab2UI.datasetArea]:      { show: phase >= p.LOADED },
+        [Tab2UI.symbolArea]:       { show: phase >= p.FILTERED },
+        [Tab2UI.symbolAxis]:       { disabled: phase < p.FILTERED },
+        [Tab2UI.symbolBtn]:        { disabled: phase < p.FILTERED },
+        [Tab2UI.datasetSection]:   { open: phase < p.FILTERED, disabled: false },
+        [Tab2UI.symbolSection]:    { open: phase >= p.FILTERED && phase < p.MAPPED, disabled: phase < p.FILTERED },
+        [Tab2UI.reportSection]:    { open: phase >= p.MAPPED, disabled: phase < p.MAPPED }
       };
       this.#applyRules(rules);
-      // マッピング行の初期化
-      if (phase === p.FILTERED.val) {
+      if (phase === p.FILTERED) {
         const baseData = State.get("Tab2ST.basePXRF") ?? [];
         const baseKey = State.get("Tab2ST.symbol.baseKey");
         UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox, 5);
@@ -207,11 +187,11 @@
         "Tab2ST.phase": v => UIPhase.updateTab2PhaseUI(v),
         "Tab1ST.file.isMapError": flags => {
           UIController.updateInputs(Tab1UI.fileBox, flags);
-          if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD.val) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD.val);
+          if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD);
         },
         "Tab1ST.exac.isMapError": flags => {
           UIController.updateInputs(Tab1UI.exacBox, flags);
-          if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID.val) UIPhase.updateTab1PhaseUI(TAB1_PHASE.VALID.val);
+          if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID) UIPhase.updateTab1PhaseUI(TAB1_PHASE.VALID);
         },
         "Tab2ST.symbol.baseKey": key => {
           const baseData = State.get("Tab2ST.basePXRF") ?? [];

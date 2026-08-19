@@ -21,32 +21,6 @@ function onOpen() {
     .addToUi();
 }
 
-// --- 定数設定取得 ---
-function getGlobal() {
-  return withErrorHandling(() => ApiResponse.success({
-    fileSheetName: "File",
-    fileHeader: ['file', 'mode', 'id', 'sub_id', 'info'],
-    resultsSheetName: "Results",
-    filelistSheetName: "ファイルリスト",
-    filelistHeader: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'],
-    extractSheetName: "抽出データ",
-    pxrfSheetName: "PXRF",
-    wdxrfSheetName: "WDXRF",
-    correctionSheetName: "Correction",
-    validModes: ["mudrock", "obsidian"],
-    propFileEdited: "isFileListEdited",
-    fileFields: [
-      { key: "file", label: "file *必須", required: true },
-      { key: "mode", label: "mode *必須", required: true },
-      { key: "id", label: "id *必須", required: true },
-      { key: "sub_id", label: "sub_id", required: false },
-      { key: "info", label: "info", required: false }
-    ],
-    obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
-    mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 }
-  }));
-}
-
 // --- サイドバー表示 ---
 function showSidebar() {
   const template = HtmlService.createTemplateFromFile("Sidebar");
@@ -71,7 +45,7 @@ function fetchData(sheetName, quotaCol = null, loadCol = null) {
     if (rawData.length <= 1) return ApiResponse.error("DATA_ERR", "データが1行以下");
     if (quotaCol !== null && rawData[0].length < quotaCol) return ApiResponse.error("DATA_ERR", "データ列不足");
     const data = loadCol !== null ? rawData.map(row => row.slice(0, loadCol)) : rawData;
-    // 通信エラー防止
+    // 通信エラー回避でstate返却
     return ApiResponse.success({ data: JSON.parse(JSON.stringify(data)), message: `取得: ${data.length} 行` });
   });
 }
@@ -102,7 +76,6 @@ function writeData(sheetName, data, options = "clear") {
 
 // --- 編集検知 ---
 function onEdit(e) {
-
   if (e?.source?.getActiveSheet().getName() === "ファイルリスト") {
     PropertiesService.getUserProperties().setProperty("isFileListEdited", "true");
   }
