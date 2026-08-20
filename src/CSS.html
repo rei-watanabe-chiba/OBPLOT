@@ -35,8 +35,7 @@
     display: grid;
     grid-template-rows: auto 1fr;
     height: 100vh;
-    overflow-x: hidden; /* 追記: 横スクロールを強制非表示 */
-    overflow-y: hidden; /* 既存: 縦はmain内でスクロールさせるためhidden */
+    overflow-x: hidden;
     font-family: 'Roboto', 'Noto Sans JP', sans-serif;
     font-size: 13px;
     color: var(--text-main);
@@ -351,24 +350,19 @@
   
   /* Popover本体の設定 (CSS Anchor Positioning) */
   .multi-select-options {
-    /* 1. Popoverのネイティブデフォルト配置を完全リセット */
-    inset: auto;
     margin: 0;
-
     padding: 0;
     max-height: 200px;
-    overflow-x: hidden;         /* 3. 要素内の横はみ出しを確実に防止 */
     overflow-y: auto;
     background-color: var(--bg-color);
     border: 1px solid var(--grey200);
     border-radius: 4px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     box-sizing: border-box;
-    
-    /* 2. アンカーを基準にした厳密な相対配置 */
+    /* アンカーを基準にした相対配置 */
     top: calc(anchor(bottom) + 4px);
     left: anchor(left);
-    width: anchor-size(width);  /* right指定を削除し、幅の同期に変更 */
+    width: anchor-size(width);
   }
   
   .badge {
