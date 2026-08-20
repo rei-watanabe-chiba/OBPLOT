@@ -191,7 +191,6 @@
 
     // --- サマリーテキスト(Badge)更新 ---
     static updateMultiSelectSummary(objID, selectedValues) {
-      // 構造変更に伴い querySelector 先を更新
       const summary = DOM.get(objID)?.querySelector(".multi-select-summary");
       if (!summary) return;
       if (!selectedValues?.length) {
