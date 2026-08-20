@@ -122,7 +122,7 @@
         ]);
         if (!pxrfRes.data || pxrfRes.data.length <= 1) throw new Error("PXRFデータ不足");
         if (!wdxrfRes.data || wdxrfRes.data.length <= 1) throw new Error("WDXRFデータ不足");
-        const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataMerger.load(pxrfRes.data, wdxrfRes.data);
+        const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataManager.load(pxrfRes.data, wdxrfRes.data);
         State.set({ 
           "Tab2ST.rawData": { correction: corrRes.data, mergedPXRF, wdxrfObjs }, 
           "Tab2ST.filter.datasets": datasets, 
@@ -140,7 +140,7 @@
         const checkedVals = State.get("Tab2ST.filter.datasets") || [];
         if (!checkedVals.length) throw new Error("Dataset未選択");
         const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
-        const { basePXRF, baseWDXRF } = Mtd.Tab2.DataMerger.filter(mergedPXRF, wdxrfObjs, checkedVals);
+        const { basePXRF, baseWDXRF } = Mtd.Tab2.DataManager.filter(mergedPXRF, wdxrfObjs, checkedVals);
         State.set({
           "Tab2ST.basePXRF": basePXRF, "Tab2ST.baseWDXRF": baseWDXRF,
           "Tab2ST.phase": TAB2_PHASE.FILTERED, "Tab2ST.symbol.mapping": {}, "Tab2ST.modeMap": {}, "Tab2ST.correctionLogic": {}
@@ -160,7 +160,7 @@
       });
     }
 
-    // --- Tab2 プレビュー生成 (臨時デバッグ用) ---
+    // --- Tab2 プレビュー生成 (State経由デバッグ) ---
     static async makePreview() {
       await CoreController.withAsyncLock("Tab2ST.repoStatus", async () => {
         const modeMap = State.get("Tab2ST.modeMap");
@@ -168,24 +168,34 @@
         const basePXRF = State.get("Tab2ST.basePXRF");
         const baseWDXRF = State.get("Tab2ST.baseWDXRF");
 
-        // 1. データ構築
+        // --- データ構築 ---
         const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic);
         if (!previewData.length) throw new Error("対象データなし");
 
-        // 2. 統計計算
+        // --- 統計計算 ---
         const xArr = previewData.map(d => d.x);
         const yArr = previewData.map(d => d.y);
         const stats = Mtd.Tab2.CalcProcessor.calcRegression(xArr, yArr);
 
-        // 3. State保存
+        // --- デバッグ文字列生成 ---
+        const debugMsg = [
+          `--- デバッグ要約 ---`,
+          `PXRF: ${basePXRF?.length ?? 0}件 / WDXRF: ${baseWDXRF?.length ?? 0}件`,
+          `プレビュー生成: ${previewData.length}件`,
+          `先頭データ X: ${previewData[0]?.x}, Y: ${previewData[0]?.y}`,
+          `相関係数(R): ${stats?.r?.toFixed(4)}`,
+          `傾き(Slope): ${stats?.slope?.toFixed(4)}`,
+          `切片(Intercept): ${stats?.intercept?.toFixed(4)}`
+        ].join(' | ');
+
+        // --- State保存 ---
         State.set({
           "Tab2ST.previewData": previewData,
-          "Tab2ST.correctionLogic": stats // 補正ロジックとして統計量を保持
+          "Tab2ST.correctionLogic": stats,
+          "Tab2ST.preview.stats": debugMsg
         });
 
-        console.log("計算結果:", stats);
-        alert(`相関係数(R): ${stats.r.toFixed(4)}`);
-        return "計算結果を表示しました";
+        return "プレビューを作成しました";
       });
     }
     

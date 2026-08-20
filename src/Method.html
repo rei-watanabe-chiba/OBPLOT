@@ -147,30 +147,30 @@
   class PreviewManager {
     // プレビュー用データ構築
     static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic) {
-      // 1. pxrf元素をモード別に抽出・リネーム
+      // pxrf元素の抽出
       const processed = basePXRF.map(row => {
         const newRow = { dataset: row.dataset, id: row.ID || row.id };
         GLOBAL_CONFIG.previewElements.forEach(el => {
-          const mode = modeMap[el]; // 'obsidian' or 'mudrock'
+          const mode = modeMap[el];
           const colName = mode === 'obsidian' ? `ob_${el}` : `md_${el}`;
           newRow[el] = row[colName] ?? null;
         });
         return newRow;
       });
 
-      // 2. WDXRFとの突合 (dataset + id)
+      // WDXRFマップ作成
       const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID || w.id}`, w]));
       
+      // プレビューデータ構築
       return processed.map(p => {
         const w = wdxrfMap.get(`${p.dataset}_${p.id}`);
         if (!w) return null;
         
-        // 算出対象の計算
-        const val = CalcProcessor.evaluate(valueLogic, p);
-        return {
-          x: w[p.id] ?? w.Value, // WDXRF側の値をXとする（仮）
-          y: val
-        };
+        const yVal = CalcProcessor.evaluate(valueLogic, p);
+        const xVal = CalcProcessor.evaluate(valueLogic, w);
+        if (xVal == null || yVal == null) return null;
+
+        return { x: xVal, y: yVal };
       }).filter(Boolean);
     }
   }
