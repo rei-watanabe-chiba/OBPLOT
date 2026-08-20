@@ -12,24 +12,52 @@
 
   // --- 汎用UIパーツ生成・描画クラス ---
   class NewDOM {
-    // --- テンプレート汎用リスト生成 ---
-    static #renderTemplateList(templateId, items, containerId, mapper) {
-      const container = DOM.get(containerId);
-      const template = DOM.get(templateId);
+    // --- テンプレートクローン ---
+    static #clone(templateId) {
+      return DOM.get(templateId)?.content.cloneNode(true);
+    }
+
+    // --- 属性一括バインド ---
+    static #bind(element, attrs) {
+      Object.entries(attrs).forEach(([k, v]) => v != null && element.setAttribute(k, v));
+      return element;
+    }
+
+    // --- テンプレートリスト汎用描画 ---
+    static #renderList(templateId, items, containerId, mapper) {
+      const [container, template] = [DOM.get(containerId), DOM.get(templateId)];
       if (!container || !template || !items?.length) return;
-      container.replaceChildren(...items.map((item, index) => mapper(template.content.cloneNode(true), item, index)));
+      container.replaceChildren(...items.map((item, index) => mapper(this.#clone(templateId), item, index)));
+    }
+
+    // --- チェックボックスリスト共通生成 ---
+    static #renderCheckboxList(arr, containerId, targetState, allChangeState = null) {
+      const container = DOM.get(containerId);
+      if (!container) return;
+      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
+
+      const items = arr.map(item => {
+        const clone = this.#clone("checkboxTemplate");
+        const cb = this.#bind(clone.querySelector(".dataset-cb"), { value: item, 'data-change': targetState });
+        cb.checked = true;
+        clone.querySelector(".cb-text").textContent = item;
+        return clone;
+      });
+
+      if (allChangeState) {
+        const allClone = this.#clone("checkAllTemplate");
+        this.#bind(allClone.querySelector("input"), { 'data-change': allChangeState }).checked = true;
+        container.replaceChildren(allClone, ...items);
+        return;
+      }
+      container.replaceChildren(...items);
     }
 
     // --- ステータスバー更新 ---
     static status(id, status = null) {
       const el = DOM.get(id);
       if (!el) return;
-      if (!status?.length) {
-        el.dataset.status = "hidden";
-        el.innerText = "";
-        return;
-      }
-      [el.dataset.status, el.innerText] = status;
+      [el.dataset.status, el.innerText] = status?.length ? status : ["hidden", ""];
     }
 
     // --- ダイアログ生成 ---
@@ -53,11 +81,9 @@
 
     // --- 列選択動的生成 ---
     static selectors(arr, objID, fields, targetState, hasEmpty = true, isMultiple = false) {
-      this.#renderTemplateList("selectorTemplate", fields, objID, (clone, field) => {
+      this.#renderList("selectorTemplate", fields, objID, (clone, field) => {
         clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
-        const select = clone.querySelector("select");
-        select.setAttribute('data-field', field.key);
-        select.setAttribute('data-change', targetState);
+        const select = this.#bind(clone.querySelector("select"), { 'data-field': field.key, 'data-change': targetState });
         if (isMultiple) select.multiple = true;
         if (!hasEmpty || isMultiple) select.querySelector(".empty-opt")?.remove();
         select.append(...arr.map(h => new Option(h, h)));
@@ -67,27 +93,14 @@
 
     // --- チェックボックス生成 ---
     static checkboxes(arr, objID) {
-      const container = DOM.get(objID);
-      if (!container) return;
-      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データがありません</div>'; return; }
-      const template = DOM.get("checkboxTemplate");
-      const items = arr.map(item => {
-        const clone = template.content.cloneNode(true);
-        clone.querySelector(".dataset-cb").value = item;
-        clone.querySelector(".cb-text").textContent = item;
-        return clone;
-      });
-      container.replaceChildren(DOM.get("checkAllTemplate").content.cloneNode(true), ...items);
+      this.#renderCheckboxList(arr, objID, "Tab2.toggleDataset");
     }
 
     // --- シンボル設定行生成 ---
     static symbolRows(values, objID, rawNum, targetState) {
       const { symbolShapes: shapes, symbolColors: colors } = GLOBAL_CONFIG;
-      this.#renderTemplateList("symbolRowTemplate", Array.from({ length: rawNum }), objID, (clone, _, i) => {
-        clone.querySelectorAll("select").forEach(s => {
-          s.setAttribute('data-symbol-idx', i);
-          s.setAttribute('data-change', targetState);
-        });
+      this.#renderList("symbolRowTemplate", Array.from({ length: rawNum }), objID, (clone, _, i) => {
+        clone.querySelectorAll("select").forEach(s => this.#bind(s, { 'data-symbol-idx': i, 'data-change': targetState }));
         clone.querySelector('[data-symbol-type="target"]').append(...values.map(v => new Option(v, v)));
         clone.querySelector('[data-symbol-type="shape"]').append(...shapes.map(s => new Option(s, s)));
         clone.querySelector('[data-symbol-type="color"]').append(...colors.map(c => new Option(c.label, c.val)));
@@ -97,18 +110,15 @@
 
     // --- ラジオボタン生成 ---
     static radioGroup(elements, boxId, targetState, initValue) {
-      const box = DOM.get(boxId);
-      const template = DOM.get("previewModeTemplate");
+      const [box, template] = [DOM.get(boxId), DOM.get("previewModeTemplate")];
       if (!box || !template || !elements?.length) return {};
       const initialMap = {};
       const items = elements.map(el => {
         initialMap[el] = initValue;
-        const clone = template.content.cloneNode(true);
+        const clone = this.#clone("previewModeTemplate");
         clone.querySelector(".radio-label").textContent = el;
         clone.querySelectorAll('input[type="radio"]').forEach(radio => {
-          radio.setAttribute('name', `mode_${el}`);
-          radio.setAttribute('data-element', el);
-          radio.setAttribute('data-change', targetState);
+          this.#bind(radio, { name: `mode_${el}`, 'data-element': el, 'data-change': targetState });
           if (radio.value === initValue) radio.checked = true;
         });
         return clone;
@@ -123,21 +133,8 @@
       if (!container) return;
       if (!stats) { container.replaceChildren(); return; }
 
-      const fmt = (v, digits = 4) => (v != null && !isNaN(v)) ? v.toFixed(digits) : "-";
-      const sign = (stats.intercept ?? 0) >= 0 ? "+" : "-";
-      const absIntercept = Math.abs(stats.intercept ?? 0);
-      const eqStr = `y = ${fmt(stats.slope)}x ${sign} ${fmt(absIntercept)}`;
-
-      const rows = [
-        ["データ個数", stats.count ?? 0],
-        ["相関/決定係数", `${fmt(stats.r)} / ${fmt(stats.r2)}`],
-        ["回帰直線", eqStr],
-        ["残差標準偏差", fmt(stats.resStdDev)],
-        ["器械Err3σ", fmt(stats.err3Sigma)]
-      ];
-
-      const containerTpl = DOM.get("statsContainerTemplate");
-      const rowTpl = DOM.get("statsRowTemplate");
+      const rows = DataUtils.createStatsRows(stats);
+      const [containerTpl, rowTpl] = [DOM.get("statsContainerTemplate"), DOM.get("statsRowTemplate")];
       if (!containerTpl || !rowTpl) return;
 
       const boxClone = containerTpl.content.cloneNode(true);
@@ -145,76 +142,43 @@
 
       rows.forEach(([label, val]) => {
         const rowClone = rowTpl.content.cloneNode(true);
-        rowClone.querySelector(".stats-label").textContent = label;
-        rowClone.querySelector(".stats-val").textContent = String(val);
+        [rowClone.querySelector(".stats-label").textContent, rowClone.querySelector(".stats-val").textContent] = [label, String(val)];
         grid.appendChild(rowClone);
       });
 
       container.replaceChildren(boxClone);
     }
 
-    // --- 疑似ドロップダウン生成 (Popover API) ---
+    // --- 疑似ドロップダウン生成 ---
     static multiSelectDropdown(arr, objID, targetState, allChangeState = null) {
       const container = DOM.get(objID);
       if (!container) return;
-      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
 
-      const clone = DOM.get("multiSelectTemplate").content.cloneNode(true);
-      const summaryBtn = clone.querySelector(".multi-select-summary");
-      const optionsBox = clone.querySelector(".multi-select-options");
+      const clone = this.#clone("multiSelectTemplate");
+      const [summaryBtn, optionsBox] = [clone.querySelector(".multi-select-summary"), clone.querySelector(".multi-select-options")];
+      const [popoverId, anchorName] = [`popover-${objID}`, `--anchor-${objID}`];
 
-      const popoverId = `popover-${objID}`;
-      const anchorName = `--anchor-${objID}`;
-      
-      summaryBtn.setAttribute("popovertarget", popoverId);
-      summaryBtn.style.anchorName = anchorName;
-      
-      optionsBox.id = popoverId;
-      optionsBox.style.positionAnchor = anchorName;
+      this.#bind(summaryBtn, { popovertarget: popoverId }).style.anchorName = anchorName;
+      this.#bind(optionsBox, { id: popoverId }).style.positionAnchor = anchorName;
 
-      if (allChangeState) {
-        const checkAllClone = DOM.get("checkAllTemplate").content.cloneNode(true);
-        const allCb = checkAllClone.querySelector("input[type='checkbox']");
-        allCb.setAttribute('data-change', allChangeState);
-        optionsBox.appendChild(checkAllClone);
-      }
-
-      const items = arr.map(item => {
-        const itemClone = DOM.get("checkboxTemplate").content.cloneNode(true);
-        const cb = itemClone.querySelector(".dataset-cb");
-        cb.value = item;
-        cb.checked = true;
-        cb.setAttribute('data-change', targetState);
-        itemClone.querySelector(".cb-text").textContent = item;
-        return itemClone;
-      });
-      
-      optionsBox.append(...items);
+      this.#renderCheckboxList(arr, optionsBox.id, targetState, allChangeState);
       container.replaceChildren(clone);
     }
 
-    // --- サマリーテキスト(Badge)更新 ---
+    // --- サマリーテキスト更新 ---
     static updateMultiSelectSummary(objID, selectedValues) {
       const summary = DOM.get(objID)?.querySelector(".multi-select-summary");
       if (!summary) return;
-      if (!selectedValues?.length) {
-        summary.innerHTML = '<span style="color:var(--grey400)">未選択</span>';
-        return;
-      }
-      summary.replaceChildren(...selectedValues.map(v => {
-        const span = document.createElement('span');
-        span.className = 'badge';
-        span.textContent = v;
-        return span;
-      }));
+      summary.innerHTML = selectedValues?.length
+        ? selectedValues.map(v => `<span class="badge">${v}</span>`).join('')
+        : '<span style="color:var(--grey400)">未選択</span>';
     }
 
-    // --- セレクタ・インプットUI更新 ---
+    // --- 入力欄エラー状態更新 ---
     static inputs(mapBoxId, errorFlags) {
       DOM.get(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => {
         s.classList.toggle('has-error', !!errorFlags?.[idx]);
       });
     }
   }
-
 </script>
