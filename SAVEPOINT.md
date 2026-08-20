@@ -22,7 +22,8 @@
 - `Sidebar.html`: サイドバーのHTML構造（動的コンテナの準備、静的アクション要素のハードコード）
 - `CSS.html`: スタイル・トークン定義
 - `Model.html`: 状態管理、定数管理、GAS通信ラップ
-- `View.html`: DOM操作・State連動によるUI制御、動的要素へのカスタム属性付与・レンダリング処理
+- `DOM.html`: 汎用DOM操作・汎用動的UI生成
+- `View.html`: State連動によるUI制御、動的要素へのカスタム属性付与・レンダリング処理
 - `Method.html`: 純粋関数ベースのデータ加工・バリデーション・データ抽出（UI非依存）
 - `Controller.html`: 非同期通信・ビジネスロジック制御、フェーズ進行のメイン（State駆動）
 - `Event.html`: グローバルなイベント移譲。`data-action` / `data-change` / `data-bind` 属性に基づいたルーティングとリアクティブな状態更新
