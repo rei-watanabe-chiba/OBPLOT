@@ -3,23 +3,28 @@
 # OBPLOT Tab2 グラフ描画・データ補正機能）設計書
 
 ## 1. Sidebar UIの設計（アコーディオン4層構造）
-限られた幅（300px）を有効活用するため、`<details>`を用いたアコーディオンで各エリアを構成。拡張性を持たせるため、パネル内の要素はJavaScriptから動的に生成・更新する前提とする。各エリアUIはphase開始時に更新。①データ設定の更新でphase 1に強制ダウングレードで内部データ初期化。なお現段階では、UI有効化等のView更新は組み込まず、根幹部分の実装を優先する。
+- 限られた幅（300px）を有効活用するため、`<details>`を用いたアコーディオン4階層（section）を採用する。
+- UI要素は **`AppState (Tab2ST)` および `phase`** によって駆動され、静的要素（HTMLハードコード）と動的要素（動的生成・リアクティブ要素）を明確に分離する。
+- datasetSectionのdatasetFilterBtnでphaseを強制ダウングレードして内部データを初期化する。**ただし、初期化機能は全てのsection実装後に導入する。**
 
-### ① データ設定（ConfigArea）
-- **機能**: 分析対象のdatasetを絞り込み
-- **UI**: 「読込」ボタン + 「確定/更新」ボタン
-  - 「読込」ボタン実行時に`Tab2ST.rawData`に各データを格納
-- **UI**: 読み込み後、PXRFの `dataset` をリストアップした「スクロール可能なチェックボックス群」を動的生成（CSSで高さ制限＋スクロール）
-  - チェックボックス入力後、「確定/更新」ボタンで`Tab2ST.filter`に代入、`Tab2ST.baseData`をフィルターして生成（以降の処理の共通データ）
+### 1.データ設定（`datasetSection`）
+* **機能**: 分析対象のdataset絞り込み
+* **UI要素**:
+* `datasetLoadBtn` (静的): 「読込」ボタン。実行時に `Tab2ST.rawData`（pxrf, wdxrf, correction）を格納。
+* `datasetFilterBtn` (静的): 「確定/更新」ボタン。`Tab2ST.phase` が `LOADED` 以上で有効。
+* `datasetBox` (**動的**): 読込完了後にPXRFの `dataset` をリストアップしたチェックボックス群を動的生成。
+* 駆動State: 出力先は `Tab2ST.filter.datasets`。変更時は `data-change` でStateに同期。
+* 初期状態: すべて選択状態（配列の全要素が格納された状態）で初期化。
 
-### ② シンボルマッピング（SymbolMapArea）
-- **機能**: グラフ上の点（マーカー）のスタイル設定
-- **UI**: マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）
-  - 入力結果を即時`Tab2ST.symbol`のbaseKeyに格納
-- **UI**: 設定行（全てプルダウン：[値名] + [形状: `circle`, `triangle`, `square`] + [色: primary色（CSS）]）、`1fr auto` のグリッドレイアウト
-  - 価名はbaseKeyに応じて`Tab2ST.baseData`の該当列ユニーク値を動的生成して選択肢に格納
-- **UI**: 「シンボル確定」ボタン
-  - `Tab2ST.symbol`にマッピング
+### 2.シンボルマッピング（`symbolSection`）
+* **機能**: グラフ上の点（マーカー）のスタイル設定
+* **UI要素**:
+* `symbolAxis` (**動的**): マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）。
+* 駆動State: `Tab2ST.symbol.baseKey` にバインド。値変更時にsymbolBoxの行を動的再生成。
+* `symbolBox` (**動的**): 設定行（`[値名プルダウン] + [形状セレクト] + [色セレクト]`）。
+* 駆動State: `baseKey` のユニーク値を動的生成し選択肢に格納。変更結果は `Tab2ST.symbol.mapping` に即時同期。
+* `symbolBtn` (静的): 「シンボル確定」ボタン。`Tab2ST.phase` が `FILTERED` 以上で有効。
+
 
 ### ③ 補正＆プレビュー（CorrectionArea）
 - **機能**: 特定元素・指数の相関確認と補正適用・出力
