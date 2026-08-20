@@ -154,7 +154,7 @@
     }
 
     // --- 疑似ドロップダウン生成 (Popover API) ---
-    static multiSelectDropdown(arr, objID, targetState, hasSelectAll = false, initialSelected = arr) {
+    static multiSelectDropdown(arr, objID, targetState, allChangeState = null) {
       const container = DOM.get(objID);
       if (!container) return;
       if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
@@ -172,14 +172,18 @@
       optionsBox.id = popoverId;
       optionsBox.style.positionAnchor = anchorName;
 
-      if (hasSelectAll) optionsBox.appendChild(DOM.get("checkAllTemplate").content.cloneNode(true));
+      if (allChangeState) {
+        const checkAllClone = DOM.get("checkAllTemplate").content.cloneNode(true);
+        const allCb = checkAllClone.querySelector("input[type='checkbox']");
+        allCb.setAttribute('data-change', allChangeState);
+        optionsBox.appendChild(checkAllClone);
+      }
 
       const items = arr.map(item => {
         const itemClone = DOM.get("checkboxTemplate").content.cloneNode(true);
         const cb = itemClone.querySelector(".dataset-cb");
         cb.value = item;
-        // 初期選択状態の厳格な適用
-        cb.checked = initialSelected.includes(item);
+        cb.checked = true;
         cb.setAttribute('data-change', targetState);
         itemClone.querySelector(".cb-text").textContent = item;
         return itemClone;
@@ -269,8 +273,8 @@
       const previewMode = DOM.get(Tab2UI.previewModeBox);
       if (previewMode) {
         const opts = GLOBAL_CONFIG.optionalElements;
-        UICreate.multiSelectDropdown(opts, Tab2UI.previewModeBox, "Tab2.updatePreviewMode", true, opts);
-        State.set("Tab2ST.modeMap", [...opts]); // Stateも全選択で初期化
+        UICreate.multiSelectDropdown(opts, Tab2UI.previewModeBox, "Tab2.togglePreviewMode", "Tab2.toggleAllPreviewMode");
+        State.set("Tab2ST.modeMap", [...opts]);
       }
 
       // プレビュー: 補正方法
@@ -378,7 +382,7 @@
           if (data?.[0]) UICreate.selectors(data[0], Tab1UI.fileBox, GLOBAL_CONFIG.fileFields, "Tab1.updateFileMap");
         },
         "Tab2ST.availableDatasets": datasets => {
-          UICreate.multiSelectDropdown(datasets, Tab2UI.datasetBox, "Tab2.toggleDataset", true, datasets);
+          UICreate.multiSelectDropdown(datasets, Tab2UI.datasetBox, "Tab2.toggleDataset", "Tab2.toggleAllDataset");
         },
         "Tab2ST.filter.datasets": vals => {
           UICreate.updateMultiSelectSummary(Tab2UI.datasetBox, vals);

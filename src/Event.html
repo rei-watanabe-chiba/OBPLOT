@@ -14,7 +14,7 @@
       const optionsBox = document.getElementById(`popover-${boxId}`);
       if (!optionsBox) return;
       optionsBox.querySelectorAll('.dataset-cb').forEach(cb => cb.checked = target.checked);
-      UIBuildInit.toggleMultiSelect(boxId, statePath);
+      EventManager.toggleMultiSelect(boxId, statePath);
     };
 
     // --- Tab1変更移譲 ---
