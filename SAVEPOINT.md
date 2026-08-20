@@ -2,8 +2,9 @@
 ### セーブポイント：OBPLOT1.1
 ## 1. 現在の設計要約・アーキテクチャ
 - **実行環境**: Google Apps Script v8エンジン
-- **フロントエンド**: HTML Service / サイドバーおよび別タブ（Blob URL展開）
 - **描画エンジン**: Google Visualization API (CoreChart: ScatterChart)
+- **計算ライブラリ**: simple-statistics
+- **フロントエンド**: HTML Service / サイドバーおよび別タブ（Blob URL展開）
 - **アーキテクチャ**: SPA型 MVMSアーキテクチャ (Model, View, Method, Service)
 - **状態管理**: `AppState` クラスによる Observer（Pub/Sub）パターン。カスタム属性と`APP_PHASE` 定数による一元管理
 - **UI思想**: Google Material Design準拠、CSS Gridレイアウト、固定カラーパレット。
