@@ -189,7 +189,6 @@
       try {
         const keys = Object.keys(rowData);
         const vals = Object.values(rowData);
-        // Mathオブジェクトの関数をローカル変数として展開し、安全に実行
         const mathFns = Object.getOwnPropertyNames(Math)
           .filter(k => typeof Math[k] === 'function')
           .map(k => `const ${k} = Math.${k};`)
@@ -206,39 +205,25 @@
     static calcRegression(xArr, yArr, errArr) {
       if (!xArr?.length || xArr.length !== yArr?.length) return null;
       const n = xArr.length;
-      
-      const [sumX, sumY] = xArr.reduce((acc, x, i) => [acc[0] + x, acc[1] + yArr[i]], [0, 0]);
-      const [meanX, meanY] = [sumX / n, sumY / n];
-
-      let num = 0, sxx = 0, syy = 0;
-      for (let i = 0; i < n; i++) {
-        const [dx, dy] = [xArr[i] - meanX, yArr[i] - meanY];
-        num += dx * dy;
-        sxx += dx * dx;
-        syy += dy * dy;
-      }
-
-      const slope = sxx === 0 ? 0 : num / sxx;
-      const intercept = meanY - slope * meanX;
-      const r = (sxx === 0 || syy === 0) ? 0 : num / Math.sqrt(sxx * syy);
-      
+      const data = xArr.map((x, i) => [x, yArr[i]]);
+      const { m: slope, b: intercept } = ss.linearRegression(data);
+      const r = ss.sampleCorrelation(xArr, yArr);
+      const r2 = r * r;
       let ssRes = 0, maxRes = 0;
-      for (let i = 0; i < n; i++) {
-        const res = Math.abs(yArr[i] - (slope * xArr[i] + intercept));
+      xArr.forEach((x, i) => {
+        const res = Math.abs(yArr[i] - (slope * x + intercept));
         ssRes += res * res;
         maxRes = Math.max(maxRes, res);
-      }
-      
+      });
       const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
-      
       let err3Sigma = 0;
       if (errArr?.length > 2) {
-        const meanErr = errArr.reduce((sum, err) => sum + err, 0) / errArr.length;
-        const ssErr = errArr.reduce((sum, err) => sum + (err - meanErr) ** 2, 0);
+        const meanErr = errArr.reduce((a, b) => a + b, 0) / errArr.length;
+        const ssErr = errArr.reduce((a, b) => a + (b - meanErr) ** 2, 0);
         err3Sigma = Math.sqrt(ssErr / (errArr.length - 1)) * 3;
       }
 
-      return { slope, intercept, r, r2: r * r, resStdDev, err3Sigma, maxRes };
+      return { slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
     }
   }
 
