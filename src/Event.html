@@ -66,7 +66,7 @@
       toggleAllDataset: (target) => {
         Evt.toggleAllMultiSelect(target, Tab2UI.datasetBox, "Tab2ST.filter.datasets");
       },
-      // リアクティブ状態監視：シンボル設定群
+      // リアクティブ状態監視：symbolBox
       updateSymbol: (target) => {
         const idx = target.getAttribute('data-symbol-idx');
         if (!idx) return;

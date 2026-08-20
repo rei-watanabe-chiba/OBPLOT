@@ -16,26 +16,21 @@
     static #clone(templateId) {
       return DOM.get(templateId)?.content.cloneNode(true);
     }
-
     // --- 属性一括バインド ---
     static #bind(element, attrs) {
       Object.entries(attrs).forEach(([k, v]) => v != null && element.setAttribute(k, v));
       return element;
     }
-
     // --- テンプレートリスト汎用描画 ---
     static #renderList(templateId, items, containerId, mapper) {
       const [container, template] = [DOM.get(containerId), DOM.get(templateId)];
       if (!container || !template || !items?.length) return;
       container.replaceChildren(...items.map((item, index) => mapper(this.#clone(templateId), item, index)));
     }
-
     // --- チェックボックスリスト共通生成 ---
-    static #renderCheckboxList(arr, containerId, targetState, allChangeState = null) {
-      const container = DOM.get(containerId);
-      if (!container) return;
-      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
-
+    static #checkboxList(arr, containerElement, targetState, allChangeState = null) {
+      if (!containerElement) return;
+      if (!arr?.length) { containerElement.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
       const items = arr.map(item => {
         const clone = this.#clone("checkboxTemplate");
         const cb = this.#bind(clone.querySelector(".dataset-cb"), { value: item, 'data-change': targetState });
@@ -43,14 +38,14 @@
         clone.querySelector(".cb-text").textContent = item;
         return clone;
       });
-
+      // 全選択オプション追加
       if (allChangeState) {
         const allClone = this.#clone("checkAllTemplate");
         this.#bind(allClone.querySelector("input"), { 'data-change': allChangeState }).checked = true;
-        container.replaceChildren(allClone, ...items);
+        containerElement.replaceChildren(allClone, ...items);
         return;
       }
-      container.replaceChildren(...items);
+      containerElement.replaceChildren(...items);
     }
 
     // --- ステータスバー更新 ---
@@ -93,7 +88,7 @@
 
     // --- チェックボックス生成 ---
     static checkboxes(arr, objID) {
-      this.#renderCheckboxList(arr, objID, "Tab2.toggleDataset");
+      this.#checkboxList(arr, DOM.get(objID), "Tab2.toggleDataset");
     }
 
     // --- シンボル設定行生成 ---
@@ -132,20 +127,16 @@
       const container = DOM.get(containerId);
       if (!container) return;
       if (!stats) { container.replaceChildren(); return; }
-
       const rows = DataUtils.createStatsRows(stats);
       const [containerTpl, rowTpl] = [DOM.get("statsContainerTemplate"), DOM.get("statsRowTemplate")];
       if (!containerTpl || !rowTpl) return;
-
       const boxClone = containerTpl.content.cloneNode(true);
       const grid = boxClone.querySelector(".stats-grid");
-
       rows.forEach(([label, val]) => {
         const rowClone = rowTpl.content.cloneNode(true);
         [rowClone.querySelector(".stats-label").textContent, rowClone.querySelector(".stats-val").textContent] = [label, String(val)];
         grid.appendChild(rowClone);
       });
-
       container.replaceChildren(boxClone);
     }
 
@@ -153,15 +144,12 @@
     static multiSelectDropdown(arr, objID, targetState, allChangeState = null) {
       const container = DOM.get(objID);
       if (!container) return;
-
       const clone = this.#clone("multiSelectTemplate");
       const [summaryBtn, optionsBox] = [clone.querySelector(".multi-select-summary"), clone.querySelector(".multi-select-options")];
       const [popoverId, anchorName] = [`popover-${objID}`, `--anchor-${objID}`];
-
       this.#bind(summaryBtn, { popovertarget: popoverId }).style.anchorName = anchorName;
       this.#bind(optionsBox, { id: popoverId }).style.positionAnchor = anchorName;
-
-      this.#renderCheckboxList(arr, optionsBox.id, targetState, allChangeState);
+      this.#checkboxList(arr, optionsBox, targetState, allChangeState);
       container.replaceChildren(clone);
     }
 
