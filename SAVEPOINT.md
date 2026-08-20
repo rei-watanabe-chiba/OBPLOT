@@ -29,7 +29,8 @@
 - `Report.html`: 別タブで展開されるレポート画面（Google Visualization API によるサンプル散布図描画）
 
 ## 3. 次の開発作業
-- リファクタリングを行う。スコープ範囲はCSS.htmlとSidebar.html。
-- multi-select-wrapperが、横幅がサイドバーの幅を超えるときにオーバーフローが発生する原因を特定し修正する。
+- リファクタリングを行う。
+- previewModeで呼び出すUICreate.multiSelectDropdownについてhasSelectAll = trueに変更する
+- これに付随してEvent.htmlにtoggleDatasetとtoggleAllDatasetをプライベートで引数にboxIDとstateを設定して汎用化して、Tab2UI.datasetBox監視とpreviewModeBox監視を作成する。
 
 
