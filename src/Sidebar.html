@@ -73,13 +73,13 @@
               <button id="datasetLoadBtn" data-type="primary" data-action="Tab2.loadData">データを読込</button>
               <button id="datasetFilterBtn" data-type="primary" class="outline" data-action="Tab2.filterData" disabled>データを確定</button>
             </div>
-            <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
             <div id="datasetArea" style="display: none;">
               <label>dataset選択</label>
               <!-- 動的生成コンテナ -->
               <div id="datasetBox" class="checkbox-container"></div>
             </div>
           </details>
+          <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
           <hr>
           <!-- シンボル層 -->
           <details id="symbolSection" data-type="disabled">
@@ -95,6 +95,26 @@
               <div id="symbolBox"></div>
             </div>
           </details>
+          <hr>
+          <!-- 補正＆プレビュー層 (新規追加) -->
+          <details id="previewSection" data-type="disabled">
+            <summary>補正＆プレビュー</summary>
+            <div id="previewArea">
+              <label>モード選択</label>
+              <div id="previewModeBox"></div>
+              
+              <label style="margin-top: 12px;">補正方法</label>
+              <div id="previewCorrectionBox"></div>
+              
+              <label style="margin-top: 12px;">プレビュー値</label>
+              <div id="previewValueBox"></div>
+              
+              <div class="btn-container" style="margin-top: 12px;">
+                <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー作成</button>
+              </div>
+            </div>
+          </details>
+          <div id="previewBar" class="status-bar" data-status="hidden"></div>
           <hr>
           <!-- レポート層 -->
           <details id="reportSection" data-type="disabled">

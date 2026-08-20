@@ -6,8 +6,8 @@
     static remapArry(data, indexArr, newHeader = null) {
       if (!data?.length) return [];
       const [rawHeader, ...body] = data;
-      const remapBody = body.map(row => indexArr.map(idx => idx !== -1 ? (row?.[idx] ?? "") : ""));
-      return [newHeader ?? indexArr.map(idx => idx !== -1 ? (rawHeader?.[idx] ?? "") : ""), ...remapBody];
+      const remap = row => indexArr.map(idx => idx !== -1 ? (row?.[idx] ?? "") : "");
+      return [newHeader ?? remap(rawHeader), ...body.map(remap)];
     }
 
     // --- セレクタ配列判定 ---
@@ -24,34 +24,30 @@
     static run(sheetData, outHeader, validModes, exacMode) {
       if (!sheetData?.length) return [];
       const [, ...body] = sheetData;
-      const fileCount = {};
-      const scanStats = {};
+      const stats = { file: {}, scan: {} };
       // カウント集計
       for (const row of body) {
         const file = row[this.#COL.FILE];
-        const mode = row[this.#COL.MODE];
         const scanId = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
-        fileCount[file] = (fileCount[file] || 0) + 1;
-        if (!scanStats[scanId]) {
-          scanStats[scanId] = { modes: new Set(), count: 0 };
-        }
-        scanStats[scanId].modes.add(mode);
-        scanStats[scanId].count++;
+        stats.file[file] = (stats.file[file] || 0) + 1;
+        stats.scan[scanId] ??= { modes: new Set(), count: 0 };
+        stats.scan[scanId].modes.add(row[this.#COL.MODE]);
+        stats.scan[scanId].count++;
       }
       // エラー判定
       const rules = [
         { check: r => !/^\d+$/.test(r[this.#COL.FILE] ?? ""), err: " file形式" },
         { check: r => !validModes.includes(r[this.#COL.MODE]), err: " mode形式" },
         { check: r => !r[this.#COL.ID], err: " id形式" },
-        { check: r => fileCount[r[this.#COL.FILE]] > 1, err: " file重複" },
+        { check: r => stats.file[r[this.#COL.FILE]] > 1, err: " file重複" },
         { check: r => {
-            const scanId = this.#getScanID(r[this.#COL.ID], r[this.#COL.SUB_ID]);
-            const s = scanStats[scanId];
+            const s = stats.scan[this.#getScanID(r[this.#COL.ID], r[this.#COL.SUB_ID])];
             if (exacMode === "Single") return s.count > 1;
             return !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
           }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式"
         }
       ];
+      // データ出力
       return [
         [...outHeader, "error"],
         ...body.map(row => {
@@ -74,27 +70,19 @@
         if (!scanIDMap.has(scanId)) scanIDMap.set(scanId, { id, files: {} });
         scanIDMap.get(scanId).files[String(mode).toLowerCase()] = file;
       }
-      const sortKeys = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
-      const obKeys = sortKeys(GLOBAL_CONFIG.obsidianIndex);
-      const mdKeys = sortKeys(GLOBAL_CONFIG.mudrockIndex);
+      const getKeys = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
+      const [obKeys, mdKeys] = [getKeys(GLOBAL_CONFIG.obsidianIndex), getKeys(GLOBAL_CONFIG.mudrockIndex)];
       // 数値フォーマット
-      const formatVal = val => {
-        if (val === "" || val === null || val === undefined) return "";
-        if (String(val).trim() === "< LOD") return val;
-        const num = Number(val);
-        return !isNaN(num) ? num * 10000 : val;
-      };
+      const format = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
       // データ抽出
-      const extractValues = (fileName, keys, idxObj) => {
-        const row = resultMap.get(String(fileName ?? ""));
-        const vals = [];
-        const errs = [];
-        for (const k of keys) {
+      const extract = (file, keys, idxObj) => {
+        const row = resultMap.get(String(file ?? ""));
+        return keys.reduce((acc, k) => {
           const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
-          vals.push(formatVal(idx !== null ? (row?.[idx] ?? "") : ""));
-          errs.push(formatVal(idx !== null ? (row?.[idx + 1] ?? "") : ""));
-        }
-        return { vals, errs };
+          acc.vals.push(format(idx !== null ? (row?.[idx] ?? "") : ""));
+          acc.errs.push(format(idx !== null ? (row?.[idx + 1] ?? "") : ""));
+          return acc;
+        }, { vals: [], errs: [] });
       };
       // データ出力
       const header = [
@@ -103,8 +91,8 @@
         ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)
       ];
       const body = Array.from(scanIDMap, ([scanId, { id, files }]) => {
-        const ob = extractValues(files.obsidian, obKeys, GLOBAL_CONFIG.obsidianIndex);
-        const mu = extractValues(files.mudrock, mdKeys, GLOBAL_CONFIG.mudrockIndex);
+        const ob = extract(files.obsidian, obKeys, GLOBAL_CONFIG.obsidianIndex);
+        const mu = extract(files.mudrock, mdKeys, GLOBAL_CONFIG.mudrockIndex);
         return [scanId, id, exacMap.dataset, exacMap.item, exacMap.date, ...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
       });
       return [header, ...body];
@@ -115,7 +103,7 @@
   class PxrfValidator {
     static run(existingDT, newDT) {
       if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
-      // dataset_IDをキー突合
+      // dataset_IDをキーとして突合
       const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
       const filteredEx = existingDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
       return filteredEx.length !== existingDT.length - 1 
@@ -125,33 +113,29 @@
   }
 
   // --- Tab2 データ取得ロジック ---
-  class DataMerger {
+  class DataManager {
     // 行列変換
     static #toObjArray(data) {
       const [header, ...body] = data;
-      return body.map(row => header.reduce((obj, h, i) => {
-        obj[String(h).trim()] = row[i];
-        return obj;
-      }, {}));
+      return body.map(row => header.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: row[i] }), {}));
     }
+
     // 読み込みロジック
     static load(pxrfData, wdxrfData) {
       const pxrfObjs = this.#toObjArray(pxrfData);
       const wdxrfObjs = this.#toObjArray(wdxrfData);    
-      const normalizeKey = (dataset, id) => {
-        const clean = str => String(str ?? "").replace(/\s+/g, "").toUpperCase();
-        return `${clean(dataset)}_${clean(id)}`;
-      };
-      const wdxrfMap = new Map(wdxrfObjs.map(obj => [normalizeKey(obj.dataset, obj.ID || obj.id), obj]));
-      const datasetSet = new Set();
+      const clean = str => String(str ?? "").replace(/\s+/g, "").toUpperCase();
+      const wdxrfMap = new Map(wdxrfObjs.map(o => [`${clean(o.dataset)}_${clean(o.ID || o.id)}`, o]));
+      const datasets = new Set();
       pxrfObjs.forEach(pObj => {
-        const wObj = wdxrfMap.get(normalizeKey(pObj.dataset, pObj.ID || pObj.id));
+        const wObj = wdxrfMap.get(`${clean(pObj.dataset)}_${clean(pObj.ID || pObj.id)}`);
         pObj.Group = wObj?.Group ?? "Unknown";
         pObj.Source = wObj?.Source ?? "Unknown";
-        if (pObj.dataset) datasetSet.add(pObj.dataset);
+        if (pObj.dataset) datasets.add(pObj.dataset);
       });
-      return { mergedPXRF: pxrfObjs, wdxrfObjs: wdxrfObjs, datasets: [...datasetSet] };
+      return { mergedPXRF: pxrfObjs, wdxrfObjs, datasets: [...datasets] };
     }
+
     // フィルターロジック
     static filter(mergedPXRF, wdxrfObjs, selectedDatasets) {
       const targetSet = new Set(selectedDatasets);
@@ -159,6 +143,99 @@
     }
   }
 
-  // --- 外部参照用 ---
-  const Mtd = { Utils: DataUtils, Tab1: { FileValidator, DataExtractor, PxrfValidator }, Tab2: { DataMerger } };
+  // --- Tab2 プレビューデータ構築ロジック ---
+  class PreviewManager {
+    // プレビュー用データ構築
+    static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic) {
+      // 1. pxrf元素をモード別に抽出・リネーム
+      const processed = basePXRF.map(row => {
+        const newRow = { dataset: row.dataset, id: row.ID || row.id };
+        GLOBAL_CONFIG.previewElements.forEach(el => {
+          const mode = modeMap[el]; // 'obsidian' or 'mudrock'
+          const colName = mode === 'obsidian' ? `ob_${el}` : `md_${el}`;
+          newRow[el] = row[colName] ?? null;
+        });
+        return newRow;
+      });
+
+      // 2. WDXRFとの突合 (dataset + id)
+      const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID || w.id}`, w]));
+      
+      return processed.map(p => {
+        const w = wdxrfMap.get(`${p.dataset}_${p.id}`);
+        if (!w) return null;
+        
+        // 算出対象の計算
+        const val = CalcProcessor.evaluate(valueLogic, p);
+        return {
+          x: w[p.id] ?? w.Value, // WDXRF側の値をXとする（仮）
+          y: val
+        };
+      }).filter(Boolean);
+    }
+  }
+
+  // --- Tab2 数式評価・統計ロジック ---
+  class CalcProcessor {
+    // 安全な式評価コンパイラ
+    static evaluate(formula, rowData) {
+      if (!formula) return null;
+      try {
+        const keys = Object.keys(rowData);
+        const vals = Object.values(rowData);
+        // Mathオブジェクトの関数をローカル変数として展開し、安全に実行
+        const mathFns = Object.getOwnPropertyNames(Math)
+          .filter(k => typeof Math[k] === 'function')
+          .map(k => `const ${k} = Math.${k};`)
+          .join('');
+        const fn = new Function(...keys, `${mathFns} return ${formula};`);
+        const result = fn(...vals);
+        return isNaN(result) || !isFinite(result) ? null : result;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // ピアソン相関 ＆ 単回帰計算 (最小二乗法)
+    static calcRegression(xArr, yArr) {
+      if (!xArr?.length || xArr.length !== yArr?.length) return null;
+      const n = xArr.length;
+      let sumX = 0, sumY = 0;
+      for (let i = 0; i < n; i++) { sumX += xArr[i]; sumY += yArr[i]; }
+      const meanX = sumX / n, meanY = sumY / n;
+
+      let num = 0, den = 0, sxx = 0, syy = 0;
+      for (let i = 0; i < n; i++) {
+        const dx = xArr[i] - meanX, dy = yArr[i] - meanY;
+        num += dx * dy;
+        den += dx * dx;
+        sxx += dx * dx;
+        syy += dy * dy;
+      }
+      
+      const slope = den === 0 ? 0 : num / den;
+      const intercept = meanY - slope * meanX;
+      const r = (sxx === 0 || syy === 0) ? 0 : num / Math.sqrt(sxx * syy);
+      const r2 = r * r;
+      
+      let ssRes = 0, maxRes = 0;
+      for (let i = 0; i < n; i++) {
+        const predY = slope * xArr[i] + intercept;
+        const res = Math.abs(yArr[i] - predY);
+        ssRes += res * res;
+        if (res > maxRes) maxRes = res;
+      }
+      const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
+      const err3Sigma = resStdDev * 3;
+
+      return { slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
+    }
+  }
+
+  // --- 外部参照用 (追加反映) ---
+  const Mtd = {
+    Utils: DataUtils,
+    Tab1: { FileValidator, DataExtractor, PxrfValidator },
+    Tab2: { DataManager, PreviewManager, CalcProcessor }
+  };
 </script>

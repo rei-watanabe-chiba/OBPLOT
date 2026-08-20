@@ -13,6 +13,8 @@
     correctionSheetName: "Correction",
     validModes: ["mudrock", "obsidian"],
     propFileEdited: "isFileListEdited",
+    previewElements: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
+    valueLogic: ["Mn", "Fe", "Mn * 100 / Fe", "Rb / Sr", "K", "log10(Fe/K)"],
     // 動的生成用: ファイルフィールド定義
     fileFields: [
       { key: "file", label: "file *必須", required: true },
@@ -80,6 +82,13 @@
     symbolAxisBox: "symbolAxisBox",
     symbolBox: "symbolBox",
     symbolBtn: "symbolBtn",
+    // プレビュー層追加
+    previewSection: "previewSection",
+    previewModeBox: "previewModeBox",
+    previewCorrectionBox: "previewCorrectionBox",
+    previewValueBox: "previewValueBox",
+    previewMakeBtn: "previewMakeBtn",
+    previewBar: "previewBar",
     reportSection: "reportSection",
     reppBtn: "reportOpenBtn",
     repoBar: "reportStatusBar"
@@ -107,7 +116,8 @@
           rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null },
           basePXRF: null, baseWDXRF: null, filter: { datasets: [] }, symbol: { baseKey: "dataset", mapping: {} },
           modeMap: {}, preview: { value: "", correction: "rawdata" }, correctionLogic: {}, report: { values: [], corrections: [] },
-          repoStatus: []
+          repoStatus: [],
+          selectData: null, previewData: null
         }
       };
       this.#listeners = {};

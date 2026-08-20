@@ -287,6 +287,17 @@
   }
   .symbol-target { flex: 2; }
   .symbol-shape, .symbol-color { flex: 1; }
+  /* --- ラジオボタン行 (新規追加) --- */
+  .radio-row { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 4px 0; 
+    border-bottom: 1px solid var(--grey50); 
+  }
+  .radio-label { font-weight: 500; flex: 1; }
+  .radio-group { display: flex; gap: 16px; flex: 2;}
+  .radio-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
   
   @keyframes spin {
     to { transform: rotate(360deg); }

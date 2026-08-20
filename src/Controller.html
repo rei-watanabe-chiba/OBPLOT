@@ -1,25 +1,7 @@
 <!-- Controller.html -->
 <script>
-  // --- コントローラー層 (共通) ---
+  // --- 共通 ---
   class CoreController {
-    // --- 初期化処理 ---
-    static init() {
-      // モード変更処理登録
-      State.subscribe("Tab1ST.config.mode", (mode) => {
-        if (!mode) return;
-        const modeText = mode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
-        const phase = State.get("Tab1ST.phase");
-        if (phase === TAB1_PHASE.INIT) {
-          State.set({ "Tab1ST.config.status": ["message", modeText], "Tab1ST.phase": TAB1_PHASE.READY });
-        } else if (phase >= TAB1_PHASE.INVALID) {
-          State.set({ "Tab1ST.file.status": ["error", "モード変更検知: 再検証"], "Tab1ST.config.status": ["message", modeText], "Tab1ST.phase": TAB1_PHASE.INVALID });
-        } else {
-          State.set("Tab1ST.config.status", ["message", modeText]);
-        }
-      });
-      State.subscribe("Tab1ST.exac.map.dataset", () => Evt.validateExacMap());
-    }
-
     // --- 共通：非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
@@ -36,9 +18,9 @@
     }
   }
 
-  // --- コントローラー層 (Tab1) ---
+  // --- Tab1 ---
   class Tab1Controller {
-    // --- Fileシート取得 ---
+    // --- Tab1 Fileシート取得 ---
     static async loadFile() {
       if (!(await UI.confirm("確認", State.get("Tab1ST.file.data") ? "内部データをリセットしますか？" : "Fileシートを読み込みますか？", Tab1UI.fileBar))) return;
       await CoreController.withAsyncLock("Tab1ST.file.status", async () => {
@@ -49,12 +31,12 @@
           "Tab1ST.file.isMapError": [true, true, true, false, false], "Tab1ST.file.cachedStatus": ["success", message],
           "Tab1ST.phase": TAB1_PHASE.LOAD
         });
-        Evt.validateFileMap();
+        Evt.Tab1.validateFileMap();
         return message; 
       });
     }
 
-    // --- ファイルリスト共通処理 ---
+    // --- Tab1 ファイルリスト共通処理 ---
     static async processFileList(actionType, fileDT) {
       if (actionType === "validate") ({ data: fileDT } = await API.fetchData(GLOBAL_CONFIG.filelistSheetName, 5, 5));
       const outData = Mtd.Tab1.FileValidator.run(fileDT, GLOBAL_CONFIG.filelistHeader, GLOBAL_CONFIG.validModes, State.get("Tab1ST.config.mode"));
@@ -68,13 +50,13 @@
         "Tab1ST.file.cachedStatus": Array.isArray(statusRes) ? statusRes : ["success", statusRes],
         "Tab1ST.phase": isAlert ? TAB1_PHASE.INVALID : TAB1_PHASE.VALID
       });
-      if (!isAlert) Evt.validateExacMap();
+      if (!isAlert) Evt.Tab1.validateExacMap();
       return statusRes;
     }
 
-    // --- ファイルリスト生成処理 ---
+    // --- Tab1 ファイルリスト生成処理 ---
     static async makeFileList() {
-      Evt.validateFileMap();
+      Evt.Tab1.validateFileMap();
       if (State.get("Tab1ST.file.isMapError").some(Boolean)) return;
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
       await CoreController.withAsyncLock("Tab1ST.file.status", async () => {
@@ -84,13 +66,13 @@
       });
     }
 
-    // --- リスト検証処理 ---
+    // --- Tab1 リスト検証処理 ---
     static async validateFileList() {
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
       await CoreController.withAsyncLock("Tab1ST.file.status", async () => this.processFileList("validate", null));
     }
 
-    // --- 突合抽出処理 ---
+    // --- Tab1 突合抽出処理 ---
     static async extractFile() {
       if (!await UI.confirm("確認", "既存の「抽出データ」シートを上書きしますか？", Tab1UI.exacBar)) return;
       await CoreController.withAsyncLock("Tab1ST.exac.status", async () => {
@@ -98,10 +80,11 @@
           State.set({ "Tab1ST.file.status": ["error", "シート編集検知: 再検証"], "Tab1ST.phase": TAB1_PHASE.INVALID });
           return;
         }
-        const [{ data: fileDT }, { data: resultDT }] = await Promise.all([
-          API.fetchData(GLOBAL_CONFIG.filelistSheetName, 6, 6), API.fetchData(GLOBAL_CONFIG.resultsSheetName)
+        const [fileRes, resultRes] = await Promise.all([
+          API.fetchData(GLOBAL_CONFIG.filelistSheetName, 6, 6), 
+          API.fetchData(GLOBAL_CONFIG.resultsSheetName)
         ]);
-        const outData = Mtd.Tab1.DataExtractor.run(fileDT, resultDT, State.get("Tab1ST.exac.map"));
+        const outData = Mtd.Tab1.DataExtractor.run(fileRes.data, resultRes.data, State.get("Tab1ST.exac.map"));
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
         await API.writeData(GLOBAL_CONFIG.extractSheetName, outData);
         State.set("Tab1ST.phase", TAB1_PHASE.EXTRACT);
@@ -109,38 +92,39 @@
       });
     }
 
-    // --- PXRF格納処理 ---
+    // --- Tab1 PXRF格納処理 ---
     static async pushExacData() {
       if (!await UI.confirm("確認", "「抽出データ」をPXRFシートに格納しますか？", Tab1UI.exacBar)) return;
       await CoreController.withAsyncLock("Tab1ST.exac.status", async () => {
-        const [{ data: extractData }, { data: pxrfData }] = await Promise.all([
-          API.fetchData(GLOBAL_CONFIG.extractSheetName), API.fetchData(GLOBAL_CONFIG.pxrfSheetName)
+        const [exacRes, pxrfRes] = await Promise.all([
+          API.fetchData(GLOBAL_CONFIG.extractSheetName), 
+          API.fetchData(GLOBAL_CONFIG.pxrfSheetName)
         ]);
-        const { isDup, data: mergedData } = Mtd.Tab1.PxrfValidator.run(pxrfData, extractData);
+        const { isDup, data: mergedData } = Mtd.Tab1.PxrfValidator.run(pxrfRes.data, exacRes.data);
         if (isDup && !await UI.confirm("確認", "重複dataset・IDが存在します。上書きしますか？", Tab1UI.exacBar)) return;
-        await API.writeData(GLOBAL_CONFIG.pxrfSheetName, isDup ? mergedData : extractData.slice(1), isDup ? "clear" : ["append"]);
+        await API.writeData(GLOBAL_CONFIG.pxrfSheetName, isDup ? mergedData : exacRes.data.slice(1), isDup ? "clear" : ["append"]);
         State.set("Tab1ST.phase", TAB1_PHASE.OUTPUT);
-        return `PXRF格納完了: ${extractData.length - 1} 件`;
+        return `PXRF格納完了: ${exacRes.data.length - 1} 件`;
       });
     }
   }
 
-  // --- コントローラー層 (Tab2) ---
+  // --- Tab2 ---
   class Tab2Controller {
     // --- Tab2 データ読込 ---
     static async loadData() {
       await CoreController.withAsyncLock("Tab2ST.datasetload.status", async () => {
         State.set("Tab2ST.datasetload.status", ["loading", "処理中..."]);
-        const [{ data: pxrfData }, { data: wdxrfData }, { data: corrData = [] }] = await Promise.all([
-          API.fetchData(GLOBAL_CONFIG.pxrfSheetName), API.fetchData(GLOBAL_CONFIG.wdxrfSheetName), API.fetchData(GLOBAL_CONFIG.correctionSheetName).catch(() => ({ data: [] }))
+        const [pxrfRes, wdxrfRes, corrRes] = await Promise.all([
+          API.fetchData(GLOBAL_CONFIG.pxrfSheetName), 
+          API.fetchData(GLOBAL_CONFIG.wdxrfSheetName), 
+          API.fetchData(GLOBAL_CONFIG.correctionSheetName).catch(() => ({ data: [] }))
         ]);
-        if (!pxrfData || pxrfData.length <= 1) throw new Error("PXRFデータ不足");
-        if (!wdxrfData || wdxrfData.length <= 1) throw new Error("WDXRFデータ不足");
-        const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataMerger.load(pxrfData, wdxrfData);
-        
-        // 全選択状態を初期化
+        if (!pxrfRes.data || pxrfRes.data.length <= 1) throw new Error("PXRFデータ不足");
+        if (!wdxrfRes.data || wdxrfRes.data.length <= 1) throw new Error("WDXRFデータ不足");
+        const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataMerger.load(pxrfRes.data, wdxrfRes.data);
         State.set({ 
-          "Tab2ST.rawData": { correction: corrData, mergedPXRF, wdxrfObjs }, 
+          "Tab2ST.rawData": { correction: corrRes.data, mergedPXRF, wdxrfObjs }, 
           "Tab2ST.filter.datasets": datasets, 
           "Tab2ST.phase": TAB2_PHASE.LOADED 
         });
@@ -175,8 +159,37 @@
         return "シンボル設定を確定しました";
       });
     }
+
+    // --- Tab2 プレビュー生成 (臨時デバッグ用) ---
+    static async makePreview() {
+      await CoreController.withAsyncLock("Tab2ST.repoStatus", async () => {
+        const modeMap = State.get("Tab2ST.modeMap");
+        const valueLogic = State.get("Tab2ST.preview.value");
+        const basePXRF = State.get("Tab2ST.basePXRF");
+        const baseWDXRF = State.get("Tab2ST.baseWDXRF");
+
+        // 1. データ構築
+        const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic);
+        if (!previewData.length) throw new Error("対象データなし");
+
+        // 2. 統計計算
+        const xArr = previewData.map(d => d.x);
+        const yArr = previewData.map(d => d.y);
+        const stats = Mtd.Tab2.CalcProcessor.calcRegression(xArr, yArr);
+
+        // 3. State保存
+        State.set({
+          "Tab2ST.previewData": previewData,
+          "Tab2ST.correctionLogic": stats // 補正ロジックとして統計量を保持
+        });
+
+        console.log("計算結果:", stats);
+        alert(`相関係数(R): ${stats.r.toFixed(4)}`);
+        return "計算結果を表示しました";
+      });
+    }
     
-    // --- レポート画面展開 ---
+    // --- Tab2 レポート画面展開 ---
     static async openReport() {
       await CoreController.withAsyncLock("Tab2ST.repoStatus", async () => {
         State.set("Tab2ST.repoStatus", ["loading", "テンプレート取得中..."]);

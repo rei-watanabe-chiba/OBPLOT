@@ -19,10 +19,11 @@
       if (modeBox) {
         const select = document.createElement("select");
         select.dataset.bind = "Tab1ST.config.mode";
-        GLOBAL_CONFIG.configModes.forEach(m => {
-          const opt = new Option(m.label, m.value);
-          if(m.disabled) opt.disabled = true;
-          if(m.hidden) opt.hidden = true;
+        GLOBAL_CONFIG.configModes.forEach(({ label, value, disabled, hidden }) => {
+          const opt = new Option(label, value);
+          if (disabled) opt.disabled = true;
+          if (hidden) opt.hidden = true;
+          if (value === "") opt.selected = true;
           select.add(opt);
         });
         modeBox.appendChild(select);
@@ -47,6 +48,29 @@
         select.dataset.bind = "Tab2ST.symbol.baseKey";
         GLOBAL_CONFIG.symbolAxes.forEach(a => select.add(new Option(a.label, a.value)));
         axisBox.appendChild(select);
+      }
+      // プレビュー: モード選択ラジオボタンの生成
+      this.renderPreviewModes(GLOBAL_CONFIG.previewElements, Tab2UI.previewModeBox);
+
+      // プレビュー: 補正方法
+      const pCorrBox = DOM.get(Tab2UI.previewCorrectionBox);
+      if (pCorrBox) {
+        const select = document.createElement("select");
+        select.dataset.bind = "Tab2ST.preview.correction";
+        select.add(new Option("補正なし", "rawdata"));
+        select.add(new Option("新規検量線", "new"));
+        pCorrBox.appendChild(select);
+        State.set("Tab2ST.preview.correction", "rawdata"); // 初期化
+      }
+
+      // プレビュー: プレビュー値
+      const pValBox = DOM.get(Tab2UI.previewValueBox);
+      if (pValBox) {
+        const select = document.createElement("select");
+        select.dataset.bind = "Tab2ST.preview.value";
+        GLOBAL_CONFIG.valueLogic.forEach(v => select.add(new Option(v, v)));
+        pValBox.appendChild(select);
+        State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]); // 初期化
       }
     }
 
@@ -137,6 +161,32 @@
       });
     }
 
+    // --- ラジオボタン生成 ---
+    static renderPreviewModes(elements, boxId) {
+      const box = DOM.get(boxId);
+      if (!box || !elements?.length) return;
+      const initialMap = {};
+      const items = elements.map(el => {
+        initialMap[el] = "obsidian"; // デフォルト値
+        const div = document.createElement("div");
+        div.className = "radio-row";
+        div.innerHTML = `
+          <span class="radio-label">${el}</span>
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="mode_${el}" value="obsidian" data-element="${el}" data-change="Tab2.updatePreviewMode" checked> obsidian
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="mode_${el}" value="mudrock" data-element="${el}" data-change="Tab2.updatePreviewMode"> mudrock
+            </label>
+          </div>
+        `;
+        return div;
+      });
+      box.replaceChildren(...items);
+      State.set("Tab2ST.modeMap", initialMap);
+    }
+
     // --- セレクタ・インプットUI更新 ---
     static updateInputs(mapBoxId, errorFlags) {
       DOM.get(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => {
@@ -148,15 +198,15 @@
   // --- フェーズ連動UI制御 ---
   class UIPhase {
     static #applyRules(rules) {
-      Object.entries(rules).forEach(([id, r]) => {
-        if (r.show !== undefined) DOM.toggle(id, r.show);
-        if (r.disabled !== undefined) DOM.setDisabled(id, r.disabled);
-        if (!id.includes('configSection') && r.active !== undefined) DOM.open(id, r.active);
-        if (r.text !== undefined) DOM.setDOM(id, r.text);
-        if (r.className !== undefined && DOM.get(id)) DOM.get(id).className = r.className;
+      Object.entries(rules).forEach(([id, { show, disabled, active, text, className }]) => {
+        if (show !== undefined) DOM.toggle(id, show);
+        if (disabled !== undefined) DOM.setDisabled(id, disabled);
+        if (!id.includes('configSection') && active !== undefined) DOM.open(id, active);
+        if (text !== undefined) DOM.setDOM(id, text);
+        if (className !== undefined && DOM.get(id)) DOM.get(id).className = className;
         if (id.includes('Section')) {
-          DOM.setAttr(id, "data-state", r.active ? "active" : null);
-          DOM.setAttr(id, "data-type", r.disabled ? "disabled" : null);
+          DOM.setAttr(id, "data-state", active ? "active" : null);
+          DOM.setAttr(id, "data-type", disabled ? "disabled" : null);
         }
       });
     }
@@ -195,6 +245,9 @@
         [Tab2UI.symbolBtn]:        { disabled: phase < p.FILTERED },
         [Tab2UI.datasetSection]:   { active: phase < p.FILTERED, disabled: false },
         [Tab2UI.symbolSection]:    { active: phase >= p.FILTERED && phase < p.MAPPED, disabled: phase < p.FILTERED },
+        // プレビューとレポートの活性制御を追加
+        [Tab2UI.previewSection]:   { active: phase >= p.FILTERED, disabled: phase < p.FILTERED },
+        [Tab2UI.previewMakeBtn]:   { disabled: phase < p.FILTERED },
         [Tab2UI.reportSection]:    { active: phase >= p.MAPPED, disabled: phase < p.MAPPED }
       };
       this.#applyRules(rules);

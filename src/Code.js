@@ -1,6 +1,6 @@
 // --- DTO ---
 class ApiResponse {
-  static success(payload) { return { success: true, payload }; }
+  static success(payload) { return { success: true, payload: JSON.parse(JSON.stringify(payload)) }; }
   static error(type, msg) { return { success: false, errorType: type, message: msg }; }
 }
 
@@ -43,10 +43,10 @@ function fetchData(sheetName, quotaCol = null, loadCol = null) {
     // 取得と検証
     const rawData = sheet.getDataRange().getValues();
     if (rawData.length <= 1) return ApiResponse.error("DATA_ERR", "データが1行以下");
-    if (quotaCol !== null && rawData[0].length < quotaCol) return ApiResponse.error("DATA_ERR", "データ列不足");
-    const data = loadCol !== null ? rawData.map(row => row.slice(0, loadCol)) : rawData;
+    if (quotaCol && rawData[0].length < quotaCol) return ApiResponse.error("DATA_ERR", "データ列不足");
     // 通信エラー回避でstate返却
-    return ApiResponse.success({ data: JSON.parse(JSON.stringify(data)), message: `取得: ${data.length} 行` });
+    const data = loadCol ? rawData.map(row => row.slice(0, loadCol)) : rawData;
+    return ApiResponse.success({ data, message: `取得: ${data.length} 行` });
   });
 }
 
@@ -55,18 +55,17 @@ function writeData(sheetName, data, options = "clear") {
   return withErrorHandling(() => {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
     if (!sheet) return ApiResponse.error("SHEET_ERR", `シート「${sheetName}」不在`);
-    const [numRows, numCols] = [data.length, data[0].length];
-    const opts = Array.isArray(options) ? options : [options];
-    // clearオプション：全消し
+    const opts = [].concat(options);
+    // 既存データ削除（オプション）
     if (opts.includes("clear")) sheet.clearContents();
-    // appendオプション：末尾追加
+    // 追記機能（オプション）
     const startRow = opts.includes("append") ? (sheet.getLastRow() || 1) + 1 : 1;
-    sheet.getRange(startRow, 1, numRows, numCols).setValues(data);
-    // ruleオプション：条件付き書式拡張
+    sheet.getRange(startRow, 1, data.length, data[0].length).setValues(data);
+    // 条件付き書式拡張（オプション）
     if (opts.includes("rule")) {
       const rules = sheet.getConditionalFormatRules();
-      if (rules.length > 0) {
-        rules[0] = rules[0].copy().setRanges([sheet.getRange(1, 1, sheet.getLastRow(), numCols)]).build();
+      if (rules.length) {
+        rules[0] = rules[0].copy().setRanges([sheet.getRange(1, 1, sheet.getLastRow(), data[0].length)]).build();
         sheet.setConditionalFormatRules(rules);
       }
     }

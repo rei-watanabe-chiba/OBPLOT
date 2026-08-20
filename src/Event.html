@@ -6,41 +6,76 @@
     static Tab1 = {
       updateFileMap: (target) => {
         State.set(`Tab1ST.file.map.${target.dataset.field}`, target.value);
-        EventManager.validateFileMap();
+        EventManager.Tab1.validateFileMap();
+      },
+      // --- リアクティブ状態監視：設定モード ---
+      validateConfigMode: (mode) => {
+        if (!mode) return;
+        const modeText = mode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
+        const phase = State.get("Tab1ST.phase");
+        if (phase === TAB1_PHASE.INIT) {
+          State.set({ "Tab1ST.config.status": ["message", modeText], "Tab1ST.phase": TAB1_PHASE.READY });
+        } else if (phase >= TAB1_PHASE.INVALID) {
+          State.set({ "Tab1ST.file.status": ["error", "モード変更検知: 再検証"], "Tab1ST.config.status": ["message", modeText], "Tab1ST.phase": TAB1_PHASE.INVALID });
+        } else {
+          State.set("Tab1ST.config.status", ["message", modeText]);
+        }
+      },
+      // --- リアクティブ状態監視：ファイルマップ ---
+      validateFileMap: () => {
+        const map = State.get("Tab1ST.file.map");
+        const flags = Mtd.Utils.validateSelect(GLOBAL_CONFIG.fileFields.map(f => map[f.key] || ""), 3);
+        const isErr = flags.some(Boolean);
+        State.set({
+          "Tab1ST.file.isMapError": flags,
+          "Tab1ST.file.status": isErr ? ["error", "エラー: 列選択"] : State.get("Tab1ST.file.cachedStatus")
+        });
+      },
+      // --- リアクティブ状態監視：抽出マップ ---
+      validateExacMap: () => {
+        const isErr = !(State.get("Tab1ST.exac.map.dataset")?.trim());
+        State.set({
+          "Tab1ST.exac.isMapError": [isErr, false, false],
+          "Tab1ST.exac.status": isErr ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus")
+        });
       }
     };
 
     // --- Tab2変更移譲 ---
     static Tab2 = {
+      // リアクティブ状態監視：チェックボックス群
       toggleDataset: () => {
-        const container = document.getElementById(Tab2UI.datasetBox);
-        if (!container) return;
-        const allCb = container.querySelector("#selectAll");
-        const itemCbs = [...container.querySelectorAll(".dataset-cb")];
-        allCb.checked = itemCbs.every(cb => cb.checked);
+        const itemCbs = [...document.querySelectorAll(`#${Tab2UI.datasetBox} .dataset-cb`)];
+        if (!itemCbs.length) return;
+        const allCb = document.getElementById("selectAll");
+        if (allCb) allCb.checked = itemCbs.every(cb => cb.checked);
         State.set("Tab2ST.filter.datasets", itemCbs.filter(cb => cb.checked).map(cb => cb.value));
       },
       toggleAllDataset: (target) => {
-        const container = document.getElementById(Tab2UI.datasetBox);
-        if (!container) return;
-        container.querySelectorAll(".dataset-cb").forEach(cb => cb.checked = target.checked);
+        document.querySelectorAll(`#${Tab2UI.datasetBox} .dataset-cb`).forEach(cb => cb.checked = target.checked);
         EventManager.Tab2.toggleDataset();
       },
+      // リアクティブ状態監視：シンボル設定群
       updateSymbol: (target) => {
         const idx = target.dataset.symbolIdx;
         if (!idx) return;
-        const tVal = document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="target"]`)?.value;
-        const sVal = document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="shape"]`)?.value;
-        const cVal = document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="color"]`)?.value;
+        const getVal = type => document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="${type}"]`)?.value;
+        const tVal = getVal("target");
         if (tVal) {
-          const currentMap = State.get("Tab2ST.symbol.mapping") || {};
-          currentMap[tVal] = { shape: sVal, color: cVal };
-          State.set("Tab2ST.symbol.mapping", { ...currentMap });
+          State.set("Tab2ST.symbol.mapping", {
+            ...(State.get("Tab2ST.symbol.mapping") || {}),
+            [tVal]: { shape: getVal("shape"), color: getVal("color") }
+          });
         }
+      },
+      // ラジオボタン変更時のマッピング同期
+      updatePreviewMode: (target) => {
+        const el = target.dataset.element;
+        if (el) State.set(`Tab2ST.modeMap.${el}`, target.value);
       }
     };
 
-    // --- ボタン監視 ---
+    // --- ボタン監視登録 ---
     static #handleClick(e) {
       const target = e.target;
       const tabBtn = target.closest('.tab-btn');
@@ -54,7 +89,7 @@
       }
     }
 
-    // --- 変更監視 ---
+    // --- DOM更新監視登録 ---
     static #handleChange(e) {
       const target = e.target;
       // 単純同期
@@ -70,26 +105,6 @@
       }
     }
 
-    // --- リアクティブ状態監視：ファイルマップ ---
-    static validateFileMap() {
-      const map = State.get("Tab1ST.file.map");
-      const flags = Mtd.Utils.validateSelect(GLOBAL_CONFIG.fileFields.map(f => map[f.key] || ""), 3);
-      const isErr = flags.some(Boolean);
-      State.set({
-        "Tab1ST.file.isMapError": flags,
-        "Tab1ST.file.status": [isErr ? "error" : "success", isErr ? "エラー: 列選択" : State.get("Tab1ST.file.cachedStatus")[1]]
-      });
-    }
-
-    // --- リアクティブ状態監視：抽出マップ ---
-    static validateExacMap() {
-      const isErr = !(State.get("Tab1ST.exac.map.dataset")?.trim());
-      State.set({
-        "Tab1ST.exac.isMapError": [isErr, false, false],
-        "Tab1ST.exac.status": isErr ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus")
-      });
-    }
-
     // --- タブ切替 UI制御 ---
     static switchTab(tabId) {
       document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
@@ -101,8 +116,9 @@
 
     // --- アプリケーション初期化 ---
     static async init() {
-      UI.buildInitUI(); // 初期UI生成
-      Ctrl.Core.init(); 
+      UI.buildInitUI();
+      State.subscribe("Tab1ST.config.mode", EventManager.Tab1.validateConfigMode);
+      State.subscribe("Tab1ST.exac.map.dataset", EventManager.Tab1.validateExacMap);
       this.switchTab(State.get("GLB.activeTab"));
       State.set({
         "GLB.isLocked": false, 
