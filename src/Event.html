@@ -1,7 +1,7 @@
 <!-- Event.html -->
 <script>
   // --- イベント管理・初期化クラス ---
-  class EventManager {
+  class Evt {
     // --- 汎用：マルチセレクト切替 ---
     static toggleMultiSelect(boxId, statePath) {
       const itemCbs = [...document.querySelectorAll(`#popover-${boxId} .dataset-cb`)];
@@ -14,7 +14,7 @@
       const optionsBox = document.getElementById(`popover-${boxId}`);
       if (!optionsBox) return;
       optionsBox.querySelectorAll('.dataset-cb').forEach(cb => cb.checked = target.checked);
-      EventManager.toggleMultiSelect(boxId, statePath);
+      Evt.toggleMultiSelect(boxId, statePath);
     };
 
     // --- Tab1変更移譲 ---
@@ -22,7 +22,7 @@
       updateFileMap: (target) => {
         const field = target.getAttribute('data-field');
         State.set(`Tab1ST.file.map.${field}`, target.value);
-        EventManager.Tab1.validateFileMap();
+        Evt.Tab1.validateFileMap();
       },
       // --- リアクティブ状態監視：設定モード ---
       validateConfigMode: (mode) => {
@@ -61,10 +61,10 @@
     static Tab2 = {
       // リアクティブ状態監視：datasetBox
       toggleDataset: () => {
-        EventManager.toggleMultiSelect(Tab2UI.datasetBox, "Tab2ST.filter.datasets");
+        Evt.toggleMultiSelect(Tab2UI.datasetBox, "Tab2ST.filter.datasets");
       },
       toggleAllDataset: (target) => {
-        EventManager.toggleAllMultiSelect(target, Tab2UI.datasetBox, "Tab2ST.filter.datasets");
+        Evt.toggleAllMultiSelect(target, Tab2UI.datasetBox, "Tab2ST.filter.datasets");
       },
       // リアクティブ状態監視：シンボル設定群
       updateSymbol: (target) => {
@@ -81,10 +81,10 @@
       },
       // リアクティブ状態監視：PreviewMode
       togglePreviewMode: () => {
-        EventManager.toggleMultiSelect(Tab2UI.previewModeBox, "Tab2ST.modeMap");
+        Evt.toggleMultiSelect(Tab2UI.previewModeBox, "Tab2ST.modeMap");
       },
       toggleAllPreviewMode: (target) => {
-        EventManager.toggleAllMultiSelect(target, Tab2UI.previewModeBox, "Tab2ST.modeMap");
+        Evt.toggleAllMultiSelect(target, Tab2UI.previewModeBox, "Tab2ST.modeMap");
       }
     };
 
@@ -127,9 +127,9 @@
 
     // --- アプリケーション初期化 ---
     static async init() {
-      UINew.build();
-      State.subscribe("Tab1ST.config.mode", EventManager.Tab1.validateConfigMode);
-      State.subscribe("Tab1ST.exac.map.dataset", EventManager.Tab1.validateExacMap);
+      UIInit.build();
+      State.subscribe("Tab1ST.config.mode", Evt.Tab1.validateConfigMode);
+      State.subscribe("Tab1ST.exac.map.dataset", Evt.Tab1.validateExacMap);
       this.switchTab(State.get("GLB.activeTab"));
       State.set({
         "GLB.isLocked": false, 
@@ -143,6 +143,5 @@
     }
   }
 
-  window.addEventListener("DOMContentLoaded", () => EventManager.init());
-  const Evt = EventManager;
+  window.addEventListener("DOMContentLoaded", () => Evt.init());
 </script>

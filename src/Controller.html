@@ -1,7 +1,7 @@
 <!-- Controller.html -->
 <script>
   // --- 共通 ---
-  class CoreController {
+  class CoreCtrl {
     // --- 共通：非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
@@ -19,11 +19,11 @@
   }
 
   // --- Tab1 ---
-  class Tab1Controller {
+  class Tab1Ctrl{
     // --- Tab1 Fileシート取得 ---
     static async loadFile() {
       if (!(await UI.confirm("確認", State.get("Tab1ST.file.data") ? "内部データをリセットしますか？" : "Fileシートを読み込みますか？", Tab1UI.fileBar))) return;
-      await CoreController.withAsyncLock("Tab1ST.file.status", async () => {
+      await CoreCtrl.withAsyncLock("Tab1ST.file.status", async () => {
         const { data, message } = await API.fetchData(GLOBAL_CONFIG.fileSheetName, 5);
         State.set({
           "Tab1ST.file.data": data, "Tab1ST.file.map": Object.fromEntries(GLOBAL_CONFIG.fileFields.map(f => [f.key, ""])),
@@ -58,7 +58,7 @@
       Evt.Tab1.validateFileMap();
       if (State.get("Tab1ST.file.isMapError").some(Boolean)) return;
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
-      await CoreController.withAsyncLock("Tab1ST.file.status", async () => {
+      await CoreCtrl.withAsyncLock("Tab1ST.file.status", async () => {
         const [fileDT, fileMap] = State.get(["Tab1ST.file.data", "Tab1ST.file.map"]);
         const remapped = Mtd.Utils.remapArry(fileDT, GLOBAL_CONFIG.fileFields.map(f => fileMap[f.key] ? fileDT[0].indexOf(fileMap[f.key]) : -1), GLOBAL_CONFIG.fileHeader);
         return await this.processFileList("make", remapped);
@@ -68,13 +68,13 @@
     // --- Tab1 リスト検証処理 ---
     static async validateFileList() {
       if (!await UI.confirm("確認", "既存の「ファイルリスト」シートを上書きしますか？", Tab1UI.fileBar)) return;
-      await CoreController.withAsyncLock("Tab1ST.file.status", async () => this.processFileList("validate", null));
+      await CoreCtrl.withAsyncLock("Tab1ST.file.status", async () => this.processFileList("validate", null));
     }
 
     // --- Tab1 突合抽出処理 ---
     static async extractFile() {
       if (!await UI.confirm("確認", "既存の「抽出データ」シートを上書きしますか？", Tab1UI.exacBar)) return;
-      await CoreController.withAsyncLock("Tab1ST.exac.status", async () => {
+      await CoreCtrl.withAsyncLock("Tab1ST.exac.status", async () => {
         if (await API.checkUserProperty(GLOBAL_CONFIG.propFileEdited)) {
           State.set({ "Tab1ST.file.status": ["error", "シート編集検知: 再検証"], "Tab1ST.phase": TAB1_PHASE.INVALID });
           return;
@@ -94,7 +94,7 @@
     // --- Tab1 PXRF格納処理 ---
     static async pushExacData() {
       if (!await UI.confirm("確認", "「抽出データ」をPXRFシートに格納しますか？", Tab1UI.exacBar)) return;
-      await CoreController.withAsyncLock("Tab1ST.exac.status", async () => {
+      await CoreCtrl.withAsyncLock("Tab1ST.exac.status", async () => {
         const [exacRes, pxrfRes] = await Promise.all([
           API.fetchData(GLOBAL_CONFIG.extractSheetName), 
           API.fetchData(GLOBAL_CONFIG.pxrfSheetName)
@@ -109,10 +109,10 @@
   }
 
   // --- Tab2 ---
-  class Tab2Controller {
+  class Tab2Ctrl {
     // --- Tab2 データ読込 ---
     static async loadData() {
-      await CoreController.withAsyncLock("Tab2ST.datasetload.status", async () => {
+      await CoreCtrl.withAsyncLock("Tab2ST.datasetload.status", async () => {
         State.set("Tab2ST.datasetload.status", ["loading", "処理中..."]);
         const [pxrfRes, wdxrfRes, corrRes] = await Promise.all([
           API.fetchData(GLOBAL_CONFIG.pxrfSheetName), 
@@ -134,7 +134,7 @@
 
     // --- Tab2 データ確定 (フィルター) ---
     static async filterData() {
-      await CoreController.withAsyncLock("Tab2ST.datasetload.status", async () => {
+      await CoreCtrl.withAsyncLock("Tab2ST.datasetload.status", async () => {
         const checkedVals = State.get("Tab2ST.filter.datasets") || [];
         if (!checkedVals.length) throw new Error("Dataset未選択");
         const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
@@ -151,7 +151,7 @@
 
     // --- Tab2 シンボルマッピング確定 ---
     static async setSymbolMap() {
-      await CoreController.withAsyncLock("Tab2ST.symbol.status", async () => {
+      await CoreCtrl.withAsyncLock("Tab2ST.symbol.status", async () => {
         // State を正として取得、バリデーション追加
         const mapping = State.get("Tab2ST.symbol.mapping");
         if (!mapping || Object.keys(mapping).length === 0) throw new Error("シンボルが設定されていません");
@@ -162,7 +162,7 @@
 
     // --- Tab2 プレビュー生成 ---
     static async makePreview() {
-      await CoreController.withAsyncLock("Tab2ST.previewBar", async () => {
+      await CoreCtrl.withAsyncLock("Tab2ST.previewBar", async () => {
         const [modeMap, valueLogic, basePXRF, baseWDXRF] = State.get([
           "Tab2ST.modeMap", "Tab2ST.preview.value", "Tab2ST.basePXRF", "Tab2ST.baseWDXRF"
         ]);
@@ -184,11 +184,11 @@
 
         return "プレビューを作成しました";
       });
-    }
+    
     
     // --- Tab2 レポート画面展開 ---
     static async openReport() {
-      await CoreController.withAsyncLock("Tab2ST.repoStatus", async () => {
+      await CoreCtrl.withAsyncLock("Tab2ST.repoStatus", async () => {
         State.set("Tab2ST.repoStatus", ["loading", "テンプレート取得中..."]);
         const htmlContent = await API.getReportTemplate();
         window.open(URL.createObjectURL(new Blob([htmlContent], { type: 'text/html' })), '_blank');
@@ -198,5 +198,5 @@
   }
 
   // --- 外部参照用 ---
-  const Ctrl = { Core: CoreController, Tab1: Tab1Controller, Tab2: Tab2Controller };
+  const Ctrl = { Core: CoreCtrl, Tab1: Tab1Ctrl, Tab2: Tab2Ctrl };
 </script>
