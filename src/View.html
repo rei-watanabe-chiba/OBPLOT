@@ -203,6 +203,14 @@
       }
     }
 
+    // シンボル設定群
+    static buildSymbols() {
+      const baseData = State.get("Tab2ST.basePXRF") ?? [];
+      const baseKey = State.get("Tab2ST.symbol.baseKey");
+      const values = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
+      UICreate.symbolRows(values, Tab2UI.symbolBox, 5, "Tab2.updateSymbol");
+    }
+
     static buildPreview() {
       // プレビュー: モード選択ラジオボタンの生成
       const previewMode = DOM.get(Tab2UI.previewModeBox);
@@ -285,28 +293,24 @@
     }
 
     static updateTab2PhaseUI(phase) {
-      const p = TAB2_PHASE;
-      const rules = {
-        [Tab2UI.datasetLoadBtn]:   { disabled: false },
-        [Tab2UI.datasetfilterBtn]: { disabled: phase < p.LOADED },
-        [Tab2UI.datasetArea]:      { show: phase >= p.LOADED },
-        [Tab2UI.symbolArea]:       { show: phase >= p.FILTERED },
-        [Tab2UI.symbolAxis]:       { disabled: phase < p.FILTERED },
-        [Tab2UI.symbolBtn]:        { disabled: phase < p.FILTERED },
-        [Tab2UI.datasetSection]:   { active: phase < p.FILTERED, disabled: false },
-        [Tab2UI.symbolSection]:    { active: phase >= p.FILTERED && phase < p.MAPPED, disabled: phase < p.FILTERED },
-        [Tab2UI.previewSection]:   { active: phase >= p.MAPPED, disabled: phase < p.FILTERED },
-        [Tab2UI.previewMakeBtn]:   { disabled: phase < p.FILTERED },
-        [Tab2UI.reportSection]:    { active: phase >= p.MAPPED, disabled: phase < p.MAPPED }
-      };
-      this.#applyRules(rules);
-      if (phase === p.FILTERED) {
-        const baseData = State.get("Tab2ST.basePXRF") ?? [];
-        const baseKey = State.get("Tab2ST.symbol.baseKey");
-        UICreate.symbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox, 5);
+        const p = TAB2_PHASE;
+        const rules = {
+          [Tab2UI.datasetLoadBtn]:   { disabled: false },
+          [Tab2UI.datasetfilterBtn]: { disabled: phase < p.LOADED },
+          [Tab2UI.datasetArea]:      { show: phase >= p.LOADED },
+          [Tab2UI.datasetSection]:   { active: phase < p.FILTERED, disabled: false },
+          [Tab2UI.symbolAxis]:       { disabled: phase < p.FILTERED },
+          [Tab2UI.symbolBtn]:        { disabled: phase < p.FILTERED },
+          [Tab2UI.symbolArea]:       { show: phase >= p.FILTERED },
+          [Tab2UI.symbolSection]:    { active: phase >= p.FILTERED && phase < p.MAPPED, disabled: phase < p.FILTERED },
+          [Tab2UI.previewMakeBtn]:   { disabled: phase < p.MAPPED },
+          [Tab2UI.previewSection]:   { active: phase >= p.MAPPED, disabled: phase < p.MAPPED },
+          [Tab2UI.reppBtn]:          { disabled: phase < p.PREVIEWED },
+          [Tab2UI.reportSection]:    { active: phase >= p.PREVIEWED, disabled: phase < p.PREVIEWED }
+        };
+        this.#applyRules(rules);
       }
     }
-  }
 
   // --- UI更新 - state同期 ---
   class UIStateUpdater {
@@ -317,6 +321,7 @@
         "Tab1ST.file.status": v => UICreate.status(Tab1UI.fileBar, v),
         "Tab1ST.exac.status": v => UICreate.status(Tab1UI.exacBar, v),
         "Tab2ST.datasetload.status": v => UICreate.status(Tab2UI.datasetloadBar, v),
+        "Tab2ST.symbol.status": v => UICreate.status(Tab2UI.symbolBar, v),
         "Tab2ST.repoStatus": v => UICreate.status(Tab2UI.repoBar, v),
         "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
         "Tab2ST.phase": v => UIPhase.updateTab2PhaseUI(v),
@@ -326,11 +331,8 @@
         "Tab2ST.availableDatasets": datasets => {
           UICreate.checkboxes(datasets, Tab2UI.datasetBox);
         },
-        "Tab2ST.symbol.baseKey": key => {
-          const baseData = State.get("Tab2ST.basePXRF") ?? [];
-          UICreate.symbolRows([...new Set(baseData.map(d => d[key]).filter(Boolean))], Tab2UI.symbolBox, 5, "Tab2.updateSymbol");
-        },
-        
+        "Tab2ST.basePXRF": () => UIBuildInit.buildSymbols(),
+        "Tab2ST.symbol.baseKey": () => UIBuildInit.buildSymbols(),
         "Tab1ST.file.isMapError": flags => {
           UICreate.inputs(Tab1UI.fileBox, flags);
           if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD);

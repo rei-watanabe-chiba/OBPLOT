@@ -74,33 +74,34 @@
   }
 
   const Tab2UI = {
-    tabSet: "tab2Fieldset",
-    datasetSection: "datasetSection",
-    datasetLoadBtn: "datasetLoadBtn",
-    datasetfilterBtn: "datasetFilterBtn",
-    datasetloadBar: "datasetLoadBar",
-    datasetArea: "datasetArea",
-    datasetBox: "datasetBox",
-    symbolSection: "symbolSection",
-    symbolArea: "symbolArea",
-    symbolAxisBox: "symbolAxisBox",
-    symbolBox: "symbolBox",
-    symbolBtn: "symbolBtn",
-    previewSection: "previewSection",
-    previewModeBox: "previewModeBox",
-    previewCorrectionBox: "previewCorrectionBox",
-    previewValueBox: "previewValueBox",
-    previewMakeBtn: "previewMakeBtn",
-    previewStatsTable: "previewStatsTable",
-    previewBar: "previewBar",
-    reportSection: "reportSection",
-    reppBtn: "reportOpenBtn",
-    repoBar: "reportStatusBar"
-  };
+  tabSet: "tab2Fieldset",
+  datasetSection: "datasetSection",
+  datasetLoadBtn: "datasetLoadBtn",
+  datasetfilterBtn: "datasetFilterBtn",
+  datasetloadBar: "datasetLoadBar",
+  datasetArea: "datasetArea",
+  datasetBox: "datasetBox",
+  symbolSection: "symbolSection",
+  symbolArea: "symbolArea",
+  symbolAxisBox: "symbolAxisBox",
+  symbolBox: "symbolBox",
+  symbolBtn: "symbolBtn",
+  symbolBar: "symbolStatusBar", 
+  previewSection: "previewSection",
+  previewModeBox: "previewModeBox",
+  previewCorrectionBox: "previewCorrectionBox",
+  previewValueBox: "previewValueBox",
+  previewMakeBtn: "previewMakeBtn",
+  previewStatsTable: "previewStatsTable",
+  previewBar: "previewBar",
+  reportSection: "reportSection",
+  reppBtn: "reportOpenBtn",
+  repoBar: "reportStatusBar"
+};
 
   // --- フェーズ定義 ---
   const TAB1_PHASE = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
-  const TAB2_PHASE = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4 };
+  const TAB2_PHASE = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
 
   // --- 状態管理クラス定義 ---
   class AppState {
