@@ -102,7 +102,7 @@
           <details id="previewSection" data-type="disabled">
             <summary>補正＆プレビュー</summary>
             <div id="previewArea">
-              <label>モード選択</label>
+              <label>オプション:Obsidianモード</label>
               <!-- 動的生成コンテナ -->
               <div id="previewModeBox"></div>
               <label style="margin-top: 12px;">補正方法</label>
@@ -206,6 +206,12 @@
       <div class="stats-val"></div>
     </template>
 
+    <template id="multiSelectTemplate">
+      <div class="multi-select-wrapper">
+        <button class="multi-select-summary"></button>
+        <div class="multi-select-options checkbox-container" popover="auto"></div>
+      </div>
+    </template>
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>
     <?!= include('View'); ?>

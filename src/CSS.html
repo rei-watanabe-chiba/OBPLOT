@@ -35,7 +35,8 @@
     display: grid;
     grid-template-rows: auto 1fr;
     height: 100vh;
-    overflow: hidden;
+    overflow-x: hidden; /* 追記: 横スクロールを強制非表示 */
+    overflow-y: hidden; /* 既存: 縦はmain内でスクロールさせるためhidden */
     font-family: 'Roboto', 'Noto Sans JP', sans-serif;
     font-size: 13px;
     color: var(--text-main);
@@ -321,6 +322,67 @@
   }
   .stats-val {
     font-weight: 700;
+  }
+
+  /* --- マルチセレクト・ドロップダウン (Popover API) --- */
+  .multi-select-wrapper {
+    width: 100%;
+    margin-top: 4px;
+  }
+  .multi-select-summary {
+    display: block;             /* flex から block へ変更（text-overflow適用のため） */
+    width: 100%;
+    height: 32px;               /* 1行分の高さを厳格に固定 */
+    line-height: 24px;          /* 縦方向の中央配置用 */
+    padding: 3px 24px 3px 8px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--grey400);
+    border-radius: 4px;
+    text-align: left;           /* 左詰め */
+    white-space: nowrap;        /* 要素の折り返しを禁止 */
+    overflow: hidden;           /* はみ出した部分を隠す */
+    text-overflow: ellipsis;    /* 末尾を...で省略 */
+    cursor: pointer;
+    font-weight: normal;
+  }
+  .multi-select-summary:hover {
+    background-color: var(--bg-color-hover);
+  }
+  
+  /* Popover本体の設定 (CSS Anchor Positioning) */
+  .multi-select-options {
+    /* 1. Popoverのネイティブデフォルト配置を完全リセット */
+    inset: auto;
+    margin: 0;
+
+    padding: 0;
+    max-height: 200px;
+    overflow-x: hidden;         /* 3. 要素内の横はみ出しを確実に防止 */
+    overflow-y: auto;
+    background-color: var(--bg-color);
+    border: 1px solid var(--grey200);
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-sizing: border-box;
+    
+    /* 2. アンカーを基準にした厳密な相対配置 */
+    top: calc(anchor(bottom) + 4px);
+    left: anchor(left);
+    width: anchor-size(width);  /* right指定を削除し、幅の同期に変更 */
+  }
+  
+  .badge {
+    display: inline-block;      /* インライン要素として1行に並べる */
+    vertical-align: middle;     /* 行の高さに対する垂直中央揃え */
+    margin-right: 4px;          /* 要素間の隙間（gapの代替） */
+    background-color: var(--grey50);
+    color: var(--text-main);
+    border: 1px solid var(--grey200);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.2;
   }
   
   @keyframes spin {

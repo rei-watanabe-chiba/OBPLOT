@@ -69,10 +69,10 @@
           });
         }
       },
-      // ラジオボタン変更時のマッピング同期
-      updatePreviewMode: (target) => {
-        const el = target.getAttribute('data-element');
-        if (el) State.set(`Tab2ST.modeMap.${el}`, target.value);
+      // リアクティブ状態監視：optionalモード
+      updatePreviewMode: () => {
+        const cbs = [...document.querySelectorAll(`#${Tab2UI.previewModeBox} .dataset-cb`)];
+        State.set("Tab2ST.modeMap", cbs.filter(cb => cb.checked).map(cb => cb.value));
       }
     };
 

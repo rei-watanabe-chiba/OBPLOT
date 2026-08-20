@@ -52,13 +52,14 @@
     }
 
     // --- 列選択動的生成 ---
-    static selectors(arr, objID, fields, targetState, hasEmpty = true) {
+    static selectors(arr, objID, fields, targetState, hasEmpty = true, isMultiple = false) {
       this.#renderTemplateList("selectorTemplate", fields, objID, (clone, field) => {
         clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
         const select = clone.querySelector("select");
         select.setAttribute('data-field', field.key);
         select.setAttribute('data-change', targetState);
-        if (!hasEmpty) select.querySelector(".empty-opt")?.remove();
+        if (isMultiple) select.multiple = true;
+        if (!hasEmpty || isMultiple) select.querySelector(".empty-opt")?.remove();
         select.append(...arr.map(h => new Option(h, h)));
         return clone;
       });
@@ -152,6 +153,59 @@
       container.replaceChildren(boxClone);
     }
 
+    // --- 疑似ドロップダウン生成 (Popover API) ---
+    static multiSelectDropdown(arr, objID, targetState, hasSelectAll = false, initialSelected = arr) {
+      const container = DOM.get(objID);
+      if (!container) return;
+      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
+
+      const clone = DOM.get("multiSelectTemplate").content.cloneNode(true);
+      const summaryBtn = clone.querySelector(".multi-select-summary");
+      const optionsBox = clone.querySelector(".multi-select-options");
+
+      const popoverId = `popover-${objID}`;
+      const anchorName = `--anchor-${objID}`;
+      
+      summaryBtn.setAttribute("popovertarget", popoverId);
+      summaryBtn.style.anchorName = anchorName;
+      
+      optionsBox.id = popoverId;
+      optionsBox.style.positionAnchor = anchorName;
+
+      if (hasSelectAll) optionsBox.appendChild(DOM.get("checkAllTemplate").content.cloneNode(true));
+
+      const items = arr.map(item => {
+        const itemClone = DOM.get("checkboxTemplate").content.cloneNode(true);
+        const cb = itemClone.querySelector(".dataset-cb");
+        cb.value = item;
+        // 初期選択状態の厳格な適用
+        cb.checked = initialSelected.includes(item);
+        cb.setAttribute('data-change', targetState);
+        itemClone.querySelector(".cb-text").textContent = item;
+        return itemClone;
+      });
+      
+      optionsBox.append(...items);
+      container.replaceChildren(clone);
+    }
+
+    // --- サマリーテキスト(Badge)更新 ---
+    static updateMultiSelectSummary(objID, selectedValues) {
+      // 構造変更に伴い querySelector 先を更新
+      const summary = DOM.get(objID)?.querySelector(".multi-select-summary");
+      if (!summary) return;
+      if (!selectedValues?.length) {
+        summary.innerHTML = '<span style="color:var(--grey400)">未選択</span>';
+        return;
+      }
+      summary.replaceChildren(...selectedValues.map(v => {
+        const span = document.createElement('span');
+        span.className = 'badge';
+        span.textContent = v;
+        return span;
+      }));
+    }
+
     // --- セレクタ・インプットUI更新 ---
     static inputs(mapBoxId, errorFlags) {
       DOM.get(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => {
@@ -212,16 +266,12 @@
     }
 
     static buildPreview() {
-      // プレビュー: モード選択ラジオボタンの生成
+      // プレビュー: モード選択 (全選択で初期化)
       const previewMode = DOM.get(Tab2UI.previewModeBox);
       if (previewMode) {
-        const initialMap = UICreate.radioGroup(
-          GLOBAL_CONFIG.optionalElements,
-          Tab2UI.previewModeBox,
-          "Tab2.updatePreviewMode",
-          "obsidian"
-        );
-        State.set("Tab2ST.modeMap", initialMap);
+        const opts = GLOBAL_CONFIG.optionalElements;
+        UICreate.multiSelectDropdown(opts, Tab2UI.previewModeBox, "Tab2.updatePreviewMode", false, opts);
+        State.set("Tab2ST.modeMap", [...opts]); // Stateも全選択で初期化
       }
 
       // プレビュー: 補正方法
@@ -231,7 +281,7 @@
         select.setAttribute('data-bind', "Tab2ST.preview.correction");
         select.add(new Option("補正なし", "rawdata"));
         select.add(new Option("新規検量線", "new"));
-        previewCorrection.appendChild(select);
+        previewCorrection.replaceChildren(select);
         State.set("Tab2ST.preview.correction", "rawdata");
       }
 
@@ -241,7 +291,7 @@
         const select = document.createElement("select");
         select.setAttribute('data-bind', "Tab2ST.preview.value");
         GLOBAL_CONFIG.valueLogic.forEach(v => select.add(new Option(v, v)));
-        previewValue.appendChild(select);
+        previewValue.replaceChildren(select);
         State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
       }
     }
@@ -329,7 +379,13 @@
           if (data?.[0]) UICreate.selectors(data[0], Tab1UI.fileBox, GLOBAL_CONFIG.fileFields, "Tab1.updateFileMap");
         },
         "Tab2ST.availableDatasets": datasets => {
-          UICreate.checkboxes(datasets, Tab2UI.datasetBox);
+          UICreate.multiSelectDropdown(datasets, Tab2UI.datasetBox, "Tab2.toggleDataset", true, datasets);
+        },
+        "Tab2ST.filter.datasets": vals => {
+          UICreate.updateMultiSelectSummary(Tab2UI.datasetBox, vals);
+        },
+        "Tab2ST.modeMap": vals => {
+          UICreate.updateMultiSelectSummary(Tab2UI.previewModeBox, vals);
         },
         "Tab2ST.basePXRF": () => UIBuildInit.buildSymbols(),
         "Tab2ST.symbol.baseKey": () => UIBuildInit.buildSymbols(),

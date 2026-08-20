@@ -135,14 +135,15 @@
     // --- Tab2 データ確定 (フィルター) ---
     static async filterData() {
       await CoreController.withAsyncLock("Tab2ST.datasetload.status", async () => {
-        // State を正として取得
         const checkedVals = State.get("Tab2ST.filter.datasets") || [];
         if (!checkedVals.length) throw new Error("Dataset未選択");
         const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
         const { basePXRF, baseWDXRF } = Mtd.Tab2.DataManager.filter(mergedPXRF, wdxrfObjs, checkedVals);
+        
+        // 修正: "Tab2ST.modeMap": {} を削除し、プレビューモードの選択状態を保持する
         State.set({
           "Tab2ST.basePXRF": basePXRF, "Tab2ST.baseWDXRF": baseWDXRF,
-          "Tab2ST.phase": TAB2_PHASE.FILTERED, "Tab2ST.symbol.mapping": {}, "Tab2ST.modeMap": {}, "Tab2ST.correctionLogic": {}
+          "Tab2ST.phase": TAB2_PHASE.FILTERED, "Tab2ST.symbol.mapping": {}, "Tab2ST.correctionLogic": {}
         });
         return "データ設定を更新しました";
       });

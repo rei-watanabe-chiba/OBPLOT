@@ -148,16 +148,16 @@
     static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic) {
       if (!basePXRF?.length || !baseWDXRF?.length) return [];
       const allElements = Object.keys(GLOBAL_CONFIG.mudrockIndex);
+      
       // pxrfデータ整形
       const processed = basePXRF.map(row => {
         const newRow = { dataset: row.dataset, id: row.ID ?? row.id };
         allElements.forEach(el => {
           const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
-          const mode = isOptional ? (modeMap[el] ?? 'obsidian') : 'mudrock';
-          const col = mode === 'obsidian' ? `ob_${el}` : `md_${el}`;
-          const errCol = mode === 'obsidian' ? `ob_${el}_Err` : `md_${el}_Err`;
-          newRow[el] = row[col] ?? null;
-          newRow[`${el}_Err`] = row[errCol] ?? null;
+          const isSelected = Array.isArray(modeMap) && modeMap.includes(el);
+          const prefix = (isOptional && isSelected) ? 'ob' : 'md';
+          newRow[el] = row[`${prefix}_${el}`] ?? null;
+          newRow[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
         });
         return newRow;
       });

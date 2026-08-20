@@ -120,9 +120,10 @@
           phase: TAB2_PHASE.INIT,
           rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null },
           basePXRF: null, baseWDXRF: null,
-          availableDatasets: [], // 追加: 生成用全データセット保持
+          availableDatasets: [], 
           filter: { datasets: [] }, symbol: { baseKey: "dataset", mapping: {} },
-          modeMap: {}, preview: { value: "", correction: "rawdata", statsData: null }, correctionLogic: {}, report: { values: [], corrections: [] },
+          modeMap: [], 
+          preview: { value: "", correction: "rawdata", statsData: null }, correctionLogic: {}, report: { values: [], corrections: [] },
           repoStatus: [],
           selectData: null, previewData: null
         }
