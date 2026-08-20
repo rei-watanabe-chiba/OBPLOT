@@ -29,10 +29,10 @@
 - `Report.html`: 別タブで展開されるレポート画面（Google Visualization API によるサンプル散布図描画）
 
 ## 3. 次の開発作業
-- MultiSelectのリファクタリングを行う。
-- 現状selectALLはポップオーバー内では反映されるが、stateに連動していないのか、summalyの内部が更新されない
-- Tab2UI.datasetBoxはselectALLのあと、個別選択を変更するとsummalyの内部も更新される
-- previewModeBoxはselectALLも個別選択も変更してもsummalyに反映されない
-- 上記の状況から原因を特定してリファクタリングを行う。
+- View.htmlが肥大化しているため、DOM.htmlを新設しclass DOMとclass UICreateを依存関係を整理しながら安全に移動する。
+- 現状、class UIBuildInitとclass UIStateUpdaterにDOM動的生成が点在している。
+- 点在する動的DOM生成を依存Stateと発火タイミングに注意して分類して、論理構成を整理する
+- 整理状況を検討して、可能ならばstate依存型＋各Tabの最初期phaseについては、初期化処理を再整理する。
+- 強制的ダウングレード等によるDOMの破棄が必要であれば、汎用的な関数を設定し組み込む形で対処する。
 
 
