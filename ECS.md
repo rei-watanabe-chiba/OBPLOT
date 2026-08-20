@@ -17,13 +17,13 @@
   - 初期状態: すべて選択状態（配列の全要素が格納された状態）で初期化。
 
 ### 2.シンボルマッピング（`symbolSection`）
-* **機能**: グラフ上の点（マーカー）のスタイル設定
-* **UI要素**:
-* `symbolAxis` (**動的**): マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）。
-* 駆動State: `Tab2ST.symbol.baseKey` にバインド。値変更時にsymbolBoxの行を動的再生成。
-* `symbolBox` (**動的**): 設定行（`[値名プルダウン] + [形状セレクト] + [色セレクト]`）。
-* 駆動State: `baseKey` のユニーク値を動的生成し選択肢に格納。変更結果は `Tab2ST.symbol.mapping` に即時同期。
-* `symbolBtn` (静的): 「シンボル確定」ボタン。`Tab2ST.phase` が `FILTERED` 以上で有効。
+- **機能**: グラフ上の点（マーカー）のスタイル設定
+- **UI要素**:
+- `symbolAxis` (**動的**): マーカ分類軸選択プルダウン（`dataset`, `item`, `Group`, `Source`）。
+  - 駆動State: `Tab2ST.symbol.baseKey` にバインド。値変更時にsymbolBoxの行を動的再生成。
+- `symbolBox` (**動的**): 設定行（`[値名プルダウン] + [形状セレクト] + [色セレクト]`）。
+  - 駆動State: `baseKey` のユニーク値を動的生成し選択肢に格納。変更結果は `Tab2ST.symbol.mapping` に即時同期。
+- `symbolBtn` (静的): 「シンボル確定」ボタン。`Tab2ST.phase` が `FILTERED` 以上で有効。
 
 
 ### ③ 補正＆プレビュー（CorrectionArea）
