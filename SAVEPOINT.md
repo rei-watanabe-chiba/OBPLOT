@@ -29,8 +29,10 @@
 - `Report.html`: 別タブで展開されるレポート画面（Google Visualization API によるサンプル散布図描画）
 
 ## 3. 次の開発作業
-- リファクタリングを行う。
-- previewModeで呼び出すUICreate.multiSelectDropdownについてhasSelectAll = trueに変更する
-- これに付随してEvent.htmlにtoggleDatasetとtoggleAllDatasetをプライベートで引数にboxIDとstateを設定して汎用化して、Tab2UI.datasetBox監視とpreviewModeBox監視を作成する。
+- MultiSelectのリファクタリングを行う。
+- 現状selectALLはポップオーバー内では反映されるが、stateに連動していないのか、summalyの内部が更新されない
+- Tab2UI.datasetBoxはselectALLのあと、個別選択を変更するとsummalyの内部も更新される
+- previewModeBoxはselectALLも個別選択も変更してもsummalyに反映されない
+- 上記の状況から原因を特定してリファクタリングを行う。
 
 
