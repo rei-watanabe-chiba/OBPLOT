@@ -2,22 +2,54 @@
 <script>
   // --- UI utilities ---
   class DOM {
-    // --- DOM取得 ---
     static get = id => document.getElementById(id);
-    // --- DOMテキスト更新 ---
     static setDOM = (id, text) => { if (text !== undefined && this.get(id)) this.get(id).innerText = text; };
-    // --- 表示切替 ---
     static toggle = (id, isShow) => { if (this.get(id)) this.get(id).style.display = isShow ? "" : "none"; };
-    // --- details開閉 ---
     static open = (id, isOpen) => { if (this.get(id)?.tagName === "DETAILS") setTimeout(() => { this.get(id).open = isOpen; }, 200); };
-    // --- 無効化切替 ---
     static setDisabled = (id, isDisabled) => { if (this.get(id)) this.get(id).disabled = isDisabled; };
-    // --- カスタム属性設定 ---
     static setAttr = (id, attr, val) => val ? this.get(id)?.setAttribute(attr, val) : this.get(id)?.removeAttribute(attr);
   }
 
   // --- UI更新・生成処理群 ---
   class UIController {
+    // --- 初期UI動的構築 ---
+    static buildInitUI() {
+      // モード選択 (Select)
+      const modeBox = DOM.get(Tab1UI.configModeBox);
+      if (modeBox) {
+        const select = document.createElement("select");
+        select.dataset.bind = "Tab1ST.config.mode";
+        GLOBAL_CONFIG.configModes.forEach(m => {
+          const opt = new Option(m.label, m.value);
+          if(m.disabled) opt.disabled = true;
+          if(m.hidden) opt.hidden = true;
+          select.add(opt);
+        });
+        modeBox.appendChild(select);
+      }
+      // 計測属性 (Inputs)
+      const exacBox = DOM.get(Tab1UI.exacBox);
+      if (exacBox) {
+        GLOBAL_CONFIG.exacFields.forEach(f => {
+          const clone = DOM.get("inputTemplate").content.cloneNode(true);
+          clone.querySelector(".field-label").firstChild.nodeValue = `${f.label} `;
+          const input = clone.querySelector("input");
+          input.placeholder = f.placeholder;
+          input.dataset.bind = f.bind;
+          exacBox.appendChild(clone);
+        });
+      }
+      // シンボル分類軸 (Select)
+      const axisBox = DOM.get(Tab2UI.symbolAxisBox);
+      if (axisBox) {
+        const select = document.createElement("select");
+        select.id = Tab2UI.symbolAxis;
+        select.dataset.bind = "Tab2ST.symbol.baseKey";
+        GLOBAL_CONFIG.symbolAxes.forEach(a => select.add(new Option(a.label, a.value)));
+        axisBox.appendChild(select);
+      }
+    }
+
     // --- ステータスバー更新 ---
     static loadingStatsBar(id, status = null) {
       const el = DOM.get(id);
@@ -48,6 +80,7 @@
         };
       });
     }
+
     // --- テンプレート生成 ---
     static #renderTemplateList(templateId, items, containerId, mapper) {
       const container = DOM.get(containerId);
@@ -62,6 +95,7 @@
         clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
         const select = clone.querySelector("select");
         select.dataset.field = field.key;
+        select.dataset.change = "Tab1.updateFileMap"; // ルーティング付与
         if (!hasEmpty) select.querySelector(".empty-opt")?.remove();
         select.append(...arr.map(h => new Option(h, h)));
         return clone;
@@ -92,7 +126,10 @@
         { val: 'var(--grey600)', label: 'Gray' }
       ];
       this.#renderTemplateList("symbolRowTemplate", Array.from({ length: rawNum }), objID, (clone, _, i) => {
-        clone.querySelectorAll("select").forEach(s => s.dataset.symbolIdx = i);
+        clone.querySelectorAll("select").forEach(s => {
+          s.dataset.symbolIdx = i;
+          s.dataset.change = "Tab2.updateSymbol";
+        });
         clone.querySelector('[data-symbol-type="target"]').append(...values.map(v => new Option(v, v)));
         clone.querySelector('[data-symbol-type="shape"]').append(...shapes.map(s => new Option(s, s)));
         clone.querySelector('[data-symbol-type="color"]').append(...colors.map(c => new Option(c.label, c.val)));
@@ -110,7 +147,6 @@
 
   // --- フェーズ連動UI制御 ---
   class UIPhase {
-    // --- 状態一括反映 ---
     static #applyRules(rules) {
       Object.entries(rules).forEach(([id, r]) => {
         if (r.show !== undefined) DOM.toggle(id, r.show);
@@ -125,7 +161,6 @@
       });
     }
 
-    // --- Tab1 フェーズUI更新 ---
     static updateTab1PhaseUI(phase) {
       const p = TAB1_PHASE;
       const fileErr = State.get("Tab1ST.file.isMapError").some(Boolean);
@@ -149,7 +184,6 @@
       if (phase >= p.EXTRACT) State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
     }
 
-    // --- Tab2 フェーズUI更新 ---
     static updateTab2PhaseUI(phase) {
       const p = TAB2_PHASE;
       const rules = {
@@ -167,7 +201,7 @@
       if (phase === p.FILTERED) {
         const baseData = State.get("Tab2ST.basePXRF") ?? [];
         const baseKey = State.get("Tab2ST.symbol.baseKey");
-        UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox, 5);
+        UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox, 5); // 修正: d[baseKey]
       }
     }
   }
@@ -175,7 +209,6 @@
   // --- UI更新 - state同期 ---
   class UIStateUpdater {
     constructor() {
-      // 状態変更のバインディング
       const stateMap = {
         "GLB.isLocked": v => DOM.setDisabled(Tab1UI.tabSet, v),
         "Tab1ST.config.status": v => UIController.loadingStatsBar(Tab1UI.configBar, v),
@@ -202,7 +235,6 @@
     }
   }
 
-  // --- 初期化と短縮 ---
   const UI = UIController;
   const UIState = new UIStateUpdater();
 </script>

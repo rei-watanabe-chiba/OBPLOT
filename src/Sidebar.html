@@ -20,11 +20,8 @@
           <details id="configSection" data-state="active" open>
             <summary>設定</summary>
             <div id="configArea">
-              <select id="configExacMode" data-bind="Tab1ST.config.mode">
-                <option value="" selected disabled hidden>モードを選択してください</option>
-                <option value="Dual">Dualモード</option>
-                <option value="Single">Singleモード</option>
-              </select>
+              <!-- 動的生成コンテナ -->
+              <div id="configModeBox"></div>
             </div>
           </details>
           <div id="configStatusBar" class="status-bar" data-status="hidden"></div>
@@ -37,6 +34,7 @@
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
             <div id="fileArea" style="display: none;">
+              <!-- 動的生成コンテナ -->
               <div id="fileBox"></div>
             </div>
             <div id="fileBtnArea" class="btn-container" style="display: none;">
@@ -54,17 +52,8 @@
               <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
             </div>
             <div id="exacArea" style="display: none;">
-              <div id="exacBox">
-                <label>dataset *必須
-                  <input type="text" data-bind="Tab1ST.exac.map.dataset" placeholder="データセット・遺跡名">
-                </label>
-                <label>item
-                  <input type="text" data-bind="Tab1ST.exac.map.item" placeholder="計測情報（任意）">
-                </label>
-                <label>date
-                  <input type="text" data-bind="Tab1ST.exac.map.date" placeholder="計測日（任意）">
-                </label>
-              </div>
+              <!-- 動的生成コンテナ -->
+              <div id="exacBox"></div>
             </div>
             <div id="exacBtnArea" class="btn-container">
               <button id="exacPushBtn" data-type="primary" class="outline" style="display: none;" data-action="Tab1.pushExacData" disabled>PXRFに格納</button>
@@ -87,6 +76,7 @@
             <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
             <div id="datasetArea" style="display: none;">
               <label>dataset選択</label>
+              <!-- 動的生成コンテナ -->
               <div id="datasetBox" class="checkbox-container"></div>
             </div>
           </details>
@@ -97,14 +87,11 @@
             <div class="btn-container">
               <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
             </div>
-            <select id="symbolAxis" data-bind="Tab2ST.symbol.baseKey" disabled>
-              <option value="dataset" selected>dataset</option>
-              <option value="item">item</option>
-              <option value="Group">Group</option>
-              <option value="Source">Source</option>
-            </select>
+            <!-- 動的生成コンテナ -->
+            <div id="symbolAxisBox"></div>
             <div id="symbolArea" style="display: none;">
               <label style="margin-top: 12px;">シンボル設定</label>
+              <!-- 動的生成コンテナ -->
               <div id="symbolBox"></div>
             </div>
           </details>
@@ -140,16 +127,22 @@
       </label>
     </template>
 
+    <template id="inputTemplate">
+      <label class="field-label">
+        <input type="text" class="field-input">
+      </label>
+    </template>
+
     <template id="checkboxTemplate">
       <label class="checkbox-item">
-        <input type="checkbox" class="dataset-cb" checked>
+        <input type="checkbox" class="dataset-cb" data-change="Tab2.toggleDataset" checked>
         <span class="cb-text"></span>
       </label>
     </template>
 
     <template id="checkAllTemplate">
       <label class="checkbox-item select-all">
-        <input type="checkbox" id="selectAll" checked>
+        <input type="checkbox" id="selectAll" data-change="Tab2.toggleAllDataset" checked>
         <span>すべて選択</span>
       </label>
     </template>

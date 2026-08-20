@@ -115,7 +115,7 @@
   class PxrfValidator {
     static run(existingDT, newDT) {
       if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
-      // dataset_IDをキーで突合
+      // dataset_IDをキー突合
       const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
       const filteredEx = existingDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
       return filteredEx.length !== existingDT.length - 1 
@@ -159,30 +159,6 @@
     }
   }
 
-  // --- Tab2 DOM抽出ヘルパー ---
-  class GetUIinput {
-    // チェックボックス
-    static getCheckedDatasets(boxId) {
-      const els = document.getElementById(boxId)?.querySelectorAll('.dataset-cb:checked');
-      return Array.from(els || []).map(cb => cb.value);
-    }
-    // シンボルマップ
-    static getSymbolMapping(boxId) {
-      const box = document.getElementById(boxId);
-      if (!box) return {};
-      return Array.from({ length: 10 }).reduce((map, _, i) => {
-        const target = box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="target"]`)?.value;
-        if (target) {
-          map[target] = {
-            shape: box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="shape"]`)?.value,
-            color: box.querySelector(`select[data-symbol-idx="${i}"][data-symbol-type="color"]`)?.value
-          };
-        }
-        return map;
-      }, {});
-    }
-  }
-  
   // --- 外部参照用 ---
-  const Mtd = { Utils: DataUtils, Tab1: { FileValidator, DataExtractor, PxrfValidator }, Tab2: { DataMerger, GetUIinput } };
+  const Mtd = { Utils: DataUtils, Tab1: { FileValidator, DataExtractor, PxrfValidator }, Tab2: { DataMerger } };
 </script>

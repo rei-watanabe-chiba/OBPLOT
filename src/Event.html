@@ -2,17 +2,52 @@
 <script>
   // --- イベント管理・初期化クラス ---
   class EventManager {
+    // --- Tab1変更移譲 ---
+    static Tab1 = {
+      updateFileMap: (target) => {
+        State.set(`Tab1ST.file.map.${target.dataset.field}`, target.value);
+        EventManager.validateFileMap();
+      }
+    };
+
+    // --- Tab2変更移譲 ---
+    static Tab2 = {
+      toggleDataset: () => {
+        const container = document.getElementById(Tab2UI.datasetBox);
+        if (!container) return;
+        const allCb = container.querySelector("#selectAll");
+        const itemCbs = [...container.querySelectorAll(".dataset-cb")];
+        allCb.checked = itemCbs.every(cb => cb.checked);
+        State.set("Tab2ST.filter.datasets", itemCbs.filter(cb => cb.checked).map(cb => cb.value));
+      },
+      toggleAllDataset: (target) => {
+        const container = document.getElementById(Tab2UI.datasetBox);
+        if (!container) return;
+        container.querySelectorAll(".dataset-cb").forEach(cb => cb.checked = target.checked);
+        EventManager.Tab2.toggleDataset();
+      },
+      updateSymbol: (target) => {
+        const idx = target.dataset.symbolIdx;
+        if (!idx) return;
+        const tVal = document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="target"]`)?.value;
+        const sVal = document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="shape"]`)?.value;
+        const cVal = document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="color"]`)?.value;
+        if (tVal) {
+          const currentMap = State.get("Tab2ST.symbol.mapping") || {};
+          currentMap[tVal] = { shape: sVal, color: cVal };
+          State.set("Tab2ST.symbol.mapping", { ...currentMap });
+        }
+      }
+    };
+
     // --- ボタン監視 ---
     static #handleClick(e) {
       const target = e.target;
-      // タブ切替処理
       const tabBtn = target.closest('.tab-btn');
       if (tabBtn) { this.switchTab(tabBtn.dataset.target); return; }
-      // data-action の登録
       const actionBtn = target.closest('[data-action]');
       if (actionBtn) {
-        const actionPath = actionBtn.dataset.action;
-        const [namespace, methodName] = actionPath.split('.');
+        const [namespace, methodName] = actionBtn.dataset.action.split('.');
         if (Ctrl[namespace] && typeof Ctrl[namespace][methodName] === 'function') {
           Ctrl[namespace][methodName]();
         }
@@ -22,22 +57,16 @@
     // --- 変更監視 ---
     static #handleChange(e) {
       const target = e.target;
-      // データバインディング
+      // 単純同期
       const bindPath = target.dataset.bind;
-      if (bindPath) {
-        State.set(bindPath, target.value);
-        return; 
-      }
-      // FileAreaの処理移譲
-      const fieldKey = target.dataset.field;
-      if (fieldKey && target.closest('#fileBox')) {
-        State.set(`Tab1ST.file.map.${fieldKey}`, target.value);
-        this.validateFileMap();
-      }
-      // datasetBoxの処理移譲
-      if (target.closest("#datasetBox")) {
-        this.handleDatasetSelection(target);
-        return;
+      if (bindPath) State.set(bindPath, target.value);
+      // カスタム属性同期
+      const changePath = target.dataset.change;
+      if (changePath) {
+        const [namespace, methodName] = changePath.split('.');
+        if (this[namespace] && typeof this[namespace][methodName] === 'function') {
+          this[namespace][methodName](target);
+        }
       }
     }
 
@@ -61,16 +90,6 @@
       });
     }
 
-    // --- リアクティブ状態監視：データセット選択 ---
-    static handleDatasetSelection(target) {
-      const container = target.closest("#datasetBox");
-      if (target.id === "selectAll") {
-        container.querySelectorAll(".dataset-cb").forEach(cb => cb.checked = target.checked);
-      } else if (target.classList.contains("dataset-cb")) {
-        container.querySelector("#selectAll").checked = [...container.querySelectorAll(".dataset-cb")].every(i => i.checked);
-      }
-    }
-
     // --- タブ切替 UI制御 ---
     static switchTab(tabId) {
       document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
@@ -82,6 +101,7 @@
 
     // --- アプリケーション初期化 ---
     static async init() {
+      UI.buildInitUI(); // 初期UI生成
       Ctrl.Core.init(); 
       this.switchTab(State.get("GLB.activeTab"));
       State.set({
@@ -96,8 +116,6 @@
     }
   }
 
-  // DOM構築完了後に初期化
   window.addEventListener("DOMContentLoaded", () => EventManager.init());
-  // --- 外部参照用 ---
   const Evt = EventManager;
 </script>

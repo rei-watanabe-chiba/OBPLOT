@@ -13,6 +13,7 @@
     correctionSheetName: "Correction",
     validModes: ["mudrock", "obsidian"],
     propFileEdited: "isFileListEdited",
+    // 動的生成用: ファイルフィールド定義
     fileFields: [
       { key: "file", label: "file *必須", required: true },
       { key: "mode", label: "mode *必須", required: true },
@@ -20,48 +21,68 @@
       { key: "sub_id", label: "sub_id", required: false },
       { key: "info", label: "info", required: false }
     ],
+    // 動的生成用: モード定義
+    configModes: [
+      { value: "", label: "モードを選択してください", disabled: true, hidden: true },
+      { value: "Dual", label: "Dualモード" },
+      { value: "Single", label: "Singleモード" }
+    ],
+    // 動的生成用: 抽出フィールド定義
+    exacFields: [
+      { key: "dataset", label: "dataset *必須", placeholder: "データセット・遺跡名", bind: "Tab1ST.exac.map.dataset" },
+      { key: "item", label: "item", placeholder: "計測情報（任意）", bind: "Tab1ST.exac.map.item" },
+      { key: "date", label: "date", placeholder: "計測日（任意）", bind: "Tab1ST.exac.map.date" }
+    ],
+    // 動的生成用: シンボル軸定義
+    symbolAxes: [
+      { value: "dataset", label: "dataset" },
+      { value: "item", label: "item" },
+      { value: "Group", label: "Group" },
+      { value: "Source", label: "Source" }
+    ],
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
     mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 }
   };
   
   // --- htmlID ---
   const Tab1UI = {
-    tabSet: "tab1Fieldset", // タブ全体UI
-    configSection: "configSection", // 設定セクション
-    configBar: "configStatusBar", // 設定コンソール
-    configArea: "configArea",  // 設定入力エリア
-    fileSection: "fileSection", // ファイルセクション
-    fileLoadBtn: "fileLoadBtn", // 読込ボタン
-    fileBar: "fileStatusBar", // ファイルコンソール
-    fileArea: "fileArea",  // ファイル入力エリア
-    fileBox: "fileBox",  // ファイル入力BOX
-    fileBtnBox:"fileBtnArea", // ファイルボタンエリア
-    fileMakeBtn: "fileMakeBtn", // リスト生成ボタン
-    fileValdBtn: "fileValdBtn", // 検証ボタン
-    exacSection: "exacSection", // 抽出セクション
-    exacBar: "exacStatusBar", // 抽出コンソール
-    exacBtn: "exacBtn", // 抽出ボタン
-    exacArea: "exacArea", // 抽出入力エリア
-    exacPushBtn: "exacPushBtn", // PXRFに格納ボタン
-    exacBox: "exacBox" // 抽出設定BOX
+    tabSet: "tab1Fieldset",
+    configSection: "configSection",
+    configBar: "configStatusBar",
+    configArea: "configArea",
+    configModeBox: "configModeBox",
+    fileSection: "fileSection",
+    fileLoadBtn: "fileLoadBtn",
+    fileBar: "fileStatusBar",
+    fileArea: "fileArea",
+    fileBox: "fileBox",
+    fileBtnBox:"fileBtnArea",
+    fileMakeBtn: "fileMakeBtn",
+    fileValdBtn: "fileValdBtn",
+    exacSection: "exacSection",
+    exacBar: "exacStatusBar",
+    exacBtn: "exacBtn",
+    exacArea: "exacArea",
+    exacPushBtn: "exacPushBtn",
+    exacBox: "exacBox"
   }
 
   const Tab2UI = {
-    tabSet: "tab2Fieldset", // タブ全体UI
-    datasetSection: "datasetSection", // データ読込セクション
-    datasetLoadBtn: "datasetLoadBtn", // 読込ボタン
-    datasetfilterBtn: "datasetFilterBtn", // 確定/更新ボタン
-    datasetloadBar: "datasetLoadBar", // ステータスバー
-    datasetArea: "datasetArea", // 入力エリア
-    datasetBox: "datasetBox", // チェックボックスコンテナ
-    symbolSection: "symbolSection", // シンボル設定セクション
-    symbolArea: "symbolArea", // シンボル設定エリア
-    symbolAxis: "symbolAxis", // 分類軸セレクト
-    symbolBox: "symbolBox", // マッピング行コンテナ
-    symbolBtn: "symbolBtn", // シンボル確定ボタン
-    reportSection: "reportSection", // レポート作成セクション
-    reppBtn: "reportOpenBtn", // 展開ボタン
-    repoBar: "reportStatusBar"  // 状態表示
+    tabSet: "tab2Fieldset",
+    datasetSection: "datasetSection",
+    datasetLoadBtn: "datasetLoadBtn",
+    datasetfilterBtn: "datasetFilterBtn",
+    datasetloadBar: "datasetLoadBar",
+    datasetArea: "datasetArea",
+    datasetBox: "datasetBox",
+    symbolSection: "symbolSection",
+    symbolArea: "symbolArea",
+    symbolAxisBox: "symbolAxisBox",
+    symbolBox: "symbolBox",
+    symbolBtn: "symbolBtn",
+    reportSection: "reportSection",
+    reppBtn: "reportOpenBtn",
+    repoBar: "reportStatusBar"
   }
 
   // --- フェーズ定義 ---
@@ -70,8 +91,8 @@
 
   // --- 状態管理クラス定義 ---
   class AppState {
-    #state; // 内部状態
-    #listeners; // 登録されたコールバック群  
+    #state; 
+    #listeners; 
     constructor() {
       this.#state = {
         GLB: { activeTab: "tab1", isLocked: false },

@@ -25,7 +25,6 @@
       State.set("GLB.isLocked", true);
       try {
         const res = await processFn();
-        // 戻り値の型で判定
         if (typeof res === "string") State.set(statusPath, ["success", res]);
         else if (Array.isArray(res)) State.set(statusPath, res);
       } catch (err) {
@@ -73,7 +72,7 @@
       return statusRes;
     }
 
-    // --- ファイルリストリスト生成処理 ---
+    // --- ファイルリスト生成処理 ---
     static async makeFileList() {
       Evt.validateFileMap();
       if (State.get("Tab1ST.file.isMapError").some(Boolean)) return;
@@ -102,7 +101,6 @@
         const [{ data: fileDT }, { data: resultDT }] = await Promise.all([
           API.fetchData(GLOBAL_CONFIG.filelistSheetName, 6, 6), API.fetchData(GLOBAL_CONFIG.resultsSheetName)
         ]);
-        // 戻り値の型で判定
         const outData = Mtd.Tab1.DataExtractor.run(fileDT, resultDT, State.get("Tab1ST.exac.map"));
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
         await API.writeData(GLOBAL_CONFIG.extractSheetName, outData);
@@ -139,7 +137,13 @@
         if (!pxrfData || pxrfData.length <= 1) throw new Error("PXRFデータ不足");
         if (!wdxrfData || wdxrfData.length <= 1) throw new Error("WDXRFデータ不足");
         const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataMerger.load(pxrfData, wdxrfData);
-        State.set({ "Tab2ST.rawData": { correction: corrData, mergedPXRF, wdxrfObjs }, "Tab2ST.phase": TAB2_PHASE.LOADED });
+        
+        // 全選択状態を初期化
+        State.set({ 
+          "Tab2ST.rawData": { correction: corrData, mergedPXRF, wdxrfObjs }, 
+          "Tab2ST.filter.datasets": datasets, 
+          "Tab2ST.phase": TAB2_PHASE.LOADED 
+        });
         UI.renderCheckboxes(datasets, Tab2UI.datasetBox);
         return `読込完了: dataset ${datasets.length}件`;
       });
@@ -148,12 +152,13 @@
     // --- Tab2 データ確定 (フィルター) ---
     static async filterData() {
       await CoreController.withAsyncLock("Tab2ST.datasetload.status", async () => {
-        const checkedVals = Mtd.Tab2.GetUIinput.getCheckedDatasets(Tab2UI.datasetBox);
+        // State を正として取得
+        const checkedVals = State.get("Tab2ST.filter.datasets") || [];
         if (!checkedVals.length) throw new Error("Dataset未選択");
         const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
         const { basePXRF, baseWDXRF } = Mtd.Tab2.DataMerger.filter(mergedPXRF, wdxrfObjs, checkedVals);
         State.set({
-          "Tab2ST.filter.datasets": checkedVals, "Tab2ST.basePXRF": basePXRF, "Tab2ST.baseWDXRF": baseWDXRF,
+          "Tab2ST.basePXRF": basePXRF, "Tab2ST.baseWDXRF": baseWDXRF,
           "Tab2ST.phase": TAB2_PHASE.FILTERED, "Tab2ST.symbol.mapping": {}, "Tab2ST.modeMap": {}, "Tab2ST.correctionLogic": {}
         });
         return "データ設定を更新しました";
@@ -163,9 +168,14 @@
     // --- Tab2 シンボルマッピング確定 ---
     static async setSymbolMap() {
       await CoreController.withAsyncLock("Tab2ST.symbol.status", async () => {
-        State.set({ "Tab2ST.symbol.mapping": Mtd.Tab2.GetUIinput.getSymbolMapping(Tab2UI.symbolBox), "Tab2ST.phase": TAB2_PHASE.MAPPED });
+        // State を正として取得、バリデーション追加
+        const mapping = State.get("Tab2ST.symbol.mapping");
+        if (!mapping || Object.keys(mapping).length === 0) throw new Error("シンボルが設定されていません");
+        State.set("Tab2ST.phase", TAB2_PHASE.MAPPED);
+        return "シンボル設定を確定しました";
       });
     }
+    
     // --- レポート画面展開 ---
     static async openReport() {
       await CoreController.withAsyncLock("Tab2ST.repoStatus", async () => {
