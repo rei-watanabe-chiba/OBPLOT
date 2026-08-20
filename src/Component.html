@@ -1,0 +1,220 @@
+<!-- DOM.html -->
+<script>
+  // --- UI utilities ---
+  class DOM {
+    static get = id => document.getElementById(id);
+    static setDOM = (id, text) => { if (text !== undefined && this.get(id)) this.get(id).innerText = text; };
+    static toggle = (id, isShow) => { if (this.get(id)) this.get(id).style.display = isShow ? "" : "none"; };
+    static open = (id, isOpen) => { if (this.get(id)?.tagName === "DETAILS") setTimeout(() => { this.get(id).open = isOpen; }, 200); };
+    static setDisabled = (id, isDisabled) => { if (this.get(id)) this.get(id).disabled = isDisabled; };
+    static setAttr = (id, attr, val) => val ? this.get(id)?.setAttribute(attr, val) : this.get(id)?.removeAttribute(attr);
+  }
+
+  // --- 汎用UIパーツ生成・描画クラス ---
+  class NewDOM {
+    // --- テンプレート汎用リスト生成 ---
+    static #renderTemplateList(templateId, items, containerId, mapper) {
+      const container = DOM.get(containerId);
+      const template = DOM.get(templateId);
+      if (!container || !template || !items?.length) return;
+      container.replaceChildren(...items.map((item, index) => mapper(template.content.cloneNode(true), item, index)));
+    }
+
+    // --- ステータスバー更新 ---
+    static status(id, status = null) {
+      const el = DOM.get(id);
+      if (!el) return;
+      if (!status?.length) {
+        el.dataset.status = "hidden";
+        el.innerText = "";
+        return;
+      }
+      [el.dataset.status, el.innerText] = status;
+    }
+
+    // --- ダイアログ生成 ---
+    static confirm(title, msg, barObj = null) {
+      const prefix = String(barObj).split("StatusBar")[0];
+      const saveStatus = State.get(`Tab1ST.${prefix}.status`);
+      if (barObj) this.status(barObj, ["loading", "実行中..."]);
+      return new Promise((resolve) => {
+        const dialog = DOM.get("universalConfirm");
+        DOM.setDOM("uDialogTitle", title);
+        DOM.setDOM("uDialogMessage", msg);
+        dialog.showModal(); 
+        DOM.get("uDialogConfirmBtn").onclick = () => { dialog.close(); resolve(true); };
+        DOM.get("uDialogCancelBtn").onclick = () => {
+          dialog.close();
+          if (barObj) this.status(barObj, saveStatus);
+          resolve(false);
+        };
+      });
+    }
+
+    // --- 列選択動的生成 ---
+    static selectors(arr, objID, fields, targetState, hasEmpty = true, isMultiple = false) {
+      this.#renderTemplateList("selectorTemplate", fields, objID, (clone, field) => {
+        clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
+        const select = clone.querySelector("select");
+        select.setAttribute('data-field', field.key);
+        select.setAttribute('data-change', targetState);
+        if (isMultiple) select.multiple = true;
+        if (!hasEmpty || isMultiple) select.querySelector(".empty-opt")?.remove();
+        select.append(...arr.map(h => new Option(h, h)));
+        return clone;
+      });
+    }
+
+    // --- チェックボックス生成 ---
+    static checkboxes(arr, objID) {
+      const container = DOM.get(objID);
+      if (!container) return;
+      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データがありません</div>'; return; }
+      const template = DOM.get("checkboxTemplate");
+      const items = arr.map(item => {
+        const clone = template.content.cloneNode(true);
+        clone.querySelector(".dataset-cb").value = item;
+        clone.querySelector(".cb-text").textContent = item;
+        return clone;
+      });
+      container.replaceChildren(DOM.get("checkAllTemplate").content.cloneNode(true), ...items);
+    }
+
+    // --- シンボル設定行生成 ---
+    static symbolRows(values, objID, rawNum, targetState) {
+      const { symbolShapes: shapes, symbolColors: colors } = GLOBAL_CONFIG;
+      this.#renderTemplateList("symbolRowTemplate", Array.from({ length: rawNum }), objID, (clone, _, i) => {
+        clone.querySelectorAll("select").forEach(s => {
+          s.setAttribute('data-symbol-idx', i);
+          s.setAttribute('data-change', targetState);
+        });
+        clone.querySelector('[data-symbol-type="target"]').append(...values.map(v => new Option(v, v)));
+        clone.querySelector('[data-symbol-type="shape"]').append(...shapes.map(s => new Option(s, s)));
+        clone.querySelector('[data-symbol-type="color"]').append(...colors.map(c => new Option(c.label, c.val)));
+        return clone;
+      });
+    }
+
+    // --- ラジオボタン生成 ---
+    static radioGroup(elements, boxId, targetState, initValue) {
+      const box = DOM.get(boxId);
+      const template = DOM.get("previewModeTemplate");
+      if (!box || !template || !elements?.length) return {};
+      const initialMap = {};
+      const items = elements.map(el => {
+        initialMap[el] = initValue;
+        const clone = template.content.cloneNode(true);
+        clone.querySelector(".radio-label").textContent = el;
+        clone.querySelectorAll('input[type="radio"]').forEach(radio => {
+          radio.setAttribute('name', `mode_${el}`);
+          radio.setAttribute('data-element', el);
+          radio.setAttribute('data-change', targetState);
+          if (radio.value === initValue) radio.checked = true;
+        });
+        return clone;
+      });
+      box.replaceChildren(...items);
+      return initialMap;
+    }
+
+    // --- 統計表レンダリング ---
+    static statsTable(stats, containerId = Tab2UI.previewStatsTable) {
+      const container = DOM.get(containerId);
+      if (!container) return;
+      if (!stats) { container.replaceChildren(); return; }
+
+      const fmt = (v, digits = 4) => (v != null && !isNaN(v)) ? v.toFixed(digits) : "-";
+      const sign = (stats.intercept ?? 0) >= 0 ? "+" : "-";
+      const absIntercept = Math.abs(stats.intercept ?? 0);
+      const eqStr = `y = ${fmt(stats.slope)}x ${sign} ${fmt(absIntercept)}`;
+
+      const rows = [
+        ["データ個数", stats.count ?? 0],
+        ["相関/決定係数", `${fmt(stats.r)} / ${fmt(stats.r2)}`],
+        ["回帰直線", eqStr],
+        ["残差標準偏差", fmt(stats.resStdDev)],
+        ["器械Err3σ", fmt(stats.err3Sigma)]
+      ];
+
+      const containerTpl = DOM.get("statsContainerTemplate");
+      const rowTpl = DOM.get("statsRowTemplate");
+      if (!containerTpl || !rowTpl) return;
+
+      const boxClone = containerTpl.content.cloneNode(true);
+      const grid = boxClone.querySelector(".stats-grid");
+
+      rows.forEach(([label, val]) => {
+        const rowClone = rowTpl.content.cloneNode(true);
+        rowClone.querySelector(".stats-label").textContent = label;
+        rowClone.querySelector(".stats-val").textContent = String(val);
+        grid.appendChild(rowClone);
+      });
+
+      container.replaceChildren(boxClone);
+    }
+
+    // --- 疑似ドロップダウン生成 (Popover API) ---
+    static multiSelectDropdown(arr, objID, targetState, allChangeState = null) {
+      const container = DOM.get(objID);
+      if (!container) return;
+      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
+
+      const clone = DOM.get("multiSelectTemplate").content.cloneNode(true);
+      const summaryBtn = clone.querySelector(".multi-select-summary");
+      const optionsBox = clone.querySelector(".multi-select-options");
+
+      const popoverId = `popover-${objID}`;
+      const anchorName = `--anchor-${objID}`;
+      
+      summaryBtn.setAttribute("popovertarget", popoverId);
+      summaryBtn.style.anchorName = anchorName;
+      
+      optionsBox.id = popoverId;
+      optionsBox.style.positionAnchor = anchorName;
+
+      if (allChangeState) {
+        const checkAllClone = DOM.get("checkAllTemplate").content.cloneNode(true);
+        const allCb = checkAllClone.querySelector("input[type='checkbox']");
+        allCb.setAttribute('data-change', allChangeState);
+        optionsBox.appendChild(checkAllClone);
+      }
+
+      const items = arr.map(item => {
+        const itemClone = DOM.get("checkboxTemplate").content.cloneNode(true);
+        const cb = itemClone.querySelector(".dataset-cb");
+        cb.value = item;
+        cb.checked = true;
+        cb.setAttribute('data-change', targetState);
+        itemClone.querySelector(".cb-text").textContent = item;
+        return itemClone;
+      });
+      
+      optionsBox.append(...items);
+      container.replaceChildren(clone);
+    }
+
+    // --- サマリーテキスト(Badge)更新 ---
+    static updateMultiSelectSummary(objID, selectedValues) {
+      const summary = DOM.get(objID)?.querySelector(".multi-select-summary");
+      if (!summary) return;
+      if (!selectedValues?.length) {
+        summary.innerHTML = '<span style="color:var(--grey400)">未選択</span>';
+        return;
+      }
+      summary.replaceChildren(...selectedValues.map(v => {
+        const span = document.createElement('span');
+        span.className = 'badge';
+        span.textContent = v;
+        return span;
+      }));
+    }
+
+    // --- セレクタ・インプットUI更新 ---
+    static inputs(mapBoxId, errorFlags) {
+      DOM.get(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => {
+        s.classList.toggle('has-error', !!errorFlags?.[idx]);
+      });
+    }
+  }
+
+</script>
