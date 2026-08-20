@@ -147,13 +147,17 @@
   class PreviewManager {
     // プレビュー用データ構築
     static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic) {
+      const allElements = Object.keys(GLOBAL_CONFIG.mudrockIndex);
       // pxrf元素の抽出
       const processed = basePXRF.map(row => {
         const newRow = { dataset: row.dataset, id: row.ID || row.id };
-        GLOBAL_CONFIG.previewElements.forEach(el => {
-          const mode = modeMap[el];
+        allElements.forEach(el => {
+          const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
+          const mode = isOptional ? (modeMap[el] || 'obsidian') : 'mudrock';
           const colName = mode === 'obsidian' ? `ob_${el}` : `md_${el}`;
+          const errColName = mode === 'obsidian' ? `ob_${el}_Err` : `md_${el}_Err`;
           newRow[el] = row[colName] ?? null;
+          newRow[`${el}_Err`] = row[errColName] ?? null;
         });
         return newRow;
       });
@@ -170,7 +174,9 @@
         const xVal = CalcProcessor.evaluate(valueLogic, w);
         if (xVal == null || yVal == null) return null;
 
-        return { x: xVal, y: yVal };
+        const errVal = allElements.includes(valueLogic) ? (p[`${valueLogic}_Err`] ?? null) : null;
+
+        return { x: xVal, y: yVal, err: errVal };
       }).filter(Boolean);
     }
   }
@@ -196,39 +202,43 @@
       }
     }
 
-    // ピアソン相関 ＆ 単回帰計算 (最小二乗法)
-    static calcRegression(xArr, yArr) {
+    // --- ピアソン相関・単回帰計算 ---
+    static calcRegression(xArr, yArr, errArr) {
       if (!xArr?.length || xArr.length !== yArr?.length) return null;
       const n = xArr.length;
-      let sumX = 0, sumY = 0;
-      for (let i = 0; i < n; i++) { sumX += xArr[i]; sumY += yArr[i]; }
-      const meanX = sumX / n, meanY = sumY / n;
+      
+      const [sumX, sumY] = xArr.reduce((acc, x, i) => [acc[0] + x, acc[1] + yArr[i]], [0, 0]);
+      const [meanX, meanY] = [sumX / n, sumY / n];
 
-      let num = 0, den = 0, sxx = 0, syy = 0;
+      let num = 0, sxx = 0, syy = 0;
       for (let i = 0; i < n; i++) {
-        const dx = xArr[i] - meanX, dy = yArr[i] - meanY;
+        const [dx, dy] = [xArr[i] - meanX, yArr[i] - meanY];
         num += dx * dy;
-        den += dx * dx;
         sxx += dx * dx;
         syy += dy * dy;
       }
-      
-      const slope = den === 0 ? 0 : num / den;
+
+      const slope = sxx === 0 ? 0 : num / sxx;
       const intercept = meanY - slope * meanX;
       const r = (sxx === 0 || syy === 0) ? 0 : num / Math.sqrt(sxx * syy);
-      const r2 = r * r;
       
       let ssRes = 0, maxRes = 0;
       for (let i = 0; i < n; i++) {
-        const predY = slope * xArr[i] + intercept;
-        const res = Math.abs(yArr[i] - predY);
+        const res = Math.abs(yArr[i] - (slope * xArr[i] + intercept));
         ssRes += res * res;
-        if (res > maxRes) maxRes = res;
+        maxRes = Math.max(maxRes, res);
       }
+      
       const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
-      const err3Sigma = resStdDev * 3;
+      
+      let err3Sigma = 0;
+      if (errArr?.length > 2) {
+        const meanErr = errArr.reduce((sum, err) => sum + err, 0) / errArr.length;
+        const ssErr = errArr.reduce((sum, err) => sum + (err - meanErr) ** 2, 0);
+        err3Sigma = Math.sqrt(ssErr / (errArr.length - 1)) * 3;
+      }
 
-      return { slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
+      return { slope, intercept, r, r2: r * r, resStdDev, err3Sigma, maxRes };
     }
   }
 

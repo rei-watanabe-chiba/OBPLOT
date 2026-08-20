@@ -175,17 +175,20 @@
         // --- 統計計算 ---
         const xArr = previewData.map(d => d.x);
         const yArr = previewData.map(d => d.y);
-        const stats = Mtd.Tab2.CalcProcessor.calcRegression(xArr, yArr);
+        const errArr = previewData.map(d => d.err).filter(v => v != null && !isNaN(v));
+        const stats = Mtd.Tab2.CalcProcessor.calcRegression(xArr, yArr, errArr);
 
         // --- デバッグ文字列生成 ---
         const debugMsg = [
           `--- デバッグ要約 ---`,
           `PXRF: ${basePXRF?.length ?? 0}件 / WDXRF: ${baseWDXRF?.length ?? 0}件`,
           `プレビュー生成: ${previewData.length}件`,
-          `先頭データ X: ${previewData[0]?.x}, Y: ${previewData[0]?.y}`,
+          `選択値: ${valueLogic}`,
+          `先頭 X: ${previewData[0]?.x}, Y: ${previewData[0]?.y}`,
           `相関係数(R): ${stats?.r?.toFixed(4)}`,
           `傾き(Slope): ${stats?.slope?.toFixed(4)}`,
-          `切片(Intercept): ${stats?.intercept?.toFixed(4)}`
+          `切片(Intercept): ${stats?.intercept?.toFixed(4)}`,
+          `3σ誤差: ${stats?.err3Sigma?.toFixed(4)}`
         ].join(' | ');
 
         // --- State保存 ---
