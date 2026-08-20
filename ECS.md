@@ -8,13 +8,13 @@
 - datasetSectionのdatasetFilterBtnでphaseを強制ダウングレードして内部データを初期化する。**ただし、初期化機能は全てのsection実装後に導入する。**
 
 ### 1.データ設定（`datasetSection`）
-* **機能**: 分析対象のdataset絞り込み
-* **UI要素**:
-* `datasetLoadBtn` (静的): 「読込」ボタン。実行時に `Tab2ST.rawData`（pxrf, wdxrf, correction）を格納。
-* `datasetFilterBtn` (静的): 「確定/更新」ボタン。`Tab2ST.phase` が `LOADED` 以上で有効。
-* `datasetBox` (**動的**): 読込完了後にPXRFの `dataset` をリストアップしたチェックボックス群を動的生成。
-* 駆動State: 出力先は `Tab2ST.filter.datasets`。変更時は `data-change` でStateに同期。
-* 初期状態: すべて選択状態（配列の全要素が格納された状態）で初期化。
+- **機能**: 分析対象のdataset絞り込み
+- **UI要素**:
+- `datasetLoadBtn` (静的): 「読込」ボタン。実行時に `Tab2ST.rawData`（pxrf, wdxrf, correction）を格納。
+- `datasetFilterBtn` (静的): 「確定/更新」ボタン。`Tab2ST.phase` が `LOADED` 以上で有効。
+- `datasetBox` (**動的**): 読込完了後にPXRFの `dataset` をリストアップしたチェックボックス群を動的生成。
+  - 駆動State: 出力先は `Tab2ST.filter.datasets`。変更時は `data-change` でStateに同期。
+  - 初期状態: すべて選択状態（配列の全要素が格納された状態）で初期化。
 
 ### 2.シンボルマッピング（`symbolSection`）
 * **機能**: グラフ上の点（マーカー）のスタイル設定
