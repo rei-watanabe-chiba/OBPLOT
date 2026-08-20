@@ -325,22 +325,24 @@
 
   /* --- マルチセレクト・ドロップダウン (Popover API) --- */
   .multi-select-wrapper {
+    box-sizing: border-box;
     width: 100%;
     margin-top: 4px;
   }
   .multi-select-summary {
-    display: block;             /* flex から block へ変更（text-overflow適用のため） */
-    width: 100%;
-    height: 32px;               /* 1行分の高さを厳格に固定 */
-    line-height: 24px;          /* 縦方向の中央配置用 */
+    display: block;
+    box-sizing: border-box;
+    width: 276px;
+    height: 32px;
+    line-height: 24px;
     padding: 3px 24px 3px 8px;
     background-color: var(--bg-color);
     border: 1px solid var(--grey400);
     border-radius: 4px;
-    text-align: left;           /* 左詰め */
-    white-space: nowrap;        /* 要素の折り返しを禁止 */
-    overflow: hidden;           /* はみ出した部分を隠す */
-    text-overflow: ellipsis;    /* 末尾を...で省略 */
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     cursor: pointer;
     font-weight: normal;
   }

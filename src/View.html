@@ -270,7 +270,7 @@
       const previewMode = DOM.get(Tab2UI.previewModeBox);
       if (previewMode) {
         const opts = GLOBAL_CONFIG.optionalElements;
-        UICreate.multiSelectDropdown(opts, Tab2UI.previewModeBox, "Tab2.updatePreviewMode", false, opts);
+        UICreate.multiSelectDropdown(opts, Tab2UI.previewModeBox, "Tab2.updatePreviewMode", true, opts);
         State.set("Tab2ST.modeMap", [...opts]); // Stateも全選択で初期化
       }
 

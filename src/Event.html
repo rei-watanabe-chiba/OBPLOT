@@ -2,6 +2,21 @@
 <script>
   // --- イベント管理・初期化クラス ---
   class EventManager {
+    // --- 汎用：マルチセレクト切替 ---
+    static toggleMultiSelect(boxId, statePath) {
+      const itemCbs = [...document.querySelectorAll(`#popover-${boxId} .dataset-cb`)];
+      if (!itemCbs.length) return;
+      const allCb = document.querySelector(`#popover-${boxId} .select-all input[type="checkbox"]`);
+      if (allCb) allCb.checked = itemCbs.every(cb => cb.checked);
+      State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
+    };
+    static toggleAllMultiSelect(target, boxId, statePath) {
+      const optionsBox = document.getElementById(`popover-${boxId}`);
+      if (!optionsBox) return;
+      optionsBox.querySelectorAll('.dataset-cb').forEach(cb => cb.checked = target.checked);
+      UIBuildInit.toggleMultiSelect(boxId, statePath);
+    };
+
     // --- Tab1変更移譲 ---
     static Tab1 = {
       updateFileMap: (target) => {
@@ -44,17 +59,12 @@
 
     // --- Tab2変更移譲 ---
     static Tab2 = {
-      // リアクティブ状態監視：チェックボックス群
+      // リアクティブ状態監視：datasetBox
       toggleDataset: () => {
-        const itemCbs = [...document.querySelectorAll(`#${Tab2UI.datasetBox} .dataset-cb`)];
-        if (!itemCbs.length) return;
-        const allCb = document.getElementById("selectAll");
-        if (allCb) allCb.checked = itemCbs.every(cb => cb.checked);
-        State.set("Tab2ST.filter.datasets", itemCbs.filter(cb => cb.checked).map(cb => cb.value));
+        EventManager.toggleMultiSelect(Tab2UI.datasetBox, "Tab2ST.filter.datasets");
       },
       toggleAllDataset: (target) => {
-        document.querySelectorAll(`#${Tab2UI.datasetBox} .dataset-cb`).forEach(cb => cb.checked = target.checked);
-        EventManager.Tab2.toggleDataset();
+        EventManager.toggleAllMultiSelect(target, Tab2UI.datasetBox, "Tab2ST.filter.datasets");
       },
       // リアクティブ状態監視：シンボル設定群
       updateSymbol: (target) => {
@@ -69,10 +79,12 @@
           });
         }
       },
-      // リアクティブ状態監視：optionalモード
-      updatePreviewMode: () => {
-        const cbs = [...document.querySelectorAll(`#${Tab2UI.previewModeBox} .dataset-cb`)];
-        State.set("Tab2ST.modeMap", cbs.filter(cb => cb.checked).map(cb => cb.value));
+      // リアクティブ状態監視：PreviewMode
+      togglePreviewMode: () => {
+        EventManager.toggleMultiSelect(Tab2UI.previewModeBox, "Tab2ST.modeMap");
+      },
+      toggleAllPreviewMode: (target) => {
+        EventManager.toggleAllMultiSelect(target, Tab2UI.previewModeBox, "Tab2ST.modeMap");
       }
     };
 
