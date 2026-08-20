@@ -19,11 +19,11 @@
     // --- 統計表データ生成 ---
     static createStatsRows(stats) {
       if (!stats) return [];
-      const fmt = (v, digits = 4) => (v != null && !isNaN(v)) ? v.toFixed(digits) : "-";
+      const fmt = (v, digits = 3) => (v != null && !isNaN(v)) ? v.toFixed(digits) : "-";
       const rows = [];
       
       if (stats.count != null) rows.push(["データ個数", stats.count]);
-      if (stats.r != null && stats.r2 != null) rows.push(["相関/決定係数", `${fmt(stats.r)} / ${fmt(stats.r2)}`]);
+      if (stats.r != null && stats.r2 != null) rows.push(["相関係数", `R = ${fmt(stats.r)} , R² = ${fmt(stats.r2)}`]);
       if (stats.slope != null && stats.intercept != null) {
         const sign = stats.intercept >= 0 ? "+" : "-";
         rows.push(["回帰直線", `y = ${fmt(stats.slope)}x ${sign} ${fmt(Math.abs(stats.intercept))}`]);
