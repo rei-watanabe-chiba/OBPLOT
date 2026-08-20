@@ -15,7 +15,6 @@
     propFileEdited: "isFileListEdited",
     optionalElements: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
     valueLogic: ["Mn", "Fe", "Mn * 100 / Fe", "Rb / Sr", "K", "log10(Fe/K)"],
-    // 動的生成用: ファイルフィールド定義
     fileFields: [
       { key: "file", label: "file *必須", required: true },
       { key: "mode", label: "mode *必須", required: true },
@@ -23,24 +22,29 @@
       { key: "sub_id", label: "sub_id", required: false },
       { key: "info", label: "info", required: false }
     ],
-    // 動的生成用: モード定義
     configModes: [
       { value: "", label: "モードを選択してください", disabled: true, hidden: true },
       { value: "Dual", label: "Dualモード" },
       { value: "Single", label: "Singleモード" }
     ],
-    // 動的生成用: 抽出フィールド定義
     exacFields: [
       { key: "dataset", label: "dataset *必須", placeholder: "データセット・遺跡名", bind: "Tab1ST.exac.map.dataset" },
       { key: "item", label: "item", placeholder: "計測情報（任意）", bind: "Tab1ST.exac.map.item" },
       { key: "date", label: "date", placeholder: "計測日（任意）", bind: "Tab1ST.exac.map.date" }
     ],
-    // 動的生成用: シンボル軸定義
     symbolAxes: [
       { value: "dataset", label: "dataset" },
       { value: "item", label: "item" },
       { value: "Group", label: "Group" },
       { value: "Source", label: "Source" }
+    ],
+    symbolShapes: ['circle', 'triangle', 'square'],
+    symbolColors: [
+      { val: 'var(--main-blue)', label: 'Blue' },
+      { val: 'var(--main-green)', label: 'Green' },
+      { val: 'var(--main-red)', label: 'Red' },
+      { val: '#fbbc04', label: 'Yellow' },
+      { val: 'var(--grey600)', label: 'Gray' }
     ],
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
     mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 }
@@ -82,17 +86,17 @@
     symbolAxisBox: "symbolAxisBox",
     symbolBox: "symbolBox",
     symbolBtn: "symbolBtn",
-    // プレビュー層追加
     previewSection: "previewSection",
     previewModeBox: "previewModeBox",
     previewCorrectionBox: "previewCorrectionBox",
     previewValueBox: "previewValueBox",
     previewMakeBtn: "previewMakeBtn",
+    previewStatsTable: "previewStatsTable",
     previewBar: "previewBar",
     reportSection: "reportSection",
     reppBtn: "reportOpenBtn",
     repoBar: "reportStatusBar"
-  }
+  };
 
   // --- フェーズ定義 ---
   const TAB1_PHASE = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
@@ -114,8 +118,10 @@
         Tab2ST: {
           phase: TAB2_PHASE.INIT,
           rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null },
-          basePXRF: null, baseWDXRF: null, filter: { datasets: [] }, symbol: { baseKey: "dataset", mapping: {} },
-          modeMap: {}, preview: { value: "", correction: "rawdata", stats: "" }, correctionLogic: {}, report: { values: [], corrections: [] },
+          basePXRF: null, baseWDXRF: null,
+          availableDatasets: [], // 追加: 生成用全データセット保持
+          filter: { datasets: [] }, symbol: { baseKey: "dataset", mapping: {} },
+          modeMap: {}, preview: { value: "", correction: "rawdata", statsData: null }, correctionLogic: {}, report: { values: [], corrections: [] },
           repoStatus: [],
           selectData: null, previewData: null
         }

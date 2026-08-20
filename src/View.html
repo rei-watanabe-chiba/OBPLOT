@@ -1,4 +1,4 @@
-<!-- View.html -->
+<!-- File: src/View.html の全面改修 -->
 <script>
   // --- UI utilities ---
   class DOM {
@@ -10,15 +10,164 @@
     static setAttr = (id, attr, val) => val ? this.get(id)?.setAttribute(attr, val) : this.get(id)?.removeAttribute(attr);
   }
 
-  // --- UI更新・生成処理群 ---
-  class UIController {
-    // --- 初期UI動的構築 ---
-    static buildInitUI() {
+  // --- 汎用UIパーツ生成・描画クラス ---
+  class UICreate {
+    // --- テンプレート汎用リスト生成 ---
+    static #renderTemplateList(templateId, items, containerId, mapper) {
+      const container = DOM.get(containerId);
+      const template = DOM.get(templateId);
+      if (!container || !template || !items?.length) return;
+      container.replaceChildren(...items.map((item, index) => mapper(template.content.cloneNode(true), item, index)));
+    }
+
+    // --- ステータスバー更新 ---
+    static status(id, status = null) {
+      const el = DOM.get(id);
+      if (!el) return;
+      if (!status?.length) {
+        el.dataset.status = "hidden";
+        el.innerText = "";
+        return;
+      }
+      [el.dataset.status, el.innerText] = status;
+    }
+
+    // --- ダイアログ生成 ---
+    static confirm(title, msg, barObj = null) {
+      const prefix = String(barObj).split("StatusBar")[0];
+      const saveStatus = State.get(`Tab1ST.${prefix}.status`);
+      if (barObj) this.status(barObj, ["loading", "実行中..."]);
+      return new Promise((resolve) => {
+        const dialog = DOM.get("universalConfirm");
+        DOM.setDOM("uDialogTitle", title);
+        DOM.setDOM("uDialogMessage", msg);
+        dialog.showModal(); 
+        DOM.get("uDialogConfirmBtn").onclick = () => { dialog.close(); resolve(true); };
+        DOM.get("uDialogCancelBtn").onclick = () => {
+          dialog.close();
+          if (barObj) this.status(barObj, saveStatus);
+          resolve(false);
+        };
+      });
+    }
+
+    // --- 列選択動的生成 ---
+    static selectors(arr, objID, fields, targetState, hasEmpty = true) {
+      this.#renderTemplateList("selectorTemplate", fields, objID, (clone, field) => {
+        clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
+        const select = clone.querySelector("select");
+        select.setAttribute('data-field', field.key);
+        select.setAttribute('data-change', targetState);
+        if (!hasEmpty) select.querySelector(".empty-opt")?.remove();
+        select.append(...arr.map(h => new Option(h, h)));
+        return clone;
+      });
+    }
+
+    // --- チェックボックス生成 ---
+    static checkboxes(arr, objID) {
+      const container = DOM.get(objID);
+      if (!container) return;
+      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データがありません</div>'; return; }
+      const template = DOM.get("checkboxTemplate");
+      const items = arr.map(item => {
+        const clone = template.content.cloneNode(true);
+        clone.querySelector(".dataset-cb").value = item;
+        clone.querySelector(".cb-text").textContent = item;
+        return clone;
+      });
+      container.replaceChildren(DOM.get("checkAllTemplate").content.cloneNode(true), ...items);
+    }
+
+    // --- シンボル設定行生成 ---
+    static symbolRows(values, objID, rawNum, targetState) {
+      const { symbolShapes: shapes, symbolColors: colors } = GLOBAL_CONFIG;
+      this.#renderTemplateList("symbolRowTemplate", Array.from({ length: rawNum }), objID, (clone, _, i) => {
+        clone.querySelectorAll("select").forEach(s => {
+          s.setAttribute('data-symbol-idx', i);
+          s.setAttribute('data-change', targetState);
+        });
+        clone.querySelector('[data-symbol-type="target"]').append(...values.map(v => new Option(v, v)));
+        clone.querySelector('[data-symbol-type="shape"]').append(...shapes.map(s => new Option(s, s)));
+        clone.querySelector('[data-symbol-type="color"]').append(...colors.map(c => new Option(c.label, c.val)));
+        return clone;
+      });
+    }
+
+    // --- ラジオボタン生成 ---
+    static radioGroup(elements, boxId, targetState, initValue) {
+      const box = DOM.get(boxId);
+      const template = DOM.get("previewModeTemplate");
+      if (!box || !template || !elements?.length) return {};
+      const initialMap = {};
+      const items = elements.map(el => {
+        initialMap[el] = initValue;
+        const clone = template.content.cloneNode(true);
+        clone.querySelector(".radio-label").textContent = el;
+        clone.querySelectorAll('input[type="radio"]').forEach(radio => {
+          radio.setAttribute('name', `mode_${el}`);
+          radio.setAttribute('data-element', el);
+          radio.setAttribute('data-change', targetState);
+          if (radio.value === initValue) radio.checked = true;
+        });
+        return clone;
+      });
+      box.replaceChildren(...items);
+      return initialMap;
+    }
+
+    // --- 統計表レンダリング ---
+    static statsTable(stats, containerId = Tab2UI.previewStatsTable) {
+      const container = DOM.get(containerId);
+      if (!container) return;
+      if (!stats) { container.replaceChildren(); return; }
+
+      const fmt = (v, digits = 4) => (v != null && !isNaN(v)) ? v.toFixed(digits) : "-";
+      const sign = (stats.intercept ?? 0) >= 0 ? "+" : "-";
+      const absIntercept = Math.abs(stats.intercept ?? 0);
+      const eqStr = `y = ${fmt(stats.slope)}x ${sign} ${fmt(absIntercept)}`;
+
+      const rows = [
+        ["データ個数", stats.count ?? 0],
+        ["相関/決定係数", `${fmt(stats.r)} / ${fmt(stats.r2)}`],
+        ["回帰直線", eqStr],
+        ["残差標準偏差", fmt(stats.resStdDev)],
+        ["器械Err3σ", fmt(stats.err3Sigma)]
+      ];
+
+      const containerTpl = DOM.get("statsContainerTemplate");
+      const rowTpl = DOM.get("statsRowTemplate");
+      if (!containerTpl || !rowTpl) return;
+
+      const boxClone = containerTpl.content.cloneNode(true);
+      const grid = boxClone.querySelector(".stats-grid");
+
+      rows.forEach(([label, val]) => {
+        const rowClone = rowTpl.content.cloneNode(true);
+        rowClone.querySelector(".stats-label").textContent = label;
+        rowClone.querySelector(".stats-val").textContent = String(val);
+        grid.appendChild(rowClone);
+      });
+
+      container.replaceChildren(boxClone);
+    }
+
+    // --- セレクタ・インプットUI更新 ---
+    static inputs(mapBoxId, errorFlags) {
+      DOM.get(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => {
+        s.classList.toggle('has-error', !!errorFlags?.[idx]);
+      });
+    }
+  }
+
+  // --- 動的DOM構築クラス ---
+  class UIBuildInit {
+    static buildTab1() {
       // モード選択 (Select)
       const modeBox = DOM.get(Tab1UI.configModeBox);
       if (modeBox) {
         const select = document.createElement("select");
-        select.dataset.bind = "Tab1ST.config.mode";
+        select.setAttribute('data-bind', "Tab1ST.config.mode");
         GLOBAL_CONFIG.configModes.forEach(({ label, value, disabled, hidden }) => {
           const opt = new Option(label, value);
           if (disabled) opt.disabled = true;
@@ -36,162 +185,63 @@
           clone.querySelector(".field-label").firstChild.nodeValue = `${f.label} `;
           const input = clone.querySelector("input");
           input.placeholder = f.placeholder;
-          input.dataset.bind = f.bind;
+          input.setAttribute('data-bind', f.bind);
           exacBox.appendChild(clone);
         });
       }
+    }
+
+    static buildTab2() {
       // シンボル分類軸 (Select)
       const axisBox = DOM.get(Tab2UI.symbolAxisBox);
       if (axisBox) {
         const select = document.createElement("select");
         select.id = Tab2UI.symbolAxis;
-        select.dataset.bind = "Tab2ST.symbol.baseKey";
+        select.setAttribute('data-bind', "Tab2ST.symbol.baseKey");
         GLOBAL_CONFIG.symbolAxes.forEach(a => select.add(new Option(a.label, a.value)));
         axisBox.appendChild(select);
       }
+    }
+
+    static buildPreview() {
       // プレビュー: モード選択ラジオボタンの生成
-      this.renderPreviewModes(GLOBAL_CONFIG.optionalElements, Tab2UI.previewModeBox);
+      const previewMode = DOM.get(Tab2UI.previewModeBox);
+      if (previewMode) {
+        const initialMap = UICreate.radioGroup(
+          GLOBAL_CONFIG.optionalElements,
+          Tab2UI.previewModeBox,
+          "Tab2.updatePreviewMode",
+          "obsidian"
+        );
+        State.set("Tab2ST.modeMap", initialMap);
+      }
 
       // プレビュー: 補正方法
-      const pCorrBox = DOM.get(Tab2UI.previewCorrectionBox);
-      if (pCorrBox) {
+      const previewCorrection = DOM.get(Tab2UI.previewCorrectionBox);
+      if (previewCorrection) {
         const select = document.createElement("select");
-        select.dataset.bind = "Tab2ST.preview.correction";
+        select.setAttribute('data-bind', "Tab2ST.preview.correction");
         select.add(new Option("補正なし", "rawdata"));
         select.add(new Option("新規検量線", "new"));
-        pCorrBox.appendChild(select);
-        State.set("Tab2ST.preview.correction", "rawdata"); // 初期化
+        previewCorrection.appendChild(select);
+        State.set("Tab2ST.preview.correction", "rawdata");
       }
 
       // プレビュー: プレビュー値
-      const pValBox = DOM.get(Tab2UI.previewValueBox);
-      if (pValBox) {
+      const previewValue = DOM.get(Tab2UI.previewValueBox);
+      if (previewValue) {
         const select = document.createElement("select");
-        select.dataset.bind = "Tab2ST.preview.value";
+        select.setAttribute('data-bind', "Tab2ST.preview.value");
         GLOBAL_CONFIG.valueLogic.forEach(v => select.add(new Option(v, v)));
-        pValBox.appendChild(select);
-        State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]); // 初期化
+        previewValue.appendChild(select);
+        State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
       }
     }
 
-    // --- ステータスバー更新 ---
-    static loadingStatsBar(id, status = null) {
-      const el = DOM.get(id);
-      if (!el) return;
-      if (!status?.length) {
-        el.dataset.status = "hidden";
-        el.innerText = "";
-        return;
-      }
-      [el.dataset.status, el.innerText] = status;
-    }
-
-    // --- ダイアログ生成 ---
-    static confirm(title, msg, barObj = null) {
-      const prefix = String(barObj).split("StatusBar")[0];
-      const saveStatus = State.get(`Tab1ST.${prefix}.status`);
-      if (barObj) this.loadingStatsBar(barObj, ["loading", "実行中..."]);
-      return new Promise((resolve) => {
-        const dialog = DOM.get("universalConfirm");
-        DOM.setDOM("uDialogTitle", title);
-        DOM.setDOM("uDialogMessage", msg);
-        dialog.showModal(); 
-        DOM.get("uDialogConfirmBtn").onclick = () => { dialog.close(); resolve(true); };
-        DOM.get("uDialogCancelBtn").onclick = () => {
-          dialog.close();
-          if (barObj) this.loadingStatsBar(barObj, saveStatus);
-          resolve(false);
-        };
-      });
-    }
-
-    // --- テンプレート生成 ---
-    static #renderTemplateList(templateId, items, containerId, mapper) {
-      const container = DOM.get(containerId);
-      const template = DOM.get(templateId);
-      if (!container || !template || !items?.length) return;
-      container.replaceChildren(...items.map((item, index) => mapper(template.content.cloneNode(true), item, index)));
-    }
-
-    // --- 列選択動的生成 ---
-    static renderSelectors(arr, objID, fields, hasEmpty = true) {
-      this.#renderTemplateList("selectorTemplate", fields, objID, (clone, field) => {
-        clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
-        const select = clone.querySelector("select");
-        select.dataset.field = field.key;
-        select.dataset.change = "Tab1.updateFileMap"; // ルーティング付与
-        if (!hasEmpty) select.querySelector(".empty-opt")?.remove();
-        select.append(...arr.map(h => new Option(h, h)));
-        return clone;
-      });
-    }
-
-    // --- チェックボックス生成 ---
-    static renderCheckboxes(arr, objID) {
-      const container = DOM.get(objID);
-      if (!container) return;
-      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データがありません</div>'; return; }
-      const template = DOM.get("checkboxTemplate");
-      const items = arr.map(item => {
-        const clone = template.content.cloneNode(true);
-        clone.querySelector(".dataset-cb").value = item;
-        clone.querySelector(".cb-text").textContent = item;
-        return clone;
-      });
-      container.replaceChildren(DOM.get("checkAllTemplate").content.cloneNode(true), ...items);
-    }
-
-    // --- シンボル設定行生成 ---
-    static renderSymbolRows(values, objID, rawNum) {
-      const shapes = ['circle', 'triangle', 'square'];
-      const colors = [
-        { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' },
-        { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' },
-        { val: 'var(--grey600)', label: 'Gray' }
-      ];
-      this.#renderTemplateList("symbolRowTemplate", Array.from({ length: rawNum }), objID, (clone, _, i) => {
-        clone.querySelectorAll("select").forEach(s => {
-          s.dataset.symbolIdx = i;
-          s.dataset.change = "Tab2.updateSymbol";
-        });
-        clone.querySelector('[data-symbol-type="target"]').append(...values.map(v => new Option(v, v)));
-        clone.querySelector('[data-symbol-type="shape"]').append(...shapes.map(s => new Option(s, s)));
-        clone.querySelector('[data-symbol-type="color"]').append(...colors.map(c => new Option(c.label, c.val)));
-        return clone;
-      });
-    }
-
-    // --- ラジオボタン生成 ---
-    static renderPreviewModes(elements, boxId) {
-      const box = DOM.get(boxId);
-      if (!box || !elements?.length) return;
-      const initialMap = {};
-      const items = elements.map(el => {
-        initialMap[el] = "obsidian"; // デフォルト値
-        const div = document.createElement("div");
-        div.className = "radio-row";
-        div.innerHTML = `
-          <span class="radio-label">${el}</span>
-          <div class="radio-group">
-            <label class="radio-item">
-              <input type="radio" name="mode_${el}" value="obsidian" data-element="${el}" data-change="Tab2.updatePreviewMode" checked> obsidian
-            </label>
-            <label class="radio-item">
-              <input type="radio" name="mode_${el}" value="mudrock" data-element="${el}" data-change="Tab2.updatePreviewMode"> mudrock
-            </label>
-          </div>
-        `;
-        return div;
-      });
-      box.replaceChildren(...items);
-      State.set("Tab2ST.modeMap", initialMap);
-    }
-
-    // --- セレクタ・インプットUI更新 ---
-    static updateInputs(mapBoxId, errorFlags) {
-      DOM.get(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => {
-        s.classList.toggle('has-error', !!errorFlags?.[idx]);
-      });
+    static build() {
+      this.buildTab1();
+      this.buildTab2();
+      this.buildPreview();
     }
   }
 
@@ -245,8 +295,7 @@
         [Tab2UI.symbolBtn]:        { disabled: phase < p.FILTERED },
         [Tab2UI.datasetSection]:   { active: phase < p.FILTERED, disabled: false },
         [Tab2UI.symbolSection]:    { active: phase >= p.FILTERED && phase < p.MAPPED, disabled: phase < p.FILTERED },
-        // プレビューとレポートの活性制御を追加
-        [Tab2UI.previewSection]:   { active: phase >= p.FILTERED, disabled: phase < p.FILTERED },
+        [Tab2UI.previewSection]:   { active: phase >= p.MAPPED, disabled: phase < p.FILTERED },
         [Tab2UI.previewMakeBtn]:   { disabled: phase < p.FILTERED },
         [Tab2UI.reportSection]:    { active: phase >= p.MAPPED, disabled: phase < p.MAPPED }
       };
@@ -254,7 +303,7 @@
       if (phase === p.FILTERED) {
         const baseData = State.get("Tab2ST.basePXRF") ?? [];
         const baseKey = State.get("Tab2ST.symbol.baseKey");
-        UIController.renderSymbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox, 5); // 修正: d[baseKey]
+        UICreate.symbolRows([...new Set(baseData.map(d => d[baseKey]).filter(Boolean))], Tab2UI.symbolBox, 5);
       }
     }
   }
@@ -264,31 +313,39 @@
     constructor() {
       const stateMap = {
         "GLB.isLocked": v => DOM.setDisabled(Tab1UI.tabSet, v),
-        "Tab1ST.config.status": v => UIController.loadingStatsBar(Tab1UI.configBar, v),
-        "Tab1ST.file.status": v => UIController.loadingStatsBar(Tab1UI.fileBar, v),
-        "Tab1ST.exac.status": v => UIController.loadingStatsBar(Tab1UI.exacBar, v),
-        "Tab2ST.datasetload.status": v => UIController.loadingStatsBar(Tab2UI.datasetloadBar, v),
-        "Tab2ST.repoStatus": v => UIController.loadingStatsBar(Tab2UI.repoBar, v),
+        "Tab1ST.config.status": v => UICreate.status(Tab1UI.configBar, v),
+        "Tab1ST.file.status": v => UICreate.status(Tab1UI.fileBar, v),
+        "Tab1ST.exac.status": v => UICreate.status(Tab1UI.exacBar, v),
+        "Tab2ST.datasetload.status": v => UICreate.status(Tab2UI.datasetloadBar, v),
+        "Tab2ST.repoStatus": v => UICreate.status(Tab2UI.repoBar, v),
         "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
         "Tab2ST.phase": v => UIPhase.updateTab2PhaseUI(v),
-        "Tab1ST.file.isMapError": flags => {
-          UIController.updateInputs(Tab1UI.fileBox, flags);
-          if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD);
+        "Tab1ST.file.data": data => {
+          if (data?.[0]) UICreate.selectors(data[0], Tab1UI.fileBox, GLOBAL_CONFIG.fileFields, "Tab1.updateFileMap");
         },
-        "Tab1ST.exac.isMapError": flags => {
-          UIController.updateInputs(Tab1UI.exacBox, flags);
-          if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID) UIPhase.updateTab1PhaseUI(TAB1_PHASE.VALID);
+        "Tab2ST.availableDatasets": datasets => {
+          UICreate.checkboxes(datasets, Tab2UI.datasetBox);
         },
         "Tab2ST.symbol.baseKey": key => {
           const baseData = State.get("Tab2ST.basePXRF") ?? [];
-          UIController.renderSymbolRows([...new Set(baseData.map(d => d[key]).filter(Boolean))], Tab2UI.symbolBox, 5);
+          UICreate.symbolRows([...new Set(baseData.map(d => d[key]).filter(Boolean))], Tab2UI.symbolBox, 5, "Tab2.updateSymbol");
         },
-        "Tab2ST.preview.stats": v => UIController.loadingStatsBar(Tab2UI.previewBar, ["message", v])
+        
+        "Tab1ST.file.isMapError": flags => {
+          UICreate.inputs(Tab1UI.fileBox, flags);
+          if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD);
+        },
+        "Tab1ST.exac.isMapError": flags => {
+          UICreate.inputs(Tab1UI.exacBox, flags);
+          if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID) UIPhase.updateTab1PhaseUI(TAB1_PHASE.VALID);
+        },
+        "Tab2ST.preview.statsData": stats => UICreate.statsTable(stats)
       };
       Object.entries(stateMap).forEach(([path, cb]) => State.subscribe(path, cb));
     }
   }
 
-  const UI = UIController;
+  const UI = UICreate;
+  const UINew = UIBuildInit;
   const UIState = new UIStateUpdater();
 </script>

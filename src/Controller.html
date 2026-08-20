@@ -25,7 +25,6 @@
       if (!(await UI.confirm("確認", State.get("Tab1ST.file.data") ? "内部データをリセットしますか？" : "Fileシートを読み込みますか？", Tab1UI.fileBar))) return;
       await CoreController.withAsyncLock("Tab1ST.file.status", async () => {
         const { data, message } = await API.fetchData(GLOBAL_CONFIG.fileSheetName, 5);
-        UI.renderSelectors(data[0], Tab1UI.fileBox, GLOBAL_CONFIG.fileFields);
         State.set({
           "Tab1ST.file.data": data, "Tab1ST.file.map": Object.fromEntries(GLOBAL_CONFIG.fileFields.map(f => [f.key, ""])),
           "Tab1ST.file.isMapError": [true, true, true, false, false], "Tab1ST.file.cachedStatus": ["success", message],
@@ -125,10 +124,10 @@
         const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataManager.load(pxrfRes.data, wdxrfRes.data);
         State.set({ 
           "Tab2ST.rawData": { correction: corrRes.data, mergedPXRF, wdxrfObjs }, 
+          "Tab2ST.availableDatasets": datasets,
           "Tab2ST.filter.datasets": datasets, 
           "Tab2ST.phase": TAB2_PHASE.LOADED 
         });
-        UI.renderCheckboxes(datasets, Tab2UI.datasetBox);
         return `読込完了: dataset ${datasets.length}件`;
       });
     }
@@ -160,42 +159,25 @@
       });
     }
 
-    // --- Tab2 プレビュー生成 (State経由デバッグ) ---
+    // --- Tab2 プレビュー生成 ---
     static async makePreview() {
-      await CoreController.withAsyncLock("Tab2ST.repoStatus", async () => {
-        const modeMap = State.get("Tab2ST.modeMap");
-        const valueLogic = State.get("Tab2ST.preview.value");
-        const basePXRF = State.get("Tab2ST.basePXRF");
-        const baseWDXRF = State.get("Tab2ST.baseWDXRF");
+      await CoreController.withAsyncLock("Tab2ST.previewBar", async () => {
+        const [modeMap, valueLogic, basePXRF, baseWDXRF] = State.get([
+          "Tab2ST.modeMap", "Tab2ST.preview.value", "Tab2ST.basePXRF", "Tab2ST.baseWDXRF"
+        ]);
 
-        // --- データ構築 ---
         const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic);
         if (!previewData.length) throw new Error("対象データなし");
 
-        // --- 統計計算 ---
         const xArr = previewData.map(d => d.x);
         const yArr = previewData.map(d => d.y);
         const errArr = previewData.map(d => d.err).filter(v => v != null && !isNaN(v));
         const stats = Mtd.Tab2.CalcProcessor.calcRegression(xArr, yArr, errArr);
 
-        // --- デバッグ文字列生成 ---
-        const debugMsg = [
-          `--- デバッグ要約 ---`,
-          `PXRF: ${basePXRF?.length ?? 0}件 / WDXRF: ${baseWDXRF?.length ?? 0}件`,
-          `プレビュー生成: ${previewData.length}件`,
-          `選択値: ${valueLogic}`,
-          `先頭 X: ${previewData[0]?.x}, Y: ${previewData[0]?.y}`,
-          `相関係数(R): ${stats?.r?.toFixed(4)}`,
-          `傾き(Slope): ${stats?.slope?.toFixed(4)}`,
-          `切片(Intercept): ${stats?.intercept?.toFixed(4)}`,
-          `3σ誤差: ${stats?.err3Sigma?.toFixed(4)}`
-        ].join(' | ');
-
-        // --- State保存 ---
         State.set({
           "Tab2ST.previewData": previewData,
           "Tab2ST.correctionLogic": stats,
-          "Tab2ST.preview.stats": debugMsg
+          "Tab2ST.preview.statsData": stats
         });
 
         return "プレビューを作成しました";

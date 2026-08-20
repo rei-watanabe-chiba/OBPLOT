@@ -97,22 +97,24 @@
             </div>
           </details>
           <hr>
-          <!-- 補正＆プレビュー層 (新規追加) -->
+          <!-- 補正＆プレビュー層 -->
           <details id="previewSection" data-type="disabled">
             <summary>補正＆プレビュー</summary>
             <div id="previewArea">
               <label>モード選択</label>
+              <!-- 動的生成コンテナ -->
               <div id="previewModeBox"></div>
-              
               <label style="margin-top: 12px;">補正方法</label>
+              <!-- 動的生成コンテナ -->
               <div id="previewCorrectionBox"></div>
-              
               <label style="margin-top: 12px;">プレビュー値</label>
+              <!-- 動的生成コンテナ -->
               <div id="previewValueBox"></div>
-              
               <div class="btn-container" style="margin-top: 12px;">
                 <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー作成</button>
               </div>
+              <!-- 動的生成コンテナ -->
+              <div id="previewStatsTable" style="margin-top: 8px;"></div>
             </div>
           </details>
           <div id="previewBar" class="status-bar" data-status="hidden"></div>
@@ -176,6 +178,31 @@
         <select data-symbol-type="shape" class="symbol-shape"></select>
         <select data-symbol-type="color" class="symbol-color"></select>
       </div>
+    </template>
+
+    <template id="previewModeTemplate">
+      <div class="radio-row">
+        <span class="radio-label"></span>
+        <div class="radio-group">
+          <label class="radio-item">
+            <input type="radio" value="obsidian"> obsidian
+          </label>
+          <label class="radio-item">
+            <input type="radio" value="mudrock"> mudrock
+          </label>
+        </div>
+      </div>
+    </template>
+
+    <template id="statsContainerTemplate">
+      <div class="stats-container">
+        <div class="stats-grid"></div>
+      </div>
+    </template>
+
+    <template id="statsRowTemplate">
+      <div class="stats-label"></div>
+      <div class="stats-val"></div>
     </template>
 
     <?!= include('Model'); ?>

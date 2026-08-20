@@ -145,37 +145,31 @@
 
   // --- Tab2 プレビューデータ構築ロジック ---
   class PreviewManager {
-    // プレビュー用データ構築
     static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic) {
+      if (!basePXRF?.length || !baseWDXRF?.length) return [];
       const allElements = Object.keys(GLOBAL_CONFIG.mudrockIndex);
-      // pxrf元素の抽出
+      // pxrfデータ整形
       const processed = basePXRF.map(row => {
-        const newRow = { dataset: row.dataset, id: row.ID || row.id };
+        const newRow = { dataset: row.dataset, id: row.ID ?? row.id };
         allElements.forEach(el => {
           const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
-          const mode = isOptional ? (modeMap[el] || 'obsidian') : 'mudrock';
-          const colName = mode === 'obsidian' ? `ob_${el}` : `md_${el}`;
-          const errColName = mode === 'obsidian' ? `ob_${el}_Err` : `md_${el}_Err`;
-          newRow[el] = row[colName] ?? null;
-          newRow[`${el}_Err`] = row[errColName] ?? null;
+          const mode = isOptional ? (modeMap[el] ?? 'obsidian') : 'mudrock';
+          const col = mode === 'obsidian' ? `ob_${el}` : `md_${el}`;
+          const errCol = mode === 'obsidian' ? `ob_${el}_Err` : `md_${el}_Err`;
+          newRow[el] = row[col] ?? null;
+          newRow[`${el}_Err`] = row[errCol] ?? null;
         });
         return newRow;
       });
-
-      // WDXRFマップ作成
-      const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID || w.id}`, w]));
-      
-      // プレビューデータ構築
+      // WDXRFマップ化と統合
+      const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID ?? w.id}`, w]));
       return processed.map(p => {
         const w = wdxrfMap.get(`${p.dataset}_${p.id}`);
         if (!w) return null;
-        
         const yVal = CalcProcessor.evaluate(valueLogic, p);
         const xVal = CalcProcessor.evaluate(valueLogic, w);
         if (xVal == null || yVal == null) return null;
-
         const errVal = allElements.includes(valueLogic) ? (p[`${valueLogic}_Err`] ?? null) : null;
-
         return { x: xVal, y: yVal, err: errVal };
       }).filter(Boolean);
     }
@@ -183,7 +177,6 @@
 
   // --- Tab2 数式評価・統計ロジック ---
   class CalcProcessor {
-    // 安全な式評価コンパイラ
     static evaluate(formula, rowData) {
       if (!formula) return null;
       try {
@@ -201,7 +194,7 @@
       }
     }
 
-    // --- ピアソン相関・単回帰計算 ---
+    // --- 単回帰・相関計算 ---
     static calcRegression(xArr, yArr, errArr) {
       if (!xArr?.length || xArr.length !== yArr?.length) return null;
       const n = xArr.length;
@@ -222,8 +215,7 @@
         const ssErr = errArr.reduce((a, b) => a + (b - meanErr) ** 2, 0);
         err3Sigma = Math.sqrt(ssErr / (errArr.length - 1)) * 3;
       }
-
-      return { slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
+      return { count: n, slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
     }
   }
 

@@ -287,7 +287,7 @@
   }
   .symbol-target { flex: 2; }
   .symbol-shape, .symbol-color { flex: 1; }
-  /* --- ラジオボタン行 (新規追加) --- */
+
   .radio-row { 
     display: flex; 
     align-items: center; 
@@ -298,6 +298,30 @@
   .radio-label { font-weight: 500; flex: 1; }
   .radio-group { display: flex; gap: 16px; flex: 2;}
   .radio-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
+  /* --- 統計テーブルスタイル --- */
+  .stats-container {
+    font-size: 11px;
+    background-color: var(--grey50);
+    padding: 8px;
+    border: 1px solid var(--grey200);
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    row-gap: 4px;
+    column-gap: 8px;
+    align-items: center;
+  }
+  .stats-label {
+    color: var(--grey600);
+    font-weight: 500;
+  }
+  .stats-val {
+    font-weight: 700;
+  }
   
   @keyframes spin {
     to { transform: rotate(360deg); }

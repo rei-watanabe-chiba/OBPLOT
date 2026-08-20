@@ -5,7 +5,8 @@
     // --- Tab1変更移譲 ---
     static Tab1 = {
       updateFileMap: (target) => {
-        State.set(`Tab1ST.file.map.${target.dataset.field}`, target.value);
+        const field = target.getAttribute('data-field');
+        State.set(`Tab1ST.file.map.${field}`, target.value);
         EventManager.Tab1.validateFileMap();
       },
       // --- リアクティブ状態監視：設定モード ---
@@ -57,7 +58,7 @@
       },
       // リアクティブ状態監視：シンボル設定群
       updateSymbol: (target) => {
-        const idx = target.dataset.symbolIdx;
+        const idx = target.getAttribute('data-symbol-idx');
         if (!idx) return;
         const getVal = type => document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="${type}"]`)?.value;
         const tVal = getVal("target");
@@ -70,7 +71,7 @@
       },
       // ラジオボタン変更時のマッピング同期
       updatePreviewMode: (target) => {
-        const el = target.dataset.element;
+        const el = target.getAttribute('data-element');
         if (el) State.set(`Tab2ST.modeMap.${el}`, target.value);
       }
     };
@@ -79,10 +80,10 @@
     static #handleClick(e) {
       const target = e.target;
       const tabBtn = target.closest('.tab-btn');
-      if (tabBtn) { this.switchTab(tabBtn.dataset.target); return; }
+      if (tabBtn) { this.switchTab(tabBtn.getAttribute('data-target')); return; }
       const actionBtn = target.closest('[data-action]');
       if (actionBtn) {
-        const [namespace, methodName] = actionBtn.dataset.action.split('.');
+        const [namespace, methodName] = actionBtn.getAttribute('data-action').split('.');
         if (Ctrl[namespace] && typeof Ctrl[namespace][methodName] === 'function') {
           Ctrl[namespace][methodName]();
         }
@@ -92,11 +93,9 @@
     // --- DOM更新監視登録 ---
     static #handleChange(e) {
       const target = e.target;
-      // 単純同期
-      const bindPath = target.dataset.bind;
+      const bindPath = target.getAttribute('data-bind');
       if (bindPath) State.set(bindPath, target.value);
-      // カスタム属性同期
-      const changePath = target.dataset.change;
+      const changePath = target.getAttribute('data-change');
       if (changePath) {
         const [namespace, methodName] = changePath.split('.');
         if (this[namespace] && typeof this[namespace][methodName] === 'function') {
@@ -110,13 +109,13 @@
       document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
       document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
       document.getElementById(tabId)?.classList.add("active");
-      document.body.dataset.theme = tabId;
+      document.body.setAttribute('data-theme', tabId);
       State.set("GLB.activeTab", tabId);
     }
 
     // --- アプリケーション初期化 ---
     static async init() {
-      UI.buildInitUI();
+      UINew.build();
       State.subscribe("Tab1ST.config.mode", EventManager.Tab1.validateConfigMode);
       State.subscribe("Tab1ST.exac.map.dataset", EventManager.Tab1.validateExacMap);
       this.switchTab(State.get("GLB.activeTab"));
