@@ -25,11 +25,27 @@
   - 駆動State: `baseKey` のユニーク値を動的生成し選択肢に格納。変更結果は `Tab2ST.symbol.mapping` に即時同期。
 - `symbolBtn` (静的): 「シンボル確定」ボタン。`Tab2ST.phase` が `FILTERED` 以上で有効。
 
+### ③ 補正＆プレビュー（`previewArea`）※新規設計対象
+- **機能**: 特定元素・指数の相関確認と補正適用・出力
+- **UI要素**:
+- **previewMode** (**動的**): ラジオボタン（`obsidian`, `mudrock）。Mn, Fe, Rb, Sr, Y, Zr, Nbの6行。(例) Mn : ○ obsidian ○ mudrock
+  - 駆動State: `Tab2ST.modeMap` にバインド。値変更時にMn : "obsidian"の形で即時同期
+- **previewValue** (**動的**): `GLB.valueLogic` から選択プルダウン。
+  - 駆動State: `Tab2ST.preview.value` にバインド。値変更時に即時同期
+- **補正値プルダウン** (**動的**): 補正方法選択プルダウン（`補正なし`, `新規検量線`, `Correctionシートのインデックス名`追加）
+  - `Tab2ST.rawData.correction` の有無により動的生成。有: correctionのインデクス名を選択肢に追加、無:追加なし。
+  - 駆動State: `Tab2ST.preview.Correction` にバインド。値変更時に即時同期。`補正なし`の値は`rawdata`、`新規検量線`の値は`newCorrection`、追加選択肢はインデックス名をそのまま値に格納する
+* 駆動State: `Tab2ST.rawData.correction` の有無により動的生成。選択に応じて `Tab2ST.correctionLogic` を計算・反映。
+* **プレビュー更新ボタン** (静的): 押下で3つのstateを反映。`Tab2ST.baseData` をソートし `Tab2ST.selectData` を生成。補正適用と指数動的計算を実施。
+* **プレビュー用散布図**: 幅260px程度の相関直線付き散布図（Google Visualization API）。
+* **統計情報パネル** (**動的**): 相関係数、決定係数、傾き、切片などの計算結果をコンパクトな表形式で自動レンダリング。
+* **Correction保存機能**: 新規インデックス名入力欄 ＋ 保存ボタン。補正係数を `Correction` シートへ書き出し。
+
 
 ### ③ 補正＆プレビュー（CorrectionArea）
 - **機能**: 特定元素・指数の相関確認と補正適用・出力
 - **UI**: [モード切替]: Mn, Fe, Rb, Sr, Y, Zr, Nbのラベルを持つラジオボタンで"obsidian"/"mudrock"を切り替え
-  - (例) label ○ obsidian ○ mudrock
+  - (例) Mn : ○ obsidian ○ mudrock
   - `Tab2ST.modeMap`に反映
 - **UI**: [対象]: `GLB.valueLogic`から選択プルダウン
   - ボタン押下で`Tab2ST.preview`に反映
