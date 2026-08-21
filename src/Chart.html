@@ -1,0 +1,253 @@
+<!-- Chart.html -->
+<script>
+  // --- グラフデザイン一括設定 ---
+  const CHART_CONFIG = {
+    scatter: {
+      chartArea: { left: '10%', top: '10%', width: '80%', height: '80%' },
+      pointSize: 5,
+      colors: ['var(--main-blue)'],
+      legend: { position: 'none' },
+      trendlines: {
+        0: {
+          type: 'linear',
+          color: 'var(--grey600)',
+          lineWidth: 1,
+          opacity: 0.4,
+          lineDashStyle: [8, 4],
+          visibleInLegend: false,
+          tooltip: false
+        }
+      },
+      hAxis: {
+        title: 'WDXRF',
+        titleTextStyle: { fontSize: 11, italic: false },
+        textStyle: { fontSize: 10 },
+        minorGridlines: { count: 0 },
+        titlePosition: 'out'
+      },
+      vAxis: {
+        title: 'PXRF',
+        titleTextStyle: { fontSize: 11, italic: false },
+        // --- 修正：フォントサイズ固定と自動省略抑止 ---
+        textStyle: { fontSize: 10, bold: false },
+        slantedText: false,
+        minorGridlines: { count: 0 },
+        titlePosition: 'out'
+      }
+    }
+  };
+
+  // --- CSS変数解決ヘルパー ---
+  const resolveCssVar = (varStr) => {
+    if (!varStr?.startsWith('var(')) return varStr;
+    const match = varStr.match(/var\((--[^,\s)]+)/);
+    if (!match) return varStr;
+    const val = getComputedStyle(document.body).getPropertyValue(match[1]).trim();
+    return val || varStr;
+  };
+
+  // --- Nice Numbers スケール計算 ---
+  const calcNiceScale = (xVals, yVals, desiredTicks = 4) => {
+    const [xMin, xMax] = [Math.min(...xVals), Math.max(...xVals)];
+    const [yMin, yMax] = [Math.min(...yVals), Math.max(...yVals)];
+
+    const isAllPositive = xMin >= 0 && yMin >= 0;
+    const rawMin = isAllPositive ? 0 : Math.min(xMin, yMin);
+    const rawMax = Math.max(xMax, yMax);
+
+    const range = rawMax - rawMin || 1;
+    const rawStep = range / (desiredTicks - 1);
+    const exponent = Math.floor(Math.log10(rawStep));
+    const fraction = rawStep / Math.pow(10, exponent);
+
+    let niceFraction = 10;
+    if (fraction <= 1.2) niceFraction = 1;
+    else if (fraction <= 2.5) niceFraction = 2;
+    else if (fraction <= 6.0) niceFraction = 5;
+
+    const niceStep = niceFraction * Math.pow(10, exponent);
+    const niceMin = isAllPositive ? 0 : Math.floor(rawMin / niceStep) * niceStep;
+    const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
+    const ticksCount = Math.round((niceMax - niceMin) / niceStep) + 1;
+
+    // --- ① ticks オプション用目盛り配列の生成（Malformed pattern 回避） ---
+    const niceTicks = [];
+    const decimals = exponent < 0 ? Math.abs(exponent) : 0;
+
+    for (let i = 0; i < ticksCount; i++) {
+      const val = niceMin + (i * niceStep);
+      let label = "";
+
+      if (Math.abs(val) >= 1000) {
+        label = `${(val / 1000).toFixed(0)}k`; // 10k表記
+      } else if (decimals > 0) {
+        label = val.toFixed(decimals);
+      } else {
+        label = val.toLocaleString();
+      }
+
+      niceTicks.push({ v: val, f: label });
+    }
+
+    return { niceMin, niceMax, niceTicks };
+  };
+
+  // --- グラフ描画・制御クラス ---
+  class PlotChart {
+    // --- 散布図描画 ---
+    static drawScatter(containerId, previewData) {
+      const container = DOM.get(containerId);
+      if (!container) return;
+      if (!previewData?.length || !window.google?.visualization) {
+        container.replaceChildren();
+        return;
+      }
+
+      container.replaceChildren();
+      container.style.position = 'relative';
+
+      const chartDiv = document.createElement('div');
+      container.appendChild(chartDiv);
+
+      const dataTable = new google.visualization.DataTable();
+      dataTable.addColumn('number', 'WDXRF');
+      dataTable.addColumn('number', 'PXRF');
+      dataTable.addColumn({ type: 'string', role: 'tooltip' });
+
+      dataTable.addRows(previewData.map(d => [
+        d.x,
+        d.y,
+        `ID: ${d.id ?? '-'}\nGroup: ${d.group ?? '-'}`
+      ]));
+
+      const sideLength = container.clientWidth || 276;
+      container.style.height = `${sideLength}px`;
+      chartDiv.style.width = `${sideLength}px`;
+      chartDiv.style.height = `${sideLength}px`;
+
+      // スケール・グリッド計算
+      const xVals = previewData.map(d => d.x);
+      const yVals = previewData.map(d => d.y);
+      const { niceMin, niceMax, niceTicks } = calcNiceScale(xVals, yVals);
+
+      const resolvedColors = CHART_CONFIG.scatter.colors.map(resolveCssVar);
+      const resolvedTrendlineColor = resolveCssVar(CHART_CONFIG.scatter.trendlines[0].color);
+
+      // --- 修正：format ではなく ticks を直接設定 ---
+      const axisOptions = {
+        viewWindow: { min: niceMin, max: niceMax },
+        ticks: niceTicks
+      };
+
+      const options = {
+        ...CHART_CONFIG.scatter,
+        width: sideLength,
+        height: sideLength,
+        colors: resolvedColors,
+        hAxis: { ...CHART_CONFIG.scatter.hAxis, ...axisOptions },
+        vAxis: { ...CHART_CONFIG.scatter.vAxis, ...axisOptions },
+        trendlines: {
+          0: {
+            ...CHART_CONFIG.scatter.trendlines[0],
+            color: resolvedTrendlineColor
+          }
+        }
+      };
+
+      const chart = new google.visualization.ScatterChart(chartDiv);
+
+      google.visualization.events.addListener(chart, 'ready', () => {
+        this.#renderEquationOverlay(container, chart);
+        this.#suppressTrendlineHoverCircle(chartDiv);
+        // --- 引数に container と chart を渡すよう更新 ---
+        this.#rotateYAxisLabels(container, chart, chartDiv);
+      });
+
+      chart.draw(dataTable, options);
+    }
+
+    // --- Y軸目盛りテキストの動的SVG回転処理 ---
+    static #rotateYAxisLabels(container, chart, chartDiv) {
+      const svg = chartDiv.querySelector('svg');
+      if (!svg) return;
+
+      const layout = chart.getChartLayoutInterface();
+      const chartArea = layout.getChartAreaBoundingBox();
+      const leftThreshold = chartArea.left;
+
+      const textElements = Array.from(svg.querySelectorAll('text')).filter(text => {
+        const x = parseFloat(text.getAttribute('x'));
+        return !isNaN(x) && x < leftThreshold && x > (leftThreshold - 50);
+      });
+
+      textElements.forEach(text => {
+        const x = parseFloat(text.getAttribute('x'));
+        const y = parseFloat(text.getAttribute('y'));
+
+        if (!isNaN(x) && !isNaN(y)) {
+          text.setAttribute('transform', `rotate(-90, ${x}, ${y})`);
+          text.setAttribute('text-anchor', 'middle');
+          text.setAttribute('dx', '-6');
+          // --- 修正：SVGテキスト要素に対してもフォントサイズを10に固定し省略を防止 ---
+          text.setAttribute('font-size', '10');
+          text.style.textOverflow = 'clip';
+        }
+      });
+    }
+
+    // --- ⑤ 回帰式・R値の左上2段表示 ---
+    static #renderEquationOverlay(container, chart) {
+      container.querySelector('.chart-eq-overlay')?.remove();
+
+      const stats = State.get("Tab2ST.preview.statsData");
+      if (!stats || stats.slope == null || stats.intercept == null) return;
+
+      const fmt = (v, digits = 3) => (v != null && !isNaN(v)) ? v.toFixed(digits) : "-";
+      const sign = stats.intercept >= 0 ? "+" : "-";
+      
+      const eqStr = `y = ${fmt(stats.slope)}x ${sign} ${fmt(Math.abs(stats.intercept))}`;
+      const rStr = `R = ${fmt(stats.r)}`;
+
+      const layout = chart.getChartLayoutInterface();
+      const chartArea = layout.getChartAreaBoundingBox();
+
+      const overlay = document.createElement('div');
+      overlay.className = 'chart-eq-overlay';
+      overlay.innerHTML = `<div>${eqStr}</div><div>${rStr}</div>`;
+      overlay.style.cssText = `
+        position: absolute;
+        left: ${chartArea.left + 8}px;
+        top: ${chartArea.top + 8}px;
+        font-size: 10px;
+        font-family: monospace;
+        color: var(--grey600);
+        background: rgba(255, 255, 255, 0.85);
+        padding: 2px 4px;
+        border-radius: 2px;
+        line-height: 1.2;
+        pointer-events: none;
+      `;
+
+      container.appendChild(overlay);
+    }
+
+    // --- ④ トレンドラインホバー時の追従円を非表示化 ---
+    static #suppressTrendlineHoverCircle(chartDiv) {
+      const observer = new MutationObserver(() => {
+        // トレンドライン描画用のSVG要素のうち、ホバーで動的に生成される追従ポインタ円を非表示化
+        const circles = chartDiv.querySelectorAll('svg g[action="highlight"] circle, svg path[fill="none"] + circle');
+        circles.forEach(c => c.style.display = 'none');
+      });
+      observer.observe(chartDiv, { childList: true, subtree: true });
+    }
+
+    // --- グラフ描画エリア消去 ---
+    static clear(containerId) {
+      const container = DOM.get(containerId);
+      if (container) {
+        container.replaceChildren();
+        container.style.height = '0px';
+      }
+    }
+  }
+</script>

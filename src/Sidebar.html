@@ -3,7 +3,11 @@
 <html>
   <head>
     <base target="_top">
+    <!-- 統計計算 -->
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
+    <!-- グラフ描画 -->
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>google.charts.load('current', {'packages':['corechart']});</script>
     <?!= include("CSS"); ?>
   </head>
   <body data-theme="tab1">
@@ -36,7 +40,7 @@
             <div id="fileArea" style="display: none;">
               <div id="fileBox"></div>
             </div>
-            <div id="fileBtnArea" class="btn-container" style="display: none;">
+            <div id="fileBtnArea" class="field-row" style="display: none;">
               <button id="fileMakeBtn" data-type="primary" class="outline" data-action="Tab1.makeFileList" disabled>リスト生成</button>
               <button id="fileValdBtn" data-type="primary" class="outline" data-action="Tab1.validateFileList" disabled>検証</button>
             </div>
@@ -53,7 +57,7 @@
             <div id="exacArea" style="display: none;">
               <div id="exacBox"></div>
             </div>
-            <div id="exacBtnArea" class="btn-container">
+            <div id="exacBtnArea" class="field-row">
               <button id="exacPushBtn" data-type="primary" class="outline" style="display: none;" data-action="Tab1.pushExacData" disabled>PXRFに格納</button>
             </div>
           </details>
@@ -67,7 +71,7 @@
           <!-- dataset層 -->
           <details id="datasetSection" open>
             <summary>データ読込・選択</summary>
-            <div class="btn-container">
+            <div class="field-row">
               <button id="datasetLoadBtn" data-type="primary" data-action="Tab2.loadData">データを読込</button>
               <button id="datasetFilterBtn" data-type="primary" class="outline" data-action="Tab2.filterData" disabled>データを確定</button>
             </div>
@@ -81,12 +85,12 @@
           <!-- シンボル層 -->
           <details id="symbolSection" data-type="disabled">
             <summary>シンボル設定</summary>
-            <div class="btn-container">
+            <div class="field-row">
               <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
             </div>
             <div id="symbolAxisBox"></div>
             <div id="symbolArea" style="display: none;">
-              <label style="margin-top: 12px;">シンボル設定</label>
+              <label style="margin-top: 8px;">シンボル設定</label>
               <div id="symbolBox"></div>
             </div>
           </details>
@@ -96,15 +100,24 @@
           <details id="previewSection" data-type="disabled">
             <summary>補正＆プレビュー</summary>
             <div id="previewArea">
-              <label>Obsidianモード計測元素</label>
+              <label>Obsidianモード計測値</label>
               <div id="previewModeBox"></div>
-              <label style="margin-top: 12px;">補正方法</label>
-              <div id="previewCorrectionBox"></div>
-              <label style="margin-top: 12px;">プレビュー値</label>
-              <div id="previewValueBox"></div>
-              <div class="btn-container" style="margin-top: 12px;">
+              <label style="margin-top: 8px;">対象Item</label>
+              <div id="previewItemBox"></div>
+              <div class="field-row">
+                <div class="field-col">
+                  <label>プレビュー値</label>
+                  <div id="previewValueBox"></div>
+                </div>
+                <div class="field-col">
+                  <label>補正方法</label>
+                  <div id="previewCorrectionBox"></div>
+                </div>
+              </div>
+              <div class="field-row">
                 <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー作成</button>
               </div>
+              <div id="previewChartBox" style="margin-top: 8px;"></div>
               <div id="previewStatsTable" style="margin-top: 8px;"></div>
             </div>
           </details>
@@ -113,7 +126,7 @@
           <!-- レポート層 -->
           <details id="reportSection" data-type="disabled">
             <summary>レポート作成</summary>
-            <div class="btn-container">
+            <div class="field-row">
               <button id="reportOpenBtn" data-type="primary" data-action="Tab2.openReport">PDF用レポートを作成</button>
             </div>
             <div id="reportStatusBar" class="status-bar" data-status="hidden"></div>
@@ -126,7 +139,7 @@
     <dialog id="universalConfirm">
       <h3 id="uDialogTitle">確認</h3>
       <p id="uDialogMessage"></p>
-      <div class="btn-container">
+      <div class="field-row">
         <button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button>
         <button id="uDialogConfirmBtn" data-type="primary">OK</button>
       </div>
@@ -198,6 +211,7 @@
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>
     <?!= include('Component'); ?>
+    <?!= include('Chart'); ?>
     <?!= include('View'); ?>
     <?!= include('Controller'); ?>
     <?!= include('Event'); ?>

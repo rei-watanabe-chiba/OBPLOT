@@ -157,9 +157,14 @@
         "Tab2ST.preview.modeMap": vals => {
           NewDOM.updateMultiSelectSummary(Tab2UI.previewModeBox, vals);
         },
-        "Tab2ST.dataset.basePXRF": () => this.#renderSymbols(),
+        "Tab2ST.preview.itemMap": vals => {
+          NewDOM.updateMultiSelectSummary(Tab2UI.previewItemBox, vals);
+        },
+        "Tab2ST.dataset.basePXRF": () => {
+          this.#renderSymbols();
+          this.#renderItems();
+        },
         "Tab2ST.symbol.baseKey": () => this.#renderSymbols(),
-        
         "Tab1ST.file.isMapError": flags => {
           NewDOM.inputs(Tab1UI.fileBox, flags);
           if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD);
@@ -168,7 +173,13 @@
           NewDOM.inputs(Tab1UI.exacBox, flags);
           if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID) UIPhase.updateTab1PhaseUI(TAB1_PHASE.VALID);
         },
-        "Tab2ST.preview.statsData": stats => NewDOM.statsTable(stats)
+        "Tab2ST.preview.statsData": stats => NewDOM.statsTable(stats),
+        "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
+        "Tab2ST.phase": v => {
+          UIPhase.updateTab2PhaseUI(v);
+          if (v < TAB2_PHASE.PREVIEWED) PlotChart.clear(Tab2UI.previewChartBox); // --- 追加：後退時クリア ---
+        },
+        "Tab2ST.preview.previewData": data => PlotChart.drawScatter(Tab2UI.previewChartBox, data) // --- 追加：描画実行 ---
       };
       Object.entries(stateMap).forEach(([path, cb]) => State.subscribe(path, cb));
     }
@@ -182,6 +193,17 @@
       }
       const values = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
       NewDOM.symbolRows(values, Tab2UI.symbolBox, "Tab2.updateSymbol");
+    }
+    // --- Item選択ドロップダウン生成 ---
+    #renderItems() {
+      const baseData = State.get("Tab2ST.dataset.basePXRF");
+      if (!baseData?.length) {
+        DOM.get(Tab2UI.previewItemBox)?.replaceChildren();
+        return;
+      }
+      const items = [...new Set(baseData.map(d => d.item ?? d.Item).filter(Boolean))];
+      NewDOM.multiSelectDropdown(items, Tab2UI.previewItemBox, "Tab2.togglePreviewItem", "Tab2.toggleAllPreviewItem");
+      State.set("Tab2ST.preview.itemMap", items);
     }
   }
 

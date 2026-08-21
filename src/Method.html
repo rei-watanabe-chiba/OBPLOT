@@ -163,22 +163,35 @@
 
   // --- Tab2 プレビューデータ構築ロジック ---
   class PreviewManager {
-    static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic) {
+    // --- プレビューデータ生成 ---
+    static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap = null) {
       if (!basePXRF?.length || !baseWDXRF?.length) return [];
       const allElements = Object.keys(GLOBAL_CONFIG.mudrockIndex);
       
+      // itemフィルタリング用Set作成
+      const itemSet = itemMap?.length ? new Set(itemMap) : null;
+
       // pxrfデータ整形
-      const processed = basePXRF.map(row => {
-        const newRow = { dataset: row.dataset, id: row.ID ?? row.id };
-        allElements.forEach(el => {
-          const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
-          const isSelected = Array.isArray(modeMap) && modeMap.includes(el);
-          const prefix = (isOptional && isSelected) ? 'ob' : 'md';
-          newRow[el] = row[`${prefix}_${el}`] ?? null;
-          newRow[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
+      const processed = basePXRF
+        .filter(row => !itemSet || itemSet.has(row.item ?? row.Item))
+        .map(row => {
+          // --- 修正：Group も抽出・保持 ---
+          const newRow = {
+            dataset: row.dataset,
+            id: row.ID ?? row.id,
+            item: row.item ?? row.Item,
+            group: row.Group ?? "Unknown"
+          };
+          allElements.forEach(el => {
+            const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
+            const isSelected = Array.isArray(modeMap) && modeMap.includes(el);
+            const prefix = (isOptional && isSelected) ? 'ob' : 'md';
+            newRow[el] = row[`${prefix}_${el}`] ?? null;
+            newRow[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
+          });
+          return newRow;
         });
-        return newRow;
-      });
+
       // WDXRFマップ化と統合
       const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID ?? w.id}`, w]));
       return processed.map(p => {
@@ -188,7 +201,8 @@
         const xVal = CalcProcessor.evaluate(valueLogic, w);
         if (xVal == null || yVal == null) return null;
         const errVal = allElements.includes(valueLogic) ? (p[`${valueLogic}_Err`] ?? null) : null;
-        return { x: xVal, y: yVal, err: errVal };
+        // --- 修正：id と group を返り値に追加 ---
+        return { x: xVal, y: yVal, err: errVal, id: p.id, group: p.group };
       }).filter(Boolean);
     }
   }

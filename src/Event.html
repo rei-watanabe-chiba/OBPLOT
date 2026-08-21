@@ -81,7 +81,10 @@
       },
       // リアクティブ状態監視：Obsidianモード
       togglePreviewMode: this.#bindMulti(Tab2UI.previewModeBox, "Tab2ST.preview.modeMap"),
-      toggleAllPreviewMode: this.#bindAll(Tab2UI.previewModeBox, "Tab2ST.preview.modeMap")
+      toggleAllPreviewMode: this.#bindAll(Tab2UI.previewModeBox, "Tab2ST.preview.modeMap"),
+      // リアクティブ状態監視：Item選択
+      togglePreviewItem: this.#bindMulti(Tab2UI.previewItemBox, "Tab2ST.preview.itemMap"),
+      toggleAllPreviewItem: this.#bindAll(Tab2UI.previewItemBox, "Tab2ST.preview.itemMap")
     };
 
     // --- ボタン・入力監視 ---
