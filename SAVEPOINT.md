@@ -47,10 +47,9 @@ for gemini
 
 ## 4. アーキテクチャ・パイプライン（データ経路）
 - **[Command Route (ボタン操作等)]**:
-  `[User Action (Sidebar)] -> (data-action) -> [Evt (Event)] -> (Route) -> [Ctrl (Controller)] <-> (Logic/Fetch) <-> [Method / API] -> (Mutate) -> [AppState.set/reset (Model)] -> (Subscribe) -> [UIStateUpdater/UIPhase (View)] -> (Render) -> [NewDOM (Component)]`
+  `[User Action] -> (data-action) -> [Evt] -> (Route) -> [Ctrl] <-> (Logic/Fetch) <-> [Method / API] -> (Mutate) -> [AppState.set/reset] -> (Subscribe) -> [UIStateUpdater/UIPhase] -> (Render/DI) -> [NewDOM / <ob-cal-plot>]`
 - **[Reactive Route (入力・選択等)]**:
-  `[User Input (Sidebar)] -> (data-bind / data-change) -> [Evt (Event: 状態変更/検証)] -> (Mutate) -> [AppState.set (Model)] -> (Subscribe) -> [UIStateUpdater/UIPhase (View)] -> (Render) -> [NewDOM (Component)]`
----
+  `[User Input] -> (data-bind / data-change) -> [Evt] -> (Mutate) -> [AppState.set] -> (Subscribe) -> [UIStateUpdater/UIPhase] -> (Render) -> [NewDOM]`
 
 ## 5. フェーズ・ステートマシン（状態遷移フロー）
 **[Tab 1: データ抽出]**
