@@ -6,107 +6,52 @@
 - **描画・計算ライブラリ**: Google Visualization API (CoreChart: ScatterChart), simple-statistics (v7.8.3)
 - **設計パターン**: SPA型 MVMS (Model-View-Method-Service) パターン
 - **状態管理 (State Management)**: 
-  - `AppState` クラスによる Observer (Pub/Sub) パターン。
-  - State 定数をセクション単位 (`dataset`, `symbol`, `preview`, `report` 等) に階層化。
-  - フェーズ後退（ダウングレード）時は `reset()` メソッドにより、指定セクションの State をディープコピーで安全に一括初期化。
+  - `AppState` クラスによる Observer (Pub/Sub) パターン。State をセクション単位 (`dataset`, `symbol`, `preview`, `report`) に階層化。
+  - フェーズ後退時は `reset()` メソッドを用いて、指定セクションの State を安全に一括初期化。
 - **UI & レンダリング思想**: 
-  - Google Material Design 準拠、CSS Grid レイアウト。
-  - HTMLの可読性を維持しつつ、最低限のカスタム属性によるUI制御を行うハイブリッド設計。
-  - **動的クリーンアップ (Fail-Safe)**: State が空 (`null`, `[]`) に変更された際、コンテナ要素を自動的に消去/プレースホルダー表示へ切り替え。
+  - HTML の可読性を重視したクリーンな DOM 構造。
+  - State 空状態 (`null`, `[]`) 検知時の自動クリーンアップ（フェイルセーフ機構）を内包。
 - **イベント駆動 & 単方向データフロー**:
-  - **Static Action**: 静的要素（ボタン等）は `data-action` 属性によるイベント委譲（`Event` ルーター）。
-  - **Reactive Action**: 状態変更による UI の活性/非活性・表示制御は、`View` 層の定数マップ（`TAB1_RULES`, `TAB2_RULES`）に基づく宣言的ルール適用エンジン (`UIPhase`) で集約制御。
-  - **高階関数化**: 類似イベントハンドラはファクトリ関数で生成し、コード量を大幅削減。
-- **ビジネスロジック分離**: `Method.html` 内の純粋関数/クラスとして完全にカプセル化（DOM・GAS API 非依存）。
+  - 静的イベントは HTML 側の `data-action` 属性と `Event` ルーターで処理し、高階関数を用いてハンドラ生成を共通化。
+  - UI フェーズ制御は `View` 層の定数マップに基づく宣言的ルール適用エンジン (`UIPhase`) で集約制御。
 - **非同期通信**: `google.script.run` を Promise ラップした `GasService` クラスによる `async/await` 統一制御。
 
 ---
 
-## 2. ディレクトリ構造とコンポーネント責務
-
-src/
-├── Code.gs             # バックエンドAPI: データ入出力、UserProperties、HTMLテンプレート供給
-├── Sidebar.html        # メインUI構造: サイドバー、動的コンテナ、Template要素、静的data-*属性
-├── CSS.html            # デザイントークン、レイアウト、コンポーネントスタイル
-├── Model.html          # 状態ストア(AppState)、定数定義(GLOBAL_CONFIG)、通信層(GasService/API)
-├── Component.html      # DOMユーティリティ(DOM)、汎用動的パーツ生成・描画(NewDOM)
-├── View.html           # 静的初期化(UIInit)、フェーズ連動ルールエンジン(UIPhase)、State同期(UIStateUpdater)
-├── Method.html         # 純粋ビジネスロジック(DataUtils, FileValidator, DataExtractor, PxrfValidator, DataManager, PreviewManager, CalcProcessor)
-├── Controller.html     # 非同期処理の直列化(CoreCtrl)、ユースケース制御・Stateリセットオーケストレーション(Tab1Ctrl, Tab2Ctrl)
-├── Event.html          # イベントルーティング、高階関数生成バインダ、リアクティブバリデーション(Evt)
-└── Report.html         # レポート出力用テンプレート (別タブ展開用)
+## 2. ディレクトリ構造・ファイル一覧
+- `Code.gs`: バックエンドAPI (データ入出力/UserProperties管理/HTMLテンプレート供給)
+- `Sidebar.html`: メインUI構造 (静的actionのハードコード/可読性重視のクリーンなマークアップ)
+- `CSS.html`: スタイル・デザイントークン・コンポーネント定義
+- `Model.html`: 階層化Stateストア(`AppState`), リセット基盤, API通信(`GasService`), アプリ定数
+- `Component.html`: 汎用DOM操作(`DOM`), 汎用動的パーツ生成(`NewDOM`, フェイルセーフ内包)
+- `View.html`: UIルール適用エンジン(`UIPhase`), 動的State同期・レンダリング(`UIStateUpdater`)
+- `Method.html`: 純粋ビジネスロジック (DOM/API非依存の計算・データ加工・バリデーション)
+- `Controller.html`: 非同期フロー制御, ユースケース実行, Stateリセット(ダウングレード)のオーケストレーション
+- `Event.html`: イベント委譲ルーター, 高階関数によるバインダ生成, リアクティブバリデーション
+- `Report.html`: レポート出力用テンプレート (Blob URL 別タブ展開用)
 
 ---
 
-## 3. 状態遷移とリセット仕様 (State Reset Map)
-
-アプリケーションの進行フェーズ (`TAB1_PHASE`, `TAB2_PHASE`) に連動し、Controller から明示的にリセットを実行。
-
-[Tab 1]
-  INIT(1) ──> READY(2) ──> LOAD(3) ──> INVALID(4) ──> VALID(5) ──> EXTRACT(6) ──> OUTPUT(7)
-                                          │
-                                          └── [再検証/編集検知] ──> State.reset(['Tab1ST.exac'])
-
-[Tab 2]
-  INIT(1) ──> LOADED(2) ──> FILTERED(3) ──> MAPPED(4) ──> PREVIEWED(5)
-                  │               │               │
-                  ├─ [再ロード]    ├─ [Filter確定]  └─ [Preview作成]
-                  │   Reset All   │   Reset Symbol/   Reset Report
-                  │               │   Preview/Report
-                  └───────────────┴───────────────────────────────> State.reset([...])
+## 3. コア・コントラクト（主要モジュールの責務と制約）
+- **[State Store] `AppState` (Model)**: 状態の唯一の源泉。更新は必ず `.set()` を経由し、フェーズ後退等による初期化は `.reset()` を明示的に呼び出す。
+- **[UI Rules] `UIPhase` (View)**: フェーズ遷移に伴う UI (活性/非活性/表示) の更新ルールは、命令的な `if` 制御を避け、定数マップ定義に集約する。
+- **[UI Renderer] `UIStateUpdater` (View)**: DOM の直接操作は禁止。State を購読 (`subscribe`) し、`NewDOM` を介して安全に描画・クリーンアップを実行する。
+- **[Logic] `Method.*` (Method)**: 状態を持たない純粋関数・クラス群。DOM操作や API通信を一切含まず、引数から計算結果を返す役割に徹する。
+- **[Event Router] `Evt` (Event)**: イベントの発火元。複雑なビジネスロジックは持たず、高階関数や属性ルーティングを用いて `Controller` へ処理を委譲する。
 
 ---
 
-## 4. コンポーネント間依存関係 (Data Flow)
-
-[User Action] ──> Event.html (Evt) ──> Controller.html (Ctrl)
-                                             │
-                                     (API Call / Method Logic)
-                                             │
-                                             ▼
-                                     Model.html (AppState.set / reset)
-                                             │
-                                   (Pub/Sub Notification)
-                                             │
-                                             ▼
-                                     View.html (UIStateUpdater / UIPhase)
-                                             │
-                                             ▼
-                                     Component.html (NewDOM) ──> [DOM Render]
+## 4. アーキテクチャ・パイプライン（単一データ経路）
+`[User Action (Sidebar)] -> (data-action) -> [Evt (Event)] -> (Route) -> [Ctrl (Controller)] <-> (Logic/Fetch) <-> [Method / API] -> (Mutate) -> [AppState.set/reset (Model)] -> (Subscribe) -> [UIStateUpdater/UIPhase (View)] -> (Render) -> [NewDOM (Component)]`
 
 ---
 
-## 5. 主要クラス・オブジェクト一覧
+## 5. フェーズ・ステートマシン（状態遷移フロー）
+**[Tab 1: データ抽出]**
+`INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
+※ `INVALID` または編集検知時、`State.reset(['Tab1ST.exac'])` を実行し、抽出関連 State を初期化してダウングレード。
 
-### Model.html
-- `GLOBAL_CONFIG`: アプリケーション定数（シート名、フィールド定義、インデックスマップ）
-- `Tab1UI` / `Tab2UI`: DOM ID マッピング定数
-- `TAB1_PHASE` / `TAB2_PHASE`: アプリケーション状態フェーズ定数
-- `AppState` (instance: `State`): 状態管理クラス (`get`, `set`, `subscribe`, `reset`)
-- `GasService` (alias: `API`): `google.script.run` Promise ラッパークラス
-
-### Component.html
-- `DOM`: 低レイヤー DOM 操作ユーティリティ (`get`, `setDOM`, `toggle`, `open`, `setDisabled`, `setAttr`)
-- `NewDOM`: コンポーネントレンダリングクラス (`status`, `confirm`, `selectors`, `symbolRows`, `statsTable`, `multiSelectDropdown`, `inputs`)
-
-### View.html
-- `UIInit`: 静的初期要素の生成（モード選択、フィールド生成）
-- `UIPhase`: ルール辞書ベースのフェーズ UI 制御クラス
-- `UIStateUpdater` (instance: `UIState`): State 監視・動的コンテナレンダリング・空データクリーンアップ
-
-### Method.html
-- `DataUtils`: 配列再レイアウト、セレクタ検証、統計データ整形
-- `FileValidator`: ファイルリスト検証・エラー判定
-- `DataExtractor`: 抽出データ突合・フォーマット加工
-- `PxrfValidator`: 重複データ判定・マージ
-- `DataManager`: PXRF/WDXRF データ読込・結合・フィルタリング
-- `PreviewManager`: プレビュー用データ構築・計算
-- `CalcProcessor`: 単回帰分析・相関計算 (`simple-statistics` 依存)
-
-### Controller.html
-- `CoreCtrl`: 非同期排他制御（Async Lock）ラッパー
-- `Tab1Ctrl`: Tab1 ユースケース実行（ファイル読込、検証、抽出、格納）
-- `Tab2Ctrl`: Tab2 ユースケース実行（データ読込、確定、シンボル適用、プレビュー作成、レポート開く）
-
-### Event.html
-- `Evt`: イベント委譲ルーター、高階関数バインダ (`#bindMulti`, `#bindAll`)、リアクティブバリデーション
+**[Tab 2: グラフ作成]**
+`INIT(1) -> LOADED(2) -> FILTERED(3) -> MAPPED(4) -> PREVIEWED(5)`
+※ データロード時: 全 Tab2 関連 State をリセット。
+※ Filter (Dataset) 確定時: `State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report'])` を実行し、後続フェーズを初期化。
