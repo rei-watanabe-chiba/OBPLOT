@@ -1,11 +1,11 @@
 <!-- View.html -->
 <script>
-  // --- 動的DOM構築クラス ---
+  // --- 起動時DOM構築 ---
   class UIInit {
     static buildTab1() {
-      // モード選択 (Select)
+      // --- Tab1 モード選択---
       const modeBox = DOM.get(Tab1UI.configModeBox);
-      if (modeBox) {
+      if (modeBox && !modeBox.hasChildNodes()) {
         const select = document.createElement("select");
         select.setAttribute('data-bind', "Tab1ST.config.mode");
         GLOBAL_CONFIG.configModes.forEach(({ label, value, disabled, hidden }) => {
@@ -17,9 +17,9 @@
         });
         modeBox.appendChild(select);
       }
-      // 計測属性 (Inputs)
+      // --- Tab1 抽出属性---
       const exacBox = DOM.get(Tab1UI.exacBox);
-      if (exacBox) {
+      if (exacBox && !exacBox.hasChildNodes()) {
         GLOBAL_CONFIG.exacFields.forEach(f => {
           const clone = DOM.get("inputTemplate").content.cloneNode(true);
           clone.querySelector(".field-label").firstChild.nodeValue = `${f.label} `;
@@ -32,149 +32,131 @@
     }
 
     static buildTab2() {
-      // シンボル分類軸 (Select)
+      // --- Tab2 シンボル属性---
       const axisBox = DOM.get(Tab2UI.symbolAxisBox);
-      if (axisBox) {
+      if (axisBox && !axisBox.hasChildNodes()) {
         const select = document.createElement("select");
         select.id = Tab2UI.symbolAxis;
         select.setAttribute('data-bind', "Tab2ST.symbol.baseKey");
         GLOBAL_CONFIG.symbolAxes.forEach(a => select.add(new Option(a.label, a.value)));
         axisBox.appendChild(select);
       }
-    }
-
-    // シンボル設定群
-    static buildSymbols() {
-      const baseData = State.get("Tab2ST.basePXRF") ?? [];
-      const baseKey = State.get("Tab2ST.symbol.baseKey");
-      const values = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
-      NewDOM.symbolRows(values, Tab2UI.symbolBox, 5, "Tab2.updateSymbol");
-    }
-
-    static buildPreview() {
-      // プレビュー: モード選択 (全選択で初期化)
-      const previewMode = DOM.get(Tab2UI.previewModeBox);
-      if (previewMode) {
-        const opts = GLOBAL_CONFIG.optionalElements;
-        NewDOM.multiSelectDropdown(opts, Tab2UI.previewModeBox, "Tab2.togglePreviewMode", "Tab2.toggleAllPreviewMode");
-        State.set("Tab2ST.modeMap", [...opts]);
-      }
-
-      // プレビュー: 補正方法
+      // --- Tab2 補正方法--
       const previewCorrection = DOM.get(Tab2UI.previewCorrectionBox);
-      if (previewCorrection) {
+      if (previewCorrection && !previewCorrection.hasChildNodes()) {
         const select = document.createElement("select");
         select.setAttribute('data-bind', "Tab2ST.preview.correction");
         select.add(new Option("補正なし", "rawdata"));
         select.add(new Option("新規検量線", "new"));
         previewCorrection.replaceChildren(select);
-        State.set("Tab2ST.preview.correction", "rawdata");
       }
-
-      // プレビュー: プレビュー値
+      // --- Tab2 プレビュー対象---
       const previewValue = DOM.get(Tab2UI.previewValueBox);
-      if (previewValue) {
+      if (previewValue && !previewValue.hasChildNodes()) {
         const select = document.createElement("select");
         select.setAttribute('data-bind', "Tab2ST.preview.value");
         GLOBAL_CONFIG.valueLogic.forEach(v => select.add(new Option(v, v)));
         previewValue.replaceChildren(select);
-        State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
       }
     }
 
     static build() {
       this.buildTab1();
       this.buildTab2();
-      this.buildPreview();
     }
   }
 
   // --- フェーズ連動UI制御 ---
   class UIPhase {
-    static #applyRules(rules) {
-      Object.entries(rules).forEach(([id, { show, disabled, active, text, className }]) => {
-        if (show !== undefined) DOM.toggle(id, show);
-        if (disabled !== undefined) DOM.setDisabled(id, disabled);
-        if (!id.includes('configSection') && active !== undefined) DOM.open(id, active);
-        if (text !== undefined) DOM.setDOM(id, text);
-        if (className !== undefined && DOM.get(id)) DOM.get(id).className = className;
+    // ルール定義
+    static #TAB1_RULES = {
+      [Tab1UI.fileLoadBtn]: p => ({ text: p <= TAB1_PHASE.READY ? "データを取得" : "データを再取得", disabled: false }),
+      [Tab1UI.fileMakeBtn]: p => ({ disabled: p < TAB1_PHASE.READY }),
+      [Tab1UI.fileValdBtn]: p => ({ 
+        disabled: p < TAB1_PHASE.INVALID || State.get("Tab1ST.file.isMapError").some(Boolean), 
+        className: p === TAB1_PHASE.INVALID ? "" : "outline" 
+      }),
+      [Tab1UI.fileArea]: p => ({ show: p >= TAB1_PHASE.LOAD }),
+      [Tab1UI.fileBtnBox]: p => ({ show: p >= TAB1_PHASE.LOAD }),
+      [Tab1UI.exacArea]: p => ({ show: p >= TAB1_PHASE.VALID }),
+      [Tab1UI.exacBar]: p => ({ show: p >= TAB1_PHASE.VALID }),
+      [Tab1UI.exacBtn]: p => ({ disabled: p < TAB1_PHASE.VALID || State.get("Tab1ST.exac.isMapError").some(Boolean) }),
+      [Tab1UI.exacPushBtn]: p => ({ show: p >= TAB1_PHASE.EXTRACT, disabled: p < TAB1_PHASE.EXTRACT }),
+      [Tab1UI.configSection]: p => ({ active: p === TAB1_PHASE.INIT, disabled: false }),
+      [Tab1UI.fileSection]: p => ({ active: p >= TAB1_PHASE.READY && p < TAB1_PHASE.VALID, disabled: p < TAB1_PHASE.READY }),
+      [Tab1UI.exacSection]: p => ({ active: p >= TAB1_PHASE.VALID && p < TAB1_PHASE.OUTPUT, disabled: p < TAB1_PHASE.VALID })
+    };
+    static #TAB2_RULES = {
+      [Tab2UI.datasetLoadBtn]: () => ({ disabled: false }),
+      [Tab2UI.datasetfilterBtn]: p => ({ disabled: p < TAB2_PHASE.LOADED }),
+      [Tab2UI.datasetArea]: p => ({ show: p >= TAB2_PHASE.LOADED }),
+      [Tab2UI.datasetSection]: p => ({ active: p < TAB2_PHASE.FILTERED, disabled: false }),
+      [Tab2UI.symbolAxis]: p => ({ disabled: p < TAB2_PHASE.FILTERED }),
+      [Tab2UI.symbolBtn]: p => ({ disabled: p < TAB2_PHASE.FILTERED }),
+      [Tab2UI.symbolArea]: p => ({ show: p >= TAB2_PHASE.FILTERED }),
+      [Tab2UI.symbolSection]: p => ({ active: p >= TAB2_PHASE.FILTERED && p < TAB2_PHASE.MAPPED, disabled: p < TAB2_PHASE.FILTERED }),
+      [Tab2UI.previewMakeBtn]: p => ({ disabled: p < TAB2_PHASE.MAPPED }),
+      [Tab2UI.previewSection]: p => ({ active: p >= TAB2_PHASE.MAPPED, disabled: p < TAB2_PHASE.MAPPED }),
+      [Tab2UI.reppBtn]: p => ({ disabled: p < TAB2_PHASE.PREVIEWED }),
+      [Tab2UI.reportSection]: p => ({ active: p >= TAB2_PHASE.PREVIEWED, disabled: p < TAB2_PHASE.PREVIEWED })
+    };
+    // 一括適用
+    static #apply(rulesObj, phase) {
+      Object.entries(rulesObj).forEach(([id, ruleFn]) => {
+        const rule = ruleFn(phase);
+        if (rule.show !== undefined) DOM.toggle(id, rule.show);
+        if (rule.disabled !== undefined) DOM.setDisabled(id, rule.disabled);
+        if (!id.includes('configSection') && rule.active !== undefined) DOM.open(id, rule.active);
+        if (rule.text !== undefined) DOM.setDOM(id, rule.text);
+        if (rule.className !== undefined && DOM.get(id)) DOM.get(id).className = rule.className;
         if (id.includes('Section')) {
-          DOM.setAttr(id, "data-state", active ? "active" : null);
-          DOM.setAttr(id, "data-type", disabled ? "disabled" : null);
+          DOM.setAttr(id, "data-state", rule.active ? "active" : null);
+          DOM.setAttr(id, "data-type", rule.disabled ? "disabled" : null);
         }
       });
     }
-
-    static updateTab1PhaseUI(phase) {
-      const p = TAB1_PHASE;
-      const fileErr = State.get("Tab1ST.file.isMapError").some(Boolean);
-      const exacErr = State.get("Tab1ST.exac.isMapError").some(Boolean);
-      const rules = {
-        [Tab1UI.fileLoadBtn]:   { text: phase <= p.READY ? "データを取得" : "データを再取得", disabled: false },
-        [Tab1UI.fileMakeBtn]:   { disabled: phase < p.READY },
-        [Tab1UI.fileValdBtn]:   { disabled: phase < p.INVALID || fileErr, className: phase === p.INVALID ? "" : "outline" },
-        [Tab1UI.fileArea]:      { show: phase >= p.LOAD },
-        [Tab1UI.fileBtnBox]:    { show: phase >= p.LOAD },
-        [Tab1UI.exacArea]:      { show: phase >= p.VALID },
-        [Tab1UI.exacBar]:       { show: phase >= p.VALID },
-        [Tab1UI.exacBtn]:       { disabled: phase < p.VALID || exacErr },
-        [Tab1UI.exacPushBtn]:   { show: phase >= p.EXTRACT, disabled: phase < p.EXTRACT },
-        [Tab1UI.configSection]: { active: phase === p.INIT, disabled: false },
-        [Tab1UI.fileSection]:   { active: phase >= p.READY && phase < p.VALID, disabled: phase < p.READY },
-        [Tab1UI.exacSection]:   { active: phase >= p.VALID && phase < p.OUTPUT, disabled: phase < p.VALID }
-      };
-      this.#applyRules(rules);
-      if (phase >= p.VALID && phase < p.EXTRACT) State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
-      if (phase >= p.EXTRACT) State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
+    static updateTab1PhaseUI(p) {
+      this.#apply(this.#TAB1_RULES, p);
+      if (p >= TAB1_PHASE.VALID && p < TAB1_PHASE.EXTRACT) State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
+      if (p >= TAB1_PHASE.EXTRACT) State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
     }
-
-    static updateTab2PhaseUI(phase) {
-        const p = TAB2_PHASE;
-        const rules = {
-          [Tab2UI.datasetLoadBtn]:   { disabled: false },
-          [Tab2UI.datasetfilterBtn]: { disabled: phase < p.LOADED },
-          [Tab2UI.datasetArea]:      { show: phase >= p.LOADED },
-          [Tab2UI.datasetSection]:   { active: phase < p.FILTERED, disabled: false },
-          [Tab2UI.symbolAxis]:       { disabled: phase < p.FILTERED },
-          [Tab2UI.symbolBtn]:        { disabled: phase < p.FILTERED },
-          [Tab2UI.symbolArea]:       { show: phase >= p.FILTERED },
-          [Tab2UI.symbolSection]:    { active: phase >= p.FILTERED && phase < p.MAPPED, disabled: phase < p.FILTERED },
-          [Tab2UI.previewMakeBtn]:   { disabled: phase < p.MAPPED },
-          [Tab2UI.previewSection]:   { active: phase >= p.MAPPED, disabled: phase < p.MAPPED },
-          [Tab2UI.reppBtn]:          { disabled: phase < p.PREVIEWED },
-          [Tab2UI.reportSection]:    { active: phase >= p.PREVIEWED, disabled: phase < p.PREVIEWED }
-        };
-        this.#applyRules(rules);
-      }
+    static updateTab2PhaseUI(p) {
+      this.#apply(this.#TAB2_RULES, p);
     }
+  }
 
-  // --- UI更新 - state同期 ---
+  // --- state-UI 同期 ---
   class UIStateUpdater {
     constructor() {
       const stateMap = {
+        // 表示UI
         "GLB.isLocked": v => DOM.setDisabled(Tab1UI.tabSet, v),
         "Tab1ST.config.status": v => NewDOM.status(Tab1UI.configBar, v),
         "Tab1ST.file.status": v => NewDOM.status(Tab1UI.fileBar, v),
         "Tab1ST.exac.status": v => NewDOM.status(Tab1UI.exacBar, v),
-        "Tab2ST.datasetload.status": v => NewDOM.status(Tab2UI.datasetloadBar, v),
+        "Tab2ST.dataset.status": v => NewDOM.status(Tab2UI.datasetloadBar, v),
         "Tab2ST.symbol.status": v => NewDOM.status(Tab2UI.symbolBar, v),
-        "Tab2ST.repoStatus": v => NewDOM.status(Tab2UI.repoBar, v),
+        "Tab2ST.preview.status": v => NewDOM.status(Tab2UI.previewBar, v),
+        "Tab2ST.report.status": v => NewDOM.status(Tab2UI.repoBar, v),
         "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
         "Tab2ST.phase": v => UIPhase.updateTab2PhaseUI(v),
+        // 動的UI
         "Tab1ST.file.data": data => {
           if (data?.[0]) NewDOM.selectors(data[0], Tab1UI.fileBox, GLOBAL_CONFIG.fileFields, "Tab1.updateFileMap");
+          else DOM.get(Tab1UI.fileBox)?.replaceChildren();
         },
-        "Tab2ST.availableDatasets": datasets => {
+        "Tab2ST.dataset.availableDatasets": datasets => {
           NewDOM.multiSelectDropdown(datasets, Tab2UI.datasetBox, "Tab2.toggleDataset", "Tab2.toggleAllDataset");
         },
-        "Tab2ST.filter.datasets": vals => {
+        "Tab2ST.dataset.filter": vals => {
           NewDOM.updateMultiSelectSummary(Tab2UI.datasetBox, vals);
         },
-        "Tab2ST.modeMap": vals => {
+        "Tab2ST.preview.modeMap": vals => {
           NewDOM.updateMultiSelectSummary(Tab2UI.previewModeBox, vals);
         },
-        "Tab2ST.basePXRF": () => UIInit.buildSymbols(),
-        "Tab2ST.symbol.baseKey": () => UIInit.buildSymbols(),
+        "Tab2ST.dataset.basePXRF": () => this.#renderSymbols(),
+        "Tab2ST.symbol.baseKey": () => this.#renderSymbols(),
+        
         "Tab1ST.file.isMapError": flags => {
           NewDOM.inputs(Tab1UI.fileBox, flags);
           if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD);
@@ -186,6 +168,17 @@
         "Tab2ST.preview.statsData": stats => NewDOM.statsTable(stats)
       };
       Object.entries(stateMap).forEach(([path, cb]) => State.subscribe(path, cb));
+    }
+    // シンボル設定動的リセット
+    #renderSymbols() {
+      const baseData = State.get("Tab2ST.dataset.basePXRF");
+      const baseKey = State.get("Tab2ST.symbol.baseKey");
+      if (!baseData || !baseData.length) {
+        DOM.get(Tab2UI.symbolBox)?.replaceChildren();
+        return;
+      }
+      const values = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
+      NewDOM.symbolRows(values, Tab2UI.symbolBox, "Tab2.updateSymbol");
     }
   }
 

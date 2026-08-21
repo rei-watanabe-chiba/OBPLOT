@@ -1,6 +1,5 @@
 <!-- Controller.html -->
 <script>
-  // --- 共通 ---
   class CoreCtrl {
     // --- 共通：非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
@@ -19,15 +18,19 @@
   }
 
   // --- Tab1 ---
-  class Tab1Ctrl{
+  class Tab1Ctrl {
     // --- Tab1 Fileシート取得 ---
     static async loadFile() {
       if (!(await NewDOM.confirm("確認", State.get("Tab1ST.file.data") ? "内部データをリセットしますか？" : "Fileシートを読み込みますか？", Tab1UI.fileBar))) return;
       await CoreCtrl.withAsyncLock("Tab1ST.file.status", async () => {
         const { data, message } = await API.fetchData(GLOBAL_CONFIG.fileSheetName, 5);
+        // リセット処理
+        State.reset(['Tab1ST.exac']); 
         State.set({
-          "Tab1ST.file.data": data, "Tab1ST.file.map": Object.fromEntries(GLOBAL_CONFIG.fileFields.map(f => [f.key, ""])),
-          "Tab1ST.file.isMapError": [true, true, true, false, false], "Tab1ST.file.cachedStatus": ["success", message],
+          "Tab1ST.file.data": data, 
+          "Tab1ST.file.map": Object.fromEntries(GLOBAL_CONFIG.fileFields.map(f => [f.key, ""])),
+          "Tab1ST.file.isMapError": [true, true, true, false, false], 
+          "Tab1ST.file.cachedStatus": ["success", message],
           "Tab1ST.phase": TAB1_PHASE.LOAD
         });
         Evt.Tab1.validateFileMap();
@@ -45,6 +48,8 @@
         API.clearUserProperty(GLOBAL_CONFIG.propFileEdited)
       ]);
       const statusRes = isAlert ? ["alert", "出力完了, errorあり"] : "出力完了, errorなし";
+      // リセット処理
+      if (isAlert) State.reset(['Tab1ST.exac']);
       State.set({
         "Tab1ST.file.cachedStatus": Array.isArray(statusRes) ? statusRes : ["success", statusRes],
         "Tab1ST.phase": isAlert ? TAB1_PHASE.INVALID : TAB1_PHASE.VALID
@@ -108,12 +113,11 @@
     }
   }
 
-  // --- Tab2 ---
   class Tab2Ctrl {
     // --- Tab2 データ読込 ---
     static async loadData() {
-      await CoreCtrl.withAsyncLock("Tab2ST.datasetload.status", async () => {
-        State.set("Tab2ST.datasetload.status", ["loading", "処理中..."]);
+      await CoreCtrl.withAsyncLock("Tab2ST.dataset.status", async () => {
+        State.set("Tab2ST.dataset.status", ["loading", "処理中..."]);
         const [pxrfRes, wdxrfRes, corrRes] = await Promise.all([
           API.fetchData(GLOBAL_CONFIG.pxrfSheetName), 
           API.fetchData(GLOBAL_CONFIG.wdxrfSheetName), 
@@ -121,68 +125,71 @@
         ]);
         if (!pxrfRes.data || pxrfRes.data.length <= 1) throw new Error("PXRFデータ不足");
         if (!wdxrfRes.data || wdxrfRes.data.length <= 1) throw new Error("WDXRFデータ不足");
+        // リセット処理
+        State.reset(['Tab2ST.dataset', 'Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report']);
         const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataManager.load(pxrfRes.data, wdxrfRes.data);
         State.set({ 
-          "Tab2ST.rawData": { correction: corrRes.data, mergedPXRF, wdxrfObjs }, 
-          "Tab2ST.availableDatasets": datasets,
-          "Tab2ST.filter.datasets": datasets, 
+          "Tab2ST.dataset.rawData": { correction: corrRes.data, mergedPXRF, wdxrfObjs }, 
+          "Tab2ST.dataset.availableDatasets": datasets,
+          "Tab2ST.dataset.filter": datasets, 
           "Tab2ST.phase": TAB2_PHASE.LOADED 
         });
+        // プレビューオプションを初期化（UIInitから移動）
+        NewDOM.multiSelectDropdown(GLOBAL_CONFIG.optionalElements, Tab2UI.previewModeBox, "Tab2.togglePreviewMode", "Tab2.toggleAllPreviewMode");
+        State.set("Tab2ST.preview.modeMap", [...GLOBAL_CONFIG.optionalElements]);
         return `読込完了: dataset ${datasets.length}件`;
       });
     }
 
-    // --- Tab2 データ確定 (フィルター) ---
+    // --- Tab2 データ確定 ---
     static async filterData() {
-      await CoreCtrl.withAsyncLock("Tab2ST.datasetload.status", async () => {
-        const checkedVals = State.get("Tab2ST.filter.datasets") || [];
+      await CoreCtrl.withAsyncLock("Tab2ST.dataset.status", async () => {
+        const checkedVals = State.get("Tab2ST.dataset.filter") || [];
         if (!checkedVals.length) throw new Error("Dataset未選択");
-        const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.rawData.mergedPXRF", "Tab2ST.rawData.wdxrfObjs"]);
+        // リセット処理
+        State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report']);
+        const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.dataset.rawData.mergedPXRF", "Tab2ST.dataset.rawData.wdxrfObjs"]);
         const { basePXRF, baseWDXRF } = Mtd.Tab2.DataManager.filter(mergedPXRF, wdxrfObjs, checkedVals);
-        
-        // 修正: "Tab2ST.modeMap": {} を削除し、プレビューモードの選択状態を保持する
         State.set({
-          "Tab2ST.basePXRF": basePXRF, "Tab2ST.baseWDXRF": baseWDXRF,
-          "Tab2ST.phase": TAB2_PHASE.FILTERED, "Tab2ST.symbol.mapping": {}, "Tab2ST.correctionLogic": {}
+          "Tab2ST.dataset.basePXRF": basePXRF, 
+          "Tab2ST.dataset.baseWDXRF": baseWDXRF,
+          "Tab2ST.phase": TAB2_PHASE.FILTERED
         });
-        return "データ設定を更新しました";
+        return "データ更新";
       });
     }
 
-    // --- Tab2 シンボルマッピング確定 ---
+    // --- Tab2 シンボル確定 ---
     static async setSymbolMap() {
       await CoreCtrl.withAsyncLock("Tab2ST.symbol.status", async () => {
-        // State を正として取得、バリデーション追加
         const mapping = State.get("Tab2ST.symbol.mapping");
         if (!mapping || Object.keys(mapping).length === 0) throw new Error("シンボルが設定されていません");
         State.set("Tab2ST.phase", TAB2_PHASE.MAPPED);
-        return "シンボル設定を確定しました";
+        return "シンボル確定";
       });
     }
 
-    // --- Tab2 プレビュー生成 ---
+    // --- Tab2 プレビュー作成 ---
     static async makePreview() {
-      await CoreCtrl.withAsyncLock("Tab2ST.previewBar", async () => {
+      await CoreCtrl.withAsyncLock("Tab2ST.preview.status", async () => {
         const [modeMap, valueLogic, basePXRF, baseWDXRF] = State.get([
-          "Tab2ST.modeMap", "Tab2ST.preview.value", "Tab2ST.basePXRF", "Tab2ST.baseWDXRF"
+          "Tab2ST.preview.modeMap", "Tab2ST.preview.value", "Tab2ST.dataset.basePXRF", "Tab2ST.dataset.baseWDXRF"
         ]);
-
         const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic);
         if (!previewData.length) throw new Error("対象データなし");
-
         const xArr = previewData.map(d => d.x);
         const yArr = previewData.map(d => d.y);
         const errArr = previewData.map(d => d.err).filter(v => v != null && !isNaN(v));
         const stats = Mtd.Tab2.CalcProcessor.calcRegression(xArr, yArr, errArr);
-
+        // リセット処理
+        State.reset(['Tab2ST.report']);
         State.set({
-          "Tab2ST.previewData": previewData,
-          "Tab2ST.correctionLogic": stats,
+          "Tab2ST.preview.previewData": previewData,
+          "Tab2ST.preview.correctionLogic": stats,
           "Tab2ST.preview.statsData": stats,
           "Tab2ST.phase": TAB2_PHASE.PREVIEWED
         });
-
-        return "プレビューを作成しました";
+        return "プレビュー更新";
       });
     }
     

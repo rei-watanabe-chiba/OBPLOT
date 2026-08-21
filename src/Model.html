@@ -14,7 +14,7 @@
     validModes: ["mudrock", "obsidian"],
     propFileEdited: "isFileListEdited",
     optionalElements: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
-    valueLogic: ["Mn", "Fe", "Mn * 100 / Fe", "Rb / Sr", "K", "log10(Fe/K)"],
+    valueLogic: ["K", "Ca", "Ti","Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb", "Mn * 100 / Fe", "log10(Fe/K)"],
     fileFields: [
       { key: "file", label: "file *必須", required: true },
       { key: "mode", label: "mode *必須", required: true },
@@ -74,30 +74,30 @@
   }
 
   const Tab2UI = {
-  tabSet: "tab2Fieldset",
-  datasetSection: "datasetSection",
-  datasetLoadBtn: "datasetLoadBtn",
-  datasetfilterBtn: "datasetFilterBtn",
-  datasetloadBar: "datasetLoadBar",
-  datasetArea: "datasetArea",
-  datasetBox: "datasetBox",
-  symbolSection: "symbolSection",
-  symbolArea: "symbolArea",
-  symbolAxisBox: "symbolAxisBox",
-  symbolBox: "symbolBox",
-  symbolBtn: "symbolBtn",
-  symbolBar: "symbolStatusBar", 
-  previewSection: "previewSection",
-  previewModeBox: "previewModeBox",
-  previewCorrectionBox: "previewCorrectionBox",
-  previewValueBox: "previewValueBox",
-  previewMakeBtn: "previewMakeBtn",
-  previewStatsTable: "previewStatsTable",
-  previewBar: "previewBar",
-  reportSection: "reportSection",
-  reppBtn: "reportOpenBtn",
-  repoBar: "reportStatusBar"
-};
+    tabSet: "tab2Fieldset",
+    datasetSection: "datasetSection",
+    datasetLoadBtn: "datasetLoadBtn",
+    datasetfilterBtn: "datasetFilterBtn",
+    datasetloadBar: "datasetLoadBar",
+    datasetArea: "datasetArea",
+    datasetBox: "datasetBox",
+    symbolSection: "symbolSection",
+    symbolArea: "symbolArea",
+    symbolAxisBox: "symbolAxisBox",
+    symbolBox: "symbolBox",
+    symbolBtn: "symbolBtn",
+    symbolBar: "symbolStatusBar", 
+    previewSection: "previewSection",
+    previewModeBox: "previewModeBox",
+    previewCorrectionBox: "previewCorrectionBox",
+    previewValueBox: "previewValueBox",
+    previewMakeBtn: "previewMakeBtn",
+    previewStatsTable: "previewStatsTable",
+    previewBar: "previewBar",
+    reportSection: "reportSection",
+    reppBtn: "reportOpenBtn",
+    repoBar: "reportStatusBar"
+  };
 
   // --- フェーズ定義 ---
   const TAB1_PHASE = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
@@ -106,9 +106,12 @@
   // --- 状態管理クラス定義 ---
   class AppState {
     #state; 
+    #initialState;
     #listeners; 
+    
     constructor() {
-      this.#state = {
+      // 初期状態の定義（キャッシュ用とステート用のベース）
+      const initialStateDef = {
         GLB: { activeTab: "tab1", isLocked: false },
         Tab1ST: {
           phase: TAB1_PHASE.INIT,
@@ -118,23 +121,47 @@
         },
         Tab2ST: {
           phase: TAB2_PHASE.INIT,
-          rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null },
-          basePXRF: null, baseWDXRF: null,
-          availableDatasets: [], 
-          filter: { datasets: [] }, symbol: { baseKey: "dataset", mapping: {} },
-          modeMap: [], 
-          preview: { value: "", correction: "rawdata", statsData: null }, correctionLogic: {}, report: { values: [], corrections: [] },
-          repoStatus: [],
-          selectData: null, previewData: null
+          dataset: {
+            rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null },
+            availableDatasets: [],
+            filter: [],
+            basePXRF: null, 
+            baseWDXRF: null,
+            status: []
+          },
+          symbol: { 
+            baseKey: "dataset", 
+            mapping: {}, 
+            status: [] 
+          },
+          preview: {
+            modeMap: [], 
+            value: "", 
+            correction: "rawdata",
+            correctionLogic: {}, 
+            previewData: null,
+            statsData: null,
+            status: []
+          },
+          report: { 
+            values: [], 
+            corrections: [],
+            status: []
+          }
         }
       };
+      
+      this.#initialState = JSON.parse(JSON.stringify(initialStateDef));
+      this.#state = JSON.parse(JSON.stringify(initialStateDef));
       this.#listeners = {};
     }
+    
     // state取得
     get(paths) {
       const resolve = p => (Array.isArray(p) ? p : p.split('.')).reduce((o, k) => o?.[k], this.#state);
       return Array.isArray(paths) ? paths.map(resolve) : resolve(paths);
     }
+    
     // state更新
     set(updates, value) {
       if (typeof updates === 'object' && !Array.isArray(updates)) {
@@ -148,10 +175,24 @@
         this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(value));
       }
     }
+    
     // state監視登録
     subscribe(path, callback) {
       const key = Array.isArray(path) ? path.join('.') : path;
       (this.#listeners[key] ??= []).push(callback);
+    }
+
+    // セクションの初期化
+    reset(paths) {
+      const pathArray = Array.isArray(paths) ? paths : [paths];
+      const updates = {};
+      pathArray.forEach(path => {
+        const keys = path.split('.');
+        const initialVal = keys.reduce((o, k) => o?.[k], this.#initialState);
+        // JSON.parseで確実に発火
+        updates[path] = initialVal !== undefined ? JSON.parse(JSON.stringify(initialVal)) : null;
+      });
+      this.set(updates);
     }
   }
 

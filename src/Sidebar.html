@@ -21,7 +21,6 @@
           <details id="configSection" data-state="active" open>
             <summary>設定</summary>
             <div id="configArea">
-              <!-- 動的生成コンテナ -->
               <div id="configModeBox"></div>
             </div>
           </details>
@@ -35,7 +34,6 @@
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
             <div id="fileArea" style="display: none;">
-              <!-- 動的生成コンテナ -->
               <div id="fileBox"></div>
             </div>
             <div id="fileBtnArea" class="btn-container" style="display: none;">
@@ -53,7 +51,6 @@
               <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
             </div>
             <div id="exacArea" style="display: none;">
-              <!-- 動的生成コンテナ -->
               <div id="exacBox"></div>
             </div>
             <div id="exacBtnArea" class="btn-container">
@@ -76,7 +73,6 @@
             </div>
             <div id="datasetArea" style="display: none;">
               <label>dataset選択</label>
-              <!-- 動的生成コンテナ -->
               <div id="datasetBox" class="checkbox-container"></div>
             </div>
           </details>
@@ -88,11 +84,9 @@
             <div class="btn-container">
               <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
             </div>
-            <!-- 動的生成コンテナ -->
             <div id="symbolAxisBox"></div>
             <div id="symbolArea" style="display: none;">
               <label style="margin-top: 12px;">シンボル設定</label>
-              <!-- 動的生成コンテナ -->
               <div id="symbolBox"></div>
             </div>
           </details>
@@ -102,19 +96,15 @@
           <details id="previewSection" data-type="disabled">
             <summary>補正＆プレビュー</summary>
             <div id="previewArea">
-              <label>オプション:Obsidianモード</label>
-              <!-- 動的生成コンテナ -->
+              <label>Obsidianモード計測元素</label>
               <div id="previewModeBox"></div>
               <label style="margin-top: 12px;">補正方法</label>
-              <!-- 動的生成コンテナ -->
               <div id="previewCorrectionBox"></div>
               <label style="margin-top: 12px;">プレビュー値</label>
-              <!-- 動的生成コンテナ -->
               <div id="previewValueBox"></div>
               <div class="btn-container" style="margin-top: 12px;">
                 <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー作成</button>
               </div>
-              <!-- 動的生成コンテナ -->
               <div id="previewStatsTable" style="margin-top: 8px;"></div>
             </div>
           </details>
@@ -150,27 +140,23 @@
         </select>
       </label>
     </template>
-
     <template id="inputTemplate">
       <label class="field-label">
         <input type="text" class="field-input">
       </label>
     </template>
-
     <template id="checkboxTemplate">
       <label class="checkbox-item">
         <input type="checkbox" class="dataset-cb" data-change="Tab2.toggleDataset" checked>
         <span class="cb-text"></span>
       </label>
     </template>
-
     <template id="checkAllTemplate">
       <label class="checkbox-item select-all">
         <input type="checkbox" id="selectAll" data-change="Tab2.toggleAllDataset" checked>
         <span>すべて選択</span>
       </label>
     </template>
-
     <template id="symbolRowTemplate">
       <div class="symbol-row">
         <select data-symbol-type="target" class="symbol-target">
@@ -180,7 +166,6 @@
         <select data-symbol-type="color" class="symbol-color"></select>
       </div>
     </template>
-
     <template id="previewModeTemplate">
       <div class="radio-row">
         <span class="radio-label"></span>
@@ -194,18 +179,15 @@
         </div>
       </div>
     </template>
-
     <template id="statsContainerTemplate">
       <div class="stats-container">
         <div class="stats-grid"></div>
       </div>
     </template>
-
     <template id="statsRowTemplate">
       <div class="stats-label"></div>
       <div class="stats-val"></div>
     </template>
-
     <template id="multiSelectTemplate">
       <div class="multi-select-wrapper">
         <button class="multi-select-summary"></button>

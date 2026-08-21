@@ -17,14 +17,13 @@
       Evt.toggleMultiSelect(boxId, statePath);
     };
 
+    // --- イベントバインダ ---
+    static #bindMulti = (id, path) => () => this.toggleMultiSelect(id, path);
+    static #bindAll = (id, path) => t => this.toggleAllMultiSelect(t, id, path);
+
     // --- Tab1変更移譲 ---
     static Tab1 = {
-      updateFileMap: (target) => {
-        const field = target.getAttribute('data-field');
-        State.set(`Tab1ST.file.map.${field}`, target.value);
-        Evt.Tab1.validateFileMap();
-      },
-      // --- リアクティブ状態監視：設定モード ---
+      // --- リアクティブ状態監視：モード選択 ---
       validateConfigMode: (mode) => {
         if (!mode) return;
         const modeText = mode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
@@ -37,7 +36,12 @@
           State.set("Tab1ST.config.status", ["message", modeText]);
         }
       },
-      // --- リアクティブ状態監視：ファイルマップ ---
+      // --- リアクティブ状態監視：列選択 ---
+      updateFileMap: (target) => {
+        const field = target.getAttribute('data-field');
+        State.set(`Tab1ST.file.map.${field}`, target.value);
+        Evt.Tab1.validateFileMap();
+      },
       validateFileMap: () => {
         const map = State.get("Tab1ST.file.map");
         const flags = Mtd.Utils.validateSelect(GLOBAL_CONFIG.fileFields.map(f => map[f.key] || ""), 3);
@@ -47,7 +51,7 @@
           "Tab1ST.file.status": isErr ? ["error", "エラー: 列選択"] : State.get("Tab1ST.file.cachedStatus")
         });
       },
-      // --- リアクティブ状態監視：抽出マップ ---
+      // --- リアクティブ状態監視：計測属性 ---
       validateExacMap: () => {
         const isErr = !(State.get("Tab1ST.exac.map.dataset")?.trim());
         State.set({
@@ -59,14 +63,10 @@
 
     // --- Tab2変更移譲 ---
     static Tab2 = {
-      // リアクティブ状態監視：datasetBox
-      toggleDataset: () => {
-        Evt.toggleMultiSelect(Tab2UI.datasetBox, "Tab2ST.filter.datasets");
-      },
-      toggleAllDataset: (target) => {
-        Evt.toggleAllMultiSelect(target, Tab2UI.datasetBox, "Tab2ST.filter.datasets");
-      },
-      // リアクティブ状態監視：symbolBox
+      // リアクティブ状態監視：dataset選択
+      toggleDataset: this.#bindMulti(Tab2UI.datasetBox, "Tab2ST.dataset.filter"),
+      toggleAllDataset: this.#bindAll(Tab2UI.datasetBox, "Tab2ST.dataset.filter"),
+      // リアクティブ状態監視：シンボル設定
       updateSymbol: (target) => {
         const idx = target.getAttribute('data-symbol-idx');
         if (!idx) return;
@@ -79,16 +79,12 @@
           });
         }
       },
-      // リアクティブ状態監視：PreviewMode
-      togglePreviewMode: () => {
-        Evt.toggleMultiSelect(Tab2UI.previewModeBox, "Tab2ST.modeMap");
-      },
-      toggleAllPreviewMode: (target) => {
-        Evt.toggleAllMultiSelect(target, Tab2UI.previewModeBox, "Tab2ST.modeMap");
-      }
+      // リアクティブ状態監視：Obsidianモード
+      togglePreviewMode: this.#bindMulti(Tab2UI.previewModeBox, "Tab2ST.preview.modeMap"),
+      toggleAllPreviewMode: this.#bindAll(Tab2UI.previewModeBox, "Tab2ST.preview.modeMap")
     };
 
-    // --- ボタン監視登録 ---
+    // --- ボタン・入力監視 ---
     static #handleClick(e) {
       const target = e.target;
       const tabBtn = target.closest('.tab-btn');
@@ -101,8 +97,7 @@
         }
       }
     }
-
-    // --- DOM更新監視登録 ---
+    // --- 値更新監視 ---
     static #handleChange(e) {
       const target = e.target;
       const bindPath = target.getAttribute('data-bind');
@@ -115,8 +110,7 @@
         }
       }
     }
-
-    // --- タブ切替 UI制御 ---
+    // --- タブ切替 ---
     static switchTab(tabId) {
       document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
       document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
