@@ -42,14 +42,14 @@
       trendlines: {
         0: {
           type: 'linear', color: 'var(--grey600)',
-          lineWidth: 1, opacity: 0.4, lineDashStyle: [8, 4],
-          visibleInLegend: true, showR2: false
+          lineWidth: 1, opacity: 0.4, lineDashStyle: [8, 4]
         }
       },
       hAxis: { ...ObCalPlot.#baseAXIS, title: 'WDXRF' },
       vAxis: { ...ObCalPlot.#baseAXIS, title: 'PXRF' },
     };
 
+    // --- コンストラクタ ---
     constructor() {
       super();
       this.#container = document.createElement('div');
@@ -64,43 +64,45 @@
       this.#mutationObserver = new MutationObserver(() => this.#applySvgHacks());
     }
 
+    // --- 接続時 ---
     connectedCallback() {
       this.appendChild(this.#container);
-      this.#resizeObserver.observe(this.#container);
+      this.#resizeObserver.observe(this.#container); // 監視開始
     }
 
+    // --- 切断時 ---
     disconnectedCallback() {
-      this.#resizeObserver.disconnect();
-      this.#mutationObserver.disconnect();
+      this.#resizeObserver.disconnect(); // 監視停止
+      this.#mutationObserver.disconnect(); // 監視停止
     }
 
-    // --- データ注入と描画 ---
+    // --- データ設定 ---
     set drawData(data) {
       this.#drawData = data;
-      this.#render();
+      this.#render(); // 再描画実行
     }
 
     // --- 描画消去 ---
     clear() {
       this.#drawData = null;
-      this.#chartDiv.replaceChildren();
-      this.#container.style.height = '0px';
+      this.#chartDiv.replaceChildren(); // 要素初期化
+      this.#container.style.height = '0px'; // 高度クリア
     }
 
     // --- 属性一式設定 ---
     #setAttrs(el, attrs) {
       if (!el || !attrs) return;
-      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v)); // 属性付与
     }
 
     // --- オプション結合 ---
     #buildOptions(overrides) {
-      const merged = Object.assign({}, ObCalPlot.#CONFIG, overrides);
+      const merged = Object.assign({}, ObCalPlot.#CONFIG, overrides); // 結合処理
       if (merged.trendlines?.[0]?.color) {
-        merged.trendlines[0].color = ThemeCache.get(merged.trendlines[0].color);
+        merged.trendlines[0].color = ThemeCache.get(merged.trendlines[0].color); // 変数解決
       }
       if (merged.legend?.textStyle) {
-        merged.legend.textStyle.color = ThemeCache.get('var(--grey600)');
+        merged.legend.textStyle.color = ThemeCache.get('var(--grey600)'); // 変数解決
       }
       return merged;
     }
@@ -123,7 +125,7 @@
     #render() {
       const { previewData, symbolData } = this.#drawData || {};
       if (!previewData?.length || !window.google?.visualization) {
-        this.clear();
+        this.clear(); // データなしのため消去
         return;
       }
       this.#chart = new google.visualization.ScatterChart(this.#chartDiv);
@@ -157,14 +159,14 @@
       }));
 
       const sideLength = this.#container.clientWidth || 276;
-      this.#container.style.height = `${sideLength}px`;
+      this.#container.style.height = `${sideLength}px`; // 高度設定
       
       const { niceMin, niceMax, niceTicks } = Mtd.Utils.calcNiceScale(
         previewData.map(d => d.x), 
         previewData.map(d => d.y)
       );
       const yTicks = [...niceTicks];
-      yTicks.shift();
+      yTicks.shift(); // 先頭除去
 
       const options = this.#buildOptions({
         width: sideLength,
@@ -183,11 +185,11 @@
       });
 
       google.visualization.events.addOneTimeListener(this.#chart, 'ready', () => {
-        this.#mutationObserver.observe(this.#chartDiv, { childList: true, subtree: true });
+        this.#mutationObserver.observe(this.#chartDiv, { childList: true, subtree: true }); // 監視開始
         this.#applySvgHacks();
       });
 
-      this.#chart.draw(dataTable, options);
+      this.#chart.draw(dataTable, options); // 描画実行
     }
 
     // --- SVGハックパイプライン ---
@@ -202,7 +204,7 @@
         this.#shiftXAxisLabels(svg);
         this.#drawEquationText(svg);
       } finally {
-        this.#mutationObserver.observe(this.#chartDiv, { childList: true, subtree: true });
+        this.#mutationObserver.observe(this.#chartDiv, { childList: true, subtree: true }); // 監視復帰
       }
     }
 
@@ -218,7 +220,7 @@
         'width': area.width, 'height': area.height,
         'fill': 'none', 'stroke': ThemeCache.get('var(--grey200)'), 'stroke-width': '1'
       });
-      svg.appendChild(rect);
+      svg.appendChild(rect); // 要素追加
     }
 
     // --- 方程式テキスト描画 ---
@@ -228,9 +230,8 @@
       if (!stats) return; // データ未存在のため終了
 
       const rows = DataUtils.createStatsRows(stats);
-      const rVal = rows.find(([label]) => label === '相関係数')?.[1];
-      const eqVal = rows.find(([label]) => label === '回帰直線')?.[1];
-      if (!rVal || !eqVal) return; // 必須データなしのため終了
+      const r2Val = rows.find(([label]) => label === '相関係数')[1].split(',')[1].trim();
+      const eqVal = rows.find(([label]) => label === '回帰直線')[1];
 
       const area = this.#chart.getChartLayoutInterface().getChartAreaBoundingBox();
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -239,17 +240,17 @@
         'font-size': '10', 'fill': ThemeCache.get('var(--grey600)'), 'font-family': 'Roboto, sans-serif'
       });
 
-      const tspan1 = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-      tspan1.textContent = rVal;
-      tspan1.setAttribute('x', area.left + 8);
+      [r2Val, eqVal].forEach((val, idx) => {
+        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        tspan.textContent = val;
+        this.#setAttrs(tspan, {
+          'x': area.left + 8,
+          ...(idx > 0 ? { 'dy': '13' } : {})
+        });
+        text.appendChild(tspan);
+      });
 
-      const tspan2 = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-      tspan2.textContent = eqVal;
-      this.#setAttrs(tspan2, { 'x': area.left + 8, 'dy': '13' });
-
-      text.appendChild(tspan1);
-      text.appendChild(tspan2);
-      svg.appendChild(text);
+      svg.appendChild(text); // 要素追加
     }
 
     // --- Y軸回転 ---
@@ -275,14 +276,14 @@
         const y = parseFloat(text.getAttribute('y'));
         return !isNaN(y) && y >= (top + height) && /^-?\d+(\.\d+)?k?$/.test(text.textContent.trim().replace(/,/g, ''));
       });
-      if (!texts.length) return;
+      if (!texts.length) return; // テキストなしのため終了
       texts.forEach(text => {
         const baseY = parseFloat(text.getAttribute('original-y') || text.getAttribute('y'));
         if (!text.hasAttribute('original-y')) text.setAttribute('original-y', baseY);
         text.setAttribute('y', baseY + 2); // 位置微調整
       });
       const minEl = texts.reduce((m, e) => parseFloat(e.getAttribute('x')) < parseFloat(m.getAttribute('x')) ? e : m);
-      minEl.setAttribute('dx', String(parseFloat(minEl.getAttribute('dx') || '0') - 8));
+      minEl.setAttribute('dx', String(parseFloat(minEl.getAttribute('dx') || '0') - 8)); // 位置調整
     }
   }
 

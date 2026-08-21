@@ -182,9 +182,9 @@
         // リセット処理
         State.reset(['Tab2ST.report']);
         State.set({
-          "Tab2ST.preview.previewData": previewData,
           "Tab2ST.preview.correctionLogic": stats,
           "Tab2ST.preview.statsData": stats,
+          "Tab2ST.preview.previewData": previewData,
           "Tab2ST.phase": TAB2_PHASE.PREVIEWED
         });
         return "プレビュー更新";
