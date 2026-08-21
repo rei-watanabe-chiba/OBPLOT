@@ -17,6 +17,10 @@ for gemini
   - 静的イベントは HTML 側の `data-action` 属性と `Event` ルーターで処理し、高階関数を用いてハンドラ生成を共通化。
   - UI フェーズ制御は `View` 層の定数マップに基づく宣言的ルール適用エンジン (`UIPhase`) で集約制御。
 - **非同期通信**: `google.script.run` を Promise ラップした `GasService` クラスによる `async/await` 統一制御。
+- **将来的な拡張性（Office Add-in 移植方針）**:
+  - **現在の開発主軸は GAS (Google Apps Script) 環境である。**
+  - 将来的に「Office Add-in + GitHub Pages」によるローカル配布型 Excel サイドバーアプリへ移行する意図を持つ。
+  - GAS通信（`GasService` / `Code.js`）以外の層（UI、状態管理、計算・描画ロジック）は、高い移植性と標準Web技術（Off-line / Local library 化等）への準拠を考慮して実装・ライブラリ選定を行う。
 
 ---
 
