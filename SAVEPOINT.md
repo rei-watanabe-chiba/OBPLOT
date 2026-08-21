@@ -42,9 +42,11 @@
 
 ---
 
-## 4. アーキテクチャ・パイプライン（単一データ経路）
-`[User Action (Sidebar)] -> (data-action) -> [Evt (Event)] -> (Route) -> [Ctrl (Controller)] <-> (Logic/Fetch) <-> [Method / API] -> (Mutate) -> [AppState.set/reset (Model)] -> (Subscribe) -> [UIStateUpdater/UIPhase (View)] -> (Render) -> [NewDOM (Component)]`
-
+## 4. アーキテクチャ・パイプライン（データ経路）
+- **[Command Route (ボタン操作等)]**:
+  `[User Action (Sidebar)] -> (data-action) -> [Evt (Event)] -> (Route) -> [Ctrl (Controller)] <-> (Logic/Fetch) <-> [Method / API] -> (Mutate) -> [AppState.set/reset (Model)] -> (Subscribe) -> [UIStateUpdater/UIPhase (View)] -> (Render) -> [NewDOM (Component)]`
+- **[Reactive Route (入力・選択等)]**:
+  `[User Input (Sidebar)] -> (data-bind / data-change) -> [Evt (Event: 状態変更/検証)] -> (Mutate) -> [AppState.set (Model)] -> (Subscribe) -> [UIStateUpdater/UIPhase (View)] -> (Render) -> [NewDOM (Component)]`
 ---
 
 ## 5. フェーズ・ステートマシン（状態遷移フロー）
