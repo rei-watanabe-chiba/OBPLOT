@@ -37,7 +37,8 @@
 - **[UI Rules] `UIPhase` (View)**: フェーズ遷移に伴う UI (活性/非活性/表示) の更新ルールは、命令的な `if` 制御を避け、定数マップ定義に集約する。
 - **[UI Renderer] `UIStateUpdater` (View)**: DOM の直接操作は禁止。State を購読 (`subscribe`) し、`NewDOM` を介して安全に描画・クリーンアップを実行する。
 - **[Logic] `Method.*` (Method)**: 状態を持たない純粋関数・クラス群。DOM操作や API通信を一切含まず、引数から計算結果を返す役割に徹する。
-- **[Event Router] `Evt` (Event)**: イベントの発火元。複雑なビジネスロジックは持たず、高階関数や属性ルーティングを用いて `Controller` へ処理を委譲する。
+- **[Event Router] `Evt` (Event)**: イベントの発火元。複雑なビジネスロジックは持たず、高階関数や属性ルーティングを用いてコード量を削減し、`Controller` へ処理を委譲する。
+- **[API / Service] `GasService`**: `google.script.run` はベタ書きせず、カスタムエラー対応のPromiseラッパーを使用。`async/await` と `try/catch` による非同期エラーハンドリングを徹底する。バックエンドレスポンス（DTO）変更に備え、フロント側で受動的バリデーションを挟む。
 
 ---
 
