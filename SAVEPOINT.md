@@ -61,4 +61,5 @@ for gemini
 ※ Filter (Dataset) 確定時: `State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report'])` を実行し、後続フェーズを初期化。
 
 ## 6. 次の開発手順
-- 実際のコードに基づく処理フローの確認
+- グラフ描画の連動state変更が、ボタン駆動の静的発火と一括 State 更新であることを前提に、Chart.html 側の過剰な防衛的コードを最小限にスリム化し、単方向データフローによる描画パイプラインのシンプル化を推進する。
+
