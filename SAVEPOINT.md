@@ -21,14 +21,14 @@
 
 ## 2. ディレクトリ構造・ファイル一覧
 - `Code.gs`: バックエンドデータ入出力・設定管理・テンプレート取得API
-- `Sidebar.html`: サイドバーのHTML構造（動的コンテナの準備、静的アクション要素のハードコード）
+- `Sidebar.html`: サイドバーのHTML構造（動的コンテナ準備、静的actionのハードコード、`data-v-*` 属性による宣言的UIバインディングのマークアップ）
 - `CSS.html`: スタイル・トークン定義
-- `Model.html`: 状態管理、定数管理、GAS通信ラップ
-- `Component.html`: 汎用DOM操作・汎用動的UI生成
-- `View.html`: State連動によるUI制御、動的要素へのカスタム属性付与・レンダリング処理
-- `Method.html`: 純粋関数ベースのデータ加工・バリデーション・データ抽出（UI非依存）
-- `Controller.html`: 非同期通信・ビジネスロジック制御、フェーズ進行のメイン（State駆動）
-- `Event.html`: グローバルなイベント移譲。`data-action` / `data-change` / `data-bind` 属性に基づいたルーティングとリアクティブな状態更新
+- `Model.html`: セクション単位で階層化された状態管理 (`AppState`)、ダウングレード時の明示的初期化基盤 (`State.reset`)、定数管理、GAS通信ラップ
+- `Component.html`: 汎用DOM操作・汎用動的UI生成（データ空時の自動クリーンアップ・フェイルセーフ機構を内包）
+- `View.html`: `UIAutoBinder` による宣言的属性の自動バインド、`UIPhase`（定数マップベースの宣言的ルール適用）、`UIStateUpdater` による動的要素のレンダリングと完全な責務分離
+- `Method.html`: DOMアクセスから完全に分離された純粋関数ベースのデータ加工・バリデーション・データ抽出・計算ロジック
+- `Controller.html`: 非同期通信・ビジネスロジック制御、フェーズ進行およびダウングレード時の明示的な状態リセットのオーケストレーション
+- `Event.html`: グローバルなイベント移譲。高階関数（ファクトリ関数）を用いた省コード化と、`data-action` / `data-change` / `data-bind` 属性に基づく純粋なルーター・リアクティブ監視
 - `Report.html`: 別タブで展開されるレポート画面（Google Visualization API によるサンプル散布図描画）
 
 ## 3. 次の開発作業
