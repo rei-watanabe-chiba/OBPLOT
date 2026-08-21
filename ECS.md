@@ -47,7 +47,7 @@
     - **駆動State**: `Tab2ST.preview.value` (初期値: `GLOBAL_CONFIG.valueLogic[0]` = `"K"`)
   - `previewMakeBtn` (静的): `Tab2.makePreview` を実行。`PreviewManager.buildPreviewData` でペアデータを構築し、`CalcProcessor.calcRegression` で単回帰分析を実施。`Tab2ST.phase = PREVIEWED(5)`
   - `previewStatsTable` (**動的**): `NewDOM.statsTable` により、データ個数・R/R²・回帰直線・残差標準偏差・器械Err3σ を Grid 表形式で表示。
-  - **未実装（今後実装）**: `previewPlot` (散布図描画), `previewSave` (Correctionシートへの書き出し)
+  - **未実装（今後実装）**: previewItemBox` (item選択), previewPlot` (散布図描画), `previewSave` (Correctionシートへの書き出し)
 
 ### ④ レポート出力 (`reportSection`)
 - **機能**: PDF用レポート展開および複数指標の一括出力
