@@ -3,7 +3,7 @@ for gemini
 ## 1. システム・アーキテクチャ概要
 - **実行環境**: Google Apps Script (V8 runtime)
 - **フロントエンド**: HTML Service (Sidebar & Blob URL による別タブ展開)
-- **描画・計算ライブラリ**: Google Visualization API (CoreChart: ScatterChart), simple-statistics (v7.8.3)
+- **描画・計算ライブラリ**: Apache ECharts (v5.5.1), simple-statistics (v7.8.3)
 - **設計パターン**: SPA型 MVMS (Model-View-Method-Service) パターン + Web Components
 - **状態管理 (State Management)**: 
   - `AppState` クラスによる Observer (Pub/Sub) パターン。State をセクション単位 (`dataset`, `symbol`, `preview`, `report`) に階層化。
