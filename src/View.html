@@ -57,6 +57,9 @@
         select.setAttribute('data-bind', "Tab2ST.preview.value");
         GLOBAL_CONFIG.valueLogic.forEach(v => select.add(new Option(v, v)));
         previewValue.replaceChildren(select);
+        if (GLOBAL_CONFIG.valueLogic.length) {
+          State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
+        }
       }
     }
 

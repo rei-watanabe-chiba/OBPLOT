@@ -162,8 +162,6 @@
     // --- Tab2 シンボル確定 ---
     static async setSymbolMap() {
       await CoreCtrl.withAsyncLock("Tab2ST.symbol.status", async () => {
-        const mapping = State.get("Tab2ST.symbol.mapping");
-        if (!mapping || Object.keys(mapping).length === 0) throw new Error("シンボルが設定されていません");
         State.set("Tab2ST.phase", TAB2_PHASE.MAPPED);
         return "シンボル確定";
       });
