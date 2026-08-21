@@ -43,9 +43,15 @@
   }
   main {
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 12px;
     padding-top: 8px;
+    scrollbar-color: transparent;
   }
+  main:hover {
+    scrollbar-color: var(--grey200) transparent;
+  }
+  
   fieldset { border: none; }
   .flex-row { display: flex; align-items: center; gap: 0; }
   .txt-btninfo { font-size: 11px; color: var(--grey600); margin-left: 8px; }

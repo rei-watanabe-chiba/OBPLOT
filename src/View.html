@@ -177,9 +177,25 @@
         "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
         "Tab2ST.phase": v => {
           UIPhase.updateTab2PhaseUI(v);
-          if (v < TAB2_PHASE.PREVIEWED) PlotChart.clear(Tab2UI.previewChartBox); // --- 追加：後退時クリア ---
+          // 要素のID指定を変更
+          if (v < TAB2_PHASE.PREVIEWED) DOM.get('ob-cal-plot-el')?.clear();
         },
-        "Tab2ST.preview.previewData": data => PlotChart.drawScatter(Tab2UI.previewChartBox, data) // --- 追加：描画実行 ---
+        // --- 描画データのDI注入 (カスタム要素へ) ---
+        "Tab2ST.preview.previewData": data => {
+          const stats = State.get("Tab2ST.preview.statsData");
+          const symbol = State.get("Tab2ST.symbol");
+          // 要素のID指定を変更
+          let chartEl = DOM.get('ob-cal-plot-el');
+          // 未生成の場合はコンテナ内に初期化
+          if (!chartEl) {
+            // 生成するタグ名と付与するIDを変更
+            chartEl = document.createElement('ob-cal-plot');
+            chartEl.id = 'ob-cal-plot-el';
+            DOM.get(Tab2UI.previewChartBox).replaceChildren(chartEl);
+          }
+          // プロパティへの代入で内部の再描画をトリガー
+          chartEl.drawData = { previewData: data, statsData: stats, symbolData: symbol };
+        }
       };
       Object.entries(stateMap).forEach(([path, cb]) => State.subscribe(path, cb));
     }

@@ -33,6 +33,49 @@
       
       return rows;
     }
+
+    // --- スケール計算 ---
+    static calcNiceScale(xVals, yVals, desiredTicks = 4) {
+      if (!xVals?.length || !yVals?.length) return { niceMin: 0, niceMax: 0, niceTicks: [] };
+      const [xMin, xMax] = [Math.min(...xVals), Math.max(...xVals)];
+      const [yMin, yMax] = [Math.min(...yVals), Math.max(...yVals)];
+
+      const isAllPositive = xMin >= 0 && yMin >= 0;
+      const rawMin = isAllPositive ? 0 : Math.min(xMin, yMin);
+      const rawMax = Math.max(xMax, yMax);
+
+      const range = rawMax - rawMin || 1;
+      const rawStep = range / (desiredTicks - 1);
+      const exponent = Math.floor(Math.log10(rawStep));
+      const fraction = rawStep / Math.pow(10, exponent);
+
+      let niceFraction = 10;
+      if (fraction <= 1.2) niceFraction = 1;
+      else if (fraction <= 2.5) niceFraction = 2;
+      else if (fraction <= 6.0) niceFraction = 5;
+
+      const niceStep = niceFraction * Math.pow(10, exponent);
+      const niceMin = isAllPositive ? 0 : Math.floor(rawMin / niceStep) * niceStep;
+      const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
+      const ticksCount = Math.round((niceMax - niceMin) / niceStep) + 1;
+
+      const niceTicks = [];
+      const decimals = exponent < 0 ? Math.abs(exponent) : 0;
+
+      for (let i = 0; i < ticksCount; i++) {
+        const val = niceMin + (i * niceStep);
+        let label = "";
+        if (Math.abs(val) >= 1000) {
+          label = `${(val / 1000).toFixed(0)}k`;
+        } else if (decimals > 0) {
+          label = val.toFixed(decimals);
+        } else {
+          label = val.toLocaleString();
+        }
+        niceTicks.push({ v: val, f: label });
+      }
+      return { niceMin, niceMax, niceTicks };
+    }
   }
 
   // --- Tab1 ファイルリスト検証ロジック ---

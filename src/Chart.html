@@ -1,11 +1,42 @@
 <!-- Chart.html -->
 <script>
-  // --- グラフデザイン設定 ---
-  const CHART_CONFIG = {
-    scatter: {
-      pointSize: 5,
-      colors: ['var(--main-blue)'],
-      legend: { position: 'none' },
+  // --- テーマキャッシュ ---
+  class ThemeCache {
+    static #cache = new Map();
+    // --- 変数解決 ---
+    static get(varStr) {
+      if (!varStr?.startsWith('var(')) return varStr;
+      const match = varStr.match(/var\((--[^,\s)]+)/);
+      if (!match) return varStr;
+      const key = match[1];
+      if (!this.#cache.has(key)) {
+        const val = getComputedStyle(document.body).getPropertyValue(key).trim();
+        this.#cache.set(key, val || varStr);
+      }
+      return this.#cache.get(key);
+    }
+  }
+
+  // --- グラフカスタム要素 ---
+  class ObScatterChart extends HTMLElement {
+    #container;
+    #chartDiv;
+    #chart;
+    #resizeObserver;
+    #mutationObserver;
+    #drawData = null;
+
+    // --- デフォルト構成 ---
+    static #CONFIG = {
+      defaultPoint: {
+        shapeType: 'circle',
+        size: 5,
+        fillColor: 'transparent',
+        strokeColor: 'var(--grey600)',
+        strokeWidth: 0.8
+      },
+      legend: { position: 'top', alignment: 'end', textStyle: { fontSize: 10 } },
+      series: { 0: { visibleInLegend: false } },
       trendlines: {
         0: {
           type: 'linear',
@@ -13,8 +44,8 @@
           lineWidth: 1,
           opacity: 0.4,
           lineDashStyle: [8, 4],
-          visibleInLegend: false,
-          tooltip: false
+          visibleInLegend: true,
+          showR2: true
         }
       },
       hAxis: {
@@ -23,317 +54,212 @@
         textStyle: { fontSize: 10, bold: false },
         minorGridlines: { count: 0 },
         titlePosition: 'out',
-        slantedText: false,
         maxAlternation: 1
       },
       vAxis: {
         title: 'PXRF',
         titleTextStyle: { fontSize: 11, italic: false },
         textStyle: { fontSize: 10, bold: false },
-        slantedText: false,
         minorGridlines: { count: 0 },
         titlePosition: 'out',
         maxAlternation: 1
       }
+    };
+
+    constructor() {
+      super();
+      this.#container = document.createElement('div');
+      this.#container.style.cssText = 'width: 100%; position: relative;';
+      this.#chartDiv = document.createElement('div');
+      this.#container.appendChild(this.#chartDiv);
+      
+      this.#resizeObserver = new ResizeObserver(() => {
+        if (this.#drawData && this.#chartDiv.clientWidth > 0) {
+          requestAnimationFrame(() => this.#render());
+        }
+      });
+      this.#mutationObserver = new MutationObserver(() => this.#applySvgHacks());
     }
-  };
 
-  // --- CSS変数解決 ---
-  const resolveCssVar = (varStr) => {
-    if (!varStr?.startsWith('var(')) return varStr;
-    const match = varStr.match(/var\((--[^,\s)]+)/);
-    if (!match) return varStr;
-    const val = getComputedStyle(document.body).getPropertyValue(match[1]).trim();
-    return val || varStr;
-  };
+    connectedCallback() {
+      this.appendChild(this.#container);
+      this.#resizeObserver.observe(this.#container);
+    }
 
-  // --- スケール計算 ---
-  const calcNiceScale = (xVals, yVals, desiredTicks = 4) => {
-    const [xMin, xMax] = [Math.min(...xVals), Math.max(...xVals)];
-    const [yMin, yMax] = [Math.min(...yVals), Math.max(...yVals)];
+    disconnectedCallback() {
+      this.#resizeObserver.disconnect();
+      this.#mutationObserver.disconnect();
+    }
 
-    const isAllPositive = xMin >= 0 && yMin >= 0;
-    const rawMin = isAllPositive ? 0 : Math.min(xMin, yMin);
-    const rawMax = Math.max(xMax, yMax);
+    // --- データ注入と描画 ---
+    set drawData(data) {
+      this.#drawData = data;
+      this.#render();
+    }
 
-    const range = rawMax - rawMin || 1;
-    const rawStep = range / (desiredTicks - 1);
-    const exponent = Math.floor(Math.log10(rawStep));
-    const fraction = rawStep / Math.pow(10, exponent);
+    // --- 描画消去 ---
+    clear() {
+      this.#drawData = null;
+      this.#chartDiv.replaceChildren();
+      this.#container.style.height = '0px';
+    }
 
-    let niceFraction = 10;
-    if (fraction <= 1.2) niceFraction = 1;
-    else if (fraction <= 2.5) niceFraction = 2;
-    else if (fraction <= 6.0) niceFraction = 5;
-
-    const niceStep = niceFraction * Math.pow(10, exponent);
-    const niceMin = isAllPositive ? 0 : Math.floor(rawMin / niceStep) * niceStep;
-    const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
-    const ticksCount = Math.round((niceMax - niceMin) / niceStep) + 1;
-
-    const niceTicks = [];
-    const decimals = exponent < 0 ? Math.abs(exponent) : 0;
-
-    for (let i = 0; i < ticksCount; i++) {
-      const val = niceMin + (i * niceStep);
-      let label = "";
-
-      if (Math.abs(val) >= 1000) {
-        label = `${(val / 1000).toFixed(0)}k`;
-      } else if (decimals > 0) {
-        label = val.toFixed(decimals);
-      } else {
-        label = val.toLocaleString();
+    // --- オプション結合 ---
+    #buildOptions(overrides) {
+      const merged = Object.assign({}, ObScatterChart.#CONFIG, overrides);
+      if (merged.trendlines?.[0]?.color) {
+        merged.trendlines[0].color = ThemeCache.get(merged.trendlines[0].color);
       }
-
-      niceTicks.push({ v: val, f: label });
+      if (merged.legend?.textStyle) {
+        merged.legend.textStyle.color = ThemeCache.get('var(--grey600)');
+      }
+      return merged;
     }
 
-    return { niceMin, niceMax, niceTicks };
-  };
+    // --- スタイル文字列生成 ---
+    #buildStyleString(styleObj) {
+      if (!styleObj) return '';
+      const map = {
+        shapeType: 'shape-type',
+        size: 'size',
+        fillColor: 'fill-color',
+        strokeColor: 'stroke-color',
+        strokeWidth: 'stroke-width'
+      };
+      const props = Object.entries(styleObj)
+        .filter(([_, v]) => v != null)
+        .map(([k, v]) => `${map[k] \vert{}\vert{} k}:${v};`)
+        .join(' ');
+      return `point { ${props} }`;
+    }
 
-  // --- グラフ描画制御 ---
-  class PlotChart {
-    // --- 散布図描画 ---
-    static drawScatter(containerId, previewData) {
-      const container = DOM.get(containerId);
-      if (!container) return;
+    // --- 散布図描画本体 ---
+    #render() {
+      const { previewData, symbolData } = this.#drawData || {};
       if (!previewData?.length || !window.google?.visualization) {
-        container.replaceChildren();
+        this.clear();
         return;
       }
 
-      container.replaceChildren();
-      container.style.position = 'relative';
-
-      const chartDiv = document.createElement('div');
-      container.appendChild(chartDiv);
-
+      this.#chart = new google.visualization.ScatterChart(this.#chartDiv);
       const dataTable = new google.visualization.DataTable();
       dataTable.addColumn('number', 'WDXRF');
       dataTable.addColumn('number', 'PXRF');
       dataTable.addColumn({ type: 'string', role: 'tooltip' });
+      dataTable.addColumn({ type: 'string', role: 'style' });
 
-      dataTable.addRows(previewData.map(d => [
-        d.x,
-        d.y,
-        `ID: ${d.id ?? '-'}\nGroup: ${d.group ?? '-'}`
-      ]));
+      const baseKey = symbolData?.baseKey;
+      const mapping = symbolData?.mapping || {};
+      const defPoint = ObScatterChart.#CONFIG.defaultPoint;
 
-      const sideLength = container.clientWidth || 276;
-      container.style.height = `${sideLength}px`;
-      chartDiv.style.width = `${sideLength}px`;
-      chartDiv.style.height = `${sideLength}px`;
+      dataTable.addRows(previewData.map(d => {
+        let currentStyle = { ...defPoint };
+        const val = d[baseKey];
+        // 動的設定のマージ
+        if (val && mapping[val]) {
+          const c = ThemeCache.get(mapping[val].color);
+          currentStyle = {
+            ...currentStyle,
+            shapeType: mapping[val].shape,
+            fillColor: c,
+            strokeColor: c
+          };
+        }
+        
+        const styleStr = this.#buildStyleString(currentStyle);
+        return [d.x, d.y, `ID: ${d.id ?? '-'}\nGroup: ${d.group ?? '-'}`, styleStr];
+      }));
 
-      const xVals = previewData.map(d => d.x);
-      const yVals = previewData.map(d => d.y);
-      const { niceMin, niceMax, niceTicks } = calcNiceScale(xVals, yVals);
-
-      const resolvedColors = CHART_CONFIG.scatter.colors.map(resolveCssVar);
-      const resolvedTrendlineColor = resolveCssVar(CHART_CONFIG.scatter.trendlines[0].color);
-
-      // --- 描画領域を正方形に固定 ---
-      const paddingLeft = 40;
-      const paddingTop = 20;
-      const plotSize = sideLength - 65;
-
+      const sideLength = this.#container.clientWidth || 276;
+      this.#container.style.height = `${sideLength}px`;
+      
+      const { niceMin, niceMax, niceTicks } = Mtd.Utils.calcNiceScale(
+        previewData.map(d => d.x), 
+        previewData.map(d => d.y)
+      );
       const yTicks = [...niceTicks];
       yTicks.shift();
 
-      const xAxisOptions = {
-        viewWindow: { min: niceMin, max: niceMax },
-        ticks: niceTicks
-      };
-      const yAxisOptions = {
-        viewWindow: { min: niceMin, max: niceMax },
-        ticks: yTicks
-      };
-
-      const options = {
-        ...CHART_CONFIG.scatter,
+      const options = this.#buildOptions({
         width: sideLength,
         height: sideLength,
-        chartArea: {
-          left: paddingLeft,
-          top: paddingTop,
-          width: plotSize,
-          height: plotSize
-        },
-        colors: resolvedColors,
-        hAxis: { ...CHART_CONFIG.scatter.hAxis, ...xAxisOptions },
-        vAxis: { ...CHART_CONFIG.scatter.vAxis, ...yAxisOptions },
-        trendlines: {
-          0: {
-            ...CHART_CONFIG.scatter.trendlines[0],
-            color: resolvedTrendlineColor
-          }
-        }
-      };
-
-      const chart = new google.visualization.ScatterChart(chartDiv);
-
-      google.visualization.events.addListener(chart, 'ready', () => {
-        this.#renderEquationOverlay(container, chart);
-        this.#suppressTrendlineHoverCircle(chartDiv);
-        this.#rotateYAxisLabels(container, chart, chartDiv);
-        this.#shiftXAxisLabels(container, chart, chartDiv);
-        this.#drawPlotBorder(chartDiv, chart); // 外周枠描画を追加
+        chartArea: { left: 40, top: 25, width: sideLength - 65, height: sideLength - 70 },
+        hAxis: { viewWindow: { min: niceMin, max: niceMax }, ticks: niceTicks },
+        vAxis: { viewWindow: { min: niceMin, max: niceMax }, ticks: yTicks }
       });
 
-      chart.draw(dataTable, options);
+      google.visualization.events.addOneTimeListener(this.#chart, 'ready', () => {
+        this.#mutationObserver.observe(this.#chartDiv, { childList: true, subtree: true });
+        this.#applySvgHacks();
+      });
+
+      this.#chart.draw(dataTable, options);
     }
 
-    // --- プロットエリア外周枠描画 ---
-    static #drawPlotBorder(chartDiv, chart) {
-      const svg = chartDiv.querySelector('svg');
-      if (!svg) return;
+    // --- SVGハックパイプライン ---
+    #applySvgHacks() {
+      if (!this.#chart) return;
+      this.#mutationObserver.disconnect();
+      try {
+        const svg = this.#chartDiv.querySelector('svg');
+        if (!svg) return;
+        this.#drawPlotBorder(svg);
+        this.#rotateYAxisLabels(svg);
+        this.#shiftXAxisLabels(svg);
+      } finally {
+        this.#mutationObserver.observe(this.#chartDiv, { childList: true, subtree: true });
+      }
+    }
 
-      const layout = chart.getChartLayoutInterface();
-      const chartArea = layout.getChartAreaBoundingBox();
-
+    // --- 領域枠描画 ---
+    #drawPlotBorder(svg) {
+      svg.querySelector('.plot-border')?.remove();
+      const area = this.#chart.getChartLayoutInterface().getChartAreaBoundingBox();
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('x', chartArea.left);
-      rect.setAttribute('y', chartArea.top);
-      rect.setAttribute('width', chartArea.width);
-      rect.setAttribute('height', chartArea.height);
+      rect.setAttribute('class', 'plot-border');
+      rect.setAttribute('x', area.left);
+      rect.setAttribute('y', area.top);
+      rect.setAttribute('width', area.width);
+      rect.setAttribute('height', area.height);
       rect.setAttribute('fill', 'none');
-      rect.setAttribute('stroke', resolveCssVar('var(--grey200)'));
+      rect.setAttribute('stroke', ThemeCache.get('var(--grey200)'));
       rect.setAttribute('stroke-width', '1');
-
       svg.appendChild(rect);
     }
 
-    // --- Y軸回転処理 ---
-    static #rotateYAxisLabels(container, chart, chartDiv) {
-      const svg = chartDiv.querySelector('svg');
-      if (!svg) return;
-
-      const layout = chart.getChartLayoutInterface();
-      const chartArea = layout.getChartAreaBoundingBox();
-      const leftThreshold = chartArea.left;
-
-      const textElements = Array.from(svg.querySelectorAll('text')).filter(text => {
+    // --- Y軸回転 ---
+    #rotateYAxisLabels(svg) {
+      const leftThreshold = this.#chart.getChartLayoutInterface().getChartAreaBoundingBox().left;
+      Array.from(svg.querySelectorAll('text')).filter(text => {
         const x = parseFloat(text.getAttribute('x'));
-        const textVal = text.textContent.trim().replace(/,/g, '');
-        const isNumericLabel = /^-?\d+(\.\d+)?k?$/.test(textVal);
-        return !isNaN(x) && x < leftThreshold && x > (leftThreshold - 50) && isNumericLabel;
-      });
-
-      textElements.forEach(text => {
-        const x = parseFloat(text.getAttribute('x'));
+        return !isNaN(x) && x < leftThreshold && x > (leftThreshold - 50) && /^-?\d+(\.\d+)?k?$/.test(text.textContent.trim().replace(/,/g, ''));
+      }).forEach(text => {
         const y = parseFloat(text.getAttribute('y'));
-
-        if (!isNaN(x) && !isNaN(y)) {
-          const cx = leftThreshold - 12; // ユーザー指定値（微調整可能）
-          const cy = y - 3;              // ユーザー指定値（微調整可能）
-
-          text.setAttribute('transform', `rotate(-90, ${cx}, ${cy})`);
-          text.setAttribute('text-anchor', 'middle');
-          text.setAttribute('dx', '-6');
-          text.setAttribute('font-size', '10');
-          text.style.textOverflow = 'clip';
-        }
+        text.setAttribute('transform', `rotate(-90, ${leftThreshold - 12},${y - 3})`);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dx', '-6');
+        text.setAttribute('font-size', '10');
       });
     }
 
-    // --- X軸目盛シフト・高さ調整処理 ---
-    static #shiftXAxisLabels(container, chart, chartDiv) {
-      const svg = chartDiv.querySelector('svg');
-      if (!svg) return;
-
-      const layout = chart.getChartLayoutInterface();
-      const chartArea = layout.getChartAreaBoundingBox();
-      const topThreshold = chartArea.top + chartArea.height;
-
-      const textElements = Array.from(svg.querySelectorAll('text')).filter(text => {
+    // --- X軸シフト ---
+    #shiftXAxisLabels(svg) {
+      const { top, height } = this.#chart.getChartLayoutInterface().getChartAreaBoundingBox();
+      const texts = Array.from(svg.querySelectorAll('text')).filter(text => {
         const y = parseFloat(text.getAttribute('y'));
-        const textVal = text.textContent.trim().replace(/,/g, '');
-        const isNumericLabel = /^-?\d+(\.\d+)?k?$/.test(textVal);
-        return !isNaN(y) && y >= topThreshold && isNumericLabel;
+        return !isNaN(y) && y >= (top + height) && /^-?\d+(\.\d+)?k?$/.test(text.textContent.trim().replace(/,/g, ''));
       });
-
-      if (!textElements.length) return;
-
-      // 基準のY座標を保持しつつ全体の高さを一括調整
-      const yOffset = 2; // 高さを微調整（例: 上に挙げるならマイナス）
-
-      textElements.forEach(text => {
-        const baseY = parseFloat(text.getAttribute('original-y') || text.getAttribute('y'));
-        if (!text.hasAttribute('original-y')) {
-          text.setAttribute('original-y', baseY);
-        }
-        text.setAttribute('y', baseY + yOffset);
-      });
-
-      // 画面上で最も左側にある（最小値の）目盛要素を特定
-      let minEl = textElements[0];
-      let minX = parseFloat(minEl.getAttribute('x'));
-
-      textElements.forEach(text => {
-        const x = parseFloat(text.getAttribute('x'));
-        if (!isNaN(x) && x < minX) {
-          minX = x;
-          minEl = text;
-        }
-      });
-
-      // 最小値のみ左へシフト
-      const currentDx = parseFloat(minEl.getAttribute('dx') || '0');
-      minEl.setAttribute('dx', String(currentDx - 8));
-    }
-
-    // --- 回帰式表示 ---
-    static #renderEquationOverlay(container, chart) {
-      container.querySelector('.chart-eq-overlay')?.remove();
-
-      const stats = State.get("Tab2ST.preview.statsData");
-      if (!stats || stats.slope == null || stats.intercept == null) return;
-
-      const fmt = (v, digits = 3) => (v != null && !isNaN(v)) ? v.toFixed(digits) : "-";
-      const sign = stats.intercept >= 0 ? "+" : "-";
+      if (!texts.length) return;
       
-      const eqStr = `y = ${fmt(stats.slope)}x ${sign} ${fmt(Math.abs(stats.intercept))}`;
-      const rStr = `R = ${fmt(stats.r)}`;
-
-      const layout = chart.getChartLayoutInterface();
-      const chartArea = layout.getChartAreaBoundingBox();
-
-      const overlay = document.createElement('div');
-      overlay.className = 'chart-eq-overlay';
-      overlay.innerHTML = `<div>${eqStr}</div><div>${rStr}</div>`;
-      overlay.style.cssText = `
-        position: absolute;
-        left: ${chartArea.left + 8}px;
-        top: ${chartArea.top + 8}px;
-        font-size: 10px;
-        font-family: monospace;
-        color: var(--grey600);
-        background: rgba(255, 255, 255, 0.85);
-        padding: 2px 4px;
-        border-radius: 2px;
-        line-height: 1.2;
-        pointer-events: none;
-      `;
-
-      container.appendChild(overlay);
-    }
-
-    // --- 追跡円非表示 ---
-    static #suppressTrendlineHoverCircle(chartDiv) {
-      const observer = new MutationObserver(() => {
-        const circles = chartDiv.querySelectorAll('svg g[action="highlight"] circle, svg path[fill="none"] + circle');
-        circles.forEach(c => c.style.display = 'none');
+      texts.forEach(text => {
+        const baseY = parseFloat(text.getAttribute('original-y') || text.getAttribute('y'));
+        if (!text.hasAttribute('original-y')) text.setAttribute('original-y', baseY);
+        text.setAttribute('y', baseY + 2);
       });
-      observer.observe(chartDiv, { childList: true, subtree: true });
-    }
-
-    // --- 描画消去 ---
-    static clear(containerId) {
-      const container = DOM.get(containerId);
-      if (container) {
-        container.replaceChildren();
-        container.style.height = '0px';
-      }
+      const minEl = texts.reduce((m, e) => parseFloat(e.getAttribute('x')) < parseFloat(m.getAttribute('x')) ? e : m);
+      minEl.setAttribute('dx', String(parseFloat(minEl.getAttribute('dx') || '0') - 8));
     }
   }
+
+  customElements.define('ob-cal-plot', ObScatterChart);
 </script>
