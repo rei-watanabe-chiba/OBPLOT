@@ -1,9 +1,8 @@
 <!-- Chart.html -->
 <script>
-  // --- グラフデザイン一括設定 ---
+  // --- グラフデザイン設定 ---
   const CHART_CONFIG = {
     scatter: {
-      chartArea: { left: '10%', top: '10%', width: '80%', height: '80%' },
       pointSize: 5,
       colors: ['var(--main-blue)'],
       legend: { position: 'none' },
@@ -21,23 +20,25 @@
       hAxis: {
         title: 'WDXRF',
         titleTextStyle: { fontSize: 11, italic: false },
-        textStyle: { fontSize: 10 },
+        textStyle: { fontSize: 10, bold: false },
         minorGridlines: { count: 0 },
-        titlePosition: 'out'
+        titlePosition: 'out',
+        slantedText: false,
+        maxAlternation: 1
       },
       vAxis: {
         title: 'PXRF',
         titleTextStyle: { fontSize: 11, italic: false },
-        // --- 修正：フォントサイズ固定と自動省略抑止 ---
         textStyle: { fontSize: 10, bold: false },
         slantedText: false,
         minorGridlines: { count: 0 },
-        titlePosition: 'out'
+        titlePosition: 'out',
+        maxAlternation: 1
       }
     }
   };
 
-  // --- CSS変数解決ヘルパー ---
+  // --- CSS変数解決 ---
   const resolveCssVar = (varStr) => {
     if (!varStr?.startsWith('var(')) return varStr;
     const match = varStr.match(/var\((--[^,\s)]+)/);
@@ -46,7 +47,7 @@
     return val || varStr;
   };
 
-  // --- Nice Numbers スケール計算 ---
+  // --- スケール計算 ---
   const calcNiceScale = (xVals, yVals, desiredTicks = 4) => {
     const [xMin, xMax] = [Math.min(...xVals), Math.max(...xVals)];
     const [yMin, yMax] = [Math.min(...yVals), Math.max(...yVals)];
@@ -70,7 +71,6 @@
     const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
     const ticksCount = Math.round((niceMax - niceMin) / niceStep) + 1;
 
-    // --- ① ticks オプション用目盛り配列の生成（Malformed pattern 回避） ---
     const niceTicks = [];
     const decimals = exponent < 0 ? Math.abs(exponent) : 0;
 
@@ -79,7 +79,7 @@
       let label = "";
 
       if (Math.abs(val) >= 1000) {
-        label = `${(val / 1000).toFixed(0)}k`; // 10k表記
+        label = `${(val / 1000).toFixed(0)}k`;
       } else if (decimals > 0) {
         label = val.toFixed(decimals);
       } else {
@@ -92,7 +92,7 @@
     return { niceMin, niceMax, niceTicks };
   };
 
-  // --- グラフ描画・制御クラス ---
+  // --- グラフ描画制御 ---
   class PlotChart {
     // --- 散布図描画 ---
     static drawScatter(containerId, previewData) {
@@ -125,7 +125,6 @@
       chartDiv.style.width = `${sideLength}px`;
       chartDiv.style.height = `${sideLength}px`;
 
-      // スケール・グリッド計算
       const xVals = previewData.map(d => d.x);
       const yVals = previewData.map(d => d.y);
       const { niceMin, niceMax, niceTicks } = calcNiceScale(xVals, yVals);
@@ -133,19 +132,36 @@
       const resolvedColors = CHART_CONFIG.scatter.colors.map(resolveCssVar);
       const resolvedTrendlineColor = resolveCssVar(CHART_CONFIG.scatter.trendlines[0].color);
 
-      // --- 修正：format ではなく ticks を直接設定 ---
-      const axisOptions = {
+      // --- 描画領域を正方形に固定 ---
+      const paddingLeft = 40;
+      const paddingTop = 20;
+      const plotSize = sideLength - 65;
+
+      const yTicks = [...niceTicks];
+      yTicks.shift();
+
+      const xAxisOptions = {
         viewWindow: { min: niceMin, max: niceMax },
         ticks: niceTicks
+      };
+      const yAxisOptions = {
+        viewWindow: { min: niceMin, max: niceMax },
+        ticks: yTicks
       };
 
       const options = {
         ...CHART_CONFIG.scatter,
         width: sideLength,
         height: sideLength,
+        chartArea: {
+          left: paddingLeft,
+          top: paddingTop,
+          width: plotSize,
+          height: plotSize
+        },
         colors: resolvedColors,
-        hAxis: { ...CHART_CONFIG.scatter.hAxis, ...axisOptions },
-        vAxis: { ...CHART_CONFIG.scatter.vAxis, ...axisOptions },
+        hAxis: { ...CHART_CONFIG.scatter.hAxis, ...xAxisOptions },
+        vAxis: { ...CHART_CONFIG.scatter.vAxis, ...yAxisOptions },
         trendlines: {
           0: {
             ...CHART_CONFIG.scatter.trendlines[0],
@@ -159,14 +175,35 @@
       google.visualization.events.addListener(chart, 'ready', () => {
         this.#renderEquationOverlay(container, chart);
         this.#suppressTrendlineHoverCircle(chartDiv);
-        // --- 引数に container と chart を渡すよう更新 ---
         this.#rotateYAxisLabels(container, chart, chartDiv);
+        this.#shiftXAxisLabels(container, chart, chartDiv);
+        this.#drawPlotBorder(chartDiv, chart); // 外周枠描画を追加
       });
 
       chart.draw(dataTable, options);
     }
 
-    // --- Y軸目盛りテキストの動的SVG回転処理 ---
+    // --- プロットエリア外周枠描画 ---
+    static #drawPlotBorder(chartDiv, chart) {
+      const svg = chartDiv.querySelector('svg');
+      if (!svg) return;
+
+      const layout = chart.getChartLayoutInterface();
+      const chartArea = layout.getChartAreaBoundingBox();
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', chartArea.left);
+      rect.setAttribute('y', chartArea.top);
+      rect.setAttribute('width', chartArea.width);
+      rect.setAttribute('height', chartArea.height);
+      rect.setAttribute('fill', 'none');
+      rect.setAttribute('stroke', resolveCssVar('var(--grey200)'));
+      rect.setAttribute('stroke-width', '1');
+
+      svg.appendChild(rect);
+    }
+
+    // --- Y軸回転処理 ---
     static #rotateYAxisLabels(container, chart, chartDiv) {
       const svg = chartDiv.querySelector('svg');
       if (!svg) return;
@@ -177,7 +214,9 @@
 
       const textElements = Array.from(svg.querySelectorAll('text')).filter(text => {
         const x = parseFloat(text.getAttribute('x'));
-        return !isNaN(x) && x < leftThreshold && x > (leftThreshold - 50);
+        const textVal = text.textContent.trim().replace(/,/g, '');
+        const isNumericLabel = /^-?\d+(\.\d+)?k?$/.test(textVal);
+        return !isNaN(x) && x < leftThreshold && x > (leftThreshold - 50) && isNumericLabel;
       });
 
       textElements.forEach(text => {
@@ -185,17 +224,65 @@
         const y = parseFloat(text.getAttribute('y'));
 
         if (!isNaN(x) && !isNaN(y)) {
-          text.setAttribute('transform', `rotate(-90, ${x}, ${y})`);
+          const cx = leftThreshold - 12; // ユーザー指定値（微調整可能）
+          const cy = y - 3;              // ユーザー指定値（微調整可能）
+
+          text.setAttribute('transform', `rotate(-90, ${cx}, ${cy})`);
           text.setAttribute('text-anchor', 'middle');
           text.setAttribute('dx', '-6');
-          // --- 修正：SVGテキスト要素に対してもフォントサイズを10に固定し省略を防止 ---
           text.setAttribute('font-size', '10');
           text.style.textOverflow = 'clip';
         }
       });
     }
 
-    // --- ⑤ 回帰式・R値の左上2段表示 ---
+    // --- X軸目盛シフト・高さ調整処理 ---
+    static #shiftXAxisLabels(container, chart, chartDiv) {
+      const svg = chartDiv.querySelector('svg');
+      if (!svg) return;
+
+      const layout = chart.getChartLayoutInterface();
+      const chartArea = layout.getChartAreaBoundingBox();
+      const topThreshold = chartArea.top + chartArea.height;
+
+      const textElements = Array.from(svg.querySelectorAll('text')).filter(text => {
+        const y = parseFloat(text.getAttribute('y'));
+        const textVal = text.textContent.trim().replace(/,/g, '');
+        const isNumericLabel = /^-?\d+(\.\d+)?k?$/.test(textVal);
+        return !isNaN(y) && y >= topThreshold && isNumericLabel;
+      });
+
+      if (!textElements.length) return;
+
+      // 基準のY座標を保持しつつ全体の高さを一括調整
+      const yOffset = 2; // 高さを微調整（例: 上に挙げるならマイナス）
+
+      textElements.forEach(text => {
+        const baseY = parseFloat(text.getAttribute('original-y') || text.getAttribute('y'));
+        if (!text.hasAttribute('original-y')) {
+          text.setAttribute('original-y', baseY);
+        }
+        text.setAttribute('y', baseY + yOffset);
+      });
+
+      // 画面上で最も左側にある（最小値の）目盛要素を特定
+      let minEl = textElements[0];
+      let minX = parseFloat(minEl.getAttribute('x'));
+
+      textElements.forEach(text => {
+        const x = parseFloat(text.getAttribute('x'));
+        if (!isNaN(x) && x < minX) {
+          minX = x;
+          minEl = text;
+        }
+      });
+
+      // 最小値のみ左へシフト
+      const currentDx = parseFloat(minEl.getAttribute('dx') || '0');
+      minEl.setAttribute('dx', String(currentDx - 8));
+    }
+
+    // --- 回帰式表示 ---
     static #renderEquationOverlay(container, chart) {
       container.querySelector('.chart-eq-overlay')?.remove();
 
@@ -231,17 +318,16 @@
       container.appendChild(overlay);
     }
 
-    // --- ④ トレンドラインホバー時の追従円を非表示化 ---
+    // --- 追跡円非表示 ---
     static #suppressTrendlineHoverCircle(chartDiv) {
       const observer = new MutationObserver(() => {
-        // トレンドライン描画用のSVG要素のうち、ホバーで動的に生成される追従ポインタ円を非表示化
         const circles = chartDiv.querySelectorAll('svg g[action="highlight"] circle, svg path[fill="none"] + circle');
         circles.forEach(c => c.style.display = 'none');
       });
       observer.observe(chartDiv, { childList: true, subtree: true });
     }
 
-    // --- グラフ描画エリア消去 ---
+    // --- 描画消去 ---
     static clear(containerId) {
       const container = DOM.get(containerId);
       if (container) {
