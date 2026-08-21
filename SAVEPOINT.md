@@ -1,3 +1,4 @@
+for gemini
 ### セーブポイント：OBPLOT1.1 (アーキテクチャ最適化完了)
 ## 1. システム・アーキテクチャ概要
 - **実行環境**: Google Apps Script (V8 runtime)
