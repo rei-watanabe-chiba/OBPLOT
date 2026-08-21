@@ -59,4 +59,4 @@ for gemini
 ※ Filter (Dataset) 確定時: `State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report'])` を実行し、後続フェーズを初期化。
 
 ## 6. 次の開発手順
-- 新規追加したChart.htmlのリファクタリングとセーブポイント反映
+- 新規追加したChart.htmlのリファクタリングと設計書・セーブポイント反映
