@@ -4,13 +4,15 @@ for gemini
 - **実行環境**: Google Apps Script (V8 runtime)
 - **フロントエンド**: HTML Service (Sidebar & Blob URL による別タブ展開)
 - **描画・計算ライブラリ**: Google Visualization API (CoreChart: ScatterChart), simple-statistics (v7.8.3)
-- **設計パターン**: SPA型 MVMS (Model-View-Method-Service) パターン
+- **設計パターン**: SPA型 MVMS (Model-View-Method-Service) パターン + Web Components
 - **状態管理 (State Management)**: 
   - `AppState` クラスによる Observer (Pub/Sub) パターン。State をセクション単位 (`dataset`, `symbol`, `preview`, `report`) に階層化。
   - フェーズ後退時は `reset()` メソッドを用いて、指定セクションの State を安全に一括初期化。
 - **UI & レンダリング思想**: 
   - HTML の可読性を重視したクリーンな DOM 構造。
-  - State 空状態 (`null`, `[]`) 検知時の自動クリーンアップ（フェイルセーフ機構）を内包。
+  - **Web Components カプセル化**: カスタム要素を用いて機能単位を隠蔽し、外部からの干渉を排除。
+  - **依存性注入 (DI)**: 描画コンポーネント内部からのグローバル State への直接参照を禁止し、プロパティ代入（セッター）によるデータの注入を徹底。
+  - **State連動UI**:  Stateリセット時の自動クリーンアップ（フェイルセーフ機構）を内包。
 - **イベント駆動 & 単方向データフロー**:
   - 静的イベントは HTML 側の `data-action` 属性と `Event` ルーターで処理し、高階関数を用いてハンドラ生成を共通化。
   - UI フェーズ制御は `View` 層の定数マップに基づく宣言的ルール適用エンジン (`UIPhase`) で集約制御。
@@ -24,8 +26,9 @@ for gemini
 - `CSS.html`: スタイル・デザイントークン・コンポーネント定義
 - `Model.html`: 階層化Stateストア(`AppState`), リセット基盤, API通信(`GasService`), アプリ定数
 - `Component.html`: 汎用DOM操作(`DOM`), 汎用動的パーツ生成(`NewDOM`, フェイルセーフ内包)
-- `View.html`: UIルール適用エンジン(`UIPhase`), 動的State同期・レンダリング(`UIStateUpdater`)
-- `Method.html`: 純粋ビジネスロジック (DOM/API非依存の計算・データ加工・バリデーション)
+- `View.html`: UIルール適用エンジン(`UIPhase`), 動的State同期・レンダリング(`UIStateUpdater`, カスタム要素へのDI実行)
+- `Chart.html`: グラフ描画Web Component (`<ob-cal-plot>`), ThemeCache, DataRoles統合, Observer監視パイプライン
+- `Method.html`: 純粋ビジネスロジック (DOM/API非依存の計算・データ加工・スケール計算・バリデーション)
 - `Controller.html`: 非同期フロー制御, ユースケース実行, Stateリセット(ダウングレード)のオーケストレーション
 - `Event.html`: イベント委譲ルーター, 高階関数によるバインダ生成, リアクティブバリデーション
 - `Report.html`: レポート出力用テンプレート (Blob URL 別タブ展開用)
@@ -35,10 +38,10 @@ for gemini
 ## 3. コア・コントラクト（主要モジュールの責務と制約）
 - **[State Store] `AppState` (Model)**: 状態の唯一の源泉。更新は必ず `.set()` を経由し、フェーズ後退等による初期化は `.reset()` を明示的に呼び出す。
 - **[UI Rules] `UIPhase` (View)**: フェーズ遷移に伴う UI (活性/非活性/表示) の更新ルールは、命令的な `if` 制御を避け、定数マップ定義に集約する。
-- **[UI Renderer] `UIStateUpdater` (View)**: DOM の直接操作は禁止。State を購読 (`subscribe`) し、`NewDOM` を介して安全に描画・クリーンアップを実行する。
+- **[UI Renderer] `UIStateUpdater` (View)**: DOM の直接操作は禁止。State を購読 (`subscribe`) し、`NewDOM` やカスタム要素を介して安全に描画・クリーンアップを実行する（描画データはDTOとして注入する）。
 - **[Logic] `Method.*` (Method)**: 状態を持たない純粋関数・クラス群。DOM操作や API通信を一切含まず、引数から計算結果を返す役割に徹する。
 - **[Event Router] `Evt` (Event)**: イベントの発火元。複雑なビジネスロジックは持たず、高階関数や属性ルーティングを用いてコード量を削減し、`Controller` へ処理を委譲する。
-- **[API / Service] `GasService`**: `google.script.run` はベタ書きせず、カスタムエラー対応のPromiseラッパーを使用。`async/await` と `try/catch` による非同期エラーハンドリングを徹底する。バックエンドレスポンス（DTO）変更に備え、フロント側で受動的バリデーションを挟む。
+- **[API / Service] `GasService`**: `google.script.run` はベタ書きせず、カスタムエラー対応のPromiseラッパーを使用。`async/await` と `try/catch` による非同期エラーハンドリングを徹底する。
 
 ---
 
