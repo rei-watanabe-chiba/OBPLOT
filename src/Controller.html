@@ -166,6 +166,22 @@
         return "シンボル確定";
       });
     }
+    // --- Tab2 シンボルリセット ---
+    static async resetSymbolRules() {
+      State.reset('Tab2ST.symbol.rules');
+    }
+    // --- Tab2 シンボル行追加と削除 ---
+    static async addSymbolRule() {
+      const rules = [...(State.get("Tab2ST.symbol.rules") || [])];
+      rules.push({ id: `rule_${Date.now()}`, target: "", shape: "circle", color: "var(--grey600)" });
+      State.set("Tab2ST.symbol.rules", rules);
+    }
+    static async removeSymbolRule(targetBtn) {
+      const ruleId = targetBtn?.getAttribute('data-rule-id');
+      if (!ruleId) return;
+      const rules = (State.get("Tab2ST.symbol.rules") || []).filter(r => r.id !== ruleId);
+      State.set("Tab2ST.symbol.rules", rules);
+    }
 
     // --- Tab2 プレビュー作成 ---
     static async makePreview() {

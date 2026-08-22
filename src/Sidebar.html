@@ -93,6 +93,7 @@
             </div>
             <div class="field-row">
               <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
+              <button id="symbolResetBtn" class="outline" data-action="Tab2.resetSymbolRules">リセット</button>
             </div>
           </details>
           <div id="symbolStatusBar" class="status-bar" data-status="hidden"></div>
@@ -172,12 +173,19 @@
       </label>
     </template>
     <template id="symbolRowTemplate">
-      <div class="symbol-row">
-        <select data-symbol-type="target" class="symbol-target">
-          <option value="" selected>未選択</option>
-        </select>
-        <select data-symbol-type="shape" class="symbol-shape"></select>
-        <select data-symbol-type="color" class="symbol-color"></select>
+      <div class="symbol-table-row">
+        <div class="symbol-col-btn">
+          <button type="button" class="icon-btn"></button>
+        </div>
+        <div class="symbol-col-target"></div>
+        <div class="symbol-col-shape"></div>
+        <div class="symbol-col-color"></div>
+      </div>
+    </template>
+    <template id="singleSelectTemplate">
+      <div class="single-select-wrapper">
+        <button type="button" class="single-select-summary"></button>
+        <div class="single-select-options" popover="auto"></div>
       </div>
     </template>
     <template id="previewModeTemplate">

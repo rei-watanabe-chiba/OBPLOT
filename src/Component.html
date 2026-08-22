@@ -77,19 +77,95 @@
       });
     }
 
-    // --- シンボル設定行生成 ---
-    static symbolRows(values, objID, targetState) {
+    // --- シンボル設定行生成 (独立[+]ボタン対応) ---
+    static symbolRows(rules, targetValues, objID) {
       const container = DOM.get(objID);
       if (!container) return;
-      if (!values?.length) { container.replaceChildren(); return; } // 空ならクリア
+      if (!rules?.length) { container.replaceChildren(); return; }
+
       const { symbolShapes: shapes, symbolColors: colors } = GLOBAL_CONFIG;
-      this.#renderList("symbolRowTemplate", Array.from({ length: 5 }), objID, (clone, _, i) => {
-        clone.querySelectorAll("select").forEach(s => this.#bind(s, { 'data-symbol-idx': i, 'data-change': targetState }));
-        clone.querySelector('[data-symbol-type="target"]').append(...values.map(v => new Option(v, v)));
-        clone.querySelector('[data-symbol-type="shape"]').append(...shapes.map(s => new Option(s, s)));
-        clone.querySelector('[data-symbol-type="color"]').append(...colors.map(c => new Option(c.label, c.val)));
+      const rowTpl = DOM.get("symbolRowTemplate");
+      const selTpl = DOM.get("singleSelectTemplate");
+
+      // ドロップダウン生成ヘルパー
+      const makeSelect = (opts, currentVal, type, idx, hasColorBox = false) => {
+        const clone = selTpl.content.cloneNode(true);
+        const summary = clone.querySelector(".single-select-summary");
+        const optionsBox = clone.querySelector(".single-select-options");
+        const popoverId = `popover-sym-${type}-${idx}`;
+        const anchorName = `--anchor-sym-${type}-${idx}`;
+        
+        summary.setAttribute("popovertarget", popoverId);
+        summary.style.anchorName = anchorName;
+        optionsBox.id = popoverId;
+        optionsBox.style.positionAnchor = anchorName;
+
+        let currentLabel = "未選択";
+        let currentColor = "";
+
+        opts.forEach(opt => {
+          const itemBtn = document.createElement("button");
+          itemBtn.type = "button";
+          itemBtn.className = "single-select-item";
+          itemBtn.setAttribute("data-change", "Tab2.updateSymbol");
+          itemBtn.setAttribute("data-symbol-idx", idx);
+          itemBtn.setAttribute("data-symbol-type", type);
+          itemBtn.value = opt.val;
+
+          let html = hasColorBox ? `<span class="color-box" style="background: ${opt.val}"></span>` : "";
+          itemBtn.innerHTML = html + opt.label;
+
+          if (opt.val === currentVal) {
+            currentLabel = opt.label;
+            currentColor = opt.val;
+          }
+          itemBtn.setAttribute("popovertarget", popoverId);
+          itemBtn.setAttribute("popovertargetaction", "hide");
+          
+          optionsBox.appendChild(itemBtn);
+        });
+
+        let summaryHtml = (hasColorBox && currentVal) ? `<span class="color-box" style="background: ${currentColor}"></span>` : "";
+        summary.innerHTML = summaryHtml + currentLabel;
         return clone;
+      };
+
+      // 1. データ行の生成（すべて左端は[-]）
+      const itemRows = rules.map((rule, i) => {
+        const rowClone = rowTpl.content.cloneNode(true);
+        const btn = rowClone.querySelector(".icon-btn");
+        const isDefault = (rule.id === "default");
+        
+        btn.textContent = "-";
+        btn.setAttribute("data-action", "Tab2.removeSymbolRule");
+        btn.setAttribute("data-rule-id", rule.id);
+        if (isDefault) btn.disabled = true;
+
+        const targetContainer = rowClone.querySelector(".symbol-col-target");
+        if (isDefault) {
+          targetContainer.innerHTML = '<div style="padding: 4px 12px; font-size: 12px; color: var(--grey400);">指定なし (Default)</div>';
+        } else {
+          const tOpts = [{ val: "", label: "未選択" }, ...targetValues.map(v => ({ val: v, label: v }))];
+          targetContainer.appendChild(makeSelect(tOpts, rule.target, "target", i));
+        }
+
+        rowClone.querySelector(".symbol-col-shape").appendChild(makeSelect(shapes, rule.shape, "shape", i));
+        rowClone.querySelector(".symbol-col-color").appendChild(makeSelect(colors, rule.color, "color", i, true));
+
+        return rowClone;
       });
+
+      // 2. 末尾の[+]専用行の生成
+      const addRowClone = rowTpl.content.cloneNode(true);
+      const addBtn = addRowClone.querySelector(".icon-btn");
+      addBtn.textContent = "+";
+      addBtn.setAttribute("data-action", "Tab2.addSymbolRule");
+      
+      addRowClone.querySelector(".symbol-col-target").innerHTML = "";
+      addRowClone.querySelector(".symbol-col-shape").innerHTML = "";
+      addRowClone.querySelector(".symbol-col-color").innerHTML = "";
+
+      container.replaceChildren(...itemRows, addRowClone);
     }
 
     // --- 統計表レンダリング ---

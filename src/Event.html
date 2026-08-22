@@ -67,16 +67,27 @@
       toggleDataset: this.#bindMulti(Tab2UI.datasetBox, "Tab2ST.dataset.filter"),
       toggleAllDataset: this.#bindAll(Tab2UI.datasetBox, "Tab2ST.dataset.filter"),
       // リアクティブ状態監視：シンボル設定
-      updateSymbol: (target) => {
-        const idx = target.getAttribute('data-symbol-idx');
-        if (!idx) return;
-        const getVal = type => document.querySelector(`select[data-symbol-idx="${idx}"][data-symbol-type="${type}"]`)?.value;
-        const tVal = getVal("target");
-        if (tVal) {
-          State.set("Tab2ST.symbol.mapping", {
-            ...(State.get("Tab2ST.symbol.mapping") || {}),
-            [tVal]: { shape: getVal("shape"), color: getVal("color") }
-          });
+      confirmAndChangeAxis: async (targetSelect) => {
+        const newVal = targetSelect.value;
+        const oldVal = State.get("Tab2ST.symbol.baseKey");
+        if (newVal === oldVal) return;
+        const isConfirmed = await NewDOM.confirm("確認", "シンボル設定をリセットしますか？");
+        if (!isConfirmed) {
+          targetSelect.value = oldVal;
+          return;
+        }
+        State.set("Tab2ST.symbol.baseKey", newVal);
+        State.reset("Tab2ST.symbol.rules");
+      },
+      updateSymbol: (targetBtn) => {
+        const idx = targetBtn.getAttribute('data-symbol-idx');
+        const type = targetBtn.getAttribute('data-symbol-type');
+        const val = targetBtn.value;
+        if (idx == null || !type) return;
+        const rules = [...(State.get("Tab2ST.symbol.rules") || [])];
+        if (rules[idx]) {
+          rules[idx][type] = val;
+          State.set("Tab2ST.symbol.rules", rules);
         }
       },
       // リアクティブ状態監視：Obsidianモード
@@ -100,7 +111,7 @@
         }
       }
     }
-    // --- 値更新監視 ---
+     // --- 値更新監視 ---
     static #handleChange(e) {
       const target = e.target;
       const bindPath = target.getAttribute('data-bind');

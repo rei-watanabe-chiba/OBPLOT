@@ -38,7 +38,12 @@
       { value: "Group", label: "Group" },
       { value: "Source", label: "Source" }
     ],
-    symbolShapes: ['circle', 'triangle', 'square', 'cross'],
+    symbolShapes: [
+      { val: 'circle', label: '●' },
+      { val: 'triangle', label: '▲' },
+      { val: 'square', label: '■' },
+      { val: 'cross', label: '✖' }
+    ],
     symbolColors: [
       { val: 'var(--grey600)', label: 'Gray' },
       { val: 'var(--main-blue)', label: 'Blue' },
@@ -133,7 +138,7 @@
           },
           symbol: { 
             baseKey: "dataset", 
-            mapping: {}, 
+            rules: [{ id: "default", target: "", shape: "circle", color: "var(--grey600)" }], 
             status: [] 
           },
           preview: {
