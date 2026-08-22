@@ -123,6 +123,7 @@
   }
 
   input, select {
+    flex: 1;
     width: 100%;
     margin-top: calc(var(--unit) * 1);
     padding: calc(var(--unit) * 1.5) calc(var(--unit) * 2);
@@ -477,7 +478,16 @@
     border-radius: calc(var(--unit) * 1);
   }
 
-  /* --- シンボル設定テーブル風レイアウト --- */
+  /* --- シンボル設定動的テーブル --- */
+  #symbolBox {
+    max-height: calc(var(--unit) * 50);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--grey200) transparent;
+    border: 1px solid var(--grey200);
+    border-radius: calc(var(--unit) * 1);
+    padding: calc(var(--unit) * 1) calc(var(--unit) * 2);
+  }
   .symbol-table-row {
     display: flex;
     align-items: center;

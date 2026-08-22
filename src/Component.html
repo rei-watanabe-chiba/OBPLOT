@@ -77,7 +77,7 @@
       });
     }
 
-    // --- シンボル設定行生成 (独立[+]ボタン対応) ---
+    // --- シンボル設定行生成 ---
     static symbolRows(rules, targetValues, objID) {
       const container = DOM.get(objID);
       if (!container) return;
@@ -107,7 +107,8 @@
           const itemBtn = document.createElement("button");
           itemBtn.type = "button";
           itemBtn.className = "single-select-item";
-          itemBtn.setAttribute("data-change", "Tab2.updateSymbol");
+          // data-change から data-action へ移行
+          itemBtn.setAttribute("data-action", "Tab2.updateSymbol");
           itemBtn.setAttribute("data-symbol-idx", idx);
           itemBtn.setAttribute("data-symbol-type", type);
           itemBtn.value = opt.val;
@@ -143,7 +144,7 @@
 
         const targetContainer = rowClone.querySelector(".symbol-col-target");
         if (isDefault) {
-          targetContainer.innerHTML = '<div style="padding: 4px 12px; font-size: 12px; color: var(--grey400);">指定なし (Default)</div>';
+          targetContainer.innerHTML = '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>';
         } else {
           const tOpts = [{ val: "", label: "未選択" }, ...targetValues.map(v => ({ val: v, label: v }))];
           targetContainer.appendChild(makeSelect(tOpts, rule.target, "target", i));

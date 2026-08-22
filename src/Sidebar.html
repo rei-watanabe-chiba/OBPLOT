@@ -87,13 +87,15 @@
             <summary>シンボル設定</summary>
             <div id="symbolArea" style="display: none;">
               <label>属性選択</label>
-            <div id="symbolAxisBox"></div>
+              <div class="field-row">
+                <div id="symbolAxisBox"></div>
+                <button id="symbolResetBtn" data-type="primary" class="outline" data-action="Tab2.resetSymbolRules">リセット</button>
+              </div>
               <label>シンボル設定</label>
               <div id="symbolBox"></div>
             </div>
             <div class="field-row">
               <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
-              <button id="symbolResetBtn" class="outline" data-action="Tab2.resetSymbolRules">リセット</button>
             </div>
           </details>
           <div id="symbolStatusBar" class="status-bar" data-status="hidden"></div>

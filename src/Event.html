@@ -107,7 +107,7 @@
       if (actionBtn) {
         const [namespace, methodName] = actionBtn.getAttribute('data-action').split('.');
         if (Ctrl[namespace] && typeof Ctrl[namespace][methodName] === 'function') {
-          Ctrl[namespace][methodName]();
+          Ctrl[namespace][methodName](actionBtn);
         }
       }
     }

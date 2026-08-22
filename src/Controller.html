@@ -166,21 +166,38 @@
         return "シンボル確定";
       });
     }
+    
     // --- Tab2 シンボルリセット ---
     static async resetSymbolRules() {
-      State.reset('Tab2ST.symbol.rules');
+      State.reset("Tab2ST.symbol.rules");
     }
-    // --- Tab2 シンボル行追加と削除 ---
-    static async addSymbolRule() {
+
+    // --- Tab2 シンボル行追加 (targetBtn引数受け取り) ---
+    static async addSymbolRule(targetBtn) {
       const rules = [...(State.get("Tab2ST.symbol.rules") || [])];
       rules.push({ id: `rule_${Date.now()}`, target: "", shape: "circle", color: "var(--grey600)" });
       State.set("Tab2ST.symbol.rules", rules);
     }
+
+    // --- Tab2 シンボル行削除 (targetBtn引数受け取り) ---
     static async removeSymbolRule(targetBtn) {
       const ruleId = targetBtn?.getAttribute('data-rule-id');
       if (!ruleId) return;
       const rules = (State.get("Tab2ST.symbol.rules") || []).filter(r => r.id !== ruleId);
       State.set("Tab2ST.symbol.rules", rules);
+    }
+
+    // --- Tab2 シンボル値更新 (targetBtn引数受け取り) ---
+    static async updateSymbol(targetBtn) {
+      const idx = targetBtn.getAttribute('data-symbol-idx');
+      const type = targetBtn.getAttribute('data-symbol-type');
+      const val = targetBtn.value;
+      if (idx == null || !type) return;
+      const rules = [...(State.get("Tab2ST.symbol.rules") || [])];
+      if (rules[idx]) {
+        rules[idx][type] = val;
+        State.set("Tab2ST.symbol.rules", rules);
+      }
     }
 
     // --- Tab2 プレビュー作成 ---
