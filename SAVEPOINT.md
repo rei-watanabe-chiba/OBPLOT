@@ -1,74 +1,66 @@
 for gemini
 ### セーブポイント：OBPLOT1.1 (アーキテクチャ最適化完了)
-## 1. システム・アーキテクチャ概要
-- **実行環境**: Google Apps Script (V8 runtime)
-- **フロントエンド**: HTML Service (Sidebar & Blob URL による別タブ展開)
-- **描画・計算ライブラリ**: Apache ECharts (v5.5.1), simple-statistics (v7.8.3)
-- **設計パターン**: SPA型 MVMS (Model-View-Method-Service) パターン + Web Components
-- **状態管理 (State Management)**: 
-  - `AppState` クラスによる Observer (Pub/Sub) パターン。State をセクション単位 (`dataset`, `symbol`, `preview`, `report`) に階層化。
-  - フェーズ後退時は `reset()` メソッドを用いて、指定セクションの State を安全に一括初期化。
-- **UI & スタイリング思想**: 
-  - CSS Nesting構文による明確なスコープ化と階層化。
-  - 共通基底クラス（`.scroll-y`, `.form-control`）による DRY なコンポーネント構成。
-  - カスタムプロパティ（CSS変数）を活用したボタン・ステータスバーの動的バリアント設計。
-  - **Web Components によるUIプリミティブカプセル化**: 
-    - `<ob-popover>`: Popover APIのガワとAnchor位置計算を隠蔽。
-    - `<ob-multi-select>` / `<ob-symbol-table>`: 宣言的データ注入（DI）で描画されるフォーム要素。
-    - `<ob-cal-plot>`: ECharts グラフ描画。
-  - **宣言的ビルダー (View -> Component)**: `UIInit` のボイラープレートを撤廃し、ファクトリ関数を用いた構成定義のみでDOMを構築。
-- **イベント駆動 & 単方向データフロー**:
-  - 静的イベントは HTML 側の `data-action`, `data-change` 属性と `Event` ルーターで処理し、高階関数を用いてハンドラ生成を共通化。
-  - UI フェーズ制御は `View` 層の定数マップに基づく宣言的ルール適用エンジン (`UIPhase`) で集約制御。
-  - State 更新は DI 経由で Component に注入され、DOM は内部で自動再描画される。
-- **非同期通信**: `google.script.run` を Promise ラップした `GasService` クラスによる `async/await` 統一制御。
-- **将来的な拡張性（Office Add-in 移植方針）**:
-  - 現在の開発主軸は GAS (Google Apps Script) 環境。
-  - 将来的に「Office Add-in + GitHub Pages」によるローカル配布型 Excel サイドバーアプリへ移行可能とするため、標準Web技術（Off-line / Local library 化等）に準拠。
+### セーブポイント：OBPLOT1.8 (完全宣言的UI・MVMSアーキテクチャ確立)
+
+## 1. システム・アーキテクチャ（設計思想とパラダイム）
+- **実行環境**: Google Apps Script (V8 runtime) / HTML Service (Sidebar & Blob URL)
+- **コア・パラダイム**: SPA型 MVMS (Model-View-Method-Service) + Web Components + Presenter パターン
+- **状態管理 (State Management - Single Source of Truth)**: 
+  - `AppState` による Observer (Pub/Sub) モデルを採用。状態はセクション (`dataset`, `symbol`, `preview`, `report`) ごとに厳密に階層化される。
+  - 状態の後退・破棄は、各階層の初期値を安全に復元する `reset()` メソッドによってフェイルセーフに管理される。
+- **プレゼンテーション (UI & Rendering Philosophy)**: 
+  - **UIプリミティブのカプセル化 (Web Components)**: `<ob-popover>`, `<ob-multi-select>`, `<ob-symbol-table>`, `<ob-cal-plot>` 等のカスタム要素を用い、Popover APIのバインディングやAnchor位置計算などの「振る舞い」と「内部構造」を完全に隠蔽する。
+  - **完全宣言的UI (Declarative Builder)**: 設定配列 (Config Array) を受け取るファクトリ (`NewDOM.buildFormFields`) がDOMを動的構築し、静的マークアップと動的生成の境界を明確化。
+  - **ViewとLogicの分離 (Presenter パターン)**: 全てのHTML文字列生成を `Tpl` クラス（疑似テンプレート管理）へ集約。名前空間（Common, Stats, Symbol等）で純粋関数として管理し、DRY原則を徹底。
+  - **デザイントークンとスコープ化**: CSS Nesting構文、基底ユーティリティ（`.scroll-y`, `.form-control`）、CSSカスタムプロパティを用いたバリアント設計により、拡張性と保守性を両立。
+  - **UIフェーズ制御 (Phase UIControl)**: 定数マップに基づく宣言的UIルールエンジン (`UIPhase`) で集約制御。
+- **データフロー (Unidirectional Data Flow)**:
+  - ユーザー操作 -> `data-action`/`data-change` -> `Event` (ルーター) -> Controller (フロー制御) -> State (更新) -> View (購読) -> Web Components (DIによるプロパティ注入) -> 内部再描画、という厳格な単方向サイクルを遵守する。
+- **将来的な拡張性 (Add-in Portability)**:
+  - 非同期通信のためのGAS通信層 (`GasService`) 以外は、標準Web技術 (ES6, Web Components, CSS Nesting) に完全準拠し、将来的な「Office Add-in + GitHub Pages」等のローカル配布環境への移植を前提とした設計とする。
 
 ---
 
-## 2. ディレクトリ構造・ファイル一覧
-- `Code.gs`: バックエンドAPI (データ入出力/UserProperties管理/HTMLテンプレート供給)
-- `Sidebar.html`: メインUI構造 (静的actionのハードコード/可読性重視のクリーンなマークアップ)
-- `CSS.html`: スタイル・デザイントークン・コンポーネント定義
-- `Model.html`: 階層化Stateストア(`AppState`), リセット基盤, API通信(`GasService`), アプリ定数
-- `Component.html`: 汎用DOM操作(`DOM`), 汎用動的パーツ生成(`NewDOM`, フェイルセーフ内包)
-- `View.html`: UIルール適用エンジン(`UIPhase`), 動的State同期・レンダリング(`UIStateUpdater`, カスタム要素へのDI実行)
-- `Chart.html`: グラフ描画Web Component (`<ob-cal-plot>`), ThemeCache, DataRoles統合, Observer監視パイプライン
-- `Method.html`: 純粋ビジネスロジック (DOM/API非依存の計算・データ加工・スケール計算・バリデーション)
-- `Controller.html`: 非同期フロー制御, ユースケース実行, Stateリセット(ダウングレード)のオーケストレーション
-- `Event.html`: イベント委譲ルーター, 高階関数によるバインダ生成, リアクティブバリデーション
-- `Report.html`: レポート出力用テンプレート (Blob URL 別タブ展開用)
+## 2. ディレクトリ構造とモジュール責務
+- `Code.js`: [Service] バックエンドAPI (データI/O, UserProperties管理, HTML供給)
+- `Sidebar.html`: [UI] メインUIの静的構造定義。動的要素はWeb Componentタグの配置のみ。
+- `CSS.html`: [Style] トークン定義、共通ユーティリティ、カプセル化されたコンポーネントスタイル。
+- `Model.html`: [Model] 状態管理ストア(`AppState`), 定数群(`GLOBAL_CONFIG`), API通信ラッパー(`GasService`)。
+- `Component.html`: [Component/Presenter] DOM構築ビルダー(`NewDOM`), テンプレート管理(`Tpl`), カスタム要素定義群。
+- `View.html`: [View] 宣言的UIルールエンジン(`UIPhase`), 状態購読とコンポーネントへのデータ注入(DI)を担うバインディング層(`UIStateUpdater`)。
+- `Chart.html`: [Component] EChartsをカプセル化したグラフ描画用カスタム要素 (`<ob-cal-plot>`) とテーマキャッシュ。
+- `Method.html`: [Logic] DOM/APIに一切依存しない、純粋関数によるビジネスロジック群 (データ加工, 統計計算, バリデーション)。
+- `Controller.html`: [Controller] ユースケース単位の非同期フロー制御、Stateのリセット・更新のオーケストレーション。
+- `Event.html`: [Event] 静的属性に基づくイベント委譲ルーター、リアクティブな入力バリデーションフック。
+- `Report.html`: [Template] レポート出力用静的HTMLテンプレート (Blob URL 別タブ展開用)。
 
 ---
 
-## 3. コア・コントラクト（主要モジュールの責務と制約）
-- **[State Store] `AppState` (Model)**: 状態の唯一の源泉。更新は必ず `.set()` を経由し、フェーズ後退等による初期化は `.reset()` を明示的に呼び出す。
-- **[UI Rules] `UIPhase` (View)**: フェーズ遷移に伴う UI (活性/非活性/表示) の更新ルールは、命令的な `if` 制御を避け、定数マップ定義に集約する。
-- **[UI Renderer] `UIStateUpdater` (View)**: DOM の直接操作は禁止。State を購読 (`subscribe`) し、`NewDOM` やカスタム要素を介して安全に描画・クリーンアップを実行する（描画データはDTOとして注入する）。
-- **[Logic] `Method.*` (Method)**: 状態を持たない純粋関数・クラス群。DOM操作や API通信を一切含まず、引数から計算結果を返す役割に徹する。
-- **[Event Router] `Evt` (Event)**: イベントの発火元。複雑なビジネスロジックは持たず、高階関数や属性ルーティングを用いてコード量を削減し、`Controller` へ処理を委譲する。
-- **[API / Service] `GasService`**: `google.script.run` はベタ書きせず、カスタムエラー対応のPromiseラッパーを使用。`async/await` と `try/catch` による非同期エラーハンドリングを徹底する。
+## 3. コア・コントラクト（絶対的制約事項）
+1. **[State Store]** 状態の更新は必ず `.set()` を経由し、状態の初期化は `.reset()` で明示的に行う。DOMからの逆算による状態取得は禁止。
+2. **[UI Rules]** フェーズ遷移に伴うUIの活性/非活性・表示制御は、命令的な `if` 分岐を避け、`UIPhase` の定数マップ定義（宣言的ルール）に集約する。
+3. **[UI Renderer]** `View` 層（`UIStateUpdater`）はDOMを直接操作しない。Stateを購読し、ヘルパー関数やWeb Componentに対してデータ (DTO) をプロパティとして注入 (DI) する「パイプライン」に徹する。
+4. **[Business Logic]** `Method` 層は副作用を持たない純粋関数・クラス群として実装し、DOM操作やAPI通信を一切混入させない。
+5. **[Event Router]** `Event` 層は複雑なロジックを持たず、高階関数や属性ルーティングを用いてイベントを捕捉し、速やかに `Controller` または `State.set()` へ処理を委譲する。
+6. **[API Communication]** GASとの通信は `GasService` (Promiseラッパー) を用い、`async/await` と `try/catch` によるエラーハンドリングを徹底する。
 
 ---
 
-## 4. アーキテクチャ・パイプライン（データ経路）
-- **[Command Route (ボタン操作等)]**:
-  `[User Action] -> (data-action) -> [Evt] -> (Route) -> [Ctrl] <-> (Logic/Fetch) <-> [Method / API] -> (Mutate) -> [AppState.set/reset] -> (Subscribe) -> [UIStateUpdater/UIPhase] -> (Render/DI) -> [NewDOM / <ob-cal-plot>]`
-- **[Reactive Route (入力・選択等)]**:
-  `[User Input] -> (data-bind / data-change) -> [Evt] -> (Mutate) -> [AppState.set] -> (Subscribe) -> [UIStateUpdater/UIPhase] -> (Render) -> [NewDOM]`
+## 4. アーキテクチャ・パイプライン（イベントとデータの経路）
+- **[コマンド・ルート (非同期実行・ボタン操作等)]**:
+  `[User Action] -> (data-action) -> [Evt Router] -> [Controller] <-> (Method / API) -> (Mutate) -> [AppState] -> (Subscribe) -> [View (UIPhase/UIStateUpdater)] -> (DI) -> [Web Components]`
+- **[リアクティブ・ルート (同期実行・入力選択等)]**:
+  `[User Input] -> (data-bind / data-change) -> [Evt Router] -> (Mutate) -> [AppState] -> (Subscribe) -> [View (UIPhase/UIStateUpdater)] -> (DI) -> [Web Components]`
 
-## 5. フェーズ・ステートマシン（状態遷移フロー）
+## 5. フェーズ・ステートマシン（状態遷移定義）
 - **[Tab 1: データ抽出]**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
-  - ※ `INVALID` または編集検知時、`State.reset(['Tab1ST.exac'])` を実行し、抽出関連 State を初期化してダウングレード。
+  - ※ `INVALID` フェーズ移行時、またはシート編集検知時、`State.reset(['Tab1ST.exac'])` により抽出Stateを初期化しダウングレードする。
 - **[Tab 2: グラフ作成]**: `INIT(1) -> LOADED(2) -> FILTERED(3) -> MAPPED(4) -> PREVIEWED(5)`
-  - ※ データロード時: 全 Tab2 関連 State をリセット。
-  - ※ Filter (Dataset) 確定時: `State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report'])` を実行し、後続フェーズを初期化。
+  - ※ データロード(`LOADED`)時: 全Tab2関連Stateをリセット。
+  - ※ データ確定(`FILTERED`)時: `State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report'])` により後続Stateを初期化。
 
 ## 6. 次の開発手順
-- セーブポイント更新
-- モダン化による省コード化: calc(var(--unit) * N) を維持しつつ、gap や flex のレイアウト指定を活用て子要素のレイアウト記述を削減してください
-- そのほかスクロールような汎用化可能な部分、拡張コンポーネントでネスト構文により共通化可能な部分があれば改修してください
-- 現状のUXとフローを大きく崩さない程度の論理構成の変更は許可します（他層の改修も含む）
+- Tab2「補正方法」適用ロジックの実装（`Correction` シートの読込・検量パラメータのプレビュー値への適用）
+- `Report.html` への検量線プロットおよびレポートデータ動的注入ロジックの統合
+- エッジケース（欠損値・外れ値）に対するバリデーションテストと動作確認
 
