@@ -40,7 +40,7 @@ for gemini
 ## 3. コア・コントラクト（絶対的制約事項）
 1. **[State Store]** 状態の更新は必ず `.set()` を経由し、状態の初期化は `.reset()` で明示的に行う。DOMからの逆算による状態取得は禁止。
 2. **[UI Rules]** フェーズ遷移に伴うUIの活性/非活性・表示制御は、命令的な `if` 分岐を避け、`UIPhase` の定数マップ定義（宣言的ルール）に集約する。
-3. **[UI Renderer]** `View` 層（`UIStateUpdater`）はDOMを直接操作しない。Stateを購読し、ヘルパー関数やWeb Componentに対してデータ (DTO) をプロパティとして注入 (DI) する「パイプライン」に徹する。**※初期表示を操作するためのView側からの直接プロパティ代入は、リアクティブサイクルを破壊するため厳禁とする。**
+3. **[UI Renderer]** `View` 層（`UIStateUpdater`）はDOMを直接操作しない。Stateを購読し、ヘルパー関数やWeb Componentに対してデータ (DTO) をプロパティとして注入 (DI) する「パイプライン」に徹する。可能な限りHTMLの宣言的バインディング属性 (`data-bind-*`) を活用し、手動のDOMプロパティ代入を避ける。**※初期表示を操作するためのView側からの直接プロパティ代入は、リアクティブサイクルを破壊するため厳禁とする。**
 4. **[Business Logic]** `Method` 層は副作用を持たない純粋関数・クラス群として実装し、DOM操作やAPI通信を一切混入させない。
 5. **[Event Router]** `Event` 層は複雑なロジックを持たず、高階関数や属性ルーティングを用いてイベントを捕捉し、速やかに `Controller` または `State.set()` へ処理を委譲する。
 6. **[API Communication]** GASとの通信は `GasService` (Promiseラッパー) を用い、`async/await` と `try/catch` によるエラーハンドリングを徹底する。
