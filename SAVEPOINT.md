@@ -1,6 +1,5 @@
 for gemini
-### セーブポイント：OBPLOT1.1 (アーキテクチャ最適化完了)
-### セーブポイント：OBPLOT1.8 (完全宣言的UI・MVMSアーキテクチャ確立)
+### セーブポイント：OBPLOT1.0
 
 ## 1. システム・アーキテクチャ（設計思想とパラダイム）
 - **実行環境**: Google Apps Script (V8 runtime) / HTML Service (Sidebar & Blob URL)
