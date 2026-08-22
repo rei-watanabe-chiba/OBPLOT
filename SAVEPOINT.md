@@ -11,8 +11,8 @@ for gemini
 - **プレゼンテーション (UI & Rendering Philosophy)**: 
   - **UIプリミティブのカプセル化 (Web Components)**: `<ob-popover>`, `<ob-multi-select>`, `<ob-symbol-table>`, `<ob-cal-plot>` 等のカスタム要素を用い、Popover APIのバインディングやAnchor位置計算などの「振る舞い」と「内部構造」を完全に隠蔽する。
   - **完全宣言的UI (Declarative Builder)**: 設定配列 (Config Array) を受け取るファクトリ (`NewDOM.buildFormFields`) がDOMを動的構築し、静的マークアップと動的生成の境界を明確化。
-  - **ViewとLogicの分離 (Presenter パターン)**: 全てのHTML文字列生成を `Tpl` クラス（疑似テンプレート管理）へ集約。名前空間（Common, Stats, Symbol等）で純粋関数として管理し、DRY原則を徹底。
-  - **デザイントークンとスコープ化**: CSS Nesting構文、基底ユーティリティ（`.scroll-y`, `.form-control`）、CSSカスタムプロパティを用いたバリアント設計により、拡張性と保守性を両立。
+  - **ViewとLogicの分離 (Presenter パターン)**: 全てのHTML文字列生成を `Tpl` クラス（疑似テンプレート管理）へ集約。タグ付きテンプレートリテラル (`html``)で未定義値のフォールバックを隠蔽して宣言。名前空間（Common, Stats, Symbol等）で純粋関数として管理し、DRY原則を徹底。
+  - **デザイントークンとレイヤーアーキテクチャ**: CSS Nesting構文と変数設計に加え、最新の カスケードレイヤー (@layer reset, base, components, utilities) で詳細度の競合をアーキテクチャレベルで排除し堅牢性を確保。
   - **UIフェーズ制御 (Phase UIControl)**: 定数マップに基づく宣言的UIルールエンジン (`UIPhase`) で集約制御。
 - **データフローと厳格なDI (Unidirectional Data Flow & Reactive DI)**:
   - ユーザー操作 -> `data-action`/`data-change` -> `Event` (ルーター) -> Controller (フロー制御) -> State (更新) -> View (購読) -> Web Components (DIによるプロパティ注入) -> 内部再描画、という厳格な単方向サイクルを遵守する。
