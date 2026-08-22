@@ -79,14 +79,24 @@
         State.set("Tab2ST.symbol.baseKey", newVal);
         State.reset("Tab2ST.symbol.rules");
       },
-      updateSymbol: (targetBtn) => {
+      addSymbolRule: () => {
+        const rules = [...(State.get("Tab2ST.symbol.rules") || [])];
+        rules.push({ id: `rule_${Date.now()}`, target: "", shape: "circle", color: "var(--grey600)" });
+        State.set("Tab2ST.symbol.rules", rules);
+      },
+      removeSymbolRule: (targetBtn) => {
+        const id = targetBtn.getAttribute('data-rule-id');
+        if (!id) return;
+        const rules = (State.get("Tab2ST.symbol.rules") || []).filter(r => r.id !== id);
+        State.set("Tab2ST.symbol.rules", rules);
+      },
+      updateSymbolRule: (targetBtn) => {
         const idx = targetBtn.getAttribute('data-symbol-idx');
         const type = targetBtn.getAttribute('data-symbol-type');
-        const val = targetBtn.value;
         if (idx == null || !type) return;
         const rules = [...(State.get("Tab2ST.symbol.rules") || [])];
         if (rules[idx]) {
-          rules[idx][type] = val;
+          rules[idx][type] = targetBtn.value;
           State.set("Tab2ST.symbol.rules", rules);
         }
       },
@@ -98,7 +108,7 @@
       toggleAllPreviewItem: this.#bindAll(Tab2UI.previewItemBox, "Tab2ST.preview.itemMap")
     };
 
-    // --- ボタン・入力監視 ---
+    // --- ボタン監視ルーター ---
     static #handleClick(e) {
       const target = e.target;
       const tabBtn = target.closest('.tab-btn');
@@ -106,12 +116,15 @@
       const actionBtn = target.closest('[data-action]');
       if (actionBtn) {
         const [namespace, methodName] = actionBtn.getAttribute('data-action').split('.');
-        if (Ctrl[namespace] && typeof Ctrl[namespace][methodName] === 'function') {
+        // Ctrl層になければEvent(this)層を探す
+        if (Ctrl[namespace]?.[methodName]) {
           Ctrl[namespace][methodName](actionBtn);
+        } else if (this[namespace]?.[methodName]) {
+          this[namespace][methodName](actionBtn);
         }
       }
     }
-     // --- 値更新監視 ---
+     // --- 変更監視ルーター ---
     static #handleChange(e) {
       const target = e.target;
       const bindPath = target.getAttribute('data-bind');

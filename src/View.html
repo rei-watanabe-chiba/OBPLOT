@@ -220,14 +220,26 @@
       const baseData = State.get("Tab2ST.dataset.basePXRF");
       const baseKey = State.get("Tab2ST.symbol.baseKey");
       const rules = State.get("Tab2ST.symbol.rules");
-      
       if (!baseData || !baseData.length) {
         DOM.get(Tab2UI.symbolBox)?.replaceChildren();
         return;
       }
       const values = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
-      // rules配列とドロップダウン用選択肢を渡して描画
-      NewDOM.symbolRows(rules, values, Tab2UI.symbolBox);
+      // DI: 選択肢設定の構築
+      const optionsConfig = {
+        target: [{ val: "", label: "未選択" }, ...values.map(v => ({ val: v, label: v }))],
+        shape: GLOBAL_CONFIG.symbolShapes,
+        color: GLOBAL_CONFIG.symbolColors
+      };
+      // DI: アクション名の注入
+      const actionsConfig = {
+        add: "Tab2.addSymbolRule",
+        remove: "Tab2.removeSymbolRule",
+        update: "Tab2.updateSymbolRule"
+      };
+
+      // 汎用レンダラーの呼び出し
+      NewDOM.symbolTable(Tab2UI.symbolBox, rules, optionsConfig, actionsConfig);
     }
     // --- Item選択ドロップダウン生成 ---
     #renderItems() {

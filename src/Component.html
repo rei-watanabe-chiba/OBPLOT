@@ -77,94 +77,95 @@
       });
     }
 
-    // --- シンボル設定行生成 ---
-    static symbolRows(rules, targetValues, objID) {
-      const container = DOM.get(objID);
+    // --- シンボル設定動的テーブル生成 ---
+    static symbolTable(containerId, rowData, optionsConfig, actionsConfig) {
+      const container = DOM.get(containerId);
       if (!container) return;
-      if (!rules?.length) { container.replaceChildren(); return; }
+      if (!rowData?.length) { container.replaceChildren(); return; }
 
-      const { symbolShapes: shapes, symbolColors: colors } = GLOBAL_CONFIG;
       const rowTpl = DOM.get("symbolRowTemplate");
       const selTpl = DOM.get("singleSelectTemplate");
+      const itemTpl = DOM.get("singleSelectItemTemplate");
 
       // ドロップダウン生成ヘルパー
-      const makeSelect = (opts, currentVal, type, idx, hasColorBox = false) => {
+      const buildSelect = (opts, currentVal, type, idx, hasColorBox = false) => {
         const clone = selTpl.content.cloneNode(true);
         const summary = clone.querySelector(".single-select-summary");
         const optionsBox = clone.querySelector(".single-select-options");
         const popoverId = `popover-sym-${type}-${idx}`;
         const anchorName = `--anchor-sym-${type}-${idx}`;
         
-        summary.setAttribute("popovertarget", popoverId);
-        summary.style.anchorName = anchorName;
-        optionsBox.id = popoverId;
-        optionsBox.style.positionAnchor = anchorName;
+        // アンカー紐付け
+        this.#bind(summary, { popovertarget: popoverId }).style.anchorName = anchorName;
+        this.#bind(optionsBox, { id: popoverId }).style.positionAnchor = anchorName;
 
         let currentLabel = "未選択";
         let currentColor = "";
 
-        opts.forEach(opt => {
-          const itemBtn = document.createElement("button");
-          itemBtn.type = "button";
-          itemBtn.className = "single-select-item";
-          // data-change から data-action へ移行
-          itemBtn.setAttribute("data-action", "Tab2.updateSymbol");
-          itemBtn.setAttribute("data-symbol-idx", idx);
-          itemBtn.setAttribute("data-symbol-type", type);
-          itemBtn.value = opt.val;
+        // 選択肢の生成
+        const items = opts.map(opt => {
+          const itemClone = itemTpl.content.cloneNode(true);
+          const btn = itemClone.querySelector(".single-select-item");
+          
+          this.#bind(btn, {
+            'data-action': actionsConfig.update,
+            'data-symbol-idx': idx,
+            'data-symbol-type': type,
+            'value': opt.val,
+            'popovertarget': popoverId
+          });
 
-          let html = hasColorBox ? `<span class="color-box" style="background: ${opt.val}"></span>` : "";
-          itemBtn.innerHTML = html + opt.label;
+          // カラーボックス付きラベルの構築
+          const colorHtml = hasColorBox ? `<span class="color-box" style="background: ${opt.val}"></span>` : "";
+          btn.innerHTML = colorHtml + opt.label;
 
           if (opt.val === currentVal) {
             currentLabel = opt.label;
             currentColor = opt.val;
           }
-          itemBtn.setAttribute("popovertarget", popoverId);
-          itemBtn.setAttribute("popovertargetaction", "hide");
-          
-          optionsBox.appendChild(itemBtn);
+          return itemClone;
         });
 
-        let summaryHtml = (hasColorBox && currentVal) ? `<span class="color-box" style="background: ${currentColor}"></span>` : "";
-        summary.innerHTML = summaryHtml + currentLabel;
+        optionsBox.append(...items);
+        
+        // サマリー表示の更新
+        const summaryColor = (hasColorBox && currentVal) ? `<span class="color-box" style="background: ${currentColor}"></span>` : "";
+        summary.innerHTML = summaryColor + currentLabel;
+        
         return clone;
       };
 
-      // 1. データ行の生成（すべて左端は[-]）
-      const itemRows = rules.map((rule, i) => {
+      // 1. データ行の生成
+      const itemRows = rowData.map((rule, i) => {
         const rowClone = rowTpl.content.cloneNode(true);
         const btn = rowClone.querySelector(".icon-btn");
-        const isDefault = (rule.id === "default");
+        const isDefault = rule.id === "default";
         
-        btn.textContent = "-";
-        btn.setAttribute("data-action", "Tab2.removeSymbolRule");
-        btn.setAttribute("data-rule-id", rule.id);
+        this.#bind(btn, {
+          'data-action': actionsConfig.remove,
+          'data-rule-id': rule.id
+        }).textContent = "-";
         if (isDefault) btn.disabled = true;
 
-        const targetContainer = rowClone.querySelector(".symbol-col-target");
+        const targetCol = rowClone.querySelector(".symbol-col-target");
         if (isDefault) {
-          targetContainer.innerHTML = '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>';
+          targetCol.innerHTML = '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>';
         } else {
-          const tOpts = [{ val: "", label: "未選択" }, ...targetValues.map(v => ({ val: v, label: v }))];
-          targetContainer.appendChild(makeSelect(tOpts, rule.target, "target", i));
+          targetCol.appendChild(buildSelect(optionsConfig.target, rule.target, "target", i));
         }
 
-        rowClone.querySelector(".symbol-col-shape").appendChild(makeSelect(shapes, rule.shape, "shape", i));
-        rowClone.querySelector(".symbol-col-color").appendChild(makeSelect(colors, rule.color, "color", i, true));
+        rowClone.querySelector(".symbol-col-shape").appendChild(buildSelect(optionsConfig.shape, rule.shape, "shape", i));
+        rowClone.querySelector(".symbol-col-color").appendChild(buildSelect(optionsConfig.color, rule.color, "color", i, true));
 
         return rowClone;
       });
 
       // 2. 末尾の[+]専用行の生成
       const addRowClone = rowTpl.content.cloneNode(true);
-      const addBtn = addRowClone.querySelector(".icon-btn");
-      addBtn.textContent = "+";
-      addBtn.setAttribute("data-action", "Tab2.addSymbolRule");
-      
-      addRowClone.querySelector(".symbol-col-target").innerHTML = "";
-      addRowClone.querySelector(".symbol-col-shape").innerHTML = "";
-      addRowClone.querySelector(".symbol-col-color").innerHTML = "";
+      this.#bind(addRowClone.querySelector(".icon-btn"), { 'data-action': actionsConfig.add }).textContent = "+";
+      addRowClone.querySelector(".symbol-col-target").replaceChildren();
+      addRowClone.querySelector(".symbol-col-shape").replaceChildren();
+      addRowClone.querySelector(".symbol-col-color").replaceChildren();
 
       container.replaceChildren(...itemRows, addRowClone);
     }

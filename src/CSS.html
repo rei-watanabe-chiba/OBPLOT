@@ -496,10 +496,18 @@
     padding-bottom: calc(var(--unit) * 0.5);
     border-bottom: 1px solid var(--grey50);
   }
+  
+  /* ▼ 修正: flex比率の調整 */
   .symbol-col-btn { flex: 0 0 calc(var(--unit) * 6); text-align: center; }
-  .symbol-col-target { flex: 2; min-width: 0; }
-  .symbol-col-shape { flex: 1.5; min-width: 0; }
+  .symbol-col-target { flex: 2.5; min-width: 0; }
+  .symbol-col-shape { flex: 1; min-width: 0; }
   .symbol-col-color { flex: 1.5; min-width: 0; }
+
+  /* ▼ 追記: Shape列のテキスト中央揃え (display: flex を利用) */
+  .symbol-col-shape .single-select-summary,
+  .symbol-col-shape .single-select-item {
+    justify-content: center;
+  }
 
   /* ＋/－ ボタン風スタイル */
   .icon-btn {
