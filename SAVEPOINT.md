@@ -8,19 +8,23 @@ for gemini
 - **状態管理 (State Management)**: 
   - `AppState` クラスによる Observer (Pub/Sub) パターン。State をセクション単位 (`dataset`, `symbol`, `preview`, `report`) に階層化。
   - フェーズ後退時は `reset()` メソッドを用いて、指定セクションの State を安全に一括初期化。
-- **UI & レンダリング思想**: 
-  - HTML の可読性を重視したクリーンな DOM 構造。
-  - **Web Components カプセル化**: カスタム要素を用いて機能単位を隠蔽し、外部からの干渉を排除。
-  - **State連動UI**:  Stateリセット時の自動クリーンアップ（フェイルセーフ機構）を内包。
-  - **DIグラフ描画**: グラフ描画コンポーネント内部からのグローバル State への直接参照を禁止し、単方向データフローを徹底。
+- **UI & スタイリング思想**: 
+  - CSS Nesting構文による明確なスコープ化と階層化。
+  - 共通基底クラス（`.scroll-y`, `.form-control`）による DRY なコンポーネント構成。
+  - カスタムプロパティ（CSS変数）を活用したボタン・ステータスバーの動的バリアント設計。
+  - **Web Components によるUIプリミティブカプセル化**: 
+    - `<ob-popover>`: Popover APIのガワとAnchor位置計算を隠蔽。
+    - `<ob-multi-select>` / `<ob-symbol-table>`: 宣言的データ注入（DI）で描画されるフォーム要素。
+    - `<ob-cal-plot>`: ECharts グラフ描画。
+  - **宣言的ビルダー (View -> Component)**: `UIInit` のボイラープレートを撤廃し、ファクトリ関数を用いた構成定義のみでDOMを構築。
 - **イベント駆動 & 単方向データフロー**:
-  - 静的イベントは HTML 側の `data-action` 属性と `Event` ルーターで処理し、高階関数を用いてハンドラ生成を共通化。
+  - 静的イベントは HTML 側の `data-action`, `data-change` 属性と `Event` ルーターで処理し、高階関数を用いてハンドラ生成を共通化。
   - UI フェーズ制御は `View` 層の定数マップに基づく宣言的ルール適用エンジン (`UIPhase`) で集約制御。
+  - State 更新は DI 経由で Component に注入され、DOM は内部で自動再描画される。
 - **非同期通信**: `google.script.run` を Promise ラップした `GasService` クラスによる `async/await` 統一制御。
 - **将来的な拡張性（Office Add-in 移植方針）**:
-  - **現在の開発主軸は GAS (Google Apps Script) 環境である。**
-  - 将来的に「Office Add-in + GitHub Pages」によるローカル配布型 Excel サイドバーアプリへ移行する意図を持つ。
-  - GAS通信（`GasService` / `Code.js`）以外の層（UI、状態管理、計算・描画ロジック）は、高い移植性と標準Web技術（Off-line / Local library 化等）への準拠を考慮して実装・ライブラリ選定を行う。
+  - 現在の開発主軸は GAS (Google Apps Script) 環境。
+  - 将来的に「Office Add-in + GitHub Pages」によるローカル配布型 Excel サイドバーアプリへ移行可能とするため、標準Web技術（Off-line / Local library 化等）に準拠。
 
 ---
 
