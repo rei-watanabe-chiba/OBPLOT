@@ -40,6 +40,7 @@
     ],
     symbolShapes: [
       { val: 'circle', label: '●' },
+      { val: 'emptyCircle', label: '○' },
       { val: 'triangle', label: '▲' },
       { val: 'square', label: '■' },
       { val: 'cross', label: '✖' }
@@ -98,10 +99,14 @@
     previewCorrectionBox: "previewCorrectionBox",
     previewValueBox: "previewValueBox",
     previewLODBox: "previewLODBox",
+    previewCalToggleBox: "previewCalToggleBox",
     previewMakeBtn: "previewMakeBtn",
     previewChartBox: "previewChartBox",
     previewStatsTable: "previewStatsTable",
     previewBar: "previewBar",
+    previewSaveBox: "previewSaveBox",
+    previewSaveInput: "previewSaveInput",
+    previewSaveBtn: "previewSaveBtn",
     reportSection: "reportSection",
     reppBtn: "reportOpenBtn",
     repoBar: "reportStatusBar"
@@ -118,7 +123,7 @@
     #listeners; 
     
     constructor() {
-      // 初期状態の定義（キャッシュ用とステート用のベース）
+      // 初期状態の定義
       const initialStateDef = {
         GLB: { activeTab: "tab1", isLocked: false },
         Tab1ST: {
@@ -146,8 +151,10 @@
             modeMap: [...GLOBAL_CONFIG.optionalElements],
             itemMap: [], 
             value: GLOBAL_CONFIG.valueLogic[0], 
-            correction: "rawdata",
+            correction: "new",
             lodEnabled: false,
+            calEnabled: false,
+            saveIndexName: "",
             correctionLogic: {}, 
             previewData: null,
             statsData: null,
@@ -199,7 +206,6 @@
       pathArray.forEach(path => {
         const keys = path.split('.');
         const initialVal = keys.reduce((o, k) => o?.[k], this.#initialState);
-        // JSON.parseで確実に発火
         updates[path] = initialVal !== undefined ? JSON.parse(JSON.stringify(initialVal)) : null;
       });
       this.set(updates);

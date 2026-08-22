@@ -101,22 +101,32 @@
         { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }
       ]).map(r => r[1]).join('\n');
 
-      // --- ⑤ シンボル記号変換 (「×」記号追加) ---
+      // --- ⑤ シンボル判定とスタイル適用 ---
       const baseKey = symbolData?.baseKey;
-      const mapping = symbolData?.mapping || {};
+      const rules = symbolData?.rules || [];
+      const defaultRule = rules.find(r => r.id === "default");
+
       const getShape = shape => {
         if (shape === 'square') return 'rect';
-        if (shape === 'cross') return 'path://M -4,-4 L 4,4 M 4,-4 L -4,4'; // ⑤ SVGパスによる「×」記号
+        if (shape === 'cross') return 'path://M -4,-4 L 4,4 M 4,-4 L -4,4'; 
+        if (shape === 'emptyCircle') return 'circle'; // 描画パスは円を使用
         return shape || 'circle';
       };
 
       const scatterData = previewData.map(d => {
         const val = d[baseKey];
-        const mapDef = (val && mapping[val]) ? mapping[val] : null;
+        // 個別一致 -> Defaultの順で適用
+        const rule = rules.find(r => r.target !== "" && r.target === val) || defaultRule;
         
-        const shape = mapDef ? getShape(mapDef.shape) : 'circle';
-        const color = mapDef ? ThemeCache.get(mapDef.color) : 'transparent';
-        const stroke = mapDef ? color : ThemeCache.get('var(--grey600)');
+        const shapeVal = rule.shape;
+        const isEmpty = shapeVal === 'emptyCircle';
+        const shape = getShape(shapeVal);
+        const baseColor = ThemeCache.get(rule.color);
+
+        // 線丸指定時は塗りを透明、枠線に色を適用
+        const color = isEmpty ? 'transparent' : baseColor;
+        const borderColor = baseColor;
+        const borderWidth = isEmpty ? 1.5 : 1; 
 
         return {
           value: [d.x, d.y],
@@ -124,7 +134,7 @@
           group: d.group,
           symbol: shape,
           symbolSize: shape.startsWith('path://') ? 7 : 6,
-          itemStyle: { color, borderColor: stroke, borderWidth: 1 }
+          itemStyle: { color, borderColor, borderWidth }
         };
       });
 
@@ -148,15 +158,15 @@
 
       // --- ECharts Option 設定 ---
       const axisColor = ThemeCache.get('var(--grey400)');
-      const borderColor = ThemeCache.get('var(--grey200)');
-      const gridPlotSize = sideLength - 70; // ⑦ 正方形プロットサイズ固定
+      const gridBorder = ThemeCache.get('var(--grey200)');
+      const gridPlotSize = sideLength - 70; 
 
       const option = {
-        animation: false, // ① グラフ変化時のアニメーション無効化
+        animation: false, 
         grid: {
           left: 45, top: 25, 
-          width: gridPlotSize, height: gridPlotSize, // ⑦ 枠外はみ出し防止・正方形固定
-          show: true, borderColor: borderColor, borderWidth: 1
+          width: gridPlotSize, height: gridPlotSize,
+          show: true, borderColor: gridBorder, borderWidth: 1
         },
         tooltip: {
           formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`,
@@ -167,18 +177,16 @@
           type: 'value',
           name: 'WDXRF',
           nameLocation: 'middle',
-          nameGap: 20, // ② 軸名と軸線の間隔
+          nameGap: 20, 
           nameTextStyle: { fontSize: 11, color: axisColor },
           min: niceMin, max: niceMax, interval: interval,
           axisLabel: { 
-            margin: 6, // ② 目盛文字と軸線の間隔調整項目
+            margin: 6, 
             fontSize: 10, 
             color: axisColor,
-            // ⑥ X軸最小値の文字配置調整
             formatter: val => tickFormatter(val)
           },
-          // ④ 主軸目盛り線追加・0原点強調
-          splitLine: { show: true, lineStyle: { color: borderColor, type: 'solid', width: 0.3 } },
+          splitLine: { show: true, lineStyle: { color: gridBorder, type: 'solid', width: 0.3 } },
           axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
           axisTick: { show: false, inside: true }
         },
@@ -186,21 +194,19 @@
           type: 'value',
           name: 'PXRF',
           nameLocation: 'middle',
-          nameGap: 22, // ② 軸名と軸線の間隔
+          nameGap: 22, 
           nameTextStyle: { fontSize: 11, color: axisColor },
           min: niceMin, max: niceMax, interval: interval,
           axisLabel: { 
-            rotate: 90, // ③ Y軸目盛りの-90度回転
+            rotate: 90, 
             verticalAlign: 'middle',
             align: 'center',
-            margin: 8, // ② 目盛文字と軸線の間隔調整項目
+            margin: 8, 
             fontSize: 10, 
             color: axisColor,
-            // ⑥ Y軸最小値を非表示にする（原点被り回避）
             formatter: val => (Math.abs(val - niceMin) < 1e-8) ? '' : tickFormatter(val)
           },
-          // ④ 主軸目盛り線追加・0原点強調
-          splitLine: { show: true, lineStyle: { color: borderColor, type: 'solid', width: 0.3 } },
+          splitLine: { show: true, lineStyle: { color: gridBorder, type: 'solid', width: 0.3 } },
           axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
           axisTick: { show: false, inside: true }
         },

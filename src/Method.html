@@ -230,10 +230,27 @@
   // --- Tab2 プレビューデータ構築ロジック ---
   class PreviewManager {
     // --- プレビューデータ生成 ---
-    static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap = null, lodEnabled = false) {
+    static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap = null, lodEnabled = false, correctionData = [], correctionIndex = "new", calEnabled = false) {
       if (!basePXRF?.length || !baseWDXRF?.length) return [];
       const allElements = Object.keys(GLOBAL_CONFIG.mudrockIndex);
       const itemSet = itemMap?.length ? new Set(itemMap) : null;
+
+      // [追加] 補正係数の抽出 (calEnabled === true かつ 過去インデックス選択時)
+      let calCoeffs = null;
+      if (calEnabled && correctionIndex !== "new" && correctionData?.length > 1) {
+        const header = correctionData[0];
+        const row = correctionData.find(r => r[0] === correctionIndex);
+        if (row) {
+          calCoeffs = {};
+          allElements.forEach(el => {
+            const slpIdx = header.indexOf(`${el}_slp`);
+            const intIdx = header.indexOf(`${el}_int`);
+            if (slpIdx !== -1 && intIdx !== -1 && row[slpIdx] !== "" && row[intIdx] !== "") {
+              calCoeffs[el] = { slp: Number(row[slpIdx]), int: Number(row[intIdx]) };
+            }
+          });
+        }
+      }
 
       // 元素別最小値集計
       const minMap = {};
@@ -251,7 +268,6 @@
       const processed = basePXRF
         .filter(row => !itemSet || itemSet.has(row.item ?? row.Item))
         .map(row => {
-          // 分類軸に必要な全属性を保持
           const newRow = {
             dataset: row.dataset,
             id: row.ID ?? row.id,
@@ -260,6 +276,7 @@
             Group: row.Group ?? "Unknown",
             Source: row.Source ?? "Unknown"
           };
+          
           allElements.forEach(el => {
             const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
             const isSelected = Array.isArray(modeMap) && modeMap.includes(el);
@@ -274,6 +291,11 @@
               val = Number(rawVal);
             }
 
+            // [追加] 補正式の適用 (y_new = y_raw * slp + int)
+            if (val !== null && calCoeffs?.[el]) {
+              val = val * calCoeffs[el].slp + calCoeffs[el].int;
+            }
+
             newRow[el] = val;
             newRow[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
           });
@@ -285,22 +307,17 @@
       return processed.map(p => {
         const w = wdxrfMap.get(`${p.dataset}_${p.id}`);
         if (!w) return null;
+        
         const yVal = CalcProcessor.evaluate(valueLogic, p);
         const xVal = CalcProcessor.evaluate(valueLogic, w);
         if (xVal == null || yVal == null) return null;
+        
         const errVal = allElements.includes(valueLogic) ? (p[`${valueLogic}_Err`] ?? null) : null;
         
-        // 分類軸キー一式をオブジェクトとして返却
         return { 
-          x: xVal, 
-          y: yVal, 
-          err: errVal, 
-          id: p.id, 
-          group: p.group,
-          dataset: p.dataset,
-          item: p.item,
-          Group: p.Group,
-          Source: p.Source !== "Unknown" ? p.Source : (w.Source ?? "Unknown")
+          x: xVal, y: yVal, err: errVal, 
+          id: p.id, group: p.group, dataset: p.dataset, item: p.item,
+          Group: p.Group, Source: p.Source !== "Unknown" ? p.Source : (w.Source ?? "Unknown")
         };
       }).filter(Boolean);
     }

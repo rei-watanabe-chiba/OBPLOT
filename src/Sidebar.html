@@ -118,7 +118,10 @@
                   <div id="previewCorrectionBox"></div>
                 </div>
               </div>
-              <div id="previewLODBox"></div>
+              <div class="field-row">
+                <div id="previewLODBox" class="field-col"></div>
+                <div id="previewCalToggleBox" class="field-col"></div>
+              </div>
               <div class="field-row">
                 <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
               </div>
@@ -126,6 +129,14 @@
               <ob-multi-select id="previewModeBoxEl" data-change-item="Tab2.togglePreviewMode" data-change-all="Tab2.toggleAllPreviewMode"></ob-multi-select>
               <label>対象Item</label>
               <ob-multi-select id="previewItemBoxEl" data-change-item="Tab2.togglePreviewItem" data-change-all="Tab2.toggleAllPreviewItem"></ob-multi-select>
+              <div id="previewSaveBox" class="field-row" style="display: none; margin-top: calc(var(--unit) * 3);">
+                <div class="field-col">
+                  <input type="text" id="previewSaveInput" class="form-control" placeholder="インデックス名を入力" data-bind="Tab2ST.preview.saveIndexName">
+                </div>
+                <div class="field-col">
+                  <button id="previewSaveBtn" data-type="primary" class="outline" data-action="Tab2.saveCorrection">補正出力</button>
+                </div>
+              </div>
             </div>
           </details>
           <div id="previewBar" class="status-bar" data-status="hidden"></div>

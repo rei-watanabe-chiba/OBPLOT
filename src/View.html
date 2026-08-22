@@ -23,7 +23,7 @@
       // Tab2 補正方法選択
       NewDOM.buildFormFields([{
         type: "select", bind: "Tab2ST.preview.correction", hasEmpty: false,
-        options: [{ label: "補正なし", value: "rawdata" }, { label: "新規検量線", value: "new" }]
+        options: [{ label: "新規検量線", value: "new" }]
       }], Tab2UI.previewCorrectionBox);
 
       // Tab2 プレビュー値選択
@@ -42,9 +42,17 @@
         bind: "Tab2ST.preview.lodEnabled"
       }, Tab2UI.previewLODBox);
 
+      // Tab2 検量線適用トグル [新規]
+      NewDOM.buildToggle({
+        label: "検量線適用",
+        bind: "Tab2ST.preview.calEnabled"
+      }, Tab2UI.previewCalToggleBox);
+
       // 静的要素の初期化DI
       const previewModeEl = DOM.get("previewModeBoxEl");
       if (previewModeEl) previewModeEl.options = GLOBAL_CONFIG.optionalElements;
+      const previewCalEl = DOM.get("previewCalElementBoxEl");
+      if (previewCalEl) previewCalEl.options = Object.keys(GLOBAL_CONFIG.mudrockIndex);
     }
 
     static build() { this.buildTab1(); this.buildTab2(); }
@@ -80,6 +88,7 @@
       [Tab2UI.symbolSection]: p => ({ active: p >= TAB2_PHASE.FILTERED && p < TAB2_PHASE.MAPPED, disabled: p < TAB2_PHASE.FILTERED }),
       [Tab2UI.previewMakeBtn]: p => ({ disabled: p < TAB2_PHASE.MAPPED }),
       [Tab2UI.previewSection]: p => ({ active: p >= TAB2_PHASE.MAPPED, disabled: p < TAB2_PHASE.MAPPED }),
+      [Tab2UI.previewSaveBox]: p => ({ show: p >= TAB2_PHASE.MAPPED && State.get("Tab2ST.preview.correction") === "new" }),
       [Tab2UI.reppBtn]: p => ({ disabled: p < TAB2_PHASE.PREVIEWED }),
       [Tab2UI.reportSection]: p => ({ active: p >= TAB2_PHASE.PREVIEWED, disabled: p < TAB2_PHASE.PREVIEWED })
     };
@@ -158,6 +167,9 @@
         "Tab2ST.dataset.filter": setElProp("datasetBoxEl", "selected"),
         "Tab2ST.preview.modeMap": setElProp("previewModeBoxEl", "selected"),
         "Tab2ST.preview.itemMap": setElProp("previewItemBoxEl", "selected"),
+        "Tab2ST.preview.calElementMap": setElProp("previewCalElementBoxEl", "selected"),
+        "Tab2ST.preview.saveIndexName": setElProp(Tab2UI.previewSaveInput, "value"),
+        "Tab2ST.preview.correction": () => UIPhase.updateTab2PhaseUI(State.get("Tab2ST.phase")),
         "Tab2ST.preview.statsData": stats => NewDOM.statsTable(stats),
         "Tab2ST.preview.previewData": data => {
           const stats = State.get("Tab2ST.preview.statsData");
@@ -170,7 +182,18 @@
           }
           chartEl.drawData = { previewData: data, statsData: stats, symbolData: symbol };
         },
-
+        "Tab2ST.dataset.rawData.correction": data => {
+          if (!data) return;
+          const opts = [{ label: "新規検量線", value: "new" }];
+          if (data.length > 1) {
+            data.slice(1).forEach(row => { if (row[0]) opts.push({ label: row[0], value: row[0] }); });
+          }
+          NewDOM.buildFormFields([{
+            type: "select", bind: "Tab2ST.preview.correction", hasEmpty: false, options: opts
+          }], Tab2UI.previewCorrectionBox, true);
+          const el = DOM.get(Tab2UI.previewCorrectionBox)?.querySelector('select');
+          if (el) el.value = State.get("Tab2ST.preview.correction");
+        },
         "Tab2ST.dataset.basePXRF": () => {
           this.#renderSymbols();
           this.#renderItems();

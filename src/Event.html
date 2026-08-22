@@ -102,9 +102,12 @@
           State.set("Tab2ST.symbol.rules", rules);
         }
       },
-      // リアクティブ状態監視：Obsidianモード
+      // リアクティブ状態監視：Obsidian元素
       togglePreviewMode: this.#bindMulti("Tab2ST.preview.modeMap"),
       toggleAllPreviewMode: this.#bindAll("Tab2ST.preview.modeMap"),
+      // リアクティブ状態監視：CalElement元素
+      toggleCalElement: this.#bindMulti("Tab2ST.preview.calElementMap"),
+      toggleAllCalElement: this.#bindAll("Tab2ST.preview.calElementMap"),
       // リアクティブ状態監視：Item選択
       togglePreviewItem: this.#bindMulti("Tab2ST.preview.itemMap"),
       toggleAllPreviewItem: this.#bindAll("Tab2ST.preview.itemMap")
