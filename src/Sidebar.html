@@ -127,13 +127,14 @@
               </div>
               <label>Obsidianモード計測値</label>
               <ob-multi-select id="previewModeBoxEl" data-change-item="Tab2.togglePreviewMode" data-change-all="Tab2.toggleAllPreviewMode"></ob-multi-select>
+              <label>検量線適用</label>
+              <ob-multi-select id="previewCalElementBoxEl" data-change-item="Tab2.toggleCalElement" data-change-all="Tab2.toggleAllCalElement"></ob-multi-select>
               <label>対象Item</label>
               <ob-multi-select id="previewItemBoxEl" data-change-item="Tab2.togglePreviewItem" data-change-all="Tab2.toggleAllPreviewItem"></ob-multi-select>
-              <div id="previewSaveBox" class="field-row" style="display: none; margin-top: calc(var(--unit) * 3);">
-                <div class="field-col">
+              <div id="previewSaveBox" style="display: none; margin-top: calc(var(--unit) * 3);">
+                <label>検量線を保存する</label>
+                <div class="field-row">
                   <input type="text" id="previewSaveInput" class="form-control" placeholder="インデックス名を入力" data-bind="Tab2ST.preview.saveIndexName">
-                </div>
-                <div class="field-col">
                   <button id="previewSaveBtn" data-type="primary" class="outline" data-action="Tab2.saveCorrection">補正出力</button>
                 </div>
               </div>

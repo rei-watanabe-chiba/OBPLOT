@@ -145,8 +145,9 @@
     set selected(vals) {
       const summary = this.querySelector('.popover-summary');
       if (summary) {
+        // ▼ 修正: 生成した個別のバッジ群をラッパーで包む
         summary.innerHTML = vals?.length
-          ? vals.map(v => Tpl.Common.badge(v)).join('')
+          ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>`
           : '<span style="color:var(--grey400)">未選択</span>';
       }
       const cbs = this.querySelectorAll('.dataset-cb');

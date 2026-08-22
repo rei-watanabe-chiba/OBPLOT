@@ -106,7 +106,7 @@
   }
   .field-row {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     gap: 0 calc(var(--unit) * 2);
     width: 100%;
     margin: calc(var(--unit) * 2) 0;
@@ -132,6 +132,22 @@
     background-color: var(--grey50);
     border: 1px solid var(--grey200);
     border-radius: var(--unit) ;
+  }
+
+  /* ▼ 新規: グラデーション透過用のラッパー ▼ */
+  .badge-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    .badge { flex-shrink: 0; }
+  }
+  
+  /* ラッパー内のバッジが親の幅に合わせて潰れるのを防ぐ */
+  .badge-wrapper .badge {
+    flex-shrink: 0;
   }
   .color-box {
     display: inline-block;
@@ -390,7 +406,6 @@
     box-sizing: border-box;
     width: 100%;
   }
-
   .popover-summary {
     display: flex;
     align-items: center;
@@ -402,7 +417,6 @@
     text-overflow: ellipsis;
     cursor: pointer;
   }
-
   .popover-content {
     box-sizing: border-box;
     margin: 0;
@@ -426,6 +440,7 @@
   }
   ob-multi-select .popover-summary {
     height: var(--control-height);
+    width: 276px;
     padding: 0 calc(var(--unit) * 6) 0 calc(var(--unit) * 2);
     font-weight: normal;
     &:hover { background-color: var(--bg-color-hover); }
@@ -445,7 +460,6 @@
       border-bottom: 1px solid var(--grey200);
     }
   }
-
   .single-select-item {
     display: flex;
     align-items: center;
@@ -459,14 +473,12 @@
     cursor: pointer;
     &:hover { background-color: var(--bg-color-hover); }
   }
-
   #symbolBox {
     max-height: calc(var(--unit) * 50);
     border: 1px solid var(--grey200);
     border-radius: var(--unit) ;
     padding: var(--unit)  calc(var(--unit) * 2);
   }
-
   .symbol-table-row {
     display: flex;
     align-items: center;
@@ -518,16 +530,18 @@
   .toggle-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start; /* ← 左詰めに変更 */
+    gap: calc(var(--unit) * 3);   /* ← ラベルとスイッチの間隔を指定 */
     margin: calc(var(--unit) * 1.5) 0;
   }
   .toggle-label {
     font-size: 13px;
     color: var(--grey600);
+    line-height: 1.2
   }
   .toggle-switch {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
     width: calc(var(--unit) * 9);
     height: calc(var(--unit) * 5);
     flex: none;
