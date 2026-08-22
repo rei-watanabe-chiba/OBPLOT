@@ -16,21 +16,44 @@
       return values.map((v, i) => i < quota ? (!v || checkVals.indexOf(v) !== checkVals.lastIndexOf(v)) : false);
     }
 
-    // --- 統計表データ生成 ---
-    static createStatsRows(stats) {
+    // --- 統計表・テキスト動的生成 ---
+    static createStatsRows(stats, digits = 3, formatRules = null) {
       if (!stats) return [];
-      const fmt = (v, digits = 3) => (v != null && !isNaN(v)) ? v.toFixed(digits) : "-";
+      // --- 数値フォーマット ---
+      const fmt = v => (v != null && !isNaN(v)) ? Number(v).toFixed(digits) : "-";
+      // --- 置換用メタデータ生成 ---
+      const meta = { ...stats };
+      if (stats.intercept != null) {
+        meta.sign = stats.intercept >= 0 ? "+" : "-";
+        meta.abs_intercept = Math.abs(stats.intercept);
+      }
+      // --- カスタムルール適用 (ECharts等用) ---
+      if (formatRules && Array.isArray(formatRules)) {
+        return formatRules.map(({ key, label }) => {
+          if (!key) return [label ?? "", ""];
+          let valStr = "";
+          // 1. 完全一致キーの場合 (例: 'r2')
+          if (meta[key] !== undefined) {
+            valStr = meta[key] === meta.sign ? meta[key] : fmt(meta[key]);
+          } else {
+            // 2. テンプレート展開 (例: 'y = {slope}x {sign} {abs_intercept}')
+            valStr = key.replace(/\{(\w+)\}/g, (match, k) => {
+              if (meta[k] === undefined) return match;
+              return k === "sign" ? meta[k] : fmt(meta[k]);
+            });
+          }
+          return [label ?? "", valStr];
+        });
+      }
+      // --- デフォルトUI用生成 ---
       const rows = [];
-      
       if (stats.count != null) rows.push(["データ個数", stats.count]);
       if (stats.r != null && stats.r2 != null) rows.push(["相関係数", `R = ${fmt(stats.r)} , R² = ${fmt(stats.r2)}`]);
       if (stats.slope != null && stats.intercept != null) {
-        const sign = stats.intercept >= 0 ? "+" : "-";
-        rows.push(["回帰直線", `y = ${fmt(stats.slope)}x ${sign} ${fmt(Math.abs(stats.intercept))}`]);
+        rows.push(["回帰直線", `y = ${fmt(stats.slope)}x ${meta.sign} ${fmt(meta.abs_intercept)}`]);
       }
       if (stats.resStdDev != null) rows.push(["残差標準偏差", fmt(stats.resStdDev)]);
       if (stats.err3Sigma != null) rows.push(["器械Err3σ", fmt(stats.err3Sigma)]);
-      
       return rows;
     }
 
@@ -211,19 +234,20 @@
       if (!basePXRF?.length || !baseWDXRF?.length) return [];
       const allElements = Object.keys(GLOBAL_CONFIG.mudrockIndex);
       
-      // itemフィルタリング用Set作成
       const itemSet = itemMap?.length ? new Set(itemMap) : null;
 
       // pxrfデータ整形
       const processed = basePXRF
         .filter(row => !itemSet || itemSet.has(row.item ?? row.Item))
         .map(row => {
-          // --- 修正：Group も抽出・保持 ---
+          // 分類軸に必要な全属性を保持
           const newRow = {
             dataset: row.dataset,
             id: row.ID ?? row.id,
             item: row.item ?? row.Item,
-            group: row.Group ?? "Unknown"
+            group: row.Group ?? "Unknown",
+            Group: row.Group ?? "Unknown", // 大小文字双方に対応
+            Source: row.Source ?? "Unknown" // Source属性を保持
           };
           allElements.forEach(el => {
             const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
@@ -244,8 +268,19 @@
         const xVal = CalcProcessor.evaluate(valueLogic, w);
         if (xVal == null || yVal == null) return null;
         const errVal = allElements.includes(valueLogic) ? (p[`${valueLogic}_Err`] ?? null) : null;
-        // --- 修正：id と group を返り値に追加 ---
-        return { x: xVal, y: yVal, err: errVal, id: p.id, group: p.group };
+        
+        // 分類軸キー一式をオブジェクトとして返却
+        return { 
+          x: xVal, 
+          y: yVal, 
+          err: errVal, 
+          id: p.id, 
+          group: p.group,
+          dataset: p.dataset,
+          item: p.item,
+          Group: p.Group,
+          Source: p.Source !== "Unknown" ? p.Source : (w.Source ?? "Unknown")
+        };
       }).filter(Boolean);
     }
   }

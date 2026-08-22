@@ -3,10 +3,10 @@
 <html>
   <head>
     <base target="_top">
-    <!-- 統計計算 -->
+    <!-- 統計計算ライブラリ (simple-statistics) -->
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
-    <!-- グラフ描画 -->
-    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <!-- グラフ描画ライブラリ (Apache ECharts) -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <script>google.charts.load('current', {'packages':['corechart']});</script>
     <?!= include("CSS"); ?>
   </head>
@@ -71,13 +71,13 @@
           <!-- dataset層 -->
           <details id="datasetSection" open>
             <summary>データ読込・選択</summary>
+            <div id="datasetArea" style="display: none;">
+              <label>dataset選択</label>
+              <div id="datasetBox"></div>
+            </div>
             <div class="field-row">
               <button id="datasetLoadBtn" data-type="primary" data-action="Tab2.loadData">データを読込</button>
               <button id="datasetFilterBtn" data-type="primary" class="outline" data-action="Tab2.filterData" disabled>データを確定</button>
-            </div>
-            <div id="datasetArea" style="display: none;">
-              <label>dataset選択</label>
-              <div id="datasetBox" class="checkbox-container"></div>
             </div>
           </details>
           <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
@@ -85,13 +85,14 @@
           <!-- シンボル層 -->
           <details id="symbolSection" data-type="disabled">
             <summary>シンボル設定</summary>
+            <div id="symbolArea" style="display: none;">
+              <label>属性選択</label>
+            <div id="symbolAxisBox"></div>
+              <label>シンボル設定</label>
+              <div id="symbolBox"></div>
+            </div>
             <div class="field-row">
               <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
-            </div>
-            <div id="symbolAxisBox"></div>
-            <div id="symbolArea" style="display: none;">
-              <label style="margin-top: 8px;">シンボル設定</label>
-              <div id="symbolBox"></div>
             </div>
           </details>
           <div id="symbolStatusBar" class="status-bar" data-status="hidden"></div>
@@ -100,9 +101,12 @@
           <details id="previewSection" data-type="disabled">
             <summary>補正＆プレビュー</summary>
             <div id="previewArea">
+              <div class="field-row">
+                <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
+              </div>
               <label>Obsidianモード計測値</label>
               <div id="previewModeBox"></div>
-              <label style="margin-top: 8px;">対象Item</label>
+              <label>対象Item</label>
               <div id="previewItemBox"></div>
               <div class="field-row">
                 <div class="field-col">
@@ -114,11 +118,8 @@
                   <div id="previewCorrectionBox"></div>
                 </div>
               </div>
-              <div class="field-row">
-                <button id="previewMakeBtn" data-type="primary" class="outline" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
-              </div>
-              <div id="previewChartBox" style="margin-top: 8px;"></div>
-              <div id="previewStatsTable" style="margin-top: 8px;"></div>
+              <div id="previewChartBox"></div>
+              <div id="previewStatsTable"></div>
             </div>
           </details>
           <div id="previewBar" class="status-bar" data-status="hidden"></div>

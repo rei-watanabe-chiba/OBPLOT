@@ -155,6 +155,18 @@
           NewDOM.updateMultiSelectSummary(Tab2UI.datasetBox, vals);
         },
         "Tab2ST.preview.modeMap": vals => {
+          // UIチェックボックスの描画同期
+          const optionsBox = document.getElementById(`popover-${Tab2UI.previewModeBox}`);
+          if (optionsBox) {
+            optionsBox.querySelectorAll('.dataset-cb').forEach(cb => {
+              cb.checked = Array.isArray(vals) && vals.includes(cb.value);
+            });
+            const allCb = optionsBox.querySelector('.select-all input[type="checkbox"]');
+            if (allCb) {
+              const itemCbs = [...optionsBox.querySelectorAll('.dataset-cb')];
+              allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
+            }
+          }
           NewDOM.updateMultiSelectSummary(Tab2UI.previewModeBox, vals);
         },
         "Tab2ST.preview.itemMap": vals => {

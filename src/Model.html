@@ -38,13 +38,13 @@
       { value: "Group", label: "Group" },
       { value: "Source", label: "Source" }
     ],
-    symbolShapes: ['circle', 'triangle', 'square'],
+    symbolShapes: ['circle', 'triangle', 'square', 'cross'],
     symbolColors: [
+      { val: 'var(--grey600)', label: 'Gray' },
       { val: 'var(--main-blue)', label: 'Blue' },
       { val: 'var(--main-green)', label: 'Green' },
       { val: 'var(--main-red)', label: 'Red' },
-      { val: '#fbbc04', label: 'Yellow' },
-      { val: 'var(--grey600)', label: 'Gray' }
+      { val: '#fbbc04', label: 'Yellow' }
     ],
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
     mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 }
@@ -137,7 +137,7 @@
             status: [] 
           },
           preview: {
-            modeMap: [], 
+            modeMap: [...GLOBAL_CONFIG.optionalElements],
             itemMap: [], 
             value: GLOBAL_CONFIG.valueLogic[0], 
             correction: "rawdata",

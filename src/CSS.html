@@ -40,6 +40,7 @@
     font-size: 13px;
     color: var(--text-main);
     background-color: var(--bg-color);
+    user-select: none;
   }
   main {
     overflow-y: auto;
@@ -58,7 +59,7 @@
   hr { border: none; border-top: 1.5px solid var(--grey200); margin: 12px 0; }
   .field-row {
     display: flex;
-    gap: 8px;
+    gap: 0 8px;
     width: 100%;
     margin: 8px 0;
   }
@@ -100,7 +101,6 @@
     display: block;
     margin: 4px 2px;
     color: var(--grey600);
-    user-select: none;
   }
 
   input, select {
@@ -159,13 +159,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 0;
-    color: var(--text-main);
+    padding: 6px;
+    color: var(--grey600);
     font-size: 14px;
     font-weight: 600;
     list-style: none;
     cursor: pointer;
-    user-select: none;
     transition: color var(--transition-speed);
     &::-webkit-details-marker, &::marker { display: none; }
     &::after {
@@ -317,6 +316,7 @@
     border: 1px solid var(--grey200);
     border-radius: 4px;
     margin-top: 6px;
+    user-select: text;
   }
   .stats-grid {
     display: grid;
@@ -337,7 +337,7 @@
   .multi-select-wrapper {
     box-sizing: border-box;
     width: 100%;
-    margin-top: 4px;
+    margin: 4px 0;
   }
   .multi-select-summary {
     display: block;

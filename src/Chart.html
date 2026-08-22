@@ -6,284 +6,213 @@
 
     // --- カラー変数変換 ---
     static get(varStr) {
-      if (!varStr?.startsWith('var(')) return varStr; // 非変数名のため直返す
+      if (!varStr?.startsWith('var(')) return varStr;
       const match = varStr.match(/var\((--[^,\s)]+)/);
-      if (!match) return varStr; // 解析失敗のため直返す
+      if (!match) return varStr;
       const key = match[1];
       if (!this.#cache.has(key)) {
         const val = getComputedStyle(document.body).getPropertyValue(key).trim();
-        this.#cache.set(key, val || varStr); // 計算値を保存
+        this.#cache.set(key, val || varStr);
       }
       return this.#cache.get(key);
     }
   }
 
-  // --- グラフカスタム要素 ---
+  // --- ECharts グラフカスタム要素 ---
   class ObCalPlot extends HTMLElement {
     #container;
-    #chartDiv;
-    #chart;
+    #chartInstance = null;
     #resizeObserver;
-    #mutationObserver;
     #drawData = null;
-    static #baseAXIS = {
-      titleTextStyle: { fontSize: 11, italic: false }, textStyle: { fontSize: 10, bold: false },
-      minorGridlines: { count: 0 }, titlePosition: 'out', maxAlternation: 1
-    };
 
-    // --- デフォルト構成 ---
-    static #CONFIG = {
-      defaultPoint: { 
-        shapeType: 'circle', size: 4, fillColor: 'transparent', 
-        strokeColor: 'var(--grey600)', strokeWidth: 0.6
-      },
-      legend: { position: 'top', alignment: 'end', textStyle: { fontSize: 10 } },
-      series: { 0: { visibleInLegend: false } },
-      trendlines: {
-        0: {
-          type: 'linear', color: 'var(--grey600)',
-          lineWidth: 1, opacity: 0.4, lineDashStyle: [8, 4]
-        }
-      },
-      hAxis: { ...ObCalPlot.#baseAXIS, title: 'WDXRF' },
-      vAxis: { ...ObCalPlot.#baseAXIS, title: 'PXRF' },
-    };
-
-    // --- コンストラクタ ---
     constructor() {
       super();
       this.#container = document.createElement('div');
       this.#container.style.cssText = 'width: 100%; position: relative;';
-      this.#chartDiv = document.createElement('div');
-      this.#container.appendChild(this.#chartDiv);
+      
+      // リサイズ検知
       this.#resizeObserver = new ResizeObserver(() => {
-        if (this.#drawData && this.#chartDiv.clientWidth > 0) {
-          requestAnimationFrame(() => this.#render()); // 描画予約
+        if (this.#chartInstance && this.#container.clientWidth > 0) {
+          this.#chartInstance.resize();
         }
       });
-      this.#mutationObserver = new MutationObserver(() => this.#applySvgHacks());
     }
 
-    // --- 接続時 ---
     connectedCallback() {
       this.appendChild(this.#container);
-      this.#resizeObserver.observe(this.#container); // 監視開始
+      this.#resizeObserver.observe(this.#container);
     }
 
-    // --- 切断時 ---
     disconnectedCallback() {
-      this.#resizeObserver.disconnect(); // 監視停止
-      this.#mutationObserver.disconnect(); // 監視停止
+      this.#resizeObserver.disconnect();
+      if (this.#chartInstance) {
+        this.#chartInstance.dispose();
+        this.#chartInstance = null;
+      }
     }
 
-    // --- データ設定 ---
+    // --- データ注入と描画 ---
     set drawData(data) {
       this.#drawData = data;
-      this.#render(); // 再描画実行
+      this.#render();
     }
 
     // --- 描画消去 ---
     clear() {
       this.#drawData = null;
-      this.#chartDiv.replaceChildren(); // 要素初期化
-      this.#container.style.height = '0px'; // 高度クリア
-    }
-
-    // --- 属性一式設定 ---
-    #setAttrs(el, attrs) {
-      if (!el || !attrs) return;
-      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v)); // 属性付与
-    }
-
-    // --- オプション結合 ---
-    #buildOptions(overrides) {
-      const merged = Object.assign({}, ObCalPlot.#CONFIG, overrides); // 結合処理
-      if (merged.trendlines?.[0]?.color) {
-        merged.trendlines[0].color = ThemeCache.get(merged.trendlines[0].color); // 変数解決
+      if (this.#chartInstance) {
+        this.#chartInstance.clear();
       }
-      if (merged.legend?.textStyle) {
-        merged.legend.textStyle.color = ThemeCache.get('var(--grey600)'); // 変数解決
-      }
-      return merged;
-    }
-
-    // --- スタイル文字列生成 ---
-    #buildStyleString(styleObj) {
-      if (!styleObj) return '';
-      const map = {
-        shapeType: 'shape-type', size: 'size', fillColor: 'fill-color',
-        strokeColor: 'stroke-color', strokeWidth: 'stroke-width'
-      };
-      const props = Object.entries(styleObj)
-        .filter(([_, v]) => v != null)
-        .map(([k, v]) => `${map[k] || k}:${v};`)
-        .join(' ');
-      return `point { ${props} }`;
+      this.#container.style.height = '0px';
     }
 
     // --- 散布図描画本体 ---
     #render() {
-      const { previewData, symbolData } = this.#drawData || {};
-      if (!previewData?.length || !window.google?.visualization) {
-        this.clear(); // データなしのため消去
+      const { previewData, symbolData, statsData } = this.#drawData || {};
+      if (!previewData?.length || typeof echarts === 'undefined') {
+        this.clear();
         return;
       }
-      this.#chart = new google.visualization.ScatterChart(this.#chartDiv);
-      const dataTable = new google.visualization.DataTable();
 
-      // --- カラム追加 ---
-      [
-        ['number', 'WDXRF'], ['number', 'PXRF'],
-        { type: 'string', role: 'tooltip' }, { type: 'string', role: 'style' }
-      ].forEach(spec => Array.isArray(spec) ? dataTable.addColumn(...spec) : dataTable.addColumn(spec));
+      // ⑦ プロットエリア正方形固定のためのサイズ計算
+      const sideLength = this.parentElement?.clientWidth || 276;
+      this.#container.style.height = `${sideLength}px`;
+      this.#container.style.width = `${sideLength}px`;
 
-      const baseKey = symbolData?.baseKey;
-      const mapping = symbolData?.mapping || {};
-      const defPoint = ObCalPlot.#CONFIG.defaultPoint;
+      if (!this.#chartInstance) {
+        this.#chartInstance = echarts.init(this.#container);
+      }
 
-      dataTable.addRows(previewData.map(d => {
-        let currentStyle = { ...defPoint };
-        const val = d[baseKey];
-        if (val && mapping[val]) {
-          const c = ThemeCache.get(mapping[val].color);
-          currentStyle = {
-            ...currentStyle,
-            shapeType: mapping[val].shape,
-            fillColor: c,
-            strokeColor: c
-          };
-        }
-        
-        const styleStr = this.#buildStyleString(currentStyle);
-        return [d.x, d.y, `ID: ${d.id ?? '-'}\nGroup: ${d.group ?? '-'}`, styleStr];
-      }));
-
-      const sideLength = this.#container.clientWidth || 276;
-      this.#container.style.height = `${sideLength}px`; // 高度設定
-      
+      // --- スケール計算 ---
       const { niceMin, niceMax, niceTicks } = Mtd.Utils.calcNiceScale(
         previewData.map(d => d.x), 
         previewData.map(d => d.y)
       );
-      const yTicks = [...niceTicks];
-      yTicks.shift(); // 先頭除去
-
-      const options = this.#buildOptions({
-        width: sideLength,
-        height: sideLength,
-        chartArea: { left: 40, top: 25, width: sideLength - 65, height: sideLength - 70 },
-        hAxis: {
-          ...ObCalPlot.#CONFIG.hAxis,
-          viewWindow: { min: niceMin, max: niceMax },
-          ticks: niceTicks
-        },
-        vAxis: {
-          ...ObCalPlot.#CONFIG.vAxis,
-          viewWindow: { min: niceMin, max: niceMax },
-          ticks: yTicks
-        }
-      });
-
-      google.visualization.events.addOneTimeListener(this.#chart, 'ready', () => {
-        this.#mutationObserver.observe(this.#chartDiv, { childList: true, subtree: true }); // 監視開始
-        this.#applySvgHacks();
-      });
-
-      this.#chart.draw(dataTable, options); // 描画実行
-    }
-
-    // --- SVGハックパイプライン ---
-    #applySvgHacks() {
-      if (!this.#chart) return;
-      this.#mutationObserver.disconnect(); // 誤検知防止
-      try {
-        const svg = this.#chartDiv.querySelector('svg');
-        if (!svg) return;
-        this.#drawPlotBorder(svg);
-        this.#rotateYAxisLabels(svg);
-        this.#shiftXAxisLabels(svg);
-        this.#drawEquationText(svg);
-      } finally {
-        this.#mutationObserver.observe(this.#chartDiv, { childList: true, subtree: true }); // 監視復帰
-      }
-    }
-
-    // --- 領域枠描画 ---
-    #drawPlotBorder(svg) {
-      svg.querySelector('.plot-border')?.remove(); // 重複防止
-      const area = this.#chart.getChartLayoutInterface().getChartAreaBoundingBox();
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const interval = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
       
-      // --- 属性設定 ---
-      this.#setAttrs(rect, {
-        'class': 'plot-border', 'x': area.left, 'y': area.top,
-        'width': area.width, 'height': area.height,
-        'fill': 'none', 'stroke': ThemeCache.get('var(--grey200)'), 'stroke-width': '1'
+      const tickFormatter = (val) => {
+        const tick = niceTicks.find(t => Math.abs(t.v - val) < 1e-8);
+        return tick ? tick.f : val;
+      };
+
+      // --- グラフ内テキスト生成 ---
+      const graphText = Mtd.Utils.createStatsRows(statsData, 3, [
+        { key: 'R² = {r2}', label: '' },
+        { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }
+      ]).map(r => r[1]).join('\n');
+
+      // --- ⑤ シンボル記号変換 (「×」記号追加) ---
+      const baseKey = symbolData?.baseKey;
+      const mapping = symbolData?.mapping || {};
+      const getShape = shape => {
+        if (shape === 'square') return 'rect';
+        if (shape === 'cross') return 'path://M -4,-4 L 4,4 M 4,-4 L -4,4'; // ⑤ SVGパスによる「×」記号
+        return shape || 'circle';
+      };
+
+      const scatterData = previewData.map(d => {
+        const val = d[baseKey];
+        const mapDef = (val && mapping[val]) ? mapping[val] : null;
+        
+        const shape = mapDef ? getShape(mapDef.shape) : 'circle';
+        const color = mapDef ? ThemeCache.get(mapDef.color) : 'transparent';
+        const stroke = mapDef ? color : ThemeCache.get('var(--grey600)');
+
+        return {
+          value: [d.x, d.y],
+          id: d.id,
+          group: d.group,
+          symbol: shape,
+          symbolSize: shape.startsWith('path://') ? 7 : 6,
+          itemStyle: { color, borderColor: stroke, borderWidth: 1 }
+        };
       });
-      svg.appendChild(rect); // 要素追加
-    }
 
-    // --- 方程式テキスト描画 ---
-    #drawEquationText(svg) {
-      svg.querySelector('.equation-text')?.remove(); // 重複防止
-      const stats = this.#drawData?.statsData;
-      if (!stats) return; // データ未存在のため終了
-
-      const rows = DataUtils.createStatsRows(stats);
-      const r2Val = rows.find(([label]) => label === '相関係数')[1].split(',')[1].trim();
-      const eqVal = rows.find(([label]) => label === '回帰直線')[1];
-
-      const area = this.#chart.getChartLayoutInterface().getChartAreaBoundingBox();
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      this.#setAttrs(text, {
-        'class': 'equation-text', 'x': area.left + 8, 'y': area.top + 16,
-        'font-size': '10', 'fill': ThemeCache.get('var(--grey600)'), 'font-family': 'Roboto, sans-serif'
-      });
-
-      [r2Val, eqVal].forEach((val, idx) => {
-        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        tspan.textContent = val;
-        this.#setAttrs(tspan, {
-          'x': area.left + 8,
-          ...(idx > 0 ? { 'dy': '13' } : {})
+      // --- 描画系列 (Series) ---
+      const series = [{ type: 'scatter', data: scatterData, animation: false }];
+      
+      if (statsData?.slope != null && statsData?.intercept != null) {
+        const { slope, intercept } = statsData;
+        series.push({
+          type: 'line',
+          data: [
+            [niceMin, slope * niceMin + intercept],
+            [niceMax, slope * niceMax + intercept]
+          ],
+          symbol: 'none',
+          lineStyle: { color: ThemeCache.get('var(--grey400)'), width: 1, type: 'dashed', opacity: 0.5 },
+          animation: false,
+          silent: true
         });
-        text.appendChild(tspan);
-      });
+      }
 
-      svg.appendChild(text); // 要素追加
-    }
+      // --- ECharts Option 設定 ---
+      const axisColor = ThemeCache.get('var(--grey400)');
+      const borderColor = ThemeCache.get('var(--grey200)');
+      const gridPlotSize = sideLength - 70; // ⑦ 正方形プロットサイズ固定
 
-    // --- Y軸回転 ---
-    #rotateYAxisLabels(svg) {
-      const leftThreshold = this.#chart.getChartLayoutInterface().getChartAreaBoundingBox().left;
-      Array.from(svg.querySelectorAll('text')).filter(text => {
-        const x = parseFloat(text.getAttribute('x'));
-        return !isNaN(x) && x < leftThreshold && x > (leftThreshold - 50) && /^-?\d+(\.\d+)?k?$/.test(text.textContent.trim().replace(/,/g, ''));
-      }).forEach(text => {
-        const y = parseFloat(text.getAttribute('y'));
-        // --- 属性設定 ---
-        this.#setAttrs(text, {
-          'transform': `rotate(-90, ${leftThreshold - 12},${y - 3})`,
-          'text-anchor': 'middle', 'dx': '-6', 'font-size': '10'
-        });
-      });
-    }
+      const option = {
+        animation: false, // ① グラフ変化時のアニメーション無効化
+        grid: {
+          left: 45, top: 25, 
+          width: gridPlotSize, height: gridPlotSize, // ⑦ 枠外はみ出し防止・正方形固定
+          show: true, borderColor: borderColor, borderWidth: 1
+        },
+        tooltip: {
+          formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`,
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          textStyle: { fontSize: 11, color: '#333' }
+        },
+        xAxis: {
+          type: 'value',
+          name: 'WDXRF',
+          nameLocation: 'middle',
+          nameGap: 20, // ② 軸名と軸線の間隔
+          nameTextStyle: { fontSize: 11, color: axisColor },
+          min: niceMin, max: niceMax, interval: interval,
+          axisLabel: { 
+            margin: 6, // ② 目盛文字と軸線の間隔調整項目
+            fontSize: 10, 
+            color: axisColor,
+            // ⑥ X軸最小値の文字配置調整
+            formatter: val => tickFormatter(val)
+          },
+          // ④ 主軸目盛り線追加・0原点強調
+          splitLine: { show: true, lineStyle: { color: borderColor, type: 'solid', width: 0.3 } },
+          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
+          axisTick: { show: false, inside: true }
+        },
+        yAxis: {
+          type: 'value',
+          name: 'PXRF',
+          nameLocation: 'middle',
+          nameGap: 22, // ② 軸名と軸線の間隔
+          nameTextStyle: { fontSize: 11, color: axisColor },
+          min: niceMin, max: niceMax, interval: interval,
+          axisLabel: { 
+            rotate: 90, // ③ Y軸目盛りの-90度回転
+            verticalAlign: 'middle',
+            align: 'center',
+            margin: 8, // ② 目盛文字と軸線の間隔調整項目
+            fontSize: 10, 
+            color: axisColor,
+            // ⑥ Y軸最小値を非表示にする（原点被り回避）
+            formatter: val => (Math.abs(val - niceMin) < 1e-8) ? '' : tickFormatter(val)
+          },
+          // ④ 主軸目盛り線追加・0原点強調
+          splitLine: { show: true, lineStyle: { color: borderColor, type: 'solid', width: 0.3 } },
+          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
+          axisTick: { show: false, inside: true }
+        },
+        graphic: [{
+          type: 'text',
+          left: 55, top: 35,
+          style: { text: graphText, fontSize: 10, fill: axisColor, fontFamily: 'Roboto, sans-serif' }
+        }],
+        series: series
+      };
 
-    // --- X軸シフト ---
-    #shiftXAxisLabels(svg) {
-      const { top, height } = this.#chart.getChartLayoutInterface().getChartAreaBoundingBox();
-      const texts = Array.from(svg.querySelectorAll('text')).filter(text => {
-        const y = parseFloat(text.getAttribute('y'));
-        return !isNaN(y) && y >= (top + height) && /^-?\d+(\.\d+)?k?$/.test(text.textContent.trim().replace(/,/g, ''));
-      });
-      if (!texts.length) return; // テキストなしのため終了
-      texts.forEach(text => {
-        const baseY = parseFloat(text.getAttribute('original-y') || text.getAttribute('y'));
-        if (!text.hasAttribute('original-y')) text.setAttribute('original-y', baseY);
-        text.setAttribute('y', baseY + 2); // 位置微調整
-      });
-      const minEl = texts.reduce((m, e) => parseFloat(e.getAttribute('x')) < parseFloat(m.getAttribute('x')) ? e : m);
-      minEl.setAttribute('dx', String(parseFloat(minEl.getAttribute('dx') || '0') - 8)); // 位置調整
+      this.#chartInstance.setOption(option);
     }
   }
 
