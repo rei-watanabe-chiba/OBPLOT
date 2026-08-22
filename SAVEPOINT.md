@@ -59,5 +59,5 @@ for gemini
   - ※ データ確定(`FILTERED`)時: `State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report'])` により後続Stateを初期化。
 
 ## 6. 次の開発手順
-- previewCalElementBoxElの不具合解決
+- 新規開発は停止し、設計思想と現在の動作・UI挙動を維持したままコードのスリム化と保守性向上のリファクタリングを行う。
 
