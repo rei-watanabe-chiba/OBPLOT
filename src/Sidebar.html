@@ -101,13 +101,8 @@
           <details id="previewSection" data-type="disabled">
             <summary>補正＆プレビュー</summary>
             <div id="previewArea">
-              <div class="field-row">
-                <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
-              </div>
-              <label>Obsidianモード計測値</label>
-              <div id="previewModeBox"></div>
-              <label>対象Item</label>
-              <div id="previewItemBox"></div>
+              <div id="previewChartBox"></div>
+              <div id="previewStatsTable"></div>
               <div class="field-row">
                 <div class="field-col">
                   <label>プレビュー値</label>
@@ -118,8 +113,13 @@
                   <div id="previewCorrectionBox"></div>
                 </div>
               </div>
-              <div id="previewChartBox"></div>
-              <div id="previewStatsTable"></div>
+              <div class="field-row">
+                <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
+              </div>
+              <label>Obsidianモード計測値</label>
+              <div id="previewModeBox"></div>
+              <label>対象Item</label>
+              <div id="previewItemBox"></div>
             </div>
           </details>
           <div id="previewBar" class="status-bar" data-status="hidden"></div>

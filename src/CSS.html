@@ -2,6 +2,7 @@
 <style>
   /* --- 変数・テーマ定義 --- */
   :root {
+    --unit: 4px;
     --main-blue: #1A73E8;
     --main-blue-hover: #1F41B6;
     --main-green: #34A853;
@@ -15,7 +16,6 @@
     --bg-color-hover: #F5F5F5;
     --text-main: #202124;
     --transition-speed: 0.2s;
-    /* デフォルトテーマ (Tab1) */
     --theme-color: var(--main-blue);
     --theme-hover: var(--main-blue-hover);
     interpolate-size: allow-keywords;
@@ -35,33 +35,48 @@
     display: grid;
     grid-template-rows: auto 1fr;
     height: 100vh;
-    overflow-x: hidden;
     font-family: 'Roboto', 'Noto Sans JP', sans-serif;
     font-size: 13px;
     color: var(--text-main);
     background-color: var(--bg-color);
+    overflow-x: hidden;
     user-select: none;
   }
   main {
+    padding: calc(var(--unit) * 3);
+    padding-top: calc(var(--unit) * 2);
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 12px;
-    padding-top: 8px;
-    scrollbar-color: transparent;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
   }
   main:hover {
-    scrollbar-color: var(--grey200) transparent;
+    scrollbar-color: color-mix(in srgb, var(--grey200) 50%, transparent) transparent;
   }
-  
-  fieldset { border: none; }
-  .flex-row { display: flex; align-items: center; gap: 0; }
-  .txt-btninfo { font-size: 11px; color: var(--grey600); margin-left: 8px; }
-  hr { border: none; border-top: 1.5px solid var(--grey200); margin: 12px 0; }
+
+  fieldset { 
+    border: none; 
+  }
+  .flex-row { 
+    display: flex; 
+    align-items: center; 
+    gap: 0; 
+  }
+  .txt-btninfo { 
+    margin-left: calc(var(--unit) * 2); 
+    font-size: 11px; 
+    color: var(--grey600); 
+  }
+  hr { 
+    margin: calc(var(--unit) * 3) 0; 
+    border: none; 
+    border-top: 1.5px solid var(--grey200); 
+  }
   .field-row {
     display: flex;
-    gap: 0 8px;
+    gap: 0 calc(var(--unit) * 2);
     width: 100%;
-    margin: 8px 0;
+    margin: calc(var(--unit) * 2) 0;
   }
   .field-col {
     flex: 1;
@@ -75,17 +90,19 @@
   }
   .tab-btn {
     flex: 1;
-    padding: 10px 0;
+    padding: calc(var(--unit) * 2.5) 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--grey400);
     background: none;
     border: none;
     border-radius: 0;
     border-bottom: 2px solid transparent;
-    color: var(--grey400);
-    font-size: 13px;
-    font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-speed);
-    &:hover { background-color: var(--bg-color-hover); }
+    &:hover { 
+      background-color: var(--bg-color-hover); 
+    }
     &.active {
       color: var(--theme-color);
       border-bottom-color: currentColor;
@@ -93,56 +110,98 @@
   }
   .tab-content {
     display: none;
-    &.active { display: block; }
+    &.active { 
+      display: block; 
+    }
   }
 
   /* --- フォーム --- */
   label {
     display: block;
-    margin: 4px 2px;
+    margin: calc(var(--unit) * 1) calc(var(--unit) * 0.5);
     color: var(--grey600);
   }
 
   input, select {
     width: 100%;
-    padding: 6px 8px;
-    margin-top: 4px;
+    margin-top: calc(var(--unit) * 1);
+    padding: calc(var(--unit) * 1.5) calc(var(--unit) * 2);
     font-size: 13px;
     color: var(--text-main);
     background-color: var(--bg-color);
     border: 1px solid var(--grey400);
-    border-radius: 4px;
+    border-radius: calc(var(--unit) * 1);
     transition: all var(--transition-speed);
     
-    &:disabled { cursor: not-allowed; opacity: 0.7; }
-    &:not(:disabled) { cursor: pointer; }
-    &:not(:disabled):hover { filter: brightness(0.95); }
-    &:focus { outline: none; border-color: var(--theme-color); }
+    &:disabled { 
+      opacity: 0.7; 
+      cursor: not-allowed; 
+    }
+    &:not(:disabled) {
+      cursor: pointer;
+      &:hover { 
+        filter: brightness(0.95); 
+      }
+    }
+    &:focus { 
+      outline: none; 
+      border-color: var(--theme-color); 
+    }
     &.has-error {
-      border-color: var(--main-red);
       background-color: color-mix(in srgb, var(--main-red) 10%, #fff);
+      border-color: var(--main-red);
     }
   }
-  input[type="text"]:not(:disabled) { cursor: text; }
+  input[type="text"]:not(:disabled) { 
+    cursor: text; 
+  }
 
-  .checkbox-container { max-height: 120px; overflow-y: auto; }
+  .checkbox-container { 
+    max-height: calc(var(--unit) * 30); 
+    overflow-y: auto; 
+  }
   .checkbox-item {
     display: flex;
     align-items: center;
     margin: 0 !important;
-    padding: 4px 0;
+    padding: calc(var(--unit) * 1) 0;
     border-bottom: 1px solid var(--grey200);
     cursor: pointer;
-    &:last-child { border-bottom: none; }
+    &:last-child { 
+      border-bottom: none; 
+    }
+    input[type="checkbox"] { 
+      flex: 1; 
+      transform: scale(1.2); 
+      cursor: pointer; 
+    }
+    & span { 
+      flex: 5; 
+      font-weight: normal; 
+    }
+    &.select-all {
+      border-bottom: 1px solid var(--grey400);
+      & span { 
+        font-weight: 500; 
+      }
+    }
   }
 
   /* --- アコーディオン --- */
   details {
-    margin: 4px 0;
+    margin: calc(var(--unit) * 1) 0;
     transition: opacity var(--transition-speed);
-    &[data-type="disabled"] { pointer-events: none; opacity: 0.5; }
-    &[data-state="active"] summary { color: var(--theme-color); margin-bottom: 8px; }
-    &[data-state="disabled"] summary { cursor: not-allowed; }
+    &[data-type="disabled"] { 
+      opacity: 0.5; 
+      pointer-events: none; 
+    }
+    &[data-state="active"] summary { 
+      margin-bottom: calc(var(--unit) * 2); 
+      color: var(--theme-color); 
+    }
+    &[data-state="disabled"] summary { 
+      cursor: not-allowed; 
+    }
     &::details-content {
       height: 0;
       opacity: 0;
@@ -159,75 +218,94 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px;
-    color: var(--grey600);
+    padding: calc(var(--unit) * 1.5);
     font-size: 14px;
     font-weight: 600;
     list-style: none;
+    color: var(--grey600);
     cursor: pointer;
     transition: color var(--transition-speed);
-    &::-webkit-details-marker, &::marker { display: none; }
+    &::marker { 
+      display: none; 
+    }
     &::after {
+      display: block;
+      width: calc(var(--unit) * 1.5);
+      height: calc(var(--unit) * 1.5);
       content: "";
-      width: 6px;
-      height: 6px;
       border-right: 2px solid currentColor;
       border-bottom: 2px solid currentColor;
       transform: rotate(45deg);
       transition: transform 0.2s ease;
     }
   }
-  details[open] summary::after { transform: rotate(-135deg); }
+  details[open] summary::after { 
+    transform: rotate(-135deg); 
+  }
 
   /* --- ボタン --- */
   button {
-    flex: 1 1 calc(50% - 4px);
-    padding: 8px 0;
+    flex: 1;
+    padding: calc(var(--unit) * 2) 0;
     font-size: 13px;
     font-weight: 500;
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: calc(var(--unit) * 1);
     cursor: pointer;
     transition: all var(--transition-speed);
-    &:only-child { flex: 1 1 100%; }
     &[data-type="primary"] {
-      background-color: var(--theme-color);
       color: #fff;
-    }
-    &[data-type="primary"]:not(:disabled):hover {
-      background-color: var(--theme-hover);
+      background-color: var(--theme-color);
+      &:not(:disabled):hover {
+        background-color: var(--theme-hover);
+      }
     }
     &.outline {
       background-color: transparent;
       border-color: currentColor;
-      &[data-type="primary"] { color: var(--theme-color); }
-      &:not(:disabled):hover { background-color: color-mix(in srgb, currentColor 10%, transparent); }
+      &[data-type="primary"] { 
+        color: var(--theme-color); 
+      }
+      &:not(:disabled):hover { 
+        background-color: color-mix(in srgb, currentColor 10%, transparent); 
+      }
     }
     &:disabled {
-      background-color: var(--grey200);
       color: #fff;
+      background-color: var(--grey200);
       border-color: transparent;
       cursor: not-allowed;
     }
     &.outline:disabled {
-      background-color: transparent;
       color: var(--grey400);
+      background-color: transparent;
       border-color: var(--grey400);
     }
   }
 
   /* --- ダイアログ --- */
   dialog {
-    width: 280px;
+    width: calc(var(--unit) * 70);
     margin: auto;
-    padding: 20px;
+    padding: calc(var(--unit) * 5);
     border: none;
-    border-radius: 8px;
-    h3 { margin-bottom: 12px; font-size: 16px; color: var(--text-main); }
-    p { margin-bottom: 20px; line-height: 1.5; color: var(--grey600); }
-    .field-row { margin-bottom: 0; gap: 12px; }
+    border-radius: calc(var(--unit) * 2);
+    h3 { 
+      margin-bottom: calc(var(--unit) * 3); 
+      font-size: 16px; 
+      color: var(--text-main); 
+    }
+    p { 
+      margin-bottom: calc(var(--unit) * 5); 
+      line-height: 1.5; 
+      color: var(--grey600); 
+    }
+    .field-row { 
+      gap: calc(var(--unit) * 3); 
+      margin-bottom: 0; 
+    }
     &::backdrop {
-      background-color: rgba(0, 0, 0, 0.2);
+      background-color: color-mix(in srgb, var(--text-main) 30%, transparent);
       backdrop-filter: blur(2px);
     }
   }
@@ -236,14 +314,14 @@
   .status-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    max-height: 50px;
-    margin: 6px 0;
-    padding: 8px 12px;
+    gap: calc(var(--unit) * 2);
+    max-height: calc(var(--unit) * 12.5);
+    margin: calc(var(--unit) * 1.5) 0;
+    padding: calc(var(--unit) * 2) calc(var(--unit) * 3);
     font-size: 13px;
     font-weight: 500;
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: calc(var(--unit) * 1);
     opacity: 1;
     transition: all 0.3s ease;
     &[data-status="hidden"] {
@@ -259,10 +337,10 @@
       color: var(--grey600);
     }
     &[data-status="loading"]::before {
-      content: "";
       display: block;
-      width: 14px;
-      height: 14px;
+      width: calc(var(--unit) * 3.5);
+      height: calc(var(--unit) * 3.5);
+      content: "";
       border: 2px solid var(--grey200);
       border-top-color: var(--theme-color);
       border-radius: 50%;
@@ -277,121 +355,131 @@
       background-color: color-mix(in srgb, var(--main-red) 10%, transparent);
     }
   }
-  
-  /* --- テンプレート用 拡張クラス --- */
-  .checkbox-item { 
-    input[type="checkbox"] { flex: 1; cursor: pointer; transform: scale(1.2);}
-    span { flex: 5; }
-    &.select-all { 
-      border-bottom: 1px solid var(--grey400); 
-      &span { font-weight: 500; }
-    }
-  }
+
+  /* --- 拡張コンポーネント --- */
   .symbol-row {
     display: flex;
-    gap: 4px;
-    margin-bottom: 6px;
     align-items: center;
-    select { padding: 4px; }
+    gap: calc(var(--unit) * 1);
+    margin-bottom: calc(var(--unit) * 1.5);
+    select { 
+      padding: calc(var(--unit) * 1); 
+    }
   }
-  .symbol-target { flex: 2; }
-  .symbol-shape, .symbol-color { flex: 1; }
+  .symbol-target { 
+    flex: 2; 
+  }
+  .symbol-shape, .symbol-color { 
+    flex: 1; 
+  }
 
   .radio-row { 
     display: flex; 
     align-items: center; 
     justify-content: space-between; 
-    padding: 4px 0; 
+    padding: calc(var(--unit) * 1) 0; 
     border-bottom: 1px solid var(--grey50); 
   }
-  .radio-label { font-weight: 500; flex: 1; }
-  .radio-group { display: flex; gap: 16px; flex: 2;}
-  .radio-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .radio-label { 
+    flex: 1; 
+    font-weight: 500; 
+  }
+  .radio-group { 
+    display: flex; 
+    gap: calc(var(--unit) * 4); 
+    flex: 2; 
+  }
+  .radio-item { 
+    display: flex; 
+    align-items: center; 
+    gap: calc(var(--unit) * 1); 
+    cursor: pointer; 
+  }
 
   /* --- 統計テーブルスタイル --- */
   .stats-container {
+    margin-top: calc(var(--unit) * 1.5);
+    padding: calc(var(--unit) * 2);
     font-size: 11px;
     background-color: var(--grey50);
-    padding: 8px;
     border: 1px solid var(--grey200);
-    border-radius: 4px;
-    margin-top: 6px;
+    border-radius: calc(var(--unit) * 1);
     user-select: text;
   }
   .stats-grid {
     display: grid;
     grid-template-columns: 1fr 2fr;
-    row-gap: 4px;
-    column-gap: 8px;
     align-items: center;
+    row-gap: calc(var(--unit) * 1);
+    column-gap: calc(var(--unit) * 2);
   }
   .stats-label {
-    color: var(--grey600);
     font-weight: 500;
+    color: var(--grey600);
   }
   .stats-val {
     font-weight: 700;
   }
 
-  /* --- マルチセレクト・ドロップダウン (Popover API) --- */
+  /* --- マルチセレクト・ドロップダウン --- */
   .multi-select-wrapper {
     box-sizing: border-box;
     width: 100%;
-    margin: 4px 0;
+    margin: calc(var(--unit) * 1) 0;
   }
   .multi-select-summary {
     display: block;
     box-sizing: border-box;
-    width: 276px;
-    height: 32px;
-    line-height: 24px;
-    padding: 3px 24px 3px 8px;
-    background-color: var(--bg-color);
-    border: 1px solid var(--grey400);
-    border-radius: 4px;
+    width: 100%;
+    height: calc(var(--unit) * 8);
+    padding: calc(var(--unit) * 0.75) calc(var(--unit) * 6) calc(var(--unit) * 0.75) calc(var(--unit) * 2);
+    font-weight: normal;
     text-align: left;
     white-space: nowrap;
+    background-color: var(--bg-color);
+    border: 1px solid var(--grey400);
+    border-radius: calc(var(--unit) * 1);
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: pointer;
-    font-weight: normal;
+    &:hover {
+      background-color: var(--bg-color-hover);
+    }
   }
-  .multi-select-summary:hover {
-    background-color: var(--bg-color-hover);
-  }
-  
-  /* Popover本体の設定 (CSS Anchor Positioning) */
+
   .multi-select-options {
+    top: calc(anchor(bottom) + calc(var(--unit) * 1));
+    left: anchor(left);
+    box-sizing: border-box;
+    width: anchor-size(width);
+    max-height: calc(var(--unit) * 50);
     margin: 0;
     padding: 0;
-    max-height: 200px;
-    overflow-y: auto;
     background-color: var(--bg-color);
     border: 1px solid var(--grey200);
-    border-radius: 4px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    box-sizing: border-box;
-    /* アンカーを基準にした相対配置 */
-    top: calc(anchor(bottom) + 4px);
-    left: anchor(left);
-    width: anchor-size(width);
+    border-radius: calc(var(--unit) * 1);
+    box-shadow: 0 calc(var(--unit) * 1) calc(var(--unit) * 2) color-mix(in srgb, var(--text-main) 20%, transparent);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--grey200) transparent;
   }
-  
+
   .badge {
-    display: inline-block;      /* インライン要素として1行に並べる */
-    vertical-align: middle;     /* 行の高さに対する垂直中央揃え */
-    margin-right: 4px;          /* 要素間の隙間（gapの代替） */
-    background-color: var(--grey50);
-    color: var(--text-main);
-    border: 1px solid var(--grey200);
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-family: 'Courier New', Courier, monospace;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: calc(var(--unit) * 1);
+    padding: calc(var(--unit) * 0.5) calc(var(--unit) * 1.5);
     font-size: 12px;
     line-height: 1.2;
+    color: var(--text-main);
+    background-color: var(--grey50);
+    border: 1px solid var(--grey200);
+    border-radius: calc(var(--unit) * 1);
   }
-  
+
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to { 
+      transform: rotate(360deg); 
+    }
   }
 </style>
