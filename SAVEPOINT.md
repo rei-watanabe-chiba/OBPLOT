@@ -59,7 +59,13 @@ for gemini
   - ※ データ確定(`FILTERED`)時: `State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report'])` により後続Stateを初期化。
 
 ## 6. 次の開発手順
-- Tab2「シンボル設定」のプレビューへの反映（"Tab2ST.symbol.rules" の chartEl.drawDataでsymbolData: symbolの中に取得済み）
-- Tab2「補正方法」適用ロジックの実装（`Correction` シートの読込・検量パラメータのプレビュー値への適用）
-- エッジケース（欠損値）に対するバリデーションテストと動作確認
+- tab2 previewLLODBoxにインラインのシンプルなラベル付きtoggleチェックボタンを追加。（参考:https://copipe-de-ui.net/examples/form-toggle-2)
+- NewDOM.buildToggleを作成し、CSSは既存UIとトーンを揃える（共通要素の活用）。駆動stateはlodEnabled
+- LOD値については、PXRFデータが文字列"LOD"を含む場合は定数で代入する
+- 将来的にはGLBで全元素のLODを定義するが、現在の仕様では各元素の最小値を仕様する（将来的な代替可能性の確保）
+- LOD不可タイミングについては、行指向データから列指向データへの変換時とする
+- 列指向データへの変換については、既存コードのタイミングが最適か、より省コード化が図れるタイミングがあるか処理フローを精査して決定する。
+- ただし、lodEnableをロジックに引き渡すタイミングは「プレビュー更新」押下としたい（他のstateと同様に一括で注入 
+- その後１ Tab2「シンボル設定」のプレビューへの反映（"Tab2ST.symbol.rules" の chartEl.drawDataでsymbolData: symbolの中に取得済み）
+- その後２ Tab2「補正方法」適用ロジックの実装（`Correction` シートの読込・検量パラメータのプレビュー値への適用）
 
