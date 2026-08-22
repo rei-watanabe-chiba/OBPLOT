@@ -59,7 +59,5 @@ for gemini
   - ※ データ確定(`FILTERED`)時: `State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report'])` により後続Stateを初期化。
 
 ## 6. 次の開発手順
-- マルチセレクタの不具合解決
-- その後１ Tab2「シンボル設定」のプレビューへの反映（"Tab2ST.symbol.rules" の chartEl.drawDataでsymbolData: symbolの中に取得済み）
-- その後２ Tab2「補正方法」適用ロジックの実装（`Correction` シートの読込・検量パラメータのプレビュー値への適用）
+- previewCalElementBoxElの不具合解決
 
