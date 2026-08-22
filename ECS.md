@@ -1,4 +1,4 @@
-# OBPLOT Tab2 グラフ描画・データ補正機能 設計書 (Ver. 1.2)
+# OBPLOT Tab2 グラフ描画・データ補正機能 設計書
 
 ## 1. UI設計（アコーディオン4層構造）
 - 限られた幅（300px）に対応するため、`<details>`を用いたアコーディオン4階層（section）構造を採用。
@@ -38,6 +38,10 @@
 
 ### ③ 補正＆プレビュー (`previewSection`)
 - **機能**: 特定元素・指数の計算、相関算出、統計表の表示
+- **キャリブレーションの数学的モデル**:
+  - 検量線係数の算出は、**X軸(独立変数)を真値であるWDXRF、Y軸(従属変数)を測定値であるPXRF**として単回帰分析 ($Y = aX + b$) を実施する。
+  - 補正適用時は、算出された係数を用いた逆関数 **$X = (Y - b) / a$** を用いて、測定値から本来の真値相当額を逆算して適用する。
+  - このモデルにより、測定機器の感度(a)とオフセット(b)の特性を反映した科学的に妥当な補正を実現する。
 - **UI要素**:
   - `previewModeBox` (**動的**): Obsidianモード計測元素 (`optionalElements`) の Popover 形式マルチセレクト。
     - **駆動State**: `Tab2ST.preview.modeMap`
@@ -50,7 +54,6 @@
   - `previewMakeBtn` (静的): `Tab2.makePreview` を実行。`PreviewManager.buildPreviewData` でペアデータを構築し、`CalcProcessor.calcRegression` で単回帰分析を実施。`Tab2ST.phase = PREVIEWED(5)`
   - `previewChartBox` (**動的**): カスタム要素 `<ob-cal-plot>` を配備し散布図を描画。View層からプロットデータ・統計データ・シンボル設定が DIされ、DataRoles (`style`) によって動的にスタイルが適用される（指定外・未指定時は黒線丸をデフォルト適用）。回帰式やR²値はネイティブの凡例(Legend)として表示。
   - `previewStatsTable` (**動的**): `NewDOM.statsTable` により、データ個数・R/R²・回帰直線・残差標準偏差・器械Err3σ を Grid 表形式で表示。
-  - **未実装（今後実装）**: `previewItemBox` (item選択), `previewPlot` (散布図描画), `previewSave` (Correctionシートへの書き出し)
 
 ### ④ レポート出力 (`reportSection`)
 - **機能**: PDF用レポート展開および複数指標の一括出力
