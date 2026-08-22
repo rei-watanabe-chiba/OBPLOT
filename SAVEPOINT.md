@@ -7,6 +7,7 @@ for gemini
 - **状態管理 (State Management - Single Source of Truth)**: 
   - `AppState` による Observer (Pub/Sub) モデルを採用。状態はセクション (`dataset`, `symbol`, `preview`, `report`) ごとに厳密に階層化される。
   - 状態の後退・破棄は、各階層の初期値を安全に復元する `reset()` メソッドによってフェイルセーフに管理される。
+  - Controller等での冗長なState取得を簡略化するため、オブジェクト分割代入を利用できる proxy を経由。
 - **プレゼンテーション (UI & Rendering Philosophy)**: 
   - **UIプリミティブのカプセル化 (Web Components)**: `<ob-popover>`, `<ob-multi-select>`, `<ob-symbol-table>`, `<ob-cal-plot>` 等のカスタム要素を用い、Popover APIのバインディングやAnchor位置計算などの「振る舞い」と「内部構造」を完全に隠蔽する。
   - **完全宣言的UI (Declarative Builder)**: 設定配列 (Config Array) を受け取るファクトリ (`NewDOM.buildFormFields`) がDOMを動的構築し、静的マークアップと動的生成の境界を明確化。
