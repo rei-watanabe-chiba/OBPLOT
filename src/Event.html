@@ -3,19 +3,21 @@
   // --- イベント管理・初期化クラス ---
   class Evt {
     // --- 汎用：マルチセレクト切替 ---
-    static toggleMultiSelect(boxId, statePath) {
-      const itemCbs = [...document.querySelectorAll(`#popover-${boxId} .dataset-cb`)];
-      if (!itemCbs.length) return;
-      const allCb = document.querySelector(`#popover-${boxId} .select-all input[type="checkbox"]`);
-      if (allCb) allCb.checked = itemCbs.every(cb => cb.checked);
+    static toggleMultiSelect(target, statePath) {
+      const container = target.closest('ob-multi-select');
+      if (!container) return;
+      const itemCbs = [...container.querySelectorAll('.dataset-cb')];
+      const allCb = container.querySelector('.select-all-cb');
+      if (allCb) allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
       State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
-    };
-    static toggleAllMultiSelect(target, boxId, statePath) {
-      const optionsBox = document.getElementById(`popover-${boxId}`);
-      if (!optionsBox) return;
-      optionsBox.querySelectorAll('.dataset-cb').forEach(cb => cb.checked = target.checked);
-      Evt.toggleMultiSelect(boxId, statePath);
-    };
+    }
+    static toggleAllMultiSelect(target, statePath) {
+      const container = target.closest('ob-multi-select');
+      if (!container) return;
+      const itemCbs = container.querySelectorAll('.dataset-cb');
+      itemCbs.forEach(cb => { cb.checked = target.checked; });
+      State.set(statePath, target.checked ? [...itemCbs].map(cb => cb.value) : []);
+    }
 
     // --- イベントバインダ ---
     static #bindMulti = (id, path) => () => this.toggleMultiSelect(id, path);
@@ -64,8 +66,8 @@
     // --- Tab2変更移譲 ---
     static Tab2 = {
       // リアクティブ状態監視：dataset選択
-      toggleDataset: this.#bindMulti(Tab2UI.datasetBox, "Tab2ST.dataset.filter"),
-      toggleAllDataset: this.#bindAll(Tab2UI.datasetBox, "Tab2ST.dataset.filter"),
+      toggleDataset: this.#bindMulti("Tab2ST.dataset.filter"),
+      toggleAllDataset: this.#bindAll("Tab2ST.dataset.filter"),
       // リアクティブ状態監視：シンボル設定
       confirmAndChangeAxis: async (targetSelect) => {
         const newVal = targetSelect.value;
@@ -101,11 +103,11 @@
         }
       },
       // リアクティブ状態監視：Obsidianモード
-      togglePreviewMode: this.#bindMulti(Tab2UI.previewModeBox, "Tab2ST.preview.modeMap"),
-      toggleAllPreviewMode: this.#bindAll(Tab2UI.previewModeBox, "Tab2ST.preview.modeMap"),
+      togglePreviewMode: this.#bindMulti("Tab2ST.preview.modeMap"),
+      toggleAllPreviewMode: this.#bindAll("Tab2ST.preview.modeMap"),
       // リアクティブ状態監視：Item選択
-      togglePreviewItem: this.#bindMulti(Tab2UI.previewItemBox, "Tab2ST.preview.itemMap"),
-      toggleAllPreviewItem: this.#bindAll(Tab2UI.previewItemBox, "Tab2ST.preview.itemMap")
+      togglePreviewItem: this.#bindMulti("Tab2ST.preview.itemMap"),
+      toggleAllPreviewItem: this.#bindAll("Tab2ST.preview.itemMap")
     };
 
     // --- ボタン監視ルーター ---
@@ -128,7 +130,10 @@
     static #handleChange(e) {
       const target = e.target;
       const bindPath = target.getAttribute('data-bind');
-      if (bindPath) State.set(bindPath, target.value);
+      if (bindPath) {
+        const val = target.type === "checkbox" ? target.checked : target.value;
+        State.set(bindPath, val);
+      }
       const changePath = target.getAttribute('data-change');
       if (changePath) {
         const [namespace, methodName] = changePath.split('.');

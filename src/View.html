@@ -35,6 +35,12 @@
       if (GLOBAL_CONFIG.valueLogic.length) {
         State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
       }
+      
+      // Tab2 LOD置換トグル（追加）
+      NewDOM.buildToggle({
+        label: "LOD置換",
+        bind: "Tab2ST.preview.lodEnabled"
+      }, Tab2UI.previewLODBox);
 
       // 静的要素の初期化DI
       const previewModeEl = DOM.get("previewModeBoxEl");
@@ -126,7 +132,10 @@
         "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
         "Tab2ST.phase": v => {
           UIPhase.updateTab2PhaseUI(v);
-          if (v < TAB2_PHASE.PREVIEWED) DOM.get('ob-cal-plot-el')?.clear();
+          if (v < TAB2_PHASE.PREVIEWED) {
+            DOM.get('ob-cal-plot-el')?.clear();
+            NewDOM.statsTable(null);
+          }
         },
 
         // 動的UI: Tab1 (宣言的ビルダー)
@@ -149,6 +158,7 @@
         "Tab2ST.dataset.filter": setElProp("datasetBoxEl", "selected"),
         "Tab2ST.preview.modeMap": setElProp("previewModeBoxEl", "selected"),
         "Tab2ST.preview.itemMap": setElProp("previewItemBoxEl", "selected"),
+        "Tab2ST.preview.statsData": stats => NewDOM.statsTable(stats),
         "Tab2ST.preview.previewData": data => {
           const stats = State.get("Tab2ST.preview.statsData");
           const symbol = State.get("Tab2ST.symbol");

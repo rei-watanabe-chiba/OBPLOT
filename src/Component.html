@@ -74,6 +74,16 @@
       });
     }
 
+    // --- トグルスイッチビルダ ---
+    static buildToggle(config, containerId, isClear = false) {
+      const container = DOM.get(containerId);
+      if (!container || (!isClear && container.hasChildNodes())) return;
+      if (isClear) container.replaceChildren();
+      
+      const html = Tpl.Toggle.row(config.label, config.bind, config.change, config.checked);
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
     // --- 統計表レンダリング ---
     static statsTable(stats, containerId = Tab2UI.previewStatsTable) {
       const container = DOM.get(containerId);
@@ -143,7 +153,7 @@
       cbs.forEach(cb => {
         cb.checked = Array.isArray(vals) && vals.includes(cb.value);
       });
-      const allCb = this.querySelector('.select-all input[type="checkbox"]');
+      const allCb = this.querySelector('.select-all-cb');
       if (allCb) {
         allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
       }
@@ -217,6 +227,25 @@
       }
     };
 
+    // --- トグル用 ---
+    static Toggle = class {
+      static row(label, bindPath, changePath, isChecked) {
+        const bindAttr = bindPath ? `data-bind="${bindPath}"` : "";
+        const changeAttr = changePath ? `data-change="${changePath}"` : "";
+        const checkedAttr = isChecked ? "checked" : "";
+        
+        return `
+          <div class="toggle-row">
+            <span class="toggle-label">${label || ""}</span>
+            <label class="toggle-switch">
+              <input type="checkbox" ${bindAttr} ${changeAttr} ${checkedAttr}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        `;
+      }
+    };
+
     // --- 統計テーブル用 ---
     static Stats = class {
       static row(label, val) {
@@ -240,7 +269,7 @@
       static selectAll(dataChange) {
         return `
           <label class="checkbox-item select-all">
-            <input type="checkbox" data-change="${dataChange}" checked>
+            <input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked>
             <span>すべて選択</span>
           </label>
         `;

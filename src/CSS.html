@@ -488,19 +488,24 @@
   .checkbox-item {
     display: flex;
     align-items: center;
+    gap: calc(var(--unit) * 2);
     margin: 0 !important;
-    padding: var(--unit)  0;
+    padding: var(--unit) calc(var(--unit) * 2);
     border-bottom: 1px solid var(--grey200);
     cursor: pointer;
 
     &:last-child { border-bottom: none; }
     input[type="checkbox"] {
-      flex: 1;
-      transform: scale(1.2);
+      flex: none;
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      padding: 0;
       cursor: pointer;
     }
     span {
-      flex: 5;
+      flex: 1;
+      font-size: 12px;
       font-weight: normal;
     }
     &.select-all {
@@ -509,16 +514,58 @@
     }
   }
 
-  .radio-row {
+  /* --- トグルスイッチ --- */
+  .toggle-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--unit)  0;
-    border-bottom: 1px solid var(--grey50);
+    margin: calc(var(--unit) * 1.5) 0;
+  }
+  .toggle-label {
+    font-size: 13px;
+    color: var(--grey600);
+  }
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: calc(var(--unit) * 9);
+    height: calc(var(--unit) * 5);
+    flex: none;
+    margin: 0;
 
-    .radio-label { flex: 1; font-weight: 500; }
-    .radio-group { display: flex; gap: calc(var(--unit) * 4); flex: 2; }
-    .radio-item { display: flex; align-items: center; gap: var(--unit) ; cursor: pointer; }
+    input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      margin: 0;
+      padding: 0;
+    }
+  }
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--grey200);
+    border-radius: calc(var(--unit) * 2.5);
+    transition: all var(--transition-speed);
+
+    &::before {
+      position: absolute;
+      content: "";
+      height: calc(var(--unit) * 3.5);
+      width: calc(var(--unit) * 3.5);
+      left: calc(var(--unit) * 0.75);
+      bottom: calc(var(--unit) * 0.75);
+      background-color: #fff;
+      border-radius: 50%;
+      transition: all var(--transition-speed);
+    }
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background-color: var(--theme-color);
+  }
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(calc(var(--unit) * 4));
   }
 
   /* --- 統計テーブル --- */

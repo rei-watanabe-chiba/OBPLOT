@@ -230,11 +230,22 @@
   // --- Tab2 プレビューデータ構築ロジック ---
   class PreviewManager {
     // --- プレビューデータ生成 ---
-    static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap = null) {
+    static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap = null, lodEnabled = false) {
       if (!basePXRF?.length || !baseWDXRF?.length) return [];
       const allElements = Object.keys(GLOBAL_CONFIG.mudrockIndex);
-      
       const itemSet = itemMap?.length ? new Set(itemMap) : null;
+
+      // 元素別最小値集計
+      const minMap = {};
+      allElements.forEach(el => {
+        const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
+        const isSelected = Array.isArray(modeMap) && modeMap.includes(el);
+        const prefix = (isOptional && isSelected) ? 'ob' : 'md';
+        const nums = basePXRF
+          .map(r => Number(r[`${prefix}_${el}`]))
+          .filter(v => !isNaN(v) && v > 0);
+        minMap[el] = nums.length ? Math.min(...nums) : null;
+      });
 
       // pxrfデータ整形
       const processed = basePXRF
@@ -246,14 +257,24 @@
             id: row.ID ?? row.id,
             item: row.item ?? row.Item,
             group: row.Group ?? "Unknown",
-            Group: row.Group ?? "Unknown", // 大小文字双方に対応
-            Source: row.Source ?? "Unknown" // Source属性を保持
+            Group: row.Group ?? "Unknown",
+            Source: row.Source ?? "Unknown"
           };
           allElements.forEach(el => {
             const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
             const isSelected = Array.isArray(modeMap) && modeMap.includes(el);
             const prefix = (isOptional && isSelected) ? 'ob' : 'md';
-            newRow[el] = row[`${prefix}_${el}`] ?? null;
+            const rawVal = row[`${prefix}_${el}`];
+            const isLod = typeof rawVal === 'string' && rawVal.includes('LOD');
+            
+            let val = null;
+            if (isLod) {
+              val = lodEnabled ? (minMap[el] ?? null) : null;
+            } else if (rawVal != null && rawVal !== "" && !isNaN(Number(rawVal))) {
+              val = Number(rawVal);
+            }
+
+            newRow[el] = val;
             newRow[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
           });
           return newRow;

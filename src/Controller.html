@@ -174,10 +174,10 @@
     // --- Tab2 プレビュー作成 ---
     static async makePreview() {
       await CoreCtrl.withAsyncLock("Tab2ST.preview.status", async () => {
-        const [modeMap, valueLogic, itemMap, basePXRF, baseWDXRF] = State.get([
-        "Tab2ST.preview.modeMap", "Tab2ST.preview.value", "Tab2ST.preview.itemMap", "Tab2ST.dataset.basePXRF", "Tab2ST.dataset.baseWDXRF"
-      ]);
-        const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap);
+        const [modeMap, valueLogic, itemMap, basePXRF, baseWDXRF, lodEnabled] = State.get([
+          "Tab2ST.preview.modeMap", "Tab2ST.preview.value", "Tab2ST.preview.itemMap", "Tab2ST.dataset.basePXRF", "Tab2ST.dataset.baseWDXRF", "Tab2ST.preview.lodEnabled"
+        ]);
+        const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap, lodEnabled);
         if (!previewData.length) throw new Error("対象データなし");
         const xArr = previewData.map(d => d.x);
         const yArr = previewData.map(d => d.y);
