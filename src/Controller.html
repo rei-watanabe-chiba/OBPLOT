@@ -134,8 +134,7 @@
           "Tab2ST.dataset.filter": datasets, 
           "Tab2ST.phase": TAB2_PHASE.LOADED 
         });
-        // プレビューオプションを初期化（UIInitから移動）
-        NewDOM.multiSelectDropdown(GLOBAL_CONFIG.optionalElements, Tab2UI.previewModeBox, "Tab2.togglePreviewMode", "Tab2.toggleAllPreviewMode");
+        // 依存State初期化
         State.set("Tab2ST.preview.modeMap", [...GLOBAL_CONFIG.optionalElements]);
         return `読込完了: dataset ${datasets.length}件`;
       });

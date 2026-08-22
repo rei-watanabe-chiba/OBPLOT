@@ -12,42 +12,51 @@
 
   // --- UIパーツ生成・描画クラス ---
   class NewDOM {
-    // --- 汎用処理 ---
-    static #clone(templateId) { return DOM.get(templateId)?.content.cloneNode(true); }
-    static #bind(el, attrs) { Object.entries(attrs).forEach(([k, v]) => v != null && el.setAttribute(k, v)); return el; }
-    static #renderList(templateId, items, containerId, mapper) {
+    // --- フォーム一括ビルダ ---
+    static buildFormFields(configArr, containerId, isClear = false) {
       const container = DOM.get(containerId);
-      if (!container) return;
-      if (!items?.length) { container.replaceChildren(); return; } // データ空でクリア（初期化対応）
-      container.replaceChildren(...items.map((item, index) => mapper(this.#clone(templateId), item, index)));
-    }
-    static #checkboxList(arr, containerElement, targetState, allChangeState = null) {
-      if (!containerElement) return;
-      if (!arr?.length) { containerElement.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
-      const items = arr.map(item => {
-        const clone = this.#clone("checkboxTemplate");
-        const cb = this.#bind(clone.querySelector(".dataset-cb"), { value: item, 'data-change': targetState });
-        cb.checked = true;
-        clone.querySelector(".cb-text").textContent = item;
-        return clone;
+      if (!container || (!isClear && container.hasChildNodes())) return;
+      if (isClear) container.replaceChildren();
+      const nodes = configArr.map(conf => {
+        const el = document.createElement(conf.type === "select" ? "select" : "input");
+        el.className = `field-${conf.type} form-control`;
+        if (conf.bind) el.setAttribute("data-bind", conf.bind);
+        if (conf.change) el.setAttribute("data-change", conf.change);
+        if (conf.field) el.setAttribute("data-field", conf.field);
+        if (conf.type === "select") {
+          if (conf.hasEmpty !== false) el.add(new Option("---未選択---", ""));
+          conf.options?.forEach(opt => {
+            const o = new Option(opt.label ?? opt, opt.value ?? opt);
+            if (opt.disabled) o.disabled = true;
+            if (opt.hidden) o.hidden = true;
+            if (opt.selected || opt.value === "") o.selected = true;
+            el.add(o);
+          });
+        } else {
+          el.type = conf.inputType || "text";
+          if (conf.placeholder) el.placeholder = conf.placeholder;
+        }
+        // label指定の有無で分岐
+        if (conf.label) {
+          const label = document.createElement("label");
+          label.className = "field-label";
+          label.textContent = `${conf.label} `;
+          label.appendChild(el);
+          return label;
+        }
+        return el;
       });
-      if (allChangeState) {
-        const allClone = this.#clone("checkAllTemplate");
-        this.#bind(allClone.querySelector("input"), { 'data-change': allChangeState }).checked = true;
-        containerElement.replaceChildren(allClone, ...items);
-        return;
-      }
-      containerElement.replaceChildren(...items);
+      container.append(...nodes);
     }
 
-    // --- ステータスバー更新  ---
+    // --- ステータスバー更新 ---
     static status(id, status = null) {
       const el = DOM.get(id);
       if (!el) return;
       [el.dataset.status, el.innerText] = status?.length ? status : ["hidden", ""];
     }
 
-    // --- ダイアログ生成 ---
+    // --- 汎用ダイアログ ---
     static confirm(title, msg, barObj = null) {
       const saveStatus = barObj ? DOM.get(barObj)?.innerText : "";
       if (barObj) this.status(barObj, ["loading", "実行中..."]);
@@ -65,150 +74,15 @@
       });
     }
 
-    // --- 列選択動的生成 ---
-    static selectors(arr, objID, fields, targetState, hasEmpty = true, isMultiple = false) {
-      this.#renderList("selectorTemplate", fields, objID, (clone, field) => {
-        clone.querySelector(".field-label").firstChild.nodeValue = `${field.label} `;
-        const select = this.#bind(clone.querySelector("select"), { 'data-field': field.key, 'data-change': targetState });
-        if (isMultiple) select.multiple = true;
-        if (!hasEmpty || isMultiple) select.querySelector(".empty-opt")?.remove();
-        select.append(...arr.map(h => new Option(h, h)));
-        return clone;
-      });
-    }
-
-    // --- シンボル設定動的テーブル生成 ---
-    static symbolTable(containerId, rowData, optionsConfig, actionsConfig) {
-      const container = DOM.get(containerId);
-      if (!container) return;
-      if (!rowData?.length) { container.replaceChildren(); return; }
-
-      const rowTpl = DOM.get("symbolRowTemplate");
-      const selTpl = DOM.get("singleSelectTemplate");
-      const itemTpl = DOM.get("singleSelectItemTemplate");
-
-      // ドロップダウン生成ヘルパー
-      const buildSelect = (opts, currentVal, type, idx, hasColorBox = false) => {
-        const clone = selTpl.content.cloneNode(true);
-        const summary = clone.querySelector(".single-select-summary");
-        const optionsBox = clone.querySelector(".single-select-options");
-        const popoverId = `popover-sym-${type}-${idx}`;
-        const anchorName = `--anchor-sym-${type}-${idx}`;
-        
-        // アンカー紐付け
-        this.#bind(summary, { popovertarget: popoverId }).style.anchorName = anchorName;
-        this.#bind(optionsBox, { id: popoverId }).style.positionAnchor = anchorName;
-
-        let currentLabel = "未選択";
-        let currentColor = "";
-
-        // 選択肢の生成
-        const items = opts.map(opt => {
-          const itemClone = itemTpl.content.cloneNode(true);
-          const btn = itemClone.querySelector(".single-select-item");
-          
-          this.#bind(btn, {
-            'data-action': actionsConfig.update,
-            'data-symbol-idx': idx,
-            'data-symbol-type': type,
-            'value': opt.val,
-            'popovertarget': popoverId
-          });
-
-          // カラーボックス付きラベルの構築
-          const colorHtml = hasColorBox ? `<span class="color-box" style="background: ${opt.val}"></span>` : "";
-          btn.innerHTML = colorHtml + opt.label;
-
-          if (opt.val === currentVal) {
-            currentLabel = opt.label;
-            currentColor = opt.val;
-          }
-          return itemClone;
-        });
-
-        optionsBox.append(...items);
-        
-        // サマリー表示の更新
-        const summaryColor = (hasColorBox && currentVal) ? `<span class="color-box" style="background: ${currentColor}"></span>` : "";
-        summary.innerHTML = summaryColor + currentLabel;
-        
-        return clone;
-      };
-
-      // 1. データ行の生成
-      const itemRows = rowData.map((rule, i) => {
-        const rowClone = rowTpl.content.cloneNode(true);
-        const btn = rowClone.querySelector(".icon-btn");
-        const isDefault = rule.id === "default";
-        
-        this.#bind(btn, {
-          'data-action': actionsConfig.remove,
-          'data-rule-id': rule.id
-        }).textContent = "-";
-        if (isDefault) btn.disabled = true;
-
-        const targetCol = rowClone.querySelector(".symbol-col-target");
-        if (isDefault) {
-          targetCol.innerHTML = '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>';
-        } else {
-          targetCol.appendChild(buildSelect(optionsConfig.target, rule.target, "target", i));
-        }
-
-        rowClone.querySelector(".symbol-col-shape").appendChild(buildSelect(optionsConfig.shape, rule.shape, "shape", i));
-        rowClone.querySelector(".symbol-col-color").appendChild(buildSelect(optionsConfig.color, rule.color, "color", i, true));
-
-        return rowClone;
-      });
-
-      // 2. 末尾の[+]専用行の生成
-      const addRowClone = rowTpl.content.cloneNode(true);
-      this.#bind(addRowClone.querySelector(".icon-btn"), { 'data-action': actionsConfig.add }).textContent = "+";
-      addRowClone.querySelector(".symbol-col-target").replaceChildren();
-      addRowClone.querySelector(".symbol-col-shape").replaceChildren();
-      addRowClone.querySelector(".symbol-col-color").replaceChildren();
-
-      container.replaceChildren(...itemRows, addRowClone);
-    }
-
     // --- 統計表レンダリング ---
     static statsTable(stats, containerId = Tab2UI.previewStatsTable) {
       const container = DOM.get(containerId);
       if (!container) return;
-      if (!stats) { container.replaceChildren(); return; } // 空ならクリア
+      if (!stats) { container.replaceChildren(); return; }
+      
       const rows = DataUtils.createStatsRows(stats);
-      const [containerTpl, rowTpl] = [DOM.get("statsContainerTemplate"), DOM.get("statsRowTemplate")];
-      if (!containerTpl || !rowTpl) return;
-      const boxClone = containerTpl.content.cloneNode(true);
-      const grid = boxClone.querySelector(".stats-grid");
-      rows.forEach(([label, val]) => {
-        const rowClone = rowTpl.content.cloneNode(true);
-        [rowClone.querySelector(".stats-label").textContent, rowClone.querySelector(".stats-val").textContent] = [label, String(val)];
-        grid.appendChild(rowClone);
-      });
-      container.replaceChildren(boxClone);
-    }
-
-    // --- 疑似ドロップダウン生成 ---
-    static multiSelectDropdown(arr, objID, targetState, allChangeState = null) {
-      const container = DOM.get(objID);
-      if (!container) return;
-      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
-      const clone = this.#clone("multiSelectTemplate");
-      const [summaryBtn, optionsBox] = [clone.querySelector(".multi-select-summary"), clone.querySelector(".multi-select-options")];
-      const [popoverId, anchorName] = [`popover-${objID}`, `--anchor-${objID}`];
-      this.#bind(summaryBtn, { popovertarget: popoverId }).style.anchorName = anchorName;
-      this.#bind(optionsBox, { id: popoverId }).style.positionAnchor = anchorName;
-      this.#checkboxList(arr, optionsBox, targetState, allChangeState);
-      container.replaceChildren(clone);
-    }
-
-    // --- サマリーテキスト更新 ---
-    static updateMultiSelectSummary(objID, selectedValues) {
-      const summary = DOM.get(objID)?.querySelector(".multi-select-summary");
-      if (!summary) return;
-      summary.innerHTML = selectedValues?.length
-        ? selectedValues.map(v => `<span class="badge">${v}</span>`).join('')
-        : '<span style="color:var(--grey400)">未選択</span>';
+      const rowsHtml = rows.map(([label, val]) => Tpl.Stats.row(label, val)).join('');
+      container.innerHTML = Tpl.Stats.container(rowsHtml);
     }
 
     // --- 入力欄エラー状態更新 ---
@@ -218,4 +92,198 @@
       });
     }
   }
+
+  // ==========================================================================
+  // Web Components (UI Primitives)
+  // ==========================================================================
+  
+  // --- UI: 汎用ポップオーバー (Behavior Provider) ---
+  class ObPopover extends HTMLElement {
+    connectedCallback() {
+      setTimeout(() => {
+        const summary = this.querySelector('.popover-summary');
+        const content = this.querySelector('.popover-content');
+        if (!summary || !content) return;
+        const uid = this.id || `pop_${Math.random().toString(36).substr(2, 9)}`;
+        const anchorName = `--anchor-${uid}`;
+        summary.setAttribute('popovertarget', uid);
+        summary.style.anchorName = anchorName;
+        content.id = uid;
+        content.setAttribute('popover', 'auto');
+        content.style.positionAnchor = anchorName;
+      }, 0);
+    }
+  }
+
+  // --- UI: マルチ選択ドロップダウン ---
+  class ObMultiSelect extends HTMLElement {
+    #dataChangeItem;
+    #dataChangeAll;
+    connectedCallback() {
+      this.#dataChangeItem = this.getAttribute('data-change-item');
+      this.#dataChangeAll = this.getAttribute('data-change-all');
+      this.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "checkbox-container");
+    }
+    set options(arr) {
+      const container = this.querySelector('.popover-content');
+      if (!container) return;
+      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
+      const itemsHtml = arr.map(item => Tpl.MultiSelect.item(item, this.#dataChangeItem)).join('');
+      const allHtml = this.#dataChangeAll ? Tpl.MultiSelect.selectAll(this.#dataChangeAll) : '';
+      container.innerHTML = allHtml + itemsHtml;
+    }
+    set selected(vals) {
+      const summary = this.querySelector('.popover-summary');
+      if (summary) {
+        summary.innerHTML = vals?.length
+          ? vals.map(v => Tpl.Common.badge(v)).join('')
+          : '<span style="color:var(--grey400)">未選択</span>';
+      }
+      const cbs = this.querySelectorAll('.dataset-cb');
+      cbs.forEach(cb => {
+        cb.checked = Array.isArray(vals) && vals.includes(cb.value);
+      });
+      const allCb = this.querySelector('.select-all input[type="checkbox"]');
+      if (allCb) {
+        allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
+      }
+    }
+  }
+
+  // --- UI: シンボル設定テーブル ---
+  class ObSymbolTable extends HTMLElement {
+    #data = null;
+    static #COLS = [
+      { key: 'target', className: 'symbol-col-target', hasColor: false },
+      { key: 'shape', className: 'symbol-col-shape', hasColor: false },
+      { key: 'color', className: 'symbol-col-color', hasColor: true }
+    ];
+    set tableData(val) { this.#data = val; this.#render(); }
+    clear() { this.#data = null; this.replaceChildren(); }
+    #buildSelectHtml(opts, currentVal, type, idx, hasColor, actionsConfig) {
+      let currentLabel = "未選択";
+      let currentColor = "";
+      const itemsHtml = opts.map(opt => {
+        if (opt.val === currentVal) { currentLabel = opt.label; currentColor = opt.val; }
+        return Tpl.Symbol.item(opt, type, idx, hasColor, actionsConfig.update);
+      }).join('');
+      const summaryHtml = Tpl.Symbol.summary(currentLabel, currentColor, hasColor, currentVal);
+      return Tpl.Common.popover(summaryHtml, itemsHtml, "single-summary", "");
+    }
+    #render() {
+      const { rules, optionsConfig, actionsConfig } = this.#data || {};
+      if (!rules?.length || !optionsConfig) {
+        this.clear();
+        return;
+      }
+      const rowsStream = [...rules, { isAddRow: true }];
+      const rowsHtml = rowsStream.map((rule, idx) => {
+        if (rule.isAddRow) return Tpl.Symbol.addRow(actionsConfig.add, ObSymbolTable.#COLS);
+        const isDefault = rule.id === "default";
+        const btnHtml = Tpl.Symbol.btn(actionsConfig.remove, rule.id, "-", isDefault);
+        const colsHtml = ObSymbolTable.#COLS.map(col => {
+          if (col.key === 'target' && isDefault) {
+            return Tpl.Symbol.col(col.className, '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>');
+          }
+          const selectHtml = this.#buildSelectHtml(optionsConfig[col.key], rule[col.key], col.key, idx, col.hasColor, actionsConfig);
+          return Tpl.Symbol.col(col.className, selectHtml);
+        }).join('');
+        return Tpl.Symbol.row(btnHtml, colsHtml);
+      }).join('');
+
+      this.innerHTML = rowsHtml;
+    }
+  }
+
+  // ==========================================================================
+  // 疑似テンプレート統合管理クラス (Presenter)
+  // ==========================================================================
+  class Tpl {
+    // --- 共通テンプレート ---
+    static Common = class {
+      static popover(summaryHtml, contentHtml, summaryClasses = "", contentClasses = "") {
+        return `
+          <ob-popover>
+            <button type="button" class="popover-summary ${summaryClasses}">${summaryHtml}</button>
+            <div class="popover-content scroll-y ${contentClasses}">${contentHtml}</div>
+          </ob-popover>
+        `;
+      }
+      static colorBox(color) {
+        return color ? `<span class="color-box" style="background: ${color}"></span>` : "";
+      }
+      static badge(val) {
+        return `<span class="badge">${val}</span>`;
+      }
+    };
+
+    // --- 統計テーブル用 ---
+    static Stats = class {
+      static row(label, val) {
+        return `<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`;
+      }
+      static container(rowsHtml) {
+        return `<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`;
+      }
+    };
+
+    // --- マルチセレクト用 ---
+    static MultiSelect = class {
+      static item(val, dataChange) {
+        return `
+          <label class="checkbox-item">
+            <input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked>
+            <span class="cb-text">${val}</span>
+          </label>
+        `;
+      }
+      static selectAll(dataChange) {
+        return `
+          <label class="checkbox-item select-all">
+            <input type="checkbox" data-change="${dataChange}" checked>
+            <span>すべて選択</span>
+          </label>
+        `;
+      }
+    };
+
+    // --- シンボルテーブル用 ---
+    static Symbol = class {
+      static summary(label, color, hasColor, hasVal) {
+        const colorBox = (hasColor && hasVal) ? Tpl.Common.colorBox(color) : "";
+        return `${colorBox}${label}`;
+      }
+      static item(opt, type, idx, hasColor, action) {
+        const colorBox = hasColor ? Tpl.Common.colorBox(opt.val) : "";
+        return `
+          <button type="button" class="single-select-item" 
+            data-action="${action}" data-symbol-idx="${idx}" data-symbol-type="${type}" 
+            value="${opt.val}" popovertargetaction="hide">
+            ${colorBox}${opt.label}
+          </button>
+        `;
+      }
+      static btn(action, id, text, disabled) {
+        const attrId = id ? `data-rule-id="${id}"` : "";
+        const attrDis = disabled ? "disabled" : "";
+        return `<button type="button" class="icon-btn" data-action="${action}" ${attrId} ${attrDis}>${text}</button>`;
+      }
+      static col(className, contentHtml) {
+        return `<div class="${className}">${contentHtml}</div>`;
+      }
+      static row(btnHtml, colsHtml) {
+        return `<div class="symbol-table-row"><div class="symbol-col-btn">${btnHtml}</div>${colsHtml}</div>`;
+      }
+      static addRow(actionAdd, colsArr) {
+        const btnHtml = this.btn(actionAdd, "", "+", false);
+        const colsHtml = colsArr.map(c => this.col(c.className, "")).join('');
+        return this.row(btnHtml, colsHtml);
+      }
+    };
+  }
+
+  // --- Web Components 登録 (全クラス評価後に実行) ---
+  customElements.define('ob-popover', ObPopover);
+  customElements.define('ob-multi-select', ObMultiSelect);
+  customElements.define('ob-symbol-table', ObSymbolTable);
 </script>

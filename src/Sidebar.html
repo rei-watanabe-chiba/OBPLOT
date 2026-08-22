@@ -17,7 +17,7 @@
       <button class="tab-btn" data-target="tab2">グラフ作成</button>
     </nav>
 
-    <main>
+    <main class="scroll-y">
       <!-- 第1タブ -->
       <div id="tab1" class="tab-content active">
         <fieldset id="tab1Fieldset">
@@ -73,7 +73,7 @@
             <summary>データ読込・選択</summary>
             <div id="datasetArea" style="display: none;">
               <label>dataset選択</label>
-              <div id="datasetBox"></div>
+              <ob-multi-select id="datasetBoxEl" data-change-item="Tab2.toggleDataset" data-change-all="Tab2.toggleAllDataset"></ob-multi-select>
             </div>
             <div class="field-row">
               <button id="datasetLoadBtn" data-type="primary" data-action="Tab2.loadData">データを読込</button>
@@ -87,12 +87,14 @@
             <summary>シンボル設定</summary>
             <div id="symbolArea" style="display: none;">
               <label>属性選択</label>
-              <div class="field-row">
+              <div class="field-row" style="margin-top: var(--unit)">
                 <div id="symbolAxisBox"></div>
                 <button id="symbolResetBtn" data-type="primary" class="outline" data-action="Tab2.resetSymbolRules">リセット</button>
               </div>
               <label>シンボル設定</label>
-              <div id="symbolBox"></div>
+              <div id="symbolBox" class="scroll-y">
+                <ob-symbol-table id="symbolTableEl"></ob-symbol-table>
+              </div>
             </div>
             <div class="field-row">
               <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
@@ -120,9 +122,9 @@
                 <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
               </div>
               <label>Obsidianモード計測値</label>
-              <div id="previewModeBox"></div>
+              <ob-multi-select id="previewModeBoxEl" data-change-item="Tab2.togglePreviewMode" data-change-all="Tab2.toggleAllPreviewMode"></ob-multi-select>
               <label>対象Item</label>
-              <div id="previewItemBox"></div>
+              <ob-multi-select id="previewItemBoxEl" data-change-item="Tab2.togglePreviewItem" data-change-all="Tab2.toggleAllPreviewItem"></ob-multi-select>
             </div>
           </details>
           <div id="previewBar" class="status-bar" data-status="hidden"></div>
@@ -148,79 +150,6 @@
         <button id="uDialogConfirmBtn" data-type="primary">OK</button>
       </div>
     </dialog>
-
-    <!-- 動的生成要素 (テンプレート) -->
-    <template id="selectorTemplate">
-      <label class="field-label">
-        <select class="field-select">
-          <option value="" class="empty-opt" selected>---未選択---</option>
-        </select>
-      </label>
-    </template>
-    <template id="inputTemplate">
-      <label class="field-label">
-        <input type="text" class="field-input">
-      </label>
-    </template>
-    <template id="checkboxTemplate">
-      <label class="checkbox-item">
-        <input type="checkbox" class="dataset-cb" data-change="Tab2.toggleDataset" checked>
-        <span class="cb-text"></span>
-      </label>
-    </template>
-    <template id="checkAllTemplate">
-      <label class="checkbox-item select-all">
-        <input type="checkbox" id="selectAll" data-change="Tab2.toggleAllDataset" checked>
-        <span>すべて選択</span>
-      </label>
-    </template>
-    <template id="symbolRowTemplate">
-      <div class="symbol-table-row">
-        <div class="symbol-col-btn">
-          <button type="button" class="icon-btn"></button>
-        </div>
-        <div class="symbol-col-target"></div>
-        <div class="symbol-col-shape"></div>
-        <div class="symbol-col-color"></div>
-      </div>
-    </template>
-    <template id="singleSelectTemplate">
-      <div class="single-select-wrapper">
-        <button type="button" class="single-select-summary"></button>
-        <div class="single-select-options" popover="auto"></div>
-      </div>
-    </template>
-    <template id="singleSelectItemTemplate">
-      <button type="button" class="single-select-item" popovertargetaction="hide"></button>
-    </template>
-    <template id="previewModeTemplate">
-      <div class="radio-row">
-        <span class="radio-label"></span>
-        <div class="radio-group">
-          <label class="radio-item">
-            <input type="radio" value="obsidian"> obsidian
-          </label>
-          <label class="radio-item">
-            <input type="radio" value="mudrock"> mudrock
-          </label>
-        </div>
-      </div>
-    </template>
-    <template id="statsContainerTemplate">
-      <div class="stats-container">
-        <div class="stats-grid"></div>
-      </div>
-    </template>
-    <template id="statsRowTemplate">
-      <div class="stats-label"></div>
-      <div class="stats-val"></div>
-    </template>
-    <template id="multiSelectTemplate">
-      <div class="multi-select-wrapper">
-        <button class="multi-select-summary"></button>
-        <div class="multi-select-options checkbox-container" popover="auto"></div>
-      </div>
-    </template>
 
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>

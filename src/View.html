@@ -3,75 +3,49 @@
   // --- 起動時DOM構築 ---
   class UIInit {
     static buildTab1() {
-      // --- Tab1 モード選択---
-      const modeBox = DOM.get(Tab1UI.configModeBox);
-      if (modeBox && !modeBox.hasChildNodes()) {
-        const select = document.createElement("select");
-        select.setAttribute('data-bind', "Tab1ST.config.mode");
-        GLOBAL_CONFIG.configModes.forEach(({ label, value, disabled, hidden }) => {
-          const opt = new Option(label, value);
-          if (disabled) opt.disabled = true;
-          if (hidden) opt.hidden = true;
-          if (value === "") opt.selected = true;
-          select.add(opt);
-        });
-        modeBox.appendChild(select);
-      }
-      // --- Tab1 抽出属性---
-      const exacBox = DOM.get(Tab1UI.exacBox);
-      if (exacBox && !exacBox.hasChildNodes()) {
-        GLOBAL_CONFIG.exacFields.forEach(f => {
-          const clone = DOM.get("inputTemplate").content.cloneNode(true);
-          clone.querySelector(".field-label").firstChild.nodeValue = `${f.label} `;
-          const input = clone.querySelector("input");
-          input.placeholder = f.placeholder;
-          input.setAttribute('data-bind', f.bind);
-          exacBox.appendChild(clone);
-        });
-      }
+      // Tab1 モード選択
+      NewDOM.buildFormFields([{
+        type: "select", options: GLOBAL_CONFIG.configModes, bind: "Tab1ST.config.mode", hasEmpty: false
+      }], Tab1UI.configModeBox);
+
+      // Tab1 計測属性入力
+      NewDOM.buildFormFields(GLOBAL_CONFIG.exacFields.map(f => ({
+        type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder
+      })), Tab1UI.exacBox);
     }
 
     static buildTab2() {
-      // --- Tab2 シンボル属性---
-      const axisBox = DOM.get(Tab2UI.symbolAxisBox);
-      if (axisBox && !axisBox.hasChildNodes()) {
-        const select = document.createElement("select");
-        select.id = Tab2UI.symbolAxis;
-        select.setAttribute('data-change', "Tab2.confirmAndChangeAxis");
-        GLOBAL_CONFIG.symbolAxes.forEach(a => select.add(new Option(a.label, a.value)));
-        axisBox.appendChild(select);
+      // Tab2 シンボル属性選択
+      NewDOM.buildFormFields([{
+        type: "select", options: GLOBAL_CONFIG.symbolAxes, change: "Tab2.confirmAndChangeAxis", hasEmpty: false
+      }], Tab2UI.symbolAxisBox);
+
+      // Tab2 補正方法選択
+      NewDOM.buildFormFields([{
+        type: "select", bind: "Tab2ST.preview.correction", hasEmpty: false,
+        options: [{ label: "補正なし", value: "rawdata" }, { label: "新規検量線", value: "new" }]
+      }], Tab2UI.previewCorrectionBox);
+
+      // Tab2 プレビュー値選択
+      NewDOM.buildFormFields([{
+        type: "select", bind: "Tab2ST.preview.value", hasEmpty: false,
+        options: GLOBAL_CONFIG.valueLogic.map(v => ({ label: v, value: v }))
+      }], Tab2UI.previewValueBox);
+
+      if (GLOBAL_CONFIG.valueLogic.length) {
+        State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
       }
-      // --- Tab2 補正方法--
-      const previewCorrection = DOM.get(Tab2UI.previewCorrectionBox);
-      if (previewCorrection && !previewCorrection.hasChildNodes()) {
-        const select = document.createElement("select");
-        select.setAttribute('data-bind', "Tab2ST.preview.correction");
-        select.add(new Option("補正なし", "rawdata"));
-        select.add(new Option("新規検量線", "new"));
-        previewCorrection.replaceChildren(select);
-      }
-      // --- Tab2 プレビュー対象---
-      const previewValue = DOM.get(Tab2UI.previewValueBox);
-      if (previewValue && !previewValue.hasChildNodes()) {
-        const select = document.createElement("select");
-        select.setAttribute('data-bind', "Tab2ST.preview.value");
-        GLOBAL_CONFIG.valueLogic.forEach(v => select.add(new Option(v, v)));
-        previewValue.replaceChildren(select);
-        if (GLOBAL_CONFIG.valueLogic.length) {
-          State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
-        }
-      }
+
+      // 静的要素の初期化DI
+      const previewModeEl = DOM.get("previewModeBoxEl");
+      if (previewModeEl) previewModeEl.options = GLOBAL_CONFIG.optionalElements;
     }
 
-    static build() {
-      this.buildTab1();
-      this.buildTab2();
-    }
+    static build() { this.buildTab1(); this.buildTab2(); }
   }
 
   // --- フェーズ連動UI制御 ---
   class UIPhase {
-    // ルール定義
     static #TAB1_RULES = {
       [Tab1UI.fileLoadBtn]: p => ({ text: p <= TAB1_PHASE.READY ? "データを取得" : "データを再取得", disabled: false }),
       [Tab1UI.fileMakeBtn]: p => ({ disabled: p < TAB1_PHASE.READY }),
@@ -94,7 +68,7 @@
       [Tab2UI.datasetfilterBtn]: p => ({ disabled: p < TAB2_PHASE.LOADED }),
       [Tab2UI.datasetArea]: p => ({ show: p >= TAB2_PHASE.LOADED }),
       [Tab2UI.datasetSection]: p => ({ active: p < TAB2_PHASE.FILTERED, disabled: false }),
-      [Tab2UI.symbolAxis]: p => ({ disabled: p < TAB2_PHASE.FILTERED }),
+      [Tab2UI.symbolAxisBox]: p => ({ disabled: p < TAB2_PHASE.FILTERED }),
       [Tab2UI.symbolBtn]: p => ({ disabled: p < TAB2_PHASE.FILTERED }),
       [Tab2UI.symbolArea]: p => ({ show: p >= TAB2_PHASE.FILTERED }),
       [Tab2UI.symbolSection]: p => ({ active: p >= TAB2_PHASE.FILTERED && p < TAB2_PHASE.MAPPED, disabled: p < TAB2_PHASE.FILTERED }),
@@ -103,7 +77,6 @@
       [Tab2UI.reppBtn]: p => ({ disabled: p < TAB2_PHASE.PREVIEWED }),
       [Tab2UI.reportSection]: p => ({ active: p >= TAB2_PHASE.PREVIEWED, disabled: p < TAB2_PHASE.PREVIEWED })
     };
-    // 一括適用
     static #apply(rulesObj, phase) {
       Object.entries(rulesObj).forEach(([id, ruleFn]) => {
         const rule = ruleFn(phase);
@@ -128,77 +101,54 @@
     }
   }
 
-  // --- state-UI 同期 ---
+  // --- state-UI 同期ヘルパー ---
+  const bindStatus = id => v => NewDOM.status(id, v);
+  const setElProp = (id, prop) => v => { const el = DOM.get(id); if (el) el[prop] = v; };
+  const bindError = (boxId, targetPhase) => flags => {
+    NewDOM.inputs(boxId, flags);
+    if (State.get("Tab1ST.phase") === targetPhase) {
+      UIPhase.updateTab1PhaseUI(targetPhase);
+    }
+  };
+
   class UIStateUpdater {
     constructor() {
       const stateMap = {
-        // 表示UI
+        // 表示UI (バインディングヘルパー)
         "GLB.isLocked": v => DOM.setDisabled(Tab1UI.tabSet, v),
-        "Tab1ST.config.status": v => NewDOM.status(Tab1UI.configBar, v),
-        "Tab1ST.file.status": v => NewDOM.status(Tab1UI.fileBar, v),
-        "Tab1ST.exac.status": v => NewDOM.status(Tab1UI.exacBar, v),
-        "Tab2ST.dataset.status": v => NewDOM.status(Tab2UI.datasetloadBar, v),
-        "Tab2ST.symbol.status": v => NewDOM.status(Tab2UI.symbolBar, v),
-        "Tab2ST.preview.status": v => NewDOM.status(Tab2UI.previewBar, v),
-        "Tab2ST.report.status": v => NewDOM.status(Tab2UI.repoBar, v),
-        "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
-        "Tab2ST.phase": v => UIPhase.updateTab2PhaseUI(v),
-
-        // 動的UI
-        "Tab1ST.file.data": data => {
-          if (data?.[0]) NewDOM.selectors(data[0], Tab1UI.fileBox, GLOBAL_CONFIG.fileFields, "Tab1.updateFileMap");
-          else DOM.get(Tab1UI.fileBox)?.replaceChildren();
-        },
-        "Tab1ST.file.isMapError": flags => {
-          NewDOM.inputs(Tab1UI.fileBox, flags);
-          if (State.get("Tab1ST.phase") === TAB1_PHASE.LOAD) UIPhase.updateTab1PhaseUI(TAB1_PHASE.LOAD);
-        },
-        "Tab1ST.exac.isMapError": flags => {
-          NewDOM.inputs(Tab1UI.exacBox, flags);
-          if (State.get("Tab1ST.phase") === TAB1_PHASE.VALID) UIPhase.updateTab1PhaseUI(TAB1_PHASE.VALID);
-        },
-        "Tab2ST.dataset.availableDatasets": datasets => {
-          NewDOM.multiSelectDropdown(datasets, Tab2UI.datasetBox, "Tab2.toggleDataset", "Tab2.toggleAllDataset");
-        },
-        "Tab2ST.dataset.filter": vals => {
-          NewDOM.updateMultiSelectSummary(Tab2UI.datasetBox, vals);
-        },
-         "Tab2ST.dataset.basePXRF": () => {
-          this.#renderSymbols();
-          this.#renderItems();
-        },
-        "Tab2ST.symbol.baseKey": val => {
-          const select = DOM.get(Tab2UI.symbolAxis);
-          if (select && select.value !== val) select.value = val;
-          this.#renderSymbols();
-        },
-        "Tab2ST.symbol.rules": () => this.#renderSymbols(),
-        "Tab2ST.preview.modeMap": vals => {
-          const optionsBox = document.getElementById(`popover-${Tab2UI.previewModeBox}`);
-          if (optionsBox) {
-            optionsBox.querySelectorAll('.dataset-cb').forEach(cb => {
-              cb.checked = Array.isArray(vals) && vals.includes(cb.value);
-            });
-            const allCb = optionsBox.querySelector('.select-all input[type="checkbox"]');
-            if (allCb) {
-              const itemCbs = [...optionsBox.querySelectorAll('.dataset-cb')];
-              allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
-            }
-          }
-          NewDOM.updateMultiSelectSummary(Tab2UI.previewModeBox, vals);
-        },
-        "Tab2ST.preview.itemMap": vals => {
-          NewDOM.updateMultiSelectSummary(Tab2UI.previewItemBox, vals);
-        },
-        "Tab2ST.preview.statsData": stats => NewDOM.statsTable(stats),
-
-        // PhaseUIとグラフ描画
+        "Tab1ST.config.status": bindStatus(Tab1UI.configBar),
+        "Tab1ST.file.status": bindStatus(Tab1UI.fileBar),
+        "Tab1ST.exac.status": bindStatus(Tab1UI.exacBar),
+        "Tab2ST.dataset.status": bindStatus(Tab2UI.datasetloadBar),
+        "Tab2ST.symbol.status": bindStatus(Tab2UI.symbolBar),
+        "Tab2ST.preview.status": bindStatus(Tab2UI.previewBar),
+        "Tab2ST.report.status": bindStatus(Tab2UI.repoBar),
         "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
         "Tab2ST.phase": v => {
           UIPhase.updateTab2PhaseUI(v);
           if (v < TAB2_PHASE.PREVIEWED) DOM.get('ob-cal-plot-el')?.clear();
         },
-        // 描画データのDI注入
+
+        // 動的UI: Tab1 (宣言的ビルダー)
+        "Tab1ST.file.data": data => {
+          if (data?.[0]) {
+            const opts = data[0].map(h => ({ label: h, value: h }));
+            const configs = GLOBAL_CONFIG.fileFields.map(f => ({
+              type: "select", label: f.label, field: f.key, change: "Tab1.updateFileMap", options: opts, hasEmpty: true
+            }));
+            NewDOM.buildFormFields(configs, Tab1UI.fileBox, true);
+          } else {
+            DOM.get(Tab1UI.fileBox)?.replaceChildren();
+          }
+        },
+        "Tab1ST.file.isMapError": bindError(Tab1UI.fileBox, TAB1_PHASE.LOAD),
+        "Tab1ST.exac.isMapError": bindError(Tab1UI.exacBox, TAB1_PHASE.VALID),
+
+        // 動的UI: Tab2 (Web ComponentsへのDI)
+        "Tab2ST.dataset.availableDatasets": setElProp("datasetBoxEl", "options"),
+        "Tab2ST.dataset.filter": setElProp("datasetBoxEl", "selected"),
+        "Tab2ST.preview.modeMap": setElProp("previewModeBoxEl", "selected"),
+        "Tab2ST.preview.itemMap": setElProp("previewItemBoxEl", "selected"),
         "Tab2ST.preview.previewData": data => {
           const stats = State.get("Tab2ST.preview.statsData");
           const symbol = State.get("Tab2ST.symbol");
@@ -208,48 +158,48 @@
             chartEl.id = 'ob-cal-plot-el';
             DOM.get(Tab2UI.previewChartBox).replaceChildren(chartEl);
           }
-          // プロパティへの代入で内部の再描画をトリガー
           chartEl.drawData = { previewData: data, statsData: stats, symbolData: symbol };
-        }
+        },
+
+        "Tab2ST.dataset.basePXRF": () => {
+          this.#renderSymbols();
+          this.#renderItems();
+        },
+        "Tab2ST.symbol.baseKey": val => {
+          const select = DOM.get(Tab2UI.symbolAxisBox)?.querySelector('select');
+          if (select && select.value !== val) select.value = val;
+          this.#renderSymbols();
+        },
+        "Tab2ST.symbol.rules": () => this.#renderSymbols()
       };
       Object.entries(stateMap).forEach(([path, cb]) => State.subscribe(path, cb));
     }
 
-    // --- シンボル設定動的リセット ---
+    // --- シンボル設定DI ---
     #renderSymbols() {
       const baseData = State.get("Tab2ST.dataset.basePXRF");
       const baseKey = State.get("Tab2ST.symbol.baseKey");
       const rules = State.get("Tab2ST.symbol.rules");
-      if (!baseData || !baseData.length) {
-        DOM.get(Tab2UI.symbolBox)?.replaceChildren();
-        return;
-      }
+      const symbolEl = DOM.get("symbolTableEl");
+      if (!symbolEl) return;
+      if (!baseData || !baseData.length) { symbolEl.clear(); return; }
       const values = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
-      // DI: 選択肢設定の構築
-      const optionsConfig = {
-        target: [{ val: "", label: "未選択" }, ...values.map(v => ({ val: v, label: v }))],
-        shape: GLOBAL_CONFIG.symbolShapes,
-        color: GLOBAL_CONFIG.symbolColors
+      symbolEl.tableData = {
+        rules,
+        optionsConfig: {
+          target: [{ val: "", label: "未選択" }, ...values.map(v => ({ val: v, label: v }))],
+          shape: GLOBAL_CONFIG.symbolShapes, color: GLOBAL_CONFIG.symbolColors
+        },
+        actionsConfig: { add: "Tab2.addSymbolRule", remove: "Tab2.removeSymbolRule", update: "Tab2.updateSymbolRule"}
       };
-      // DI: アクション名の注入
-      const actionsConfig = {
-        add: "Tab2.addSymbolRule",
-        remove: "Tab2.removeSymbolRule",
-        update: "Tab2.updateSymbolRule"
-      };
-
-      // 汎用レンダラーの呼び出し
-      NewDOM.symbolTable(Tab2UI.symbolBox, rules, optionsConfig, actionsConfig);
     }
-    // --- Item選択ドロップダウン生成 ---
+
+    // --- Item選択ドロップダウンDI ---
     #renderItems() {
       const baseData = State.get("Tab2ST.dataset.basePXRF");
-      if (!baseData?.length) {
-        DOM.get(Tab2UI.previewItemBox)?.replaceChildren();
-        return;
-      }
+      if (!baseData?.length) { setElProp("previewItemBoxEl", "options")([]); return; }
       const items = [...new Set(baseData.map(d => d.item ?? d.Item).filter(Boolean))];
-      NewDOM.multiSelectDropdown(items, Tab2UI.previewItemBox, "Tab2.togglePreviewItem", "Tab2.toggleAllPreviewItem");
+      setElProp("previewItemBoxEl", "options")(items);
       State.set("Tab2ST.preview.itemMap", items);
     }
   }
