@@ -27,9 +27,10 @@
       }], Tab2UI.previewCorrectionBox);
 
       // Tab2 プレビュー値選択
+      const valueOptions = [...GLOBAL_CONFIG.valueElement, ...GLOBAL_CONFIG.valueLogic].map(v => ({ label: v, value: v }));
       NewDOM.buildFormFields([{
         type: "select", bind: "Tab2ST.preview.value", hasEmpty: false,
-        options: GLOBAL_CONFIG.valueLogic.map(v => ({ label: v, value: v }))
+        options: valueOptions
       }], Tab2UI.previewValueBox);
 
       if (GLOBAL_CONFIG.valueLogic.length) {
@@ -52,7 +53,7 @@
       const previewModeEl = DOM.get("previewModeBoxEl");
       if (previewModeEl) previewModeEl.options = GLOBAL_CONFIG.optionalElements;
       const previewCalEl = DOM.get("previewCalElementBoxEl");
-      if (previewCalEl) previewCalEl.options = Object.keys(GLOBAL_CONFIG.mudrockIndex);
+      if (previewCalEl) previewCalEl.options = GLOBAL_CONFIG.valueElement;
     }
 
     static build() { this.buildTab1(); this.buildTab2(); }

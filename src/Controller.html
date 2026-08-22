@@ -125,17 +125,21 @@
         ]);
         if (!pxrfRes.data || pxrfRes.data.length <= 1) throw new Error("PXRFデータ不足");
         if (!wdxrfRes.data || wdxrfRes.data.length <= 1) throw new Error("WDXRFデータ不足");
-        // リセット処理
+        
         State.reset(['Tab2ST.dataset', 'Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report']);
         const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataManager.load(pxrfRes.data, wdxrfRes.data);
+        
+        // パスを個別に指定してState更新を発火させる
         State.set({ 
-          "Tab2ST.dataset.rawData": { correction: corrRes.data, mergedPXRF, wdxrfObjs }, 
+          "Tab2ST.dataset.rawData.mergedPXRF": mergedPXRF,
+          "Tab2ST.dataset.rawData.wdxrfObjs": wdxrfObjs,
+          "Tab2ST.dataset.rawData.correction": corrRes.data,
           "Tab2ST.dataset.availableDatasets": datasets,
           "Tab2ST.dataset.filter": datasets, 
-          "Tab2ST.phase": TAB2_PHASE.LOADED 
+          "Tab2ST.phase": TAB2_PHASE.LOADED,
+          "Tab2ST.preview.modeMap": [...GLOBAL_CONFIG.optionalElements],
+          "Tab2ST.preview.calElementMap": [...GLOBAL_CONFIG.valueElement]
         });
-        // 依存State初期化
-        State.set("Tab2ST.preview.modeMap", [...GLOBAL_CONFIG.optionalElements]);
         return `読込完了: dataset ${datasets.length}件`;
       });
     }
@@ -145,7 +149,6 @@
       await CoreCtrl.withAsyncLock("Tab2ST.dataset.status", async () => {
         const checkedVals = State.get("Tab2ST.dataset.filter") || [];
         if (!checkedVals.length) throw new Error("Dataset未選択");
-        // リセット処理
         State.reset(['Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report']);
         const [mergedPXRF, wdxrfObjs] = State.get(["Tab2ST.dataset.rawData.mergedPXRF", "Tab2ST.dataset.rawData.wdxrfObjs"]);
         const { basePXRF, baseWDXRF } = Mtd.Tab2.DataManager.filter(mergedPXRF, wdxrfObjs, checkedVals);
@@ -158,15 +161,13 @@
       });
     }
 
-    // --- Tab2 シンボル確定 ---
+    // --- Tab2 シンボル確定・リセット ---
     static async setSymbolMap() {
       await CoreCtrl.withAsyncLock("Tab2ST.symbol.status", async () => {
         State.set("Tab2ST.phase", TAB2_PHASE.MAPPED);
         return "シンボル確定";
       });
     }
-    
-    // --- Tab2 シンボルリセット ---
     static async resetSymbolRules() {
       State.reset("Tab2ST.symbol.rules");
     }
@@ -174,13 +175,13 @@
     // --- Tab2 プレビュー作成 ---
     static async makePreview() {
       await CoreCtrl.withAsyncLock("Tab2ST.preview.status", async () => {
-        // [変更] 補正系Stateも取得
-        const [modeMap, valueLogic, itemMap, basePXRF, baseWDXRF, lodEnabled, correctionData, correctionIndex, calEnabled] = State.get([
-          "Tab2ST.preview.modeMap", "Tab2ST.preview.value", "Tab2ST.preview.itemMap", "Tab2ST.dataset.basePXRF", "Tab2ST.dataset.baseWDXRF", "Tab2ST.preview.lodEnabled", "Tab2ST.dataset.rawData.correction", "Tab2ST.preview.correction", "Tab2ST.preview.calEnabled"
+        // calElementMap を取得に追加
+        const [modeMap, valueLogic, itemMap, basePXRF, baseWDXRF, lodEnabled, correctionData, correctionIndex, calEnabled, calElementMap] = State.get([
+          "Tab2ST.preview.modeMap", "Tab2ST.preview.value", "Tab2ST.preview.itemMap", "Tab2ST.dataset.basePXRF", "Tab2ST.dataset.baseWDXRF", "Tab2ST.preview.lodEnabled", "Tab2ST.dataset.rawData.correction", "Tab2ST.preview.correction", "Tab2ST.preview.calEnabled", "Tab2ST.preview.calElementMap"
         ]);
         
-        // [変更] 引数拡張
-        const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap, lodEnabled, correctionData, correctionIndex, calEnabled);
+        // calElementMap を引数に追加
+        const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap, lodEnabled, correctionData, correctionIndex, calEnabled, calElementMap);
         
         if (!previewData.length) throw new Error("対象データなし");
         
@@ -208,50 +209,46 @@
         ]);
         
         const trimmedName = indexName?.trim();
-        
-        // 1. エラーチェック (throwによる中断・ステータス反映)
         if (!trimmedName) throw new Error("インデックス名が未入力です");
         if (!calElementMap?.length) throw new Error("対象元素が選択されていません");
 
-        // 2. 出力確認ダイアログ
         const confirmMsg = `以下の検量線を出力しますか？\nインデックス名：${trimmedName}\n対象元素：${calElementMap.join(', ')}`;
         if (!await NewDOM.confirm("確認", confirmMsg, Tab2UI.previewBar)) return;
 
-        // 3. 上書き確認ダイアログ
         const isDup = correctionData?.slice(1).some(r => r[0] === trimmedName);
         if (isDup && !await NewDOM.confirm("確認", "同名のインデックスが存在します。上書きしますか？", Tab2UI.previewBar)) return;
 
-        // 4. データ計算と構築
-        const allElements = Object.keys(GLOBAL_CONFIG.mudrockIndex);
+        const allElements = GLOBAL_CONFIG.valueElement;
         const header = ['IndexName'];
         allElements.forEach(el => { header.push(`${el}_slp`, `${el}_int`); });
 
         const newRow = [trimmedName];
         
-        // 元素ごとに単回帰を計算
+        // 元素ごとに単回帰を計算 (X=WDXRF, Y=PXRF)
         allElements.forEach(el => {
           if (!calElementMap.includes(el)) {
-            newRow.push("", ""); // 未選択元素は空欄
+            newRow.push("", ""); 
             return;
           }
-          const data = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, el, itemMap, lodEnabled, [], "new", false);
+          // 生データを取得
+          const data = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, el, itemMap, lodEnabled, [], "new", false, []);
           if (!data.length) {
             newRow.push("", "");
             return;
           }
           
-          const xArr = data.map(d => d.x);
-          const yArr = data.map(d => d.y);
-          const stats = Mtd.Tab2.CalcProcessor.calcRegression(xArr, yArr, null);
+          // WDXRFとPXRFを抽出
+          const wdxrfArr = data.map(d => d.x);
+          const pxrfArr = data.map(d => d.y);
+          const coeffs = Mtd.Tab2.CalcProcessor.calcCalibrationCoeffs(wdxrfArr, pxrfArr);
           
-          if (stats?.slope != null && stats?.intercept != null) {
-            newRow.push(stats.slope, stats.intercept);
+          if (coeffs?.slp != null && coeffs?.int != null) {
+            newRow.push(coeffs.slp, coeffs.int);
           } else {
             newRow.push("", "");
           }
         });
 
-        // 5. 統合と書き出し用データの生成
         let updatedData = correctionData?.length ? [...correctionData] : [header];
         let writeData;
         
@@ -264,12 +261,10 @@
           writeData = correctionData?.length ? [newRow] : updatedData;
         }
         
-        // 重複上書き、またはシートが空の場合は全体クリア上書き。新規追加はappend
         await API.writeData(GLOBAL_CONFIG.correctionSheetName, writeData, isDup || !correctionData?.length ? "clear" : ["append"]);
         
-        // ローカルStateの更新 (プルダウン即時反映)
         State.set("Tab2ST.dataset.rawData.correction", updatedData);
-        State.set("Tab2ST.preview.saveIndexName", ""); // 入力欄クリア
+        State.set("Tab2ST.preview.saveIndexName", "");
         
         return `補正値「${trimmedName}」を${isDup ? '上書き' : '保存'}しました`;
       });

@@ -14,7 +14,8 @@
     validModes: ["mudrock", "obsidian"],
     propFileEdited: "isFileListEdited",
     optionalElements: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
-    valueLogic: ["K", "Ca", "Ti","Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb", "Mn * 100 / Fe", "log10(Fe/K)"],
+    valueElement: ["K", "Ca", "Ti", "Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
+    valueLogic: ["Mn * 100 / Fe", "log10(Fe/K)"],
     fileFields: [
       { key: "file", label: "file *必須", required: true },
       { key: "mode", label: "mode *必須", required: true },
@@ -39,8 +40,8 @@
       { value: "Source", label: "Source" }
     ],
     symbolShapes: [
-      { val: 'circle', label: '●' },
       { val: 'emptyCircle', label: '○' },
+      { val: 'circle', label: '●' },
       { val: 'triangle', label: '▲' },
       { val: 'square', label: '■' },
       { val: 'cross', label: '✖' }
@@ -57,6 +58,7 @@
   };
   
   // --- htmlID ---
+  // (省略せずに残します)
   const Tab1UI = {
     tabSet: "tab1Fieldset",
     configSection: "configSection",
@@ -150,7 +152,8 @@
           preview: {
             modeMap: [...GLOBAL_CONFIG.optionalElements],
             itemMap: [], 
-            value: GLOBAL_CONFIG.valueLogic[0], 
+            calElementMap: [...GLOBAL_CONFIG.valueElement], // 新規追加
+            value: GLOBAL_CONFIG.valueElement[0], // 変更
             correction: "new",
             lodEnabled: false,
             calEnabled: false,
