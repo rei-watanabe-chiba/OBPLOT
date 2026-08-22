@@ -13,8 +13,9 @@ for gemini
   - **ViewとLogicの分離 (Presenter パターン)**: 全てのHTML文字列生成を `Tpl` クラス（疑似テンプレート管理）へ集約。名前空間（Common, Stats, Symbol等）で純粋関数として管理し、DRY原則を徹底。
   - **デザイントークンとスコープ化**: CSS Nesting構文、基底ユーティリティ（`.scroll-y`, `.form-control`）、CSSカスタムプロパティを用いたバリアント設計により、拡張性と保守性を両立。
   - **UIフェーズ制御 (Phase UIControl)**: 定数マップに基づく宣言的UIルールエンジン (`UIPhase`) で集約制御。
-- **データフロー (Unidirectional Data Flow)**:
+- **データフローと厳格なDI (Unidirectional Data Flow & Reactive DI)**:
   - ユーザー操作 -> `data-action`/`data-change` -> `Event` (ルーター) -> Controller (フロー制御) -> State (更新) -> View (購読) -> Web Components (DIによるプロパティ注入) -> 内部再描画、という厳格な単方向サイクルを遵守する。
+  - **【重要】直接的なDOM操作やプロパティ代入による「状態のバイパス（Hack）」は、初期化処理であっても許容しない。UIの初期状態も必ず `State.set` による状態発火を通じてコンポーネントに注入（DI）されなければならない。**
 - **将来的な拡張性 (Add-in Portability)**:
   - 非同期通信のためのGAS通信層 (`GasService`) 以外は、標準Web技術 (ES6, Web Components, CSS Nesting) に完全準拠し、将来的な「Office Add-in + GitHub Pages」等のローカル配布環境への移植を前提とした設計とする。
 
@@ -38,7 +39,7 @@ for gemini
 ## 3. コア・コントラクト（絶対的制約事項）
 1. **[State Store]** 状態の更新は必ず `.set()` を経由し、状態の初期化は `.reset()` で明示的に行う。DOMからの逆算による状態取得は禁止。
 2. **[UI Rules]** フェーズ遷移に伴うUIの活性/非活性・表示制御は、命令的な `if` 分岐を避け、`UIPhase` の定数マップ定義（宣言的ルール）に集約する。
-3. **[UI Renderer]** `View` 層（`UIStateUpdater`）はDOMを直接操作しない。Stateを購読し、ヘルパー関数やWeb Componentに対してデータ (DTO) をプロパティとして注入 (DI) する「パイプライン」に徹する。
+3. **[UI Renderer]** `View` 層（`UIStateUpdater`）はDOMを直接操作しない。Stateを購読し、ヘルパー関数やWeb Componentに対してデータ (DTO) をプロパティとして注入 (DI) する「パイプライン」に徹する。**※初期表示を操作するためのView側からの直接プロパティ代入は、リアクティブサイクルを破壊するため厳禁とする。**
 4. **[Business Logic]** `Method` 層は副作用を持たない純粋関数・クラス群として実装し、DOM操作やAPI通信を一切混入させない。
 5. **[Event Router]** `Event` 層は複雑なロジックを持たず、高階関数や属性ルーティングを用いてイベントを捕捉し、速やかに `Controller` または `State.set()` へ処理を委譲する。
 6. **[API Communication]** GASとの通信は `GasService` (Promiseラッパー) を用い、`async/await` と `try/catch` によるエラーハンドリングを徹底する。
@@ -60,4 +61,3 @@ for gemini
 
 ## 6. 次の開発手順
 - 新規開発は停止し、設計思想と現在の動作・UI挙動を維持したままコードのスリム化と保守性向上のリファクタリングを行う。
-
