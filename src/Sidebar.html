@@ -73,7 +73,7 @@
             <summary>データ読込・選択</summary>
             <div id="datasetArea" style="display: none;">
               <label>dataset選択</label>
-              <ob-multi-select id="datasetBoxEl" data-change-item="Tab2.toggleDataset" data-change-all="Tab2.toggleAllDataset"></ob-multi-select>
+              <ob-multi-select id="datasetBoxEl" data-change-item="Tab2.toggleDataset" data-change-all="Tab2.toggleAllDataset" data-bind-selected="Tab2ST.dataset.filter"></ob-multi-select>
             </div>
             <div class="field-row">
               <button id="datasetLoadBtn" data-type="primary" data-action="Tab2.loadData">データを読込</button>
@@ -126,11 +126,11 @@
                 <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
               </div>
               <label>Obsidianモード計測値</label>
-              <ob-multi-select id="previewModeBoxEl" data-change-item="Tab2.togglePreviewMode" data-change-all="Tab2.toggleAllPreviewMode"></ob-multi-select>
+              <ob-multi-select id="previewModeBoxEl" data-change-item="Tab2.togglePreviewMode" data-change-all="Tab2.toggleAllPreviewMode" data-bind-selected="Tab2ST.preview.modeMap"></ob-multi-select>
               <label>検量線適用</label>
-              <ob-multi-select id="previewCalElementBoxEl" data-change-item="Tab2.toggleCalElement" data-change-all="Tab2.toggleAllCalElement"></ob-multi-select>
+              <ob-multi-select id="previewCalElementBoxEl" data-change-item="Tab2.toggleCalElement" data-change-all="Tab2.toggleAllCalElement" data-bind-selected="Tab2ST.preview.calElementMap"></ob-multi-select>
               <label>対象Item</label>
-              <ob-multi-select id="previewItemBoxEl" data-change-item="Tab2.togglePreviewItem" data-change-all="Tab2.toggleAllPreviewItem"></ob-multi-select>
+              <ob-multi-select id="previewItemBoxEl" data-change-item="Tab2.togglePreviewItem" data-change-all="Tab2.toggleAllPreviewItem" data-bind-selected="Tab2ST.preview.itemMap"></ob-multi-select>
               <div id="previewSaveBox" style="display: none; margin-top: calc(var(--unit) * 3);">
                 <label>検量線を保存する</label>
                 <div class="field-row">

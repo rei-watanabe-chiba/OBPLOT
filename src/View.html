@@ -129,8 +129,14 @@
 
   class UIStateUpdater {
     constructor() {
+      // --- 自動バインディング(DI)登録 ---
+      document.querySelectorAll('[data-bind-options]').forEach(el => State.subscribe(el.getAttribute('data-bind-options'), v => el.options = v));
+      document.querySelectorAll('[data-bind-selected]').forEach(el => State.subscribe(el.getAttribute('data-bind-selected'), v => el.selected = v));
+      document.querySelectorAll('[data-bind]').forEach(el => {
+        if (el.tagName === 'INPUT' && el.type === 'text') State.subscribe(el.getAttribute('data-bind'), v => el.value = v);
+      });
+      // --- 手動バインディング用マップ ---
       const stateMap = {
-        // 表示UI (バインディングヘルパー)
         "GLB.isLocked": v => DOM.setDisabled(Tab1UI.tabSet, v),
         "Tab1ST.config.status": bindStatus(Tab1UI.configBar),
         "Tab1ST.file.status": bindStatus(Tab1UI.fileBar),
@@ -147,14 +153,11 @@
             NewDOM.statsTable(null);
           }
         },
-
-        // 動的UI: Tab1 (宣言的ビルダー)
         "Tab1ST.file.data": data => {
+          // Fileシートデータの動的フォーム構築
           if (data?.[0]) {
             const opts = data[0].map(h => ({ label: h, value: h }));
-            const configs = GLOBAL_CONFIG.fileFields.map(f => ({
-              type: "select", label: f.label, field: f.key, change: "Tab1.updateFileMap", options: opts, hasEmpty: true
-            }));
+            const configs = GLOBAL_CONFIG.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "Tab1.updateFileMap", options: opts, hasEmpty: true }));
             NewDOM.buildFormFields(configs, Tab1UI.fileBox, true);
           } else {
             DOM.get(Tab1UI.fileBox)?.replaceChildren();
@@ -162,17 +165,10 @@
         },
         "Tab1ST.file.isMapError": bindError(Tab1UI.fileBox, TAB1_PHASE.LOAD),
         "Tab1ST.exac.isMapError": bindError(Tab1UI.exacBox, TAB1_PHASE.VALID),
-
-        // 動的UI: Tab2 (Web ComponentsへのDI)
-        "Tab2ST.dataset.availableDatasets": setElProp("datasetBoxEl", "options"),
-        "Tab2ST.dataset.filter": setElProp("datasetBoxEl", "selected"),
-        "Tab2ST.preview.modeMap": setElProp("previewModeBoxEl", "selected"),
-        "Tab2ST.preview.itemMap": setElProp("previewItemBoxEl", "selected"),
-        "Tab2ST.preview.calElementMap": setElProp("previewCalElementBoxEl", "selected"),
-        "Tab2ST.preview.saveIndexName": setElProp(Tab2UI.previewSaveInput, "value"),
         "Tab2ST.preview.correction": () => UIPhase.updateTab2PhaseUI(State.get("Tab2ST.phase")),
         "Tab2ST.preview.statsData": stats => NewDOM.statsTable(stats),
         "Tab2ST.preview.previewData": data => {
+          // グラフ描画データの注入
           const stats = State.get("Tab2ST.preview.statsData");
           const symbol = State.get("Tab2ST.symbol");
           let chartEl = DOM.get('ob-cal-plot-el');
@@ -184,14 +180,11 @@
           chartEl.drawData = { previewData: data, statsData: stats, symbolData: symbol };
         },
         "Tab2ST.dataset.rawData.correction": data => {
+          // 補正インデックスの動的構築
           if (!data) return;
           const opts = [{ label: "新規検量線", value: "new" }];
-          if (data.length > 1) {
-            data.slice(1).forEach(row => { if (row[0]) opts.push({ label: row[0], value: row[0] }); });
-          }
-          NewDOM.buildFormFields([{
-            type: "select", bind: "Tab2ST.preview.correction", hasEmpty: false, options: opts
-          }], Tab2UI.previewCorrectionBox, true);
+          if (data.length > 1) data.slice(1).forEach(row => { if (row[0]) opts.push({ label: row[0], value: row[0] }); });
+          NewDOM.buildFormFields([{ type: "select", bind: "Tab2ST.preview.correction", hasEmpty: false, options: opts }], Tab2UI.previewCorrectionBox, true);
           const el = DOM.get(Tab2UI.previewCorrectionBox)?.querySelector('select');
           if (el) el.value = State.get("Tab2ST.preview.correction");
         },

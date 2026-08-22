@@ -146,7 +146,7 @@
           },
           symbol: { 
             baseKey: "dataset", 
-            rules: [{ id: "default", target: "", shape: "circle", color: "var(--grey600)" }], 
+            rules: [{ id: "default", target: "", shape: "emptyCircle", color: "var(--grey600)" }], 
             status: [] 
           },
           preview: {
@@ -176,6 +176,11 @@
       this.#listeners = {};
     }
     
+    // Proxy
+    get proxy() {
+      return this.#state;
+    }
+
     // state取得
     get(paths) {
       const resolve = p => (Array.isArray(p) ? p : p.split('.')).reduce((o, k) => o?.[k], this.#state);

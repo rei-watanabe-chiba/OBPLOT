@@ -203,7 +203,6 @@
       const [header, ...body] = data;
       return body.map(row => header.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: row[i] }), {}));
     }
-
     // --- 読み込みロジック ---
     static load(pxrfData, wdxrfData) {
       const pxrfObjs = this.#toObjArray(pxrfData);
@@ -219,11 +218,9 @@
       });
       return { mergedPXRF: pxrfObjs, wdxrfObjs, datasets: [...datasets] };
     }
-
     // --- フィルターロジック ---
     static filter(mergedPXRF, wdxrfObjs, selectedDatasets) {
       const targetSet = new Set(selectedDatasets);
-      
       // PXRF用削ぎ落とし
       const basePXRF = mergedPXRF.filter(obj => targetSet.has(obj.dataset)).map(row => {
         const newRow = { dataset: row.dataset, id: row.id, ID: row.ID, item: row.item, Item: row.Item, Group: row.Group, Source: row.Source };
@@ -235,7 +232,6 @@
         });
         return newRow;
       });
-
       // WDXRF用削ぎ落とし
       const baseWDXRF = wdxrfObjs.filter(obj => targetSet.has(obj.dataset)).map(row => {
         const newRow = { dataset: row.dataset, id: row.id, ID: row.ID, Group: row.Group, Source: row.Source };
@@ -244,119 +240,116 @@
         });
         return newRow;
       });
-
       return { basePXRF, baseWDXRF };
     }
   }
 
   // --- Tab2 プレビューデータ構築ロジック ---
   class PreviewManager {
-    static buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap, lodEnabled, correctionData, correctionIndex, calEnabled, calElementMap) {
+    static buildPreviewData(basePXRF, baseWDXRF, config) {
       if (!basePXRF?.length || !baseWDXRF?.length) return [];
-      const allElements = GLOBAL_CONFIG.valueElement;
-      const itemSet = itemMap?.length ? new Set(itemMap) : null;
-      const targetElems = calElementMap || [];
-
-      // 元素別最小値集計
+      const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID ?? w.id}`, w]));
+      const minMap = config.lodEnabled ? this.#getMinMap(basePXRF, config) : {};
+      // 基礎整形とLODの適用
+      const rawProcessed = basePXRF
+        .filter(r => !config.itemMap?.length || config.itemMap.includes(r.item ?? r.Item))
+        .map(this.#formatAndLOD(config, minMap));
+      // 補正係数の算出と適用
+      const calCoeffs = this.#resolveCoeffs(rawProcessed, wdxrfMap, config);
+      return rawProcessed
+        .map(this.#applyCalibration(config, calCoeffs))
+        .map(this.#calcFinalValue(config, wdxrfMap))
+        .filter(Boolean);
+    }
+    // LOD用最小値（メーカーから計測機器情報取得後、GLBで定数LODに切替予定）
+    static #getMinMap(basePXRF, config) {
       const minMap = {};
-      allElements.forEach(el => {
-        const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
-        const isSelected = Array.isArray(modeMap) && modeMap.includes(el);
-        const prefix = (isOptional && isSelected) ? 'ob' : 'md';
+      GLOBAL_CONFIG.valueElement.forEach(el => {
+        const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
         const nums = basePXRF.map(r => Number(r[`${prefix}_${el}`])).filter(v => !isNaN(v) && v > 0);
         minMap[el] = nums.length ? Math.min(...nums) : null;
       });
-
-      // 基本データ整形
-      const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID ?? w.id}`, w]));
-      const rawProcessed = basePXRF
-        .filter(row => !itemSet || itemSet.has(row.item ?? row.Item))
-        .map(row => {
-          const newRow = {
-            dataset: row.dataset, id: row.ID ?? row.id, item: row.item ?? row.Item,
-            group: row.Group ?? "Unknown", Group: row.Group ?? "Unknown", Source: row.Source ?? "Unknown"
-          };
-          allElements.forEach(el => {
-            const isOptional = GLOBAL_CONFIG.optionalElements.includes(el);
-            const isSelected = Array.isArray(modeMap) && modeMap.includes(el);
-            const prefix = (isOptional && isSelected) ? 'ob' : 'md';
-            const rawVal = row[`${prefix}_${el}`];
-            const isLod = typeof rawVal === 'string' && rawVal.includes('LOD');
-            let val = null;
-            if (isLod) val = lodEnabled ? (minMap[el] ?? null) : null;
-            else if (rawVal != null && rawVal !== "" && !isNaN(Number(rawVal))) val = Number(rawVal);
-            
-            newRow[el] = val;
-            newRow[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
+      return minMap;
+    }
+    // LOD変換
+    static #formatAndLOD = (config, minMap) => (row) => {
+      const newRow = { dataset: row.dataset, id: row.ID ?? row.id, item: row.item ?? row.Item, group: row.Group ?? "Unknown", Group: row.Group ?? "Unknown", Source: row.Source ?? "Unknown" };
+      GLOBAL_CONFIG.valueElement.forEach(el => {
+        const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
+        const rawVal = row[`${prefix}_${el}`];
+        const isLod = typeof rawVal === 'string' && rawVal.includes('LOD');
+        newRow[el] = (isLod && config.lodEnabled) ? (minMap[el] ?? null) : (rawVal != null && rawVal !== "" && !isNaN(Number(rawVal)) ? Number(rawVal) : null);
+        newRow[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
+      });
+      return newRow;
+    };
+    // 検量線計算と適用
+    static #resolveCoeffs(rawProcessed, wdxrfMap, config) {
+      if (!config.calEnabled || !config.calElementMap?.length) return null;
+      const calCoeffs = {};
+      if (config.correction === "new") {
+        config.calElementMap.forEach(el => {
+          const wVals = [], pVals = [];
+          rawProcessed.forEach(p => {
+            const w = wdxrfMap.get(`${p.dataset}_${p.id}`);
+            if (w && p[el] != null && w[el] != null) { wVals.push(Number(w[el])); pVals.push(Number(p[el])); }
           });
-          return newRow;
+          const coeffs = CalcProcessor.calcCalibrationCoeffs(wVals, pVals);
+          if (coeffs) calCoeffs[el] = coeffs;
         });
-
-      // 補正係数の取得・動的算出
-      let calCoeffs = null;
-      if (calEnabled && targetElems.length > 0) {
-        calCoeffs = {};
-        if (correctionIndex === "new") {
-          // 生データから係数を動的算出
-          targetElems.forEach(el => {
-            const wdxrfVals = [];
-            const pxrfVals = [];
-            rawProcessed.forEach(p => {
-              const w = wdxrfMap.get(`${p.dataset}_${p.id}`);
-              if (w && p[el] != null && w[el] != null) {
-                wdxrfVals.push(Number(w[el]));
-                pxrfVals.push(Number(p[el]));
-              }
-            });
-            const coeffs = CalcProcessor.calcCalibrationCoeffs(wdxrfVals, pxrfVals);
-            if (coeffs) calCoeffs[el] = coeffs;
-          });
-        } else if (correctionData?.length > 1) {
-          // 保存済みデータから係数抽出
-          const header = correctionData[0];
-          const row = correctionData.find(r => r[0] === correctionIndex);
-          if (row) {
-            targetElems.forEach(el => {
-              const slpIdx = header.indexOf(`${el}_slp`);
-              const intIdx = header.indexOf(`${el}_int`);
-              if (slpIdx !== -1 && intIdx !== -1 && row[slpIdx] !== "" && row[intIdx] !== "") {
-                const slpNum = Number(row[slpIdx]);
-                if (slpNum !== 0) { // ゼロ除算回避
-                  calCoeffs[el] = { slp: slpNum, int: Number(row[intIdx]) };
-                }
-              }
-            });
-          }
-        }
-      }
-
-      // 補正適用と最終データ構築
-      return rawProcessed.map(p => {
-        const w = wdxrfMap.get(`${p.dataset}_${p.id}`);
-        if (!w) return null;
-
-        const correctedP = { ...p };
-        if (calCoeffs) {
-          targetElems.forEach(el => {
-            if (calCoeffs[el] && correctedP[el] != null) {
-              // 逆算による補正値算出
-              correctedP[el] = (correctedP[el] - calCoeffs[el].int) / calCoeffs[el].slp;
+      } else if (config.correctionData?.length > 1) {
+        const header = config.correctionData[0];
+        const row = config.correctionData.find(r => r[0] === config.correction);
+        if (row) {
+          config.calElementMap.forEach(el => {
+            const slpIdx = header.indexOf(`${el}_slp`);
+            const intIdx = header.indexOf(`${el}_int`);
+            if (slpIdx !== -1 && intIdx !== -1 && row[slpIdx] !== "") {
+              const slpNum = Number(row[slpIdx]);
+              if (slpNum !== 0) calCoeffs[el] = { slp: slpNum, int: Number(row[intIdx]) };
             }
           });
         }
-
-        const yVal = CalcProcessor.evaluate(valueLogic, correctedP);
-        const xVal = CalcProcessor.evaluate(valueLogic, w);
-        if (xVal == null || yVal == null) return null;
-
-        const errVal = allElements.includes(valueLogic) ? (correctedP[`${valueLogic}_Err`] ?? null) : null;
-
-        return { 
-          x: xVal, y: yVal, err: errVal, 
-          id: p.id, group: p.group, dataset: p.dataset, item: p.item,
-          Group: p.Group, Source: p.Source !== "Unknown" ? p.Source : (w.Source ?? "Unknown")
-        };
-      }).filter(Boolean);
+      }
+      return calCoeffs;
+    }
+    static #applyCalibration = (config, calCoeffs) => (row) => {
+      if (!calCoeffs) return row;
+      const corrected = { ...row };
+      config.calElementMap?.forEach(el => {
+        if (calCoeffs[el] && corrected[el] != null) corrected[el] = (corrected[el] - calCoeffs[el].int) / calCoeffs[el].slp;
+      });
+      return corrected;
+    };
+    // データ整形
+    static #calcFinalValue = (config, wdxrfMap) => (row) => {
+      const w = wdxrfMap.get(`${row.dataset}_${row.id}`);
+      if (!w) return null;
+      const yVal = CalcProcessor.evaluate(config.value, row);
+      const xVal = CalcProcessor.evaluate(config.value, w);
+      if (xVal == null || yVal == null) return null;
+      const errVal = GLOBAL_CONFIG.valueElement.includes(config.value) ? (row[`${config.value}_Err`] ?? null) : null;
+      return { x: xVal, y: yVal, err: errVal, id: row.id, group: row.group, dataset: row.dataset, item: row.item, Group: row.Group, Source: row.Source !== "Unknown" ? row.Source : (w.Source ?? "Unknown") };
+    };
+    // 検量線補正データ整形
+    static generateCorrectionRow(basePXRF, baseWDXRF, config, indexName) {
+      const newRow = [indexName];
+      GLOBAL_CONFIG.valueElement.forEach(el => {
+        if (!config.calElementMap?.includes(el)) {
+          newRow.push("", "");
+          return;
+        }
+        // 生データ取得用に一時コンフィグを生成
+        const tempConfig = { ...config, value: el, calEnabled: false };
+        const data = this.buildPreviewData(basePXRF, baseWDXRF, tempConfig);
+        if (!data.length) {
+          newRow.push("", "");
+          return;
+        }
+        const coeffs = CalcProcessor.calcCalibrationCoeffs(data.map(d => d.x), data.map(d => d.y));
+        newRow.push(coeffs?.slp ?? "", coeffs?.int ?? "");
+      });
+      return newRow;
     }
   }
 

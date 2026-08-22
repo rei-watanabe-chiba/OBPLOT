@@ -125,11 +125,9 @@
         ]);
         if (!pxrfRes.data || pxrfRes.data.length <= 1) throw new Error("PXRFデータ不足");
         if (!wdxrfRes.data || wdxrfRes.data.length <= 1) throw new Error("WDXRFデータ不足");
-        
         State.reset(['Tab2ST.dataset', 'Tab2ST.symbol', 'Tab2ST.preview', 'Tab2ST.report']);
+        // ベースデータ作成
         const { mergedPXRF, wdxrfObjs, datasets } = Mtd.Tab2.DataManager.load(pxrfRes.data, wdxrfRes.data);
-        
-        // パスを個別に指定してState更新を発火させる
         State.set({ 
           "Tab2ST.dataset.rawData.mergedPXRF": mergedPXRF,
           "Tab2ST.dataset.rawData.wdxrfObjs": wdxrfObjs,
@@ -175,21 +173,17 @@
     // --- Tab2 プレビュー作成 ---
     static async makePreview() {
       await CoreCtrl.withAsyncLock("Tab2ST.preview.status", async () => {
-        // calElementMap を取得に追加
-        const [modeMap, valueLogic, itemMap, basePXRF, baseWDXRF, lodEnabled, correctionData, correctionIndex, calEnabled, calElementMap] = State.get([
-          "Tab2ST.preview.modeMap", "Tab2ST.preview.value", "Tab2ST.preview.itemMap", "Tab2ST.dataset.basePXRF", "Tab2ST.dataset.baseWDXRF", "Tab2ST.preview.lodEnabled", "Tab2ST.dataset.rawData.correction", "Tab2ST.preview.correction", "Tab2ST.preview.calEnabled", "Tab2ST.preview.calElementMap"
-        ]);
-        
-        // calElementMap を引数に追加
-        const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, valueLogic, itemMap, lodEnabled, correctionData, correctionIndex, calEnabled, calElementMap);
-        
+        // ProxyによるState一括取得
+        const { preview, dataset } = State.proxy.Tab2ST;
+        const config = { ...preview, correctionData: dataset.rawData.correction };
+        const previewData = Mtd.Tab2.PreviewManager.buildPreviewData(dataset.basePXRF, dataset.baseWDXRF, config);
         if (!previewData.length) throw new Error("対象データなし");
-        
+        // 統計値の計算
         const xArr = previewData.map(d => d.x);
         const yArr = previewData.map(d => d.y);
         const errArr = previewData.map(d => d.err).filter(v => v != null && !isNaN(v));
         const stats = Mtd.Tab2.CalcProcessor.calcRegression(xArr, yArr, errArr);
-        
+        // Stateの更新
         State.reset(['Tab2ST.report']);
         State.set({
           "Tab2ST.preview.correctionLogic": stats,
@@ -204,68 +198,34 @@
     // --- Tab2 補正出力 (保存) ---
     static async saveCorrection() {
       await CoreCtrl.withAsyncLock("Tab2ST.preview.status", async () => {
-        const [indexName, correctionData, calElementMap, modeMap, itemMap, basePXRF, baseWDXRF, lodEnabled] = State.get([
-          "Tab2ST.preview.saveIndexName", "Tab2ST.dataset.rawData.correction", "Tab2ST.preview.calElementMap", "Tab2ST.preview.modeMap", "Tab2ST.preview.itemMap", "Tab2ST.dataset.basePXRF", "Tab2ST.dataset.baseWDXRF", "Tab2ST.preview.lodEnabled"
-        ]);
-        
-        const trimmedName = indexName?.trim();
+        // ProxyによるState一括取得と入力検証
+        const { preview, dataset } = State.proxy.Tab2ST;
+        const trimmedName = preview.saveIndexName?.trim();
         if (!trimmedName) throw new Error("インデックス名が未入力です");
-        if (!calElementMap?.length) throw new Error("対象元素が選択されていません");
-
-        const confirmMsg = `以下の検量線を出力しますか？\nインデックス名：${trimmedName}\n対象元素：${calElementMap.join(', ')}`;
+        if (!preview.calElementMap?.length) throw new Error("対象元素が選択されていません");
+        const confirmMsg = `以下の検量線を出力しますか？\nインデックス名：${trimmedName}\n対象元素：${preview.calElementMap.join(', ')}`;
         if (!await NewDOM.confirm("確認", confirmMsg, Tab2UI.previewBar)) return;
-
-        const isDup = correctionData?.slice(1).some(r => r[0] === trimmedName);
+        // 上書き判定
+        const isDup = dataset.rawData.correction?.slice(1).some(r => r[0] === trimmedName);
         if (isDup && !await NewDOM.confirm("確認", "同名のインデックスが存在します。上書きしますか？", Tab2UI.previewBar)) return;
-
-        const allElements = GLOBAL_CONFIG.valueElement;
+        // 保存データを生成
+        const newRow = Mtd.Tab2.PreviewManager.generateCorrectionRow(dataset.basePXRF, dataset.baseWDXRF, preview, trimmedName);
         const header = ['IndexName'];
-        allElements.forEach(el => { header.push(`${el}_slp`, `${el}_int`); });
-
-        const newRow = [trimmedName];
-        
-        // 元素ごとに単回帰を計算 (X=WDXRF, Y=PXRF)
-        allElements.forEach(el => {
-          if (!calElementMap.includes(el)) {
-            newRow.push("", ""); 
-            return;
-          }
-          // 生データを取得
-          const data = Mtd.Tab2.PreviewManager.buildPreviewData(basePXRF, baseWDXRF, modeMap, el, itemMap, lodEnabled, [], "new", false, []);
-          if (!data.length) {
-            newRow.push("", "");
-            return;
-          }
-          
-          // WDXRFとPXRFを抽出
-          const wdxrfArr = data.map(d => d.x);
-          const pxrfArr = data.map(d => d.y);
-          const coeffs = Mtd.Tab2.CalcProcessor.calcCalibrationCoeffs(wdxrfArr, pxrfArr);
-          
-          if (coeffs?.slp != null && coeffs?.int != null) {
-            newRow.push(coeffs.slp, coeffs.int);
-          } else {
-            newRow.push("", "");
-          }
-        });
-
-        let updatedData = correctionData?.length ? [...correctionData] : [header];
+        GLOBAL_CONFIG.valueElement.forEach(el => header.push(`${el}_slp`, `${el}_int`));
+        let updatedData = dataset.rawData.correction?.length ? [...dataset.rawData.correction] : [header];
         let writeData;
-        
+        // 既存データへのマージと書き込み判定
         if (isDup) {
           const targetIdx = updatedData.findIndex(r => r[0] === trimmedName);
           if (targetIdx !== -1) updatedData[targetIdx] = newRow;
           writeData = updatedData;
         } else {
           updatedData.push(newRow);
-          writeData = correctionData?.length ? [newRow] : updatedData;
+          writeData = dataset.rawData.correction?.length ? [newRow] : updatedData;
         }
-        
-        await API.writeData(GLOBAL_CONFIG.correctionSheetName, writeData, isDup || !correctionData?.length ? "clear" : ["append"]);
-        
+        await API.writeData(GLOBAL_CONFIG.correctionSheetName, writeData, (isDup || !dataset.rawData.correction?.length) ? "clear" : ["append"]);
         State.set("Tab2ST.dataset.rawData.correction", updatedData);
         State.set("Tab2ST.preview.saveIndexName", "");
-        
         return `補正値「${trimmedName}」を${isDup ? '上書き' : '保存'}しました`;
       });
     }

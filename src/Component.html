@@ -209,11 +209,13 @@
   // ==========================================================================
   // 疑似テンプレート統合管理クラス (Presenter)
   // ==========================================================================
+  // --- タグ付きテンプレート関数 (null/undefinedを安全に空文字変換) ---
+  const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
   class Tpl {
     // --- 共通テンプレート ---
     static Common = class {
       static popover(summaryHtml, contentHtml, summaryClasses = "", contentClasses = "") {
-        return `
+        return html`
           <ob-popover>
             <button type="button" class="popover-summary ${summaryClasses}">${summaryHtml}</button>
             <div class="popover-content scroll-y ${contentClasses}">${contentHtml}</div>
@@ -221,23 +223,22 @@
         `;
       }
       static colorBox(color) {
-        return color ? `<span class="color-box" style="background: ${color}"></span>` : "";
+        return color ? html`<span class="color-box" style="background: ${color}"></span>` : "";
       }
       static badge(val) {
-        return `<span class="badge">${val}</span>`;
+        return html`<span class="badge">${val}</span>`;
       }
     };
-
     // --- トグル用 ---
     static Toggle = class {
       static row(label, bindPath, changePath, isChecked) {
-        const bindAttr = bindPath ? `data-bind="${bindPath}"` : "";
-        const changeAttr = changePath ? `data-change="${changePath}"` : "";
+        // トグルスイッチUIの生成
+        const bindAttr = bindPath ? html`data-bind="${bindPath}"` : "";
+        const changeAttr = changePath ? html`data-change="${changePath}"` : "";
         const checkedAttr = isChecked ? "checked" : "";
-        
-        return `
+        return html`
           <div class="toggle-row">
-            <span class="toggle-label">${label || ""}</span>
+            <span class="toggle-label">${label}</span>
             <label class="toggle-switch">
               <input type="checkbox" ${bindAttr} ${changeAttr} ${checkedAttr}>
               <span class="toggle-slider"></span>
@@ -246,21 +247,19 @@
         `;
       }
     };
-
     // --- 統計テーブル用 ---
     static Stats = class {
       static row(label, val) {
-        return `<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`;
+        return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`;
       }
       static container(rowsHtml) {
-        return `<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`;
+        return html`<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`;
       }
     };
-
     // --- マルチセレクト用 ---
     static MultiSelect = class {
       static item(val, dataChange) {
-        return `
+        return html`
           <label class="checkbox-item">
             <input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked>
             <span class="cb-text">${val}</span>
@@ -268,7 +267,7 @@
         `;
       }
       static selectAll(dataChange) {
-        return `
+        return html`
           <label class="checkbox-item select-all">
             <input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked>
             <span>すべて選択</span>
@@ -276,16 +275,16 @@
         `;
       }
     };
-
     // --- シンボルテーブル用 ---
     static Symbol = class {
       static summary(label, color, hasColor, hasVal) {
         const colorBox = (hasColor && hasVal) ? Tpl.Common.colorBox(color) : "";
-        return `${colorBox}${label}`;
+        return html`${colorBox}${label}`;
       }
       static item(opt, type, idx, hasColor, action) {
+        // シングルセレクトのアイテム生成
         const colorBox = hasColor ? Tpl.Common.colorBox(opt.val) : "";
-        return `
+        return html`
           <button type="button" class="single-select-item" 
             data-action="${action}" data-symbol-idx="${idx}" data-symbol-type="${type}" 
             value="${opt.val}" popovertargetaction="hide">
@@ -294,15 +293,15 @@
         `;
       }
       static btn(action, id, text, disabled) {
-        const attrId = id ? `data-rule-id="${id}"` : "";
+        const attrId = id ? html`data-rule-id="${id}"` : "";
         const attrDis = disabled ? "disabled" : "";
-        return `<button type="button" class="icon-btn" data-action="${action}" ${attrId} ${attrDis}>${text}</button>`;
+        return html`<button type="button" class="icon-btn" data-action="${action}" ${attrId} ${attrDis}>${text}</button>`;
       }
       static col(className, contentHtml) {
-        return `<div class="${className}">${contentHtml}</div>`;
+        return html`<div class="${className}">${contentHtml}</div>`;
       }
       static row(btnHtml, colsHtml) {
-        return `<div class="symbol-table-row"><div class="symbol-col-btn">${btnHtml}</div>${colsHtml}</div>`;
+        return html`<div class="symbol-table-row"><div class="symbol-col-btn">${btnHtml}</div>${colsHtml}</div>`;
       }
       static addRow(actionAdd, colsArr) {
         const btnHtml = this.btn(actionAdd, "", "+", false);
@@ -312,7 +311,7 @@
     };
   }
 
-  // --- Web Components 登録 (全クラス評価後に実行) ---
+  // --- Web Components 登録 ---
   customElements.define('ob-popover', ObPopover);
   customElements.define('ob-multi-select', ObMultiSelect);
   customElements.define('ob-symbol-table', ObSymbolTable);
