@@ -20,8 +20,8 @@
     }
 
     // --- イベントバインダ ---
-    static #bindMulti = (id, path) => () => this.toggleMultiSelect(id, path);
-    static #bindAll = (id, path) => t => this.toggleAllMultiSelect(t, id, path);
+    static #bindMulti = (path) => (target) => this.toggleMultiSelect(target, path);
+    static #bindAll = (path) => (target) => this.toggleAllMultiSelect(target, path);
 
     // --- Tab1変更移譲 ---
     static Tab1 = {
