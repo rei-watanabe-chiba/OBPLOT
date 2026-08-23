@@ -1,24 +1,24 @@
-<!-- View.html -->
+<!-- src/View.html -->
 <script>
   // --- UI初期化 ---
   class UIInit {
     // --- Tab1構築 ---
     static buildTab1() {
-      NewDOM.buildFormFields([{ type: "select", options: GLOBAL_CONFIG.configModes, bind: "Tab1ST.config.mode", hasEmpty: false }], Tab1UI.configModeBox);
-      NewDOM.buildFormFields(GLOBAL_CONFIG.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })), Tab1UI.extrBox);
+      NewDOM.buildFormFields([{ type: "select", opts: GLB.Conf.confMods, bind: "T1ST.pref.mode", hasEmpty: false }], T1UI.prefModeBox);
+      NewDOM.buildFormFields(GLB.Conf.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })), T1UI.extrBox);
     }
     // --- Tab2構築 ---
     static buildTab2() {
-      NewDOM.buildFormFields([{ type: "select", options: GLOBAL_CONFIG.symbAxes, change: "Tab2.confirmAndChangeAxis", hasEmpty: false }], Tab2UI.symbAxisBox);
-      NewDOM.buildFormFields([{ type: "select", bind: "Tab2ST.prev.correction", hasEmpty: false, options: [{ label: "新規検量線", value: "new" }] }], Tab2UI.prevCorrectionBox);
-      NewDOM.buildFormFields([{ type: "select", bind: "Tab2ST.prev.val", hasEmpty: false, options: [...GLOBAL_CONFIG.valueElement, ...GLOBAL_CONFIG.valueLogic].map(v => ({ label: v, value: v })) }], Tab2UI.prevValueBox);
-      if (GLOBAL_CONFIG.valueLogic.length) State.set("Tab2ST.prev.val", GLOBAL_CONFIG.valueLogic[0]); // 初期値設定
-      NewDOM.buildToggle({ label: "LOD置換", bind: "Tab2ST.prev.lodEnabled" }, Tab2UI.prevLODBox);
-      NewDOM.buildToggle({ label: "検量線適用", bind: "Tab2ST.prev.calEnabled" }, Tab2UI.prevCalToggleBox);
-      const prevModeEl = DOM.el("prevModeBoxEl");
-      if (prevModeEl) prevModeEl.opts = GLOBAL_CONFIG.optionalElements; // 選択肢DI
-      const prevCalEl = DOM.el("prevCalElementBoxEl");
-      if (prevCalEl) prevCalEl.opts = GLOBAL_CONFIG.valueElement; // 選択肢DI
+      NewDOM.buildFormFields([{ type: "select", opts: GLB.Conf.symbAxes, change: "T2.checkAxis", hasEmpty: false }], T2UI.symbAxisBox);
+      NewDOM.buildFormFields([{ type: "select", bind: "T2ST.prev.correction", hasEmpty: false, opts: [{ label: "新規検量線", val: "new" }] }], T2UI.prevCorrBox);
+      NewDOM.buildFormFields([{ type: "select", bind: "T2ST.prev.val", hasEmpty: false, opts: [...GLB.Conf.valElms, ...GLB.Conf.valLgc].map(v => ({ label: v, val: v })) }], T2UI.prevValBox);
+      if (GLB.Conf.valLgc.length) State.set("T2ST.prev.val", GLB.Conf.valLgc[0]); // 初期値設定
+      NewDOM.buildToggle({ label: "LOD置換", bind: "T2ST.prev.useLOD" }, T2UI.prevLodBox);
+      NewDOM.buildToggle({ label: "検量線適用", bind: "T2ST.prev.useCal" }, T2UI.prevCalTglBox);
+      const prevModeElm = DOM.el("prevModeBoxEl");
+      if (prevModeElm) prevModeElm.opts = GLB.Conf.optElms; // 選択肢DI
+      const prevCalElm = DOM.el("prevCalElementBoxEl");
+      if (prevCalElm) prevCalElm.opts = GLB.Conf.valElms; // 選択肢DI
     }
     // --- 初期化実行 ---
     static build() { this.buildTab1(); this.buildTab2(); }
@@ -26,121 +26,122 @@
   // --- PhaseUI管理 ---
   class UIPhase {
     // --- Tab1ルール ---
-    static #TAB1_RULES = {
-      [Tab1UI.rawLoadBtn]: p => ({ text: p <= TAB1_PHASE.READY ? "データを取得" : "再取得", disabled: false }),
-      [Tab1UI.rawMakeBtn]: p => ({ disabled: p < TAB1_PHASE.READY }),
-      [Tab1UI.rawValdBtn]: p => ({ disabled: p < TAB1_PHASE.INVALID || State.get("Tab1ST.raw.isRefsErr").some(Boolean), className: p === TAB1_PHASE.INVALID ? "" : "outline" }),
-      [Tab1UI.rawArea]: p => ({ show: p >= TAB1_PHASE.LOAD }),
-      [Tab1UI.rawBtnBox]: p => ({ show: p >= TAB1_PHASE.LOAD }),
-      [Tab1UI.extrArea]: p => ({ show: p >= TAB1_PHASE.VALID }),
-      [Tab1UI.extrBar]: p => ({ show: p >= TAB1_PHASE.VALID }),
-      [Tab1UI.extrBtn]: p => ({ disabled: p < TAB1_PHASE.VALID || State.get("Tab1ST.extr.isRefsErr").some(Boolean) }),
-      [Tab1UI.extrPushBtn]: p => ({ show: p >= TAB1_PHASE.EXTRACT, disabled: p < TAB1_PHASE.EXTRACT }),
-      [Tab1UI.configSection]: p => ({ active: p === TAB1_PHASE.INIT, disabled: false }),
-      [Tab1UI.rawSection]: p => ({ active: p >= TAB1_PHASE.READY && p < TAB1_PHASE.VALID, disabled: p < TAB1_PHASE.READY }),
-      [Tab1UI.extrSection]: p => ({ active: p >= TAB1_PHASE.VALID && p < TAB1_PHASE.OUTPUT, disabled: p < TAB1_PHASE.VALID })
+    static #T1_RLS = {
+      [T1UI.rawLoadBtn]: p => ({ text: p <= T1_PHS.READY ? "データを取得" : "再取得", isDis: false }),
+      [T1UI.rawMakeBtn]: p => ({ isDis: p < T1_PHS.READY }),
+      [T1UI.rawValdBtn]: p => ({ isDis: p < T1_PHS.INVALID || State.get("T1ST.raw.hasRefErr").some(Boolean), className: p === T1_PHS.INVALID ? "" : "outline" }),
+      [T1UI.rawArea]: p => ({ isShow: p >= T1_PHS.LOAD }),
+      [T1UI.rawBtnBox]: p => ({ isShow: p >= T1_PHS.LOAD }),
+      [T1UI.extrArea]: p => ({ isShow: p >= T1_PHS.VALID }),
+      [T1UI.extrBar]: p => ({ isShow: p >= T1_PHS.VALID }),
+      [T1UI.extrBtn]: p => ({ isDis: p < T1_PHS.VALID || State.get("T1ST.extr.hasRefErr").some(Boolean) }),
+      [T1UI.extrPushBtn]: p => ({ isShow: p >= T1_PHS.EXTRACT, isDis: p < T1_PHS.EXTRACT }),
+      [T1UI.prefSec]: p => ({ isOpen: p === T1_PHS.INIT, isDis: false }),
+      [T1UI.rawSec]: p => ({ isOpen: p >= T1_PHS.READY && p < T1_PHS.VALID, isDis: p < T1_PHS.READY }),
+      [T1UI.extrSec]: p => ({ isOpen: p >= T1_PHS.VALID && p < T1_PHS.OUTPUT, isDis: p < T1_PHS.VALID })
     };
     // --- Tab2ルール ---
-    static #TAB2_RULES = {
-      [Tab2UI.dsetLoadBtn]: () => ({ disabled: false }),
-      [Tab2UI.dsetfilterBtn]: p => ({ disabled: p < TAB2_PHASE.LOADED }),
-      [Tab2UI.dsetArea]: p => ({ show: p >= TAB2_PHASE.LOADED }),
-      [Tab2UI.dsetSection]: p => ({ active: p < TAB2_PHASE.FILTERED, disabled: false }),
-      [Tab2UI.symbAxisBox]: p => ({ disabled: p < TAB2_PHASE.FILTERED }),
-      [Tab2UI.symbBtn]: p => ({ disabled: p < TAB2_PHASE.FILTERED }),
-      [Tab2UI.symbArea]: p => ({ show: p >= TAB2_PHASE.FILTERED }),
-      [Tab2UI.symbSection]: p => ({ active: p >= TAB2_PHASE.FILTERED && p < TAB2_PHASE.MAPPED, disabled: p < TAB2_PHASE.FILTERED }),
-      [Tab2UI.prevMakeBtn]: p => ({ disabled: p < TAB2_PHASE.MAPPED }),
-      [Tab2UI.prevSection]: p => ({ active: p >= TAB2_PHASE.MAPPED, disabled: p < TAB2_PHASE.MAPPED }),
-      [Tab2UI.prevSaveBox]: p => ({ show: p >= TAB2_PHASE.MAPPED && State.get("Tab2ST.prev.correction") === "new" }),
-      [Tab2UI.reppBtn]: p => ({ disabled: p < TAB2_PHASE.PREVIEWED }),
-      [Tab2UI.repoSection]: p => ({ active: p >= TAB2_PHASE.PREVIEWED, disabled: p < TAB2_PHASE.PREVIEWED })
+    static #T2_RLS = {
+      [T2UI.asgnLoadBtn]: () => ({ isDis: false }),
+      [T2UI.asgnFltrBtn]: p => ({ isDis: p < T2_PHS.LOADED }),
+      [T2UI.asgnArea]: p => ({ isShow: p >= T2_PHS.LOADED }),
+      [T2UI.asgnSec]: p => ({ isOpen: p < T2_PHS.FILTERED, isDis: false }),
+      [T2UI.symbAxisBox]: p => ({ isDis: p < T2_PHS.FILTERED }),
+      [T2UI.symbBtn]: p => ({ isDis: p < T2_PHS.FILTERED }),
+      [T2UI.symbArea]: p => ({ isShow: p >= T2_PHS.FILTERED }),
+      [T2UI.symbSec]: p => ({ isOpen: p >= T2_PHS.FILTERED && p < T2_PHS.MAPPED, isDis: p < T2_PHS.FILTERED }),
+      [T2UI.prevMakeBtn]: p => ({ isDis: p < T2_PHS.MAPPED }),
+      [T2UI.prevSec]: p => ({ isOpen: p >= T2_PHS.MAPPED, isDis: p < T2_PHS.MAPPED }),
+      [T2UI.prevSaveBox]: p => ({ isShow: p >= T2_PHS.MAPPED && State.get("T2ST.prev.correction") === "new" }),
+      [T2UI.reppBtn]: p => ({ isDis: p < T2_PHS.PREVIEWED }),
+      [T2UI.repoSec]: p => ({ isOpen: p >= T2_PHS.PREVIEWED, isDis: p < T2_PHS.PREVIEWED })
     };
     // --- 宣言的UI適用 ---
-    static #apply(rulesObj, phase) {
-      Object.entries(rulesObj).forEach(([id, ruleFn]) => {
-        const { show, disabled, active, text, className } = ruleFn(phase);
-        show !== undefined && DOM.toggle(id, show); // 表示切替
-        disabled !== undefined && DOM.setDisabled(id, disabled); // 無効化切替
-        (!id.includes('configSection') && active !== undefined) && DOM.open(id, active); // 開閉状態更新
+    static #apply(rlsObj, phs) {
+      Object.entries(rlsObj).forEach(([id, rlFn]) => {
+        const { isShow, isDis, isOpen, text, className } = rlFn(phs);
+        isShow !== undefined && DOM.tgl(id, isShow); // 表示切替
+        isDis !== undefined && DOM.setDis(id, isDis); // 無効化切替
+        (!id.includes('prefSec') && isOpen !== undefined) && DOM.open(id, isOpen); // 開閉状態更新
         text !== undefined && DOM.updateText(id, text); // テキスト更新
         if (className !== undefined && DOM.el(id)) DOM.el(id).className = className; // クラス更新
-        if (id.includes('Section')) { DOM.setAttr(id, "data-state", active ? "active" : null); DOM.setAttr(id, "data-type", disabled ? "disabled" : null); }
+        if (id.includes('Sec')) { DOM.setAttr(id, "data-state", isOpen ? "active" : null); DOM.setAttr(id, "data-type", isDis ? "disabled" : null); }
       });
     }
     // --- Tab1更新 ---
-    static updateTab1PhaseUI(p) {
-      this.#apply(this.#TAB1_RULES, p);
-      if (p >= TAB1_PHASE.VALID && p < TAB1_PHASE.EXTRACT) State.set("Tab1ST.extr.cachedStatus", ["hidden", ""]); // 通知非表示
-      if (p >= TAB1_PHASE.EXTRACT) State.set("Tab1ST.extr.cachedStatus", State.get("Tab1ST.extr.status")); // 通知復元
+    static renewT1Phs(p) {
+      this.#apply(this.#T1_RLS, p);
+      if (p >= T1_PHS.VALID && p < T1_PHS.EXTRACT) State.set("T1ST.extr.cachedStatus", ["hidden", ""]); // 通知非表示
+      if (p >= T1_PHS.EXTRACT) State.set("T1ST.extr.cachedStatus", State.get("T1ST.extr.status")); // 通知復元
     }
     // --- Tab2更新 ---
-    static updateTab2PhaseUI(p) { this.#apply(this.#TAB2_RULES, p); }
+    static renewT2Phs(p) { this.#apply(this.#T2_RLS, p); }
   }
   // --- state-UI管理 ---
   class UIStateUpdater {
     constructor() {
       // --- 自動バインド ---
-      document.querySelectorAll('[data-bind-opts]').forEach(el => State.subscribe(el.dataset.bindOpts, v => el.opts = v));
-      document.querySelectorAll('[data-bind-refs]').forEach(el => State.subscribe(el.dataset.bindRefs, v => el.refs = v));
-      document.querySelectorAll('[data-bind-status]').forEach(el => State.subscribe(el.dataset.bindStatus, v => NewDOM.status(el.id, v)));
-      document.querySelectorAll('[data-bind]').forEach(el => { if (el.tagName === 'INPUT' && el.type === 'text') State.subscribe(el.dataset.bind, v => el.value = v); });
+      document.querySelectorAll('[data-bind-opts]').forEach(elm => State.subscribe(elm.dataset.bindOpts, v => elm.opts = v));
+      document.querySelectorAll('[data-bind-refs]').forEach(elm => State.subscribe(elm.dataset.bindRefs, v => elm.refs = v));
+      document.querySelectorAll('[data-bind-status]').forEach(elm => State.subscribe(elm.dataset.bindStatus, v => NewDOM.status(elm.id, v)));
+      document.querySelectorAll('[data-bind]').forEach(elm => { if (elm.tagName === 'INPUT' && elm.type === 'text') State.subscribe(elm.dataset.bind, v => elm.value = v); });
       // --- エラー監視 ---
-      const bindError = (boxId, targetPhase) => flags => { NewDOM.inputs(boxId, flags); if (State.get("Tab1ST.phase") === targetPhase) UIPhase.updateTab1PhaseUI(targetPhase); };
-      State.subscribe("Tab1ST.raw.isRefsErr", bindError(Tab1UI.rawBox, TAB1_PHASE.LOAD));
-      State.subscribe("Tab1ST.extr.isRefsErr", bindError(Tab1UI.extrBox, TAB1_PHASE.VALID));
+      const bindErr = (bxId, tgtPhs) => flags => { NewDOM.inputs(bxId, flags); if (State.get("T1ST.phase") === tgtPhs) UI.Phs.renewT1Phs(tgtPhs); };
+      State.subscribe("T1ST.raw.hasRefErr", bindErr(T1UI.rawBox, T1_PHS.LOAD));
+      State.subscribe("T1ST.extr.hasRefErr", bindErr(T1UI.extrBox, T1_PHS.VALID));
       // --- 手動DI ---
       Object.entries({
-        "GLB.isLocked": v => DOM.setDisabled(Tab1UI.tabSet, v), // 全体ロック
-        "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v), // Phase反映
-        "Tab2ST.phase": v => { UIPhase.updateTab2PhaseUI(v); if (v < TAB2_PHASE.PREVIEWED) { DOM.el('ob-cal-plot-el')?.clear(); NewDOM.statsTable(null); } }, // グラフ消去
-        "Tab1ST.raw.data": data => {
-          if (data?.[0]) NewDOM.buildFormFields(GLOBAL_CONFIG.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "Tab1.updateRawRefs", options: data[0].map(h => ({ label: h, value: h })), hasEmpty: true })), Tab1UI.rawBox, true);
-          else DOM.el(Tab1UI.rawBox)?.replaceChildren();
+        "GLB.isLocked": v => DOM.setDis(T1UI.tabSet, v), // 全体ロック
+        "T1ST.phase": v => UI.Phs.renewT1Phs(v), // Phase反映
+        "T2ST.phase": v => { UI.Phs.renewT2Phs(v); if (v < T2_PHS.PREVIEWED) { DOM.el('ob-cal-plot-el')?.clear(); NewDOM.buildStats(null); } }, // グラフ消去
+        "T1ST.raw.data": data => {
+          if (data?.[0]) NewDOM.buildFormFields(GLB.Conf.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "T1.renewRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })), T1UI.rawBox, true);
+          else DOM.el(T1UI.rawBox)?.replaceChildren();
         },
-        "Tab2ST.prev.correction": () => UIPhase.updateTab2PhaseUI(State.get("Tab2ST.phase")), // 保存枠表示
-        "Tab2ST.prev.statsData": stats => NewDOM.statsTable(stats), // 統計描画
-        "Tab2ST.prev.prevData": data => {
-          let chartEl = DOM.el('ob-cal-plot-el');
-          if (!chartEl) { chartEl = document.createElement('ob-cal-plot'); chartEl.id = 'ob-cal-plot-el'; DOM.el(Tab2UI.prevChartBox).replaceChildren(chartEl); } // プロット生成
-          chartEl.src = { prevData: data, statsData: State.get("Tab2ST.prev.statsData"), symbData: State.get("Tab2ST.symb") }; // データ注入
+        "T2ST.prev.correction": () => UI.Phs.renewT2Phs(State.get("T2ST.phase")), // 保存枠表示
+        "T2ST.prev.statsDT": statsDT => NewDOM.buildStats(statsDT), // 統計描画
+        "T2ST.prev.prevDT": data => {
+          let chartElm = DOM.el('ob-cal-plot-el');
+          if (!chartElm) { chartElm = document.createElement('ob-cal-plot'); chartElm.id = 'ob-cal-plot-el'; DOM.el(T2UI.prevChartBox).replaceChildren(chartElm); } // プロット生成
+          chartElm.src = { prevDT: data, statsDT: State.get("T2ST.prev.statsDT"), symb: State.get("T2ST.symb") }; // データ注入
         },
-        "Tab2ST.dset.rawData.correction": data => {
+        "T2ST.asgn.rawDT.corrDT": data => {
           if (!data) return;
-          const opts = [{ label: "新規検量線", value: "new" }, ...data.slice(1).filter(r => r[0]).map(r => ({ label: r[0], value: r[0] }))];
-          NewDOM.buildFormFields([{ type: "select", bind: "Tab2ST.prev.correction", hasEmpty: false, options: opts }], Tab2UI.prevCorrectionBox, true);
-          const el = DOM.el(Tab2UI.prevCorrectionBox)?.querySelector('select'); // 選択復元
-          if (el) el.value = State.get("Tab2ST.prev.correction");
+          const opts = [{ label: "新規検量線", val: "new" }, ...data.slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
+          NewDOM.buildFormFields([{ type: "select", bind: "T2ST.prev.correction", hasEmpty: false, opts: opts }], T2UI.prevCorrBox, true);
+          const elm = DOM.el(T2UI.prevCorrBox)?.querySelector('select'); // 選択復元
+          if (elm) elm.value = State.get("T2ST.prev.correction");
         },
-        "Tab2ST.dset.basePXRF": () => { this.#renderSymbols(); this.#renderItems(); }, // データ更新
-        "Tab2ST.symb.baseKey": val => {
-          const select = DOM.el(Tab2UI.symbAxisBox)?.querySelector('select');
-          if (select && select.value !== val) select.value = val; // UI同期
-          this.#renderSymbols();
+        "T2ST.asgn.pxrfDT": () => { this.#renderSymbs(); this.#renderItems(); }, // データ更新
+        "T2ST.symb.baseKey": val => {
+          const sel = DOM.el(T2UI.symbAxisBox)?.querySelector('select');
+          if (sel && sel.value !== val) sel.value = val; // UI同期
+          this.#renderSymbs();
         },
-        "Tab2ST.symb.rules": () => this.#renderSymbols() // ルール再描画
+        "T2ST.symb.rls": () => this.#renderSymbs() // ルール再描画
       }).forEach(([path, cb]) => State.subscribe(path, cb));
     }
     // --- シンボルDI ---
-    #renderSymbols() {
-      const baseData = State.get("Tab2ST.dset.basePXRF"), baseKey = State.get("Tab2ST.symb.baseKey"), symbolEl = DOM.el("symbolTableEl");
-      if (!symbolEl) return;
-      if (!baseData || !baseData.length) { symbolEl.clear(); return; } // 初期化
-      const values = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
-      symbolEl.src = {
-        rules: State.get("Tab2ST.symb.rules"),
-        optionsConfig: { target: [{ val: "", label: "未選択" }, ...values.map(v => ({ val: v, label: v }))], shape: GLOBAL_CONFIG.symbShapes, color: GLOBAL_CONFIG.symbColors },
-        actionsConfig: { add: "Tab2.addSymbolRule", remove: "Tab2.removeSymbolRule", update: "Tab2.updateSymbolRule"}
+    #renderSymbs() {
+      const baseDT = State.get("T2ST.asgn.pxrfDT"), baseKey = State.get("T2ST.symb.baseKey"), symbElm = DOM.el("symbolTableEl");
+      if (!symbElm) return;
+      if (!baseDT || !baseDT.length) { symbElm.clear(); return; } // 初期化
+      const vals = [...new Set(baseDT.map(d => d[baseKey]).filter(Boolean))];
+      symbElm.src = {
+        rls: State.get("T2ST.symb.rls"),
+        optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.Conf.symbShapes, clr: GLB.Conf.symbColors },
+        actsConf: { add: "T2.addSymb", remove: "T2.removeSymb", update: "T2.renewSymb"}
       };
     }
     // --- Item抽出DI ---
     #renderItems() {
-      const baseData = State.get("Tab2ST.dset.basePXRF"), el = DOM.el("prevItemBoxEl");
-      if (!baseData?.length) { if(el) el.opts = []; return; } // 初期化
-      const items = [...new Set(baseData.map(d => d.item ?? d.Item).filter(Boolean))];
-      if(el) el.opts = items; // UI更新
-      State.set("Tab2ST.prev.itemMap", items); // State更新
+      const baseDT = State.get("T2ST.asgn.pxrfDT"), elm = DOM.el("prevItemBoxEl");
+      if (!baseDT?.length) { if(elm) elm.opts = []; return; } // 初期化
+      const items = [...new Set(baseDT.map(d => d.item ?? d.Item).filter(Boolean))];
+      if(elm) elm.opts = items; // UI更新
+      State.set("T2ST.prev.itemMap", items); // State更新
     }
   }
-  const UIState = new UIStateUpdater();
+  const UI = { Init: UIInit, Phs: UIPhase, StateUpd: UIStateUpdater };
+  const uiState = new UI.StateUpd();
 </script>

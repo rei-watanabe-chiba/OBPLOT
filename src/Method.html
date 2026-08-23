@@ -1,280 +1,278 @@
-<!-- Method.html -->
+<!-- src/Method.html -->
 <script>
-  class DataUtils {
-    // --- 再配列処理 ---
-    static remapArry(data, indexArr, newHeader = null) {
-      if (!data?.length) return [];
-      const remap = row => indexArr.map(idx => idx !== -1 ? (row?.[idx] ?? "") : "");
-      return [newHeader ?? remap(data[0]), ...data.slice(1).map(remap)];
-    }
-    // --- セレクタ配列判定 ---
-    static validateSelect(values, quota = values.length) {
-      const checkVals = values.slice(0, quota);
-      return values.map((v, i) => i < quota ? (!v || checkVals.indexOf(v) !== checkVals.lastIndexOf(v)) : false);
-    }
-    // --- 汎用キーソート ---
-    static sortKeysByValue = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
-    // --- 有効数値の抽出 ---
-    static getValidNumbers = (arr, requirePositive = false) => arr.map(Number).filter(v => !isNaN(v) && (!requirePositive || v > 0));
-    // --- 統計表データ生成 ---
-    static createStatsRows(stats, digits = 3, formatRules = null) {
-      if (!stats) return [];
-      const fmt = v => (v != null && !isNaN(v)) ? Number(v).toFixed(digits) : "-";
-      const meta = { ...stats, sign: stats.intercept >= 0 ? "+" : "-", abs_intercept: Math.abs(stats.intercept ?? 0) };
-      if (formatRules?.length) {
-        return formatRules.map(({ key, label }) => {
-          if (!key) return [label ?? "", ""];
-          const valStr = meta[key] !== undefined ? (meta[key] === meta.sign ? meta[key] : fmt(meta[key])) : key.replace(/\{(\w+)\}/g, (m, k) => meta[k] !== undefined ? (k === "sign" ? meta[k] : fmt(meta[k])) : m);
-          return [label ?? "", valStr];
-        });
+  const Mtd = {
+    Util: class {
+      // --- 再配列処理 ---
+      static remapArry(data, idxArr, newHdr = null) {
+        if (!data?.length) return [];
+        const remap = r => idxArr.map(idx => idx !== -1 ? (r?.[idx] ?? "") : "");
+        return [newHdr ?? remap(data[0]), ...data.slice(1).map(remap)];
       }
-      return [
-        stats.count != null ? ["データ個数", stats.count] : null,
-        (stats.r != null && stats.r2 != null) ? ["相関係数", `R = ${fmt(stats.r)} , R² = ${fmt(stats.r2)}`] : null,
-        (stats.slope != null && stats.intercept != null) ? ["回帰直線", `y = ${fmt(stats.slope)}x ${meta.sign} ${fmt(meta.abs_intercept)}`] : null,
-        stats.resStdDev != null ? ["残差標準偏差", fmt(stats.resStdDev)] : null,
-        stats.err3Sigma != null ? ["器械Err3σ", fmt(stats.err3Sigma)] : null
-      ].filter(Boolean);
-    }
-    // --- Nice Numbers計算 ---
-    static calcNiceScale(xVals, yVals, desiredTicks = 4) {
-      if (!xVals?.length || !yVals?.length) return { niceMin: 0, niceMax: 0, niceTicks: [] };
-      const [xMin, xMax, yMin, yMax] = [Math.min(...xVals), Math.max(...xVals), Math.min(...yVals), Math.max(...yVals)];
-      const isAllPos = xMin >= 0 && yMin >= 0;
-      const rawMin = isAllPos ? 0 : Math.min(xMin, yMin);
-      const rawMax = Math.max(xMax, yMax);
-      const rawStep = (rawMax - rawMin || 1) / (desiredTicks - 1);
-      const exp = Math.floor(Math.log10(rawStep));
-      const frac = rawStep / Math.pow(10, exp);
-      const niceFrac = frac <= 1.2 ? 1 : (frac <= 2.5 ? 2 : (frac <= 6.0 ? 5 : 10));
-      const niceStep = niceFrac * Math.pow(10, exp);
-      const niceMin = isAllPos ? 0 : Math.floor(rawMin / niceStep) * niceStep;
-      const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
-      const decimals = exp < 0 ? Math.abs(exp) : 0;
-      const niceTicks = Array.from({ length: Math.round((niceMax - niceMin) / niceStep) + 1 }, (_, i) => {
-        const val = niceMin + (i * niceStep);
-        return { v: val, f: Math.abs(val) >= 1000 ? `${(val / 1000).toFixed(0)}k` : (decimals > 0 ? val.toFixed(decimals) : val.toLocaleString()) };
-      });
-      return { niceMin, niceMax, niceTicks };
-    }
-  }
-
-  // --- Tab1 ファイルデータ検証 ---
-  class FileValidator {
-    // --- リスト検証 ---
-    static run(sheetData, outHeader, validModes, exacMode) {
-      if (!sheetData?.length) return [];
-      const [header, ...body] = sheetData;
-      const getIdx = key => header.findIndex(h => h === key); // 走査型バインド
-      const colFile = getIdx('file'), colMode = getIdx('mode'), colId = getIdx('id'), colSub = getIdx('sub_id');
-      const getScanID = r => r[colSub] ? `${r[colId]}_${r[colSub]}` : `${r[colId]}`;
-      const stats = body.reduce((acc, r) => {
-        acc.file.set(r[colFile], (acc.file.get(r[colFile]) || 0) + 1);
-        const sId = getScanID(r);
-        const s = acc.scan.get(sId) || { modes: new Set(), count: 0 };
-        s.modes.add(r[colMode]); s.count++; acc.scan.set(sId, s);
-        return acc;
-      }, { file: new Map(), scan: new Map() });
-      const rules = [
-        { check: r => !/^\d+$/.test(r[colFile] ?? ""), err: " file形式" },
-        { check: r => !validModes.includes(r[colMode]), err: " mode形式" },
-        { check: r => !r[colId], err: " id形式" },
-        { check: r => stats.file.get(r[colFile]) > 1, err: " file重複" },
-        { check: r => {
-            const s = stats.scan.get(getScanID(r));
-            return exacMode === "Single" ? s.count > 1 : !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
-          }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式" }
-      ];
-      return [[...outHeader, "error"], ...body.map(r => [...r, getScanID(r), rules.filter(rule => rule.check(r)).map(rule => rule.err).join(",")])];
-    }
-  }
-
-  // --- Tab1 抽出データ作成 ---
-  class DataExtractor {
-    // --- データ抽出 ---
-    static run(fileDT, resultDT, extrRefs) {
-      if (!fileDT?.length || !resultDT?.length) return [];
-      const resultMap = new Map(resultDT.slice(1).map(r => [String(r[0]), r]));
-      const scanIDMap = fileDT.slice(1).reduce((map, r) => {
-        const entry = map.get(r[5]) || { id: r[2], files: {} };
-        entry.files[String(r[1]).toLowerCase()] = r[0]; map.set(r[5], entry); return map;
-      }, new Map());
-      const obKeys = DataUtils.sortKeysByValue(GLOBAL_CONFIG.obsidianIndex), mdKeys = DataUtils.sortKeysByValue(GLOBAL_CONFIG.mudrockIndex);
-      const format = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
-      const extract = (file, keys, idxObj) => {
-        const row = resultMap.get(String(file ?? ""));
-        return keys.reduce((acc, k) => {
-          const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
-          acc.vals.push(format(idx !== null ? (row?.[idx] ?? "") : ""));
-          acc.errs.push(format(idx !== null ? (row?.[idx + 1] ?? "") : ""));
-          return acc;
-        }, { vals: [], errs: [] });
-      };
-      const header = ['計測ID', 'ID', 'dset', 'item', 'date', ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`), ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)];
-      return [header, ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
-        const ob = extract(files.obsidian, obKeys, GLOBAL_CONFIG.obsidianIndex), mu = extract(files.mudrock, mdKeys, GLOBAL_CONFIG.mudrockIndex);
-        return [scanId, id, extrRefs.dset, extrRefs.item, extrRefs.date, ...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
-      })];
-    }
-  }
-  
-  // --- Tab1 PXRF重複検証 ---
-  class PxrfValidator {
-    // --- 重複検証 ---
-    static run(existingDT, newDT) {
-      if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
-      const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
-      const filteredEx = existingDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
-      return filteredEx.length !== existingDT.length - 1 ? { isDup: true, data: [existingDT[0], ...filteredEx, ...newDT.slice(1)] } : { isDup: false, data: null };
-    }
-  }
-
-  // --- Tab2 データオブジェクト変換 ---
-  class DataManager {
-    // --- オブジェクト配列化 ---
-    static #toObjArray(data) {
-      const [header, ...body] = data;
-      return body.map(row => header.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: row[i] }), {}));
-    }
-    // --- 読込 ---
-    static load(pxrfData, wdxrfData) {
-      const pxrfObjs = this.#toObjArray(pxrfData), wdxrfObjs = this.#toObjArray(wdxrfData);    
-      const clean = str => String(str ?? "").replace(/\s+/g, "").toUpperCase();
-      const wdxrfMap = new Map(wdxrfObjs.map(o => [`${clean(o.dset || o.dataset)}_${clean(o.ID || o.id)}`, o]));
-      const dsets = new Set();
-      pxrfObjs.forEach(pObj => {
-        const wObj = wdxrfMap.get(`${clean(pObj.dset || pObj.dataset)}_${clean(pObj.ID || pObj.id)}`);
-        pObj.Group = wObj?.Group ?? "Unknown"; pObj.Source = wObj?.Source ?? "Unknown";
-        if (pObj.dset || pObj.dataset) dsets.add(pObj.dset || pObj.dataset);
-      });
-      return { mergedPXRF: pxrfObjs, wdxrfObjs, dsets: [...dsets] };
-    }
-    // --- フィルタ ---
-    static filter(mergedPXRF, wdxrfObjs, selectedDsets) {
-      const targetSet = new Set(selectedDsets);
-      const basePXRF = mergedPXRF.filter(obj => targetSet.has(obj.dset || obj.dataset)).map(row => ({
-        dset: row.dset || row.dataset, id: row.id, ID: row.ID, item: row.item, Item: row.Item, Group: row.Group, Source: row.Source,
-        ...Object.fromEntries(GLOBAL_CONFIG.valueElement.flatMap(el => [[`ob_${el}`, row[`ob_${el}`]], [`md_${el}`, row[`md_${el}`]], [`ob_${el}_Err`, row[`ob_${el}_Err`]], [`md_${el}_Err`, row[`md_${el}_Err`]]]))
-      }));
-      const baseWDXRF = wdxrfObjs.filter(obj => targetSet.has(obj.dset || obj.dataset)).map(row => ({
-        dset: row.dset || row.dataset, id: row.id, ID: row.ID, Group: row.Group, Source: row.Source,
-        ...Object.fromEntries(GLOBAL_CONFIG.valueElement.map(el => [el, row[el]]))
-      }));
-      return { basePXRF, baseWDXRF };
-    }
-  }
-
-  // --- Tab2 プレビューデータ生成 ---
-  class PreviewManager {
-    // --- データ生成パイプライン統合 ---
-    static buildPreviewData(basePXRF, baseWDXRF, config) {
-      if (!basePXRF?.length || !baseWDXRF?.length) return [];
-      const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dset}_${w.ID ?? w.id}`, w]));
-      const minMap = config.lodEnabled ? this.#getMinMap(basePXRF, config) : {};
-      const calCoeffs = this.#resolveCoeffs(basePXRF, wdxrfMap, config, minMap);
-      return basePXRF.reduce((acc, row) => {
-        if (config.itemMap?.length && !config.itemMap.includes(row.item ?? row.Item)) return acc;
-        const pId = row.ID ?? row.id; // 安全なID抽出
-        const w = wdxrfMap.get(`${row.dset}_${pId}`);
-        if (!w) return acc;
-        const pData = { dset: row.dset, id: pId, item: row.item ?? row.Item, group: row.Group ?? "Unknown", Group: row.Group ?? "Unknown", Source: row.Source !== "Unknown" ? row.Source : (w.Source ?? "Unknown") };
-        GLOBAL_CONFIG.valueElement.forEach(el => {
-          const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
-          const rawVal = row[`${prefix}_${el}`];
-          const isLod = typeof rawVal === 'string' && rawVal.includes('LOD');
-          let val = (isLod && config.lodEnabled) ? (minMap[el] ?? null) : (rawVal != null && rawVal !== "" && !isNaN(Number(rawVal)) ? Number(rawVal) : null);
-          if (calCoeffs?.[el] && val != null) val = (val - calCoeffs[el].int) / calCoeffs[el].slp;
-          pData[el] = val; pData[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
+      // --- セレクタ配列判定 ---
+      static validateSelect(vals, quota = vals.length) {
+        const chkVals = vals.slice(0, quota);
+        return vals.map((v, i) => i < quota ? (!v || chkVals.indexOf(v) !== chkVals.lastIndexOf(v)) : false);
+      }
+      // --- 汎用キーソート ---
+      static sortKeysByVal = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
+      // --- 有効数値の抽出 ---
+      static getValidNums = (arr, reqPos = false) => arr.map(Number).filter(v => !isNaN(v) && (!reqPos || v > 0));
+      // --- 統計表データ生成 ---
+      static buildStats(statsDT, digits = 3, fmlRls = null) {
+        if (!statsDT) return [];
+        const fmt = v => (v != null && !isNaN(v)) ? Number(v).toFixed(digits) : "-";
+        const meta = { ...statsDT, sign: statsDT.intercept >= 0 ? "+" : "-", abs_intercept: Math.abs(statsDT.intercept ?? 0) };
+        if (fmlRls?.length) {
+          return fmlRls.map(({ key, label }) => {
+            if (!key) return [label ?? "", ""];
+            const valStr = meta[key] !== undefined ? (meta[key] === meta.sign ? meta[key] : fmt(meta[key])) : key.replace(/\{(\w+)\}/g, (m, k) => meta[k] !== undefined ? (k === "sign" ? meta[k] : fmt(meta[k])) : m);
+            return [label ?? "", valStr];
+          });
+        }
+        return [
+          statsDT.count != null ? ["データ個数", statsDT.count] : null,
+          (statsDT.r != null && statsDT.r2 != null) ? ["相関係数", `R = ${fmt(statsDT.r)} , R² = ${fmt(statsDT.r2)}`] : null,
+          (statsDT.slope != null && statsDT.intercept != null) ? ["回帰直線", `y = ${fmt(statsDT.slope)}x ${meta.sign} ${fmt(meta.abs_intercept)}`] : null,
+          statsDT.resStdDev != null ? ["残差標準偏差", fmt(statsDT.resStdDev)] : null,
+          statsDT.err3Sigma != null ? ["器械Err3σ", fmt(statsDT.err3Sigma)] : null
+        ].filter(Boolean);
+      }
+      // --- Nice Numbers計算 ---
+      static calcScale(xVals, yVals, desiredTicks = 4) {
+        if (!xVals?.length || !yVals?.length) return { niceMin: 0, niceMax: 0, niceTicks: [] };
+        const [xMin, xMax, yMin, yMax] = [Math.min(...xVals), Math.max(...xVals), Math.min(...yVals), Math.max(...yVals)];
+        const isAllPos = xMin >= 0 && yMin >= 0;
+        const rawMin = isAllPos ? 0 : Math.min(xMin, yMin);
+        const rawMax = Math.max(xMax, yMax);
+        const rawStep = (rawMax - rawMin || 1) / (desiredTicks - 1);
+        const exp = Math.floor(Math.log10(rawStep));
+        const frac = rawStep / Math.pow(10, exp);
+        const niceFrac = frac <= 1.2 ? 1 : (frac <= 2.5 ? 2 : (frac <= 6.0 ? 5 : 10));
+        const niceStep = niceFrac * Math.pow(10, exp);
+        const niceMin = isAllPos ? 0 : Math.floor(rawMin / niceStep) * niceStep;
+        const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
+        const decimals = exp < 0 ? Math.abs(exp) : 0;
+        const niceTicks = Array.from({ length: Math.round((niceMax - niceMin) / niceStep) + 1 }, (_, i) => {
+          const v = niceMin + (i * niceStep);
+          return { v: v, f: Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : (decimals > 0 ? v.toFixed(decimals) : v.toLocaleString()) };
         });
-        const xVal = CalcProcessor.evaluate(config.val, w), yVal = CalcProcessor.evaluate(config.val, pData);
-        if (xVal != null && yVal != null) acc.push({ ...pData, x: xVal, y: yVal, err: GLOBAL_CONFIG.valueElement.includes(config.val) ? (pData[`${config.val}_Err`] ?? null) : null });
-        return acc;
-      }, []);
-    }
-    // --- LOD最小値取得 ---
-    static #getMinMap(basePXRF, config) {
-      return Object.fromEntries(GLOBAL_CONFIG.valueElement.map(el => {
-        const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
-        const nums = DataUtils.getValidNumbers(basePXRF.map(r => r[`${prefix}_${el}`]), true);
-        return [el, nums.length ? Math.min(...nums) : null];
-      }));
-    }
-    // --- 検量線算出 ---
-    static #resolveCoeffs(basePXRF, wdxrfMap, config, minMap) {
-      if (!config.calEnabled || !config.calElementMap?.length) return null;
-      if (config.correction === "new") {
-        return Object.fromEntries(config.calElementMap.map(el => {
-          const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
-          const vals = basePXRF.reduce((acc, p) => {
-            const pId = p.ID ?? p.id; // 安全なID抽出
-            const w = wdxrfMap.get(`${p.dset}_${pId}`);
-            if (!w || w[el] == null) return acc;
-            const raw = p[`${prefix}_${el}`];
-            const val = (typeof raw === 'string' && raw.includes('LOD') && config.lodEnabled) ? minMap[el] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
-            if (val != null) { acc.w.push(Number(w[el])); acc.p.push(val); }
+        return { niceMin, niceMax, niceTicks };
+      }
+    },
+    T1: {
+      FVald: class {
+        // --- リスト検証 ---
+        static valdList(shtDT, outHdr, validMods, exacMode) {
+          if (!shtDT?.length) return [];
+          const [hdr, ...body] = shtDT;
+          const getIdx = k => hdr.findIndex(h => h === k); // 走査型バインド
+          const colFile = getIdx('file'), colMode = getIdx('mode'), colId = getIdx('id'), colSub = getIdx('sub_id');
+          const getScanID = r => r[colSub] ? `${r[colId]}_${r[colSub]}` : `${r[colId]}`;
+          const statsDT = body.reduce((acc, r) => {
+            acc.file.set(r[colFile], (acc.file.get(r[colFile]) || 0) + 1);
+            const sId = getScanID(r);
+            const s = acc.scan.get(sId) || { modes: new Set(), count: 0 };
+            s.modes.add(r[colMode]); s.count++; acc.scan.set(sId, s);
             return acc;
-          }, { w: [], p: [] });
-          return [el, CalcProcessor.calcCalibrationCoeffs(vals.w, vals.p)];
-        }).filter(([, v]) => v));
+          }, { file: new Map(), scan: new Map() });
+          const rls = [
+            { check: r => !/^\d+$/.test(r[colFile] ?? ""), err: " file形式" },
+            { check: r => !validMods.includes(r[colMode]), err: " mode形式" },
+            { check: r => !r[colId], err: " id形式" },
+            { check: r => statsDT.file.get(r[colFile]) > 1, err: " file重複" },
+            { check: r => {
+                const s = statsDT.scan.get(getScanID(r));
+                return exacMode === "Single" ? s.count > 1 : !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
+              }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式" }
+          ];
+          return [[...outHdr, "error"], ...body.map(r => [...r, getScanID(r), rls.filter(rl => rl.check(r)).map(rl => rl.err).join(",")])];
+        }
+      },
+      Extr: class {
+        // --- データ抽出 ---
+        static runExtr(fileDT, resDT, extrRefs) {
+          if (!fileDT?.length || !resDT?.length) return [];
+          const resMap = new Map(resDT.slice(1).map(r => [String(r[0]), r]));
+          const scanIDMap = fileDT.slice(1).reduce((map, r) => {
+            const entry = map.get(r[5]) || { id: r[2], files: {} };
+            entry.files[String(r[1]).toLowerCase()] = r[0]; map.set(r[5], entry); return map;
+          }, new Map());
+          const obKeys = Mtd.Util.sortKeysByVal(GLB.Conf.obsidianIndex), mdKeys = Mtd.Util.sortKeysByVal(GLB.Conf.mudrockIndex);
+          const fmt = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
+          const extract = (file, keys, idxObj) => {
+            const r = resMap.get(String(file ?? ""));
+            return keys.reduce((acc, k) => {
+              const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
+              acc.vals.push(fmt(idx !== null ? (r?.[idx] ?? "") : ""));
+              acc.errs.push(fmt(idx !== null ? (r?.[idx + 1] ?? "") : ""));
+              return acc;
+            }, { vals: [], errs: [] });
+          };
+          const hdr = ['計測ID', 'ID', 'database', 'item', 'date', ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`), ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)];
+          return [hdr, ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+            const ob = extract(files.obsidian, obKeys, GLB.Conf.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.Conf.mudrockIndex);
+            return [scanId, id, extrRefs.DB, extrRefs.item, extrRefs.date, ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
+          })];
+        }
+      },
+      PVald: class {
+        // --- 重複検証 ---
+        static checkPxrf(pxrfDT, newDT) {
+          if (!pxrfDT?.length || !newDT?.length) return { isDup: false, data: newDT };
+          const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
+          const fltrEx = pxrfDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
+          return fltrEx.length !== pxrfDT.length - 1 ? { isDup: true, data: [pxrfDT[0], ...fltrEx, ...newDT.slice(1)] } : { isDup: false, data: null };
+        }
       }
-      const row = config.correctionData?.find(r => r[0] === config.correction);
-      if (!row) return null;
-      return Object.fromEntries(config.calElementMap.map(el => {
-        const sIdx = config.correctionData[0].indexOf(`${el}_slp`), iIdx = config.correctionData[0].indexOf(`${el}_int`);
-        return sIdx !== -1 && iIdx !== -1 && row[sIdx] !== "" ? [el, { slp: Number(row[sIdx]), int: Number(row[iIdx]) }] : [el, null];
-      }).filter(([, v]) => v));
-    }
-    // --- 検量線適用データ整形 ---
-    static generateCorrectionRow(basePXRF, baseWDXRF, config, indexName) {
-      const newRow = [indexName];
-      GLOBAL_CONFIG.valueElement.forEach(el => {
-        if (!config.calElementMap?.includes(el)) { newRow.push("", ""); return; }
-        const data = this.buildPreviewData(basePXRF, baseWDXRF, { ...config, val: el, calEnabled: false });
-        const coeffs = data.length ? CalcProcessor.calcCalibrationCoeffs(data.map(d => d.x), data.map(d => d.y)) : null;
-        newRow.push(coeffs?.slp ?? "", coeffs?.int ?? "");
-      });
-      return newRow;
-    }
-  }
-
-  // --- 数式評価 ---
-  class CalcProcessor {
-    // --- カスタム数式評価 ---
-    static evaluate(formula, rowData) {
-      if (!formula) return null;
-      try {
-        const keys = Object.keys(rowData), vals = Object.values(rowData);
-        const mathFns = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
-        const fn = new Function(...keys, `${mathFns} return ${formula};`);
-        const result = fn(...vals);
-        return isNaN(result) || !isFinite(result) ? null : result;
-      } catch (e) { return null; }
-    }
-    // --- 検量線係数計算 ---
-    static calcCalibrationCoeffs(wdxrfVals, pxrfVals) {
-      if (!wdxrfVals?.length || wdxrfVals.length < 2 || wdxrfVals.length !== pxrfVals?.length) return null;
-      try {
-        const data = wdxrfVals.map((x, i) => [x, pxrfVals[i]]);
-        const { m: slope, b: intercept } = ss.linearRegression(data);
-        return (isNaN(slope) || isNaN(intercept) || slope === 0) ? null : { slp: slope, int: intercept };
-      } catch (e) { return null; }
-    }
-    // --- 回帰・相関計算 ---
-    static calcRegression(xArr, yArr, errArr) {
-      if (!xArr?.length || xArr.length !== yArr?.length) return null;
-      const n = xArr.length, data = xArr.map((x, i) => [x, yArr[i]]);
-      const { m: slope, b: intercept } = ss.linearRegression(data);
-      const r = ss.sampleCorrelation(xArr, yArr), r2 = r * r;
-      let ssRes = 0, maxRes = 0;
-      xArr.forEach((x, i) => { const res = Math.abs(yArr[i] - (slope * x + intercept)); ssRes += res * res; maxRes = Math.max(maxRes, res); });
-      const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
-      let err3Sigma = 0;
-      if (errArr?.length > 2) {
-        const meanErr = errArr.reduce((a, b) => a + b, 0) / errArr.length;
-        err3Sigma = Math.sqrt(errArr.reduce((a, b) => a + (b - meanErr) ** 2, 0) / (errArr.length - 1)) * 3;
+    },
+    T2: {
+      mgmtDT: class {
+        // --- オブジェクト配列化 ---
+        static #toObjArray(data) {
+          const [hdr, ...body] = data;
+          return body.map(r => hdr.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: r[i] }), {}));
+        }
+        // --- 読込 ---
+        static loadDB(pxrfDT, wdxrfDT) {
+          const pObjs = this.#toObjArray(pxrfDT), wObjs = this.#toObjArray(wdxrfDT);    
+          const cln = s => String(s ?? "").replace(/\s+/g, "").toUpperCase();
+          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          const wMap = new Map(wObjs.map(o => [`${cln(getDB(o))}_${cln(o.ID || o.id)}`, o]));
+          const dbs = new Set();
+          pObjs.forEach(pObj => {
+            const wObj = wMap.get(`${cln(getDB(pObj))}_${cln(pObj.ID || pObj.id)}`);
+            pObj.Group = wObj?.Group ?? "Unknown"; pObj.Source = wObj?.Source ?? "Unknown";
+            pObj.DB = getDB(pObj); // DB名統一
+            if (pObj.DB) dbs.add(pObj.DB);
+          });
+          return { wrapPXRF: pObjs, wrapWDXRF: wObjs, dbs: [...dbs] };
+        }
+        // --- フィルタ ---
+        static fltrDB(wrapPXRF, wrapWDXRF, selDBs) {
+          const tgtSet = new Set(selDBs);
+          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          const pxrfDT = wrapPXRF.filter(obj => tgtSet.has(getDB(obj))).map(r => ({
+            DB: getDB(r), id: r.id, ID: r.ID, item: r.item, Item: r.Item, Group: r.Group, Source: r.Source,
+            ...Object.fromEntries(GLB.Conf.valElms.flatMap(elm => [[`ob_${elm}`, r[`ob_${elm}`]], [`md_${elm}`, r[`md_${elm}`]], [`ob_${elm}_Err`, r[`ob_${elm}_Err`]], [`md_${elm}_Err`, r[`md_${elm}_Err`]]]))
+          }));
+          const wdxrfDT = wrapWDXRF.filter(obj => tgtSet.has(getDB(obj))).map(r => ({
+            DB: getDB(r), id: r.id, ID: r.ID, Group: r.Group, Source: r.Source,
+            ...Object.fromEntries(GLB.Conf.valElms.map(elm => [elm, r[elm]]))
+          }));
+          return { pxrfDT, wdxrfDT };
+        }
+      },
+      mgmPrev: class {
+        // --- データ生成パイプライン統合 ---
+        static buildPrev(pxrfDT, wdxrfDT, conf) {
+          if (!pxrfDT?.length || !wdxrfDT?.length) return [];
+          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          const wMap = new Map(wdxrfDT.map(w => [`${getDB(w)}_${w.ID ?? w.id}`, w]));
+          const minMap = conf.useLOD ? this.#getMinMap(pxrfDT, conf) : {};
+          const cfs = this.#resCoeffs(pxrfDT, wMap, conf, minMap);
+          return pxrfDT.reduce((acc, r) => {
+            if (conf.itemMap?.length && !conf.itemMap.includes(r.item ?? r.Item)) return acc;
+            const pId = r.ID ?? r.id; // 安全なID抽出
+            const w = wMap.get(`${getDB(r)}_${pId}`);
+            if (!w) return acc;
+            const pDT = { DB: getDB(r), id: pId, item: r.item ?? r.Item, group: r.Group ?? "Unknown", Group: r.Group ?? "Unknown", Source: r.Source !== "Unknown" ? r.Source : (w.Source ?? "Unknown") };
+            GLB.Conf.valElms.forEach(elm => {
+              const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+              const rawV = r[`${pfx}_${elm}`];
+              const isLod = typeof rawV === 'string' && rawV.includes('LOD');
+              let val = (isLod && conf.useLOD) ? (minMap[elm] ?? null) : (rawV != null && rawV !== "" && !isNaN(Number(rawV)) ? Number(rawV) : null);
+              if (cfs?.[elm] && val != null) val = (val - cfs[elm].int) / cfs[elm].slp;
+              pDT[elm] = val; pDT[`${elm}_Err`] = r[`${pfx}_${elm}_Err`] ?? null;
+            });
+            const xVal = Mtd.T2.Calc.evaluate(conf.val, w), yVal = Mtd.T2.Calc.evaluate(conf.val, pDT);
+            if (xVal != null && yVal != null) acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.Conf.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
+            return acc;
+          }, []);
+        }
+        // --- LOD最小値取得 ---
+        static #getMinMap(pxrfDT, conf) {
+          return Object.fromEntries(GLB.Conf.valElms.map(elm => {
+            const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+            const nums = Mtd.Util.getValidNums(pxrfDT.map(r => r[`${pfx}_${elm}`]), true);
+            return [elm, nums.length ? Math.min(...nums) : null];
+          }));
+        }
+        // --- 検量線算出 ---
+        static #resCoeffs(pxrfDT, wMap, conf, minMap) {
+          if (!conf.useCal || !conf.calElms?.length) return null;
+          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          if (conf.correction === "new") {
+            return Object.fromEntries(conf.calElms.map(elm => {
+              const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+              const vList = pxrfDT.reduce((acc, p) => {
+                const pId = p.ID ?? p.id; // 安全なID抽出
+                const w = wMap.get(`${getDB(p)}_${pId}`);
+                if (!w || w[elm] == null) return acc;
+                const raw = p[`${pfx}_${elm}`];
+                const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
+                if (v != null) { acc.w.push(Number(w[elm])); acc.p.push(v); }
+                return acc;
+              }, { w: [], p: [] });
+              return [elm, Mtd.T2.Calc.calcCalib(vList.w, vList.p)];
+            }).filter(([, v]) => v));
+          }
+          const r = conf.corrDT?.find(rw => rw[0] === conf.correction);
+          if (!r) return null;
+          return Object.fromEntries(conf.calElms.map(elm => {
+            const sIdx = conf.corrDT[0].indexOf(`${elm}_slp`), iIdx = conf.corrDT[0].indexOf(`${elm}_int`);
+            return sIdx !== -1 && iIdx !== -1 && r[sIdx] !== "" ? [elm, { slp: Number(r[sIdx]), int: Number(r[iIdx]) }] : [elm, null];
+          }).filter(([, v]) => v));
+        }
+        // --- 検量線適用データ整形 ---
+        static genCorr(pxrfDT, wdxrfDT, conf, idxName) {
+          const newRow = [idxName];
+          GLB.Conf.valElms.forEach(elm => {
+            if (!conf.calElms?.includes(elm)) { newRow.push("", ""); return; }
+            const prevDT = this.buildPrev(pxrfDT, wdxrfDT, { ...conf, val: elm, useCal: false });
+            const cfs = prevDT.length ? Mtd.T2.Calc.calcCalib(prevDT.map(d => d.x), prevDT.map(d => d.y)) : null;
+            newRow.push(cfs?.slp ?? "", cfs?.int ?? "");
+          });
+          return newRow;
+        }
+      },
+      Calc: class {
+        // --- カスタム数式評価 ---
+        static evaluate(fml, rData) {
+          if (!fml) return null;
+          try {
+            const keys = Object.keys(rData), vals = Object.values(rData);
+            const mathFns = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
+            const fn = new Function(...keys, `${mathFns} return ${fml};`);
+            const res = fn(...vals);
+            return isNaN(res) || !isFinite(res) ? null : res;
+          } catch (e) { return null; }
+        }
+        // --- 検量線係数計算 ---
+        static calcCalib(wdxrfVals, pxrfVals) {
+          if (!wdxrfVals?.length || wdxrfVals.length < 2 || wdxrfVals.length !== pxrfVals?.length) return null;
+          try {
+            const d = wdxrfVals.map((x, i) => [x, pxrfVals[i]]);
+            const { m: slope, b: intercept } = ss.linearRegression(d);
+            return (isNaN(slope) || isNaN(intercept) || slope === 0) ? null : { slp: slope, int: intercept };
+          } catch (e) { return null; }
+        }
+        // --- 回帰・相関計算 ---
+        static calcReg(xArr, yArr, errArr) {
+          if (!xArr?.length || xArr.length !== yArr?.length) return null;
+          const n = xArr.length, d = xArr.map((x, i) => [x, yArr[i]]);
+          const { m: slope, b: intercept } = ss.linearRegression(d);
+          const r = ss.sampleCorrelation(xArr, yArr), r2 = r * r;
+          let ssRes = 0, maxRes = 0;
+          xArr.forEach((x, i) => { const res = Math.abs(yArr[i] - (slope * x + intercept)); ssRes += res * res; maxRes = Math.max(maxRes, res); });
+          const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
+          let err3Sigma = 0;
+          if (errArr?.length > 2) {
+            const meanErr = errArr.reduce((a, b) => a + b, 0) / errArr.length;
+            err3Sigma = Math.sqrt(errArr.reduce((a, b) => a + (b - meanErr) ** 2, 0) / (errArr.length - 1)) * 3;
+          }
+          return { count: n, slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
+        }
       }
-      return { count: n, slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
     }
-  }
-  const Mtd = { Utils: DataUtils, Tab1: { FileValidator, DataExtractor, PxrfValidator }, Tab2: { DataManager, PreviewManager, CalcProcessor } };
+  };
 </script>

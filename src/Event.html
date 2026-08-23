@@ -1,73 +1,73 @@
-<!-- Event.html -->
+<!-- src/Event.html -->
 <script>
   class Evt {
     // --- マルチセレクト切替 ---
-    static toggleMultiSelect(target, statePath) {
-      const container = target.closest('ob-multi-select');
-      if (!container) return;
-      const itemCbs = [...container.querySelectorAll('.dataset-cb')], allCb = container.querySelector('.select-all-cb');
+    static tglMulti(tgt, statePath) {
+      const cntr = tgt.closest('ob-multi-select');
+      if (!cntr) return;
+      const itemCbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
       if (allCb) allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
       State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
     }
     // --- 全選択切替 ---
-    static toggleAllMultiSelect(target, statePath) {
-      const container = target.closest('ob-multi-select');
-      if (!container) return;
-      const itemCbs = container.querySelectorAll('.dataset-cb');
-      itemCbs.forEach(cb => cb.checked = target.checked);
-      State.set(statePath, target.checked ? [...itemCbs].map(cb => cb.value) : []);
+    static tglAllMulti(tgt, statePath) {
+      const cntr = tgt.closest('ob-multi-select');
+      if (!cntr) return;
+      const itemCbs = cntr.querySelectorAll('.dataset-cb');
+      itemCbs.forEach(cb => cb.checked = tgt.checked);
+      State.set(statePath, tgt.checked ? [...itemCbs].map(cb => cb.value) : []);
     }
-    static #bindMulti = path => target => this.toggleMultiSelect(target, path);
-    static #bindAll = path => target => this.toggleAllMultiSelect(target, path);
+    static #bindMulti = path => tgt => this.tglMulti(tgt, path);
+    static #bindAll = path => tgt => this.tglAllMulti(tgt, path);
     // --- Tab1イベント群 ---
-    static Tab1 = {
-      validateConfigMode: mode => {
+    static T1 = {
+      checkT1Pref: mode => {
         if (!mode) return;
         const modeText = mode === "Dual" ? "セット抽出対応" : "1ファイル単位抽出";
-        const phase = State.get("Tab1ST.phase"), isInit = phase === TAB1_PHASE.INIT, isInvalid = phase >= TAB1_PHASE.INVALID;
-        isInvalid && State.set("Tab1ST.raw.status", ["error", "モード変更検知"]); // 再検証要求
-        State.set({ "Tab1ST.config.status": ["message", modeText], ...(isInit || isInvalid ? { "Tab1ST.phase": isInit ? TAB1_PHASE.READY : TAB1_PHASE.INVALID } : {}) });
+        const phs = State.get("T1ST.phase"), isInit = phs === T1_PHS.INIT, isInvalid = phs >= T1_PHS.INVALID;
+        isInvalid && State.set("T1ST.raw.status", ["error", "モード変更検知"]); // 再検証要求
+        State.set({ "T1ST.pref.status": ["message", modeText], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
       },
-      updateRawRefs: target => {
-        State.set(`Tab1ST.raw.refs.${target.dataset.field}`, target.value);
-        Evt.Tab1.validateRawRefs();
+      renewRawRefs: tgt => {
+        State.set(`T1ST.raw.refs.${tgt.dataset.field}`, tgt.value);
+        Evt.T1.checkRawRefs();
       },
-      validateRawRefs: () => {
-        const flags = Mtd.Utils.validateSelect(GLOBAL_CONFIG.fileFields.map(f => State.get(`Tab1ST.raw.refs.${f.key}`) || ""), 3);
-        State.set({ "Tab1ST.raw.isRefsErr": flags, "Tab1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("Tab1ST.raw.cachedStatus") });
+      checkRawRefs: () => {
+        const flags = Mtd.Util.validateSelect(GLB.Conf.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
+        State.set({ "T1ST.raw.hasRefErr": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") });
       },
-      validateExtrRefs: () => {
-        const isErr = !(State.get("Tab1ST.extr.refs.dset")?.trim());
-        State.set({ "Tab1ST.extr.isRefsErr": [isErr, false, false], "Tab1ST.extr.status": isErr ? ["error", "エラー: dset未入力"] : State.get("Tab1ST.extr.cachedStatus") });
+      checkExtrRefs: () => {
+        const isErr = !(State.get("T1ST.extr.refs.DB")?.trim());
+        State.set({ "T1ST.extr.hasRefErr": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", "エラー: DB未入力"] : State.get("T1ST.extr.cachedStatus") });
       }
     };
     // --- Tab2イベント群 ---
-    static Tab2 = {
-      toggleDataset: this.#bindMulti("Tab2ST.dset.filter"),
-      toggleAllDataset: this.#bindAll("Tab2ST.dset.filter"),
-      confirmAndChangeAxis: async targetSelect => {
-        const newVal = targetSelect.value, oldVal = State.get("Tab2ST.symb.baseKey");
+    static T2 = {
+      tglDB: this.#bindMulti("T2ST.asgn.filter"),
+      tglAllDB: this.#bindAll("T2ST.asgn.filter"),
+      checkAxis: async tgtSelect => {
+        const newVal = tgtSelect.value, oldVal = State.get("T2ST.symb.baseKey");
         if (newVal === oldVal) return;
-        if (!await NewDOM.confirm("確認", "リセットしますか？")) return (targetSelect.value = oldVal); // 元に戻す
-        State.set({ "Tab2ST.symb.baseKey": newVal }); State.reset("Tab2ST.symb.rules");
+        if (!await NewDOM.confirm("確認", "リセットしますか？")) return (tgtSelect.value = oldVal); // 元に戻す
+        State.set({ "T2ST.symb.baseKey": newVal }); State.reset("T2ST.symb.rls");
       },
-      addSymbolRule: () => State.set("Tab2ST.symb.rules", [...(State.get("Tab2ST.symb.rules") || []), { key: `rule_${Date.now()}`, target: "", shape: "circle", color: "var(--grey600)" }]),
-      removeSymbolRule: targetBtn => {
-        const key = targetBtn.dataset.ruleKey;
-        if (key) State.set("Tab2ST.symb.rules", (State.get("Tab2ST.symb.rules") || []).filter(r => r.key !== key));
+      addSymb: () => State.set("T2ST.symb.rls", [...(State.get("T2ST.symb.rls") || []), { key: `rule_${Date.now()}`, target: "", shp: "circle", clr: "var(--grey600)" }]),
+      removeSymb: tgtBtn => {
+        const key = tgtBtn.dataset.ruleKey;
+        if (key) State.set("T2ST.symb.rls", (State.get("T2ST.symb.rls") || []).filter(r => r.key !== key));
       },
-      updateSymbolRule: targetBtn => {
-        const idx = targetBtn.dataset.symbolIdx, type = targetBtn.dataset.symbolType;
+      renewSymb: tgtBtn => {
+        const idx = tgtBtn.dataset.symbolIdx, type = tgtBtn.dataset.symbolType;
         if (idx == null || !type) return;
-        const rules = [...(State.get("Tab2ST.symb.rules") || [])];
-        if (rules[idx]) { rules[idx][type] = targetBtn.value; State.set("Tab2ST.symb.rules", rules); } // ルール更新
+        const rls = [...(State.get("T2ST.symb.rls") || [])];
+        if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("T2ST.symb.rls", rls); } // ルール更新
       },
-      togglePreviewMode: this.#bindMulti("Tab2ST.prev.modeMap"),
-      toggleAllPreviewMode: this.#bindAll("Tab2ST.prev.modeMap"),
-      toggleCalElement: this.#bindMulti("Tab2ST.prev.calElementMap"),
-      toggleAllCalElement: this.#bindAll("Tab2ST.prev.calElementMap"),
-      togglePreviewItem: this.#bindMulti("Tab2ST.prev.itemMap"),
-      toggleAllPreviewItem: this.#bindAll("Tab2ST.prev.itemMap")
+      tglPrevMode: this.#bindMulti("T2ST.prev.modeMap"),
+      tglAllPrevMode: this.#bindAll("T2ST.prev.modeMap"),
+      tglCalElm: this.#bindMulti("T2ST.prev.calElms"),
+      tglAllCalElm: this.#bindAll("T2ST.prev.calElms"),
+      tglPrevItem: this.#bindMulti("T2ST.prev.itemMap"),
+      tglAllPrevItem: this.#bindAll("T2ST.prev.itemMap")
     };
     // --- クリック監視 ---
     static #handleClick(e) {
@@ -80,11 +80,11 @@
     }
     // --- 変更監視 ---
     static #handleChange(e) {
-      const target = e.target, bindPath = target.dataset.bind, changePath = target.dataset.change;
-      if (bindPath) State.set(bindPath, target.type === "checkbox" ? target.checked : target.value);
+      const tgt = e.target, bindPath = tgt.dataset.bind, changePath = tgt.dataset.change;
+      if (bindPath) State.set(bindPath, tgt.type === "checkbox" ? tgt.checked : tgt.value);
       if (changePath) {
         const [ns, method] = changePath.split('.');
-        this[ns]?.[method]?.(target); // 変更委譲
+        this[ns]?.[method]?.(tgt); // 変更委譲
       }
     }
     // --- タブ切替 ---
@@ -97,12 +97,12 @@
     }
     // --- 初期化 ---
     static async init() {
-      UIInit.build();
-      State.subscribe("Tab1ST.config.mode", Evt.Tab1.validateConfigMode);
-      State.subscribe("Tab1ST.extr.refs.dset", Evt.Tab1.validateExtrRefs);
+      UI.Init.build();
+      State.subscribe("T1ST.pref.mode", Evt.T1.checkT1Pref);
+      State.subscribe("T1ST.extr.refs.DB", Evt.T1.checkExtrRefs);
       this.switchTab(State.get("GLB.activeTab"));
-      State.set({ "GLB.isLocked": false, "Tab1ST.config.status": ["hidden", ""], "Tab1ST.phase": TAB1_PHASE.INIT });
-      UIPhase.updateTab1PhaseUI(State.get("Tab1ST.phase")); UIPhase.updateTab2PhaseUI(State.get("Tab2ST.phase"));
+      State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
+      UI.Phs.renewT1Phs(State.get("T1ST.phase")); UI.Phs.renewT2Phs(State.get("T2ST.phase"));
       document.addEventListener("click", this.#handleClick.bind(this)); document.addEventListener("change", this.#handleChange.bind(this));
     }
   }

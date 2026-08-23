@@ -1,4 +1,4 @@
-<!-- CSS.html -->
+<!-- src/CSS.html -->
 <style>
   /* --- レイヤー定義 --- */
   @layer reset, base, components, utilities;
@@ -29,16 +29,12 @@
       --bg-color-hover: #F5F5F5;
       --text-main: #202124;
       --transition-speed: 0.2s;
-      --theme-color: var(--main-blue);
-      --theme-hover: var(--main-blue-hover);
       interpolate-size: allow-keywords;
-    }
-    body[data-theme="tab2"] {
-      --theme-color: var(--main-green);
-      --theme-hover: var(--main-green-hover);
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     body {
+      --theme-color: var(--main-blue);
+      --theme-hover: var(--main-blue-hover);
       display: grid;
       grid-template-rows: auto 1fr;
       height: 100vh;
@@ -48,6 +44,10 @@
       background-color: var(--bg-color);
       overflow-x: hidden;
       user-select: none;
+    }
+    body[data-theme="tab2"] {
+      --theme-color: var(--main-green);
+      --theme-hover: var(--main-green-hover);
     }
     main {
       padding: calc(var(--unit) * 2) calc(var(--unit) * 3) calc(var(--unit) * 3);
@@ -147,10 +147,7 @@
         }
       }
     }
-    .tab-content {
-      display: none;
-      &.active { display: block; }
-    }
+    .tab-content { display: none; &.active { display: block; } }
     /* --- フォーム --- */
     label {
       display: block;
@@ -371,6 +368,7 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
+      &[data-status="message"] { padding:calc(var(--unit) * 0.5) calc(var(--unit) * 3) }
       &[data-status="success"] { --status-color: var(--main-green); }
       &[data-status="error"], &[data-status="alert"] { --status-color: var(--main-red); }
     }
@@ -444,7 +442,7 @@
       cursor: pointer;
       &:hover { background-color: var(--bg-color-hover); }
     }
-    #symbolBox {
+    #symbBox {
       max-height: calc(var(--unit) * 50);
       border: 1px solid var(--grey200);
       border-radius: var(--unit);
