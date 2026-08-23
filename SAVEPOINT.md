@@ -30,7 +30,7 @@
    - **[Rule]**: 動的プロパティ生成は手動代入を避け、`...Object.fromEntries()` を活用し、宣言的に記述する。
 4. **命名規則の厳守 (予約語・DOMプロパティ競合回避)**:
    - **[Why]**: `HTMLElement.dataset` 等のDOM標準プロパティとの衝突によるサイレントバグを完全に回避し、コードの認知負荷を下げるため。
-   - **[Rule]**: 汎用プロパティ（`map`, `set`, `get`, `value`）や衝突リスクのある名称（`dataset`）は禁止し、高度な短縮形（`raw`, `extr`, `prev`, `symb`, `refs`, `val`）でシステム全体を統一する。※ただし、ドメイン固有の重要キー（資料IDとしての `id`, `ID` 等）は例外とする。
+   - **[Rule]**: 汎用プロパティ（`map`, `set`, `get`, `value`）や衝突リスクのある名称（`dataset`）は禁止し、高度な短縮形（`raw`, `extr`, `prev`, `symb`, `refs`, `val`）でシステム全体を統一する。※ただし、ドメイン固有の重要キー（資料IDとしての `id`, `ID` 等）とstate操作におけるget, setは例外とする。
 5. **厳格なコメント・フォーマット規約**:
    - **[Rule]**: 関数ブロックの先頭には必ず `// --- 機能名 ---` を付与。
    - **[Rule]**: 処理内のコメントは、処理の意図（Why）を「15文字以内」で記述。
@@ -46,14 +46,14 @@
 - **[Why]**: フェーズ遷移に伴うUIの表示/非活性制御を命令的な `if` 分岐で行わず、`UIPhase` の定数マップに基づく宣言的ルールエンジンに集約するため。
 
 ## 5. ディレクトリ構造と関数一覧（モジュール責務）
-- `Code.js`: [Service] バックエンドAPI (GAS通信, I/O)
-- `Sidebar.html`: [UI] 静的ベース構造 (Auto DI属性 `data-bind-*` の保持)
+- `Code.js`: [API] バックエンドAPI (GAS通信, I/O)
+- `Sidebar.html`: [UI] 静的ベース構造 (Auto DI属性の保持)
 - `CSS.html`: [Style] トークン定義, カスケードレイヤー (`reset`, `base`, `components`, `utilities`)
-- `Model.html`: [Model] 状態管理 (`AppState`), 定数 (`GLOBAL_CONFIG`), APIラッパー (`GasService`)
-- `Method.html`: [Logic] 純粋関数群 (`DataUtils`, `FileValidator`, `DataExtractor`, `DataManager`, `PreviewManager`, `CalcProcessor`)
-- `Component.html`: [Component] DOMビルダー (`NewDOM`), Web Components群, テンプレート (`Tpl`)
-- `View.html`: [View] UIルールエンジン (`UIPhase`), DIバインディングエンジン (`UIStateUpdater`)
-- `Controller.html`: [Controller] 非同期フロー制御 (`Tab1Ctrl`, `Tab2Ctrl`, `CoreCtrl`)
+- `Model.html`: [Model] 状態管理 (`AppState`), 定数 (`GLB.Conf`), APIラッパー (`API`)
+- `Method.html`: [Logic] 純粋関数群 (`Mtd.Util`, `Mtd.T1`, `Mtd.T2`)
+- `Component.html`: [Component] DOMビルダー (`NewDOM`), Web Components, テンプレート (`Tpl`)
+- `View.html`: [View] UIルールエンジン (`UI.Phs`), DIバインディングエンジン (`UI.StateUpd`)
+- `Controller.html`: [Controller] 非同期フロー制御 (`CoreCtrl`, `T1Ctrl`, `T2Ctrl`)
 - `Event.html`: [Event] イベント委譲ルーター (`Evt`)
 - `Chart.html`: [Component] グラフ描画 (`<ob-cal-plot>`)
 - `Report.html`: [Template] レポート出力用静的HTML
