@@ -3,224 +3,111 @@
   // --- テーマキャッシュ ---
   class ThemeCache {
     static #cache = new Map();
-
     // --- カラー変数変換 ---
     static get(varStr) {
       if (!varStr?.startsWith('var(')) return varStr;
       const match = varStr.match(/var\((--[^,\s)]+)/);
-      if (!match) return varStr;
+      if (!match) return varStr; // 変数以外は返却
       const key = match[1];
-      if (!this.#cache.has(key)) {
-        const val = getComputedStyle(document.body).getPropertyValue(key).trim();
-        this.#cache.set(key, val || varStr);
-      }
+      if (!this.#cache.has(key)) this.#cache.set(key, getComputedStyle(document.body).getPropertyValue(key).trim() || varStr); // 計算値保持
       return this.#cache.get(key);
     }
   }
 
-  // --- ECharts グラフカスタム要素 ---
+  // --- プロット描画クラス ---
   class ObCalPlot extends HTMLElement {
-    #container;
-    #chartInstance = null;
-    #resizeObserver;
-    #drawData = null;
-
+    #box; #chart = null; #observer; #src = null;
     constructor() {
       super();
-      this.#container = document.createElement('div');
-      this.#container.style.cssText = 'width: 100%; position: relative;';
-      
-      // リサイズ検知
-      this.#resizeObserver = new ResizeObserver(() => {
-        if (this.#chartInstance && this.#container.clientWidth > 0) {
-          this.#chartInstance.resize();
-        }
-      });
+      this.#box = document.createElement('div');
+      this.#box.style.cssText = 'width: 100%; position: relative;';
+      this.#observer = new ResizeObserver(() => { if (this.#chart && this.#box.clientWidth > 0) this.#chart.resize(); }); // リサイズ検知
     }
-
+    // --- 接続コールバック ---
     connectedCallback() {
-      this.appendChild(this.#container);
-      this.#resizeObserver.observe(this.#container);
+      this.appendChild(this.#box);
+      this.#observer.observe(this.#box);
     }
-
+    // --- 切断コールバック ---
     disconnectedCallback() {
-      this.#resizeObserver.disconnect();
-      if (this.#chartInstance) {
-        this.#chartInstance.dispose();
-        this.#chartInstance = null;
-      }
+      this.#observer.disconnect();
+      if (this.#chart) { this.#chart.dispose(); this.#chart = null; } // メモリ解放
     }
-
     // --- データ注入と描画 ---
-    set drawData(data) {
-      this.#drawData = data;
+    set src(data) {
+      this.#src = data;
       this.#render();
     }
-
     // --- 描画消去 ---
     clear() {
-      this.#drawData = null;
-      if (this.#chartInstance) {
-        this.#chartInstance.clear();
-      }
-      this.#container.style.height = '0px';
+      this.#src = null;
+      if (this.#chart) this.#chart.clear();
+      this.#box.style.height = '0px'; // 領域リセット
     }
-
     // --- 散布図描画本体 ---
     #render() {
-      const { previewData, symbolData, statsData } = this.#drawData || {};
-      if (!previewData?.length || typeof echarts === 'undefined') {
-        this.clear();
-        return;
-      }
-
-      // ⑦ プロットエリア正方形固定のためのサイズ計算
-      const sideLength = this.parentElement?.clientWidth || 276;
-      this.#container.style.height = `${sideLength}px`;
-      this.#container.style.width = `${sideLength}px`;
-
-      if (!this.#chartInstance) {
-        this.#chartInstance = echarts.init(this.#container);
-      }
-
-      // --- スケール計算 ---
-      const { niceMin, niceMax, niceTicks } = Mtd.Utils.calcNiceScale(
-        previewData.map(d => d.x), 
-        previewData.map(d => d.y)
-      );
+      const { prevData, statsData, symbData } = this.#src || {};
+      if (!prevData?.length || typeof echarts === 'undefined') return this.clear(); // データ不足
+      const size = this.parentElement?.clientWidth || 276;
+      this.#box.style.height = `${size}px`;
+      this.#box.style.width = `${size}px`; // 正方形維持
+      if (!this.#chart) this.#chart = echarts.init(this.#box);
+      const { niceMin, niceMax, niceTicks } = Mtd.Utils.calcNiceScale(prevData.map(d => d.x), prevData.map(d => d.y));
       const interval = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
+      const fmtTick = val => { const tick = niceTicks.find(t => Math.abs(t.v - val) < 1e-8); return tick ? tick.f : val; }; // 刻みフォーマット
+      const graphText = Mtd.Utils.createStatsRows(statsData, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n');
+      const baseKey = symbData?.baseKey;
+      const rules = symbData?.rules || [];
+      const defRule = rules.find(r => r.key === "default");
+      const getShape = shape => shape === 'square' ? 'rect' : (shape === 'cross' ? 'path://M -4,-4 L 4,4 M 4,-4 L -4,4' : (shape === 'emptyCircle' ? 'circle' : (shape || 'circle')));
       
-      const tickFormatter = (val) => {
-        const tick = niceTicks.find(t => Math.abs(t.v - val) < 1e-8);
-        return tick ? tick.f : val;
-      };
-
-      // --- グラフ内テキスト生成 ---
-      const graphText = Mtd.Utils.createStatsRows(statsData, 3, [
-        { key: 'R² = {r2}', label: '' },
-        { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }
-      ]).map(r => r[1]).join('\n');
-
-      // --- ⑤ シンボル判定とスタイル適用 ---
-      const baseKey = symbolData?.baseKey;
-      const rules = symbolData?.rules || [];
-      const defaultRule = rules.find(r => r.id === "default");
-
-      const getShape = shape => {
-        if (shape === 'square') return 'rect';
-        if (shape === 'cross') return 'path://M -4,-4 L 4,4 M 4,-4 L -4,4'; 
-        if (shape === 'emptyCircle') return 'circle'; // 描画パスは円を使用
-        return shape || 'circle';
-      };
-
-      const scatterData = previewData.map(d => {
-        const val = d[baseKey];
-        // 個別一致 -> Defaultの順で適用
-        const rule = rules.find(r => r.target !== "" && r.target === val) || defaultRule;
-        
+      const plotData = prevData.map(d => {
+        const rule = rules.find(r => r.target !== "" && r.target === d[baseKey]) || defRule; // ルール適用
         const shapeVal = rule.shape;
         const isEmpty = shapeVal === 'emptyCircle';
         const shape = getShape(shapeVal);
         const baseColor = ThemeCache.get(rule.color);
-
-        // 線丸指定時は塗りを透明、枠線に色を適用
-        const color = isEmpty ? 'transparent' : baseColor;
-        const borderColor = baseColor;
-        const borderWidth = isEmpty ? 1.5 : 1; 
-
         return {
-          value: [d.x, d.y],
-          id: d.id,
-          group: d.group,
-          symbol: shape,
-          symbolSize: shape.startsWith('path://') ? 7 : 6,
-          itemStyle: { color, borderColor, borderWidth }
+          value: [d.x, d.y], id: d.id, group: d.group, symbol: shape, symbolSize: shape.startsWith('path://') ? 7 : 6,
+          itemStyle: { color: isEmpty ? 'transparent' : baseColor, borderColor: baseColor, borderWidth: isEmpty ? 1.5 : 1 }
         };
       });
-
-      // --- 描画系列 (Series) ---
-      const series = [{ type: 'scatter', data: scatterData, animation: false }];
-      
+      const series = [{ type: 'scatter', data: plotData, animation: false }];
       if (statsData?.slope != null && statsData?.intercept != null) {
         const { slope, intercept } = statsData;
         series.push({
           type: 'line',
-          data: [
-            [niceMin, slope * niceMin + intercept],
-            [niceMax, slope * niceMax + intercept]
-          ],
-          symbol: 'none',
-          lineStyle: { color: ThemeCache.get('var(--grey400)'), width: 1, type: 'dashed', opacity: 0.5 },
-          animation: false,
-          silent: true
+          data: [[niceMin, slope * niceMin + intercept], [niceMax, slope * niceMax + intercept]], // 回帰直線
+          symbol: 'none', lineStyle: { color: ThemeCache.get('var(--grey400)'), width: 1, type: 'dashed', opacity: 0.5 }, animation: false, silent: true
         });
       }
-
-      // --- ECharts Option 設定 ---
       const axisColor = ThemeCache.get('var(--grey400)');
       const gridBorder = ThemeCache.get('var(--grey200)');
-      const gridPlotSize = sideLength - 70; 
-
+      const gridPlotSize = size - 70;
       const option = {
-        animation: false, 
-        grid: {
-          left: 45, top: 25, 
-          width: gridPlotSize, height: gridPlotSize,
-          show: true, borderColor: gridBorder, borderWidth: 1
-        },
+        animation: false,
+        grid: { left: 45, top: 25, width: gridPlotSize, height: gridPlotSize, show: true, borderColor: gridBorder, borderWidth: 1 },
         tooltip: {
-          formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`,
-          backgroundColor: 'rgba(255,255,255,0.95)',
-          textStyle: { fontSize: 11, color: '#333' }
+          formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`, // ツールチップ
+          backgroundColor: 'rgba(255,255,255,0.95)', textStyle: { fontSize: 11, color: '#333' }
         },
         xAxis: {
-          type: 'value',
-          name: 'WDXRF',
-          nameLocation: 'middle',
-          nameGap: 20, 
-          nameTextStyle: { fontSize: 11, color: axisColor },
-          min: niceMin, max: niceMax, interval: interval,
-          axisLabel: { 
-            margin: 6, 
-            fontSize: 10, 
-            color: axisColor,
-            formatter: val => tickFormatter(val)
-          },
+          type: 'value', name: 'WDXRF', nameLocation: 'middle', nameGap: 20, nameTextStyle: { fontSize: 11, color: axisColor },
+          min: niceMin, max: niceMax, interval: interval, axisLabel: { margin: 6, fontSize: 10, color: axisColor, formatter: val => fmtTick(val) },
           splitLine: { show: true, lineStyle: { color: gridBorder, type: 'solid', width: 0.3 } },
-          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
-          axisTick: { show: false, inside: true }
+          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } }, axisTick: { show: false, inside: true }
         },
         yAxis: {
-          type: 'value',
-          name: 'PXRF',
-          nameLocation: 'middle',
-          nameGap: 22, 
-          nameTextStyle: { fontSize: 11, color: axisColor },
-          min: niceMin, max: niceMax, interval: interval,
-          axisLabel: { 
-            rotate: 90, 
-            verticalAlign: 'middle',
-            align: 'center',
-            margin: 8, 
-            fontSize: 10, 
-            color: axisColor,
-            formatter: val => (Math.abs(val - niceMin) < 1e-8) ? '' : tickFormatter(val)
-          },
+          type: 'value', name: 'PXRF', nameLocation: 'middle', nameGap: 22, nameTextStyle: { fontSize: 11, color: axisColor },
+          min: niceMin, max: niceMax, interval: interval, axisLabel: { rotate: 90, verticalAlign: 'middle', align: 'center', margin: 8, fontSize: 10, color: axisColor, formatter: val => (Math.abs(val - niceMin) < 1e-8) ? '' : fmtTick(val) },
           splitLine: { show: true, lineStyle: { color: gridBorder, type: 'solid', width: 0.3 } },
-          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
-          axisTick: { show: false, inside: true }
+          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } }, axisTick: { show: false, inside: true }
         },
-        graphic: [{
-          type: 'text',
-          left: 55, top: 35,
-          style: { text: graphText, fontSize: 10, fill: axisColor, fontFamily: 'Roboto, sans-serif' }
-        }],
+        graphic: [{ type: 'text', left: 55, top: 35, style: { text: graphText, fontSize: 10, fill: axisColor, fontFamily: 'Roboto, sans-serif' } }], // テキスト注入
         series: series
       };
-
-      this.#chartInstance.setOption(option);
+      this.#chart.setOption(option);
     }
   }
-
   customElements.define('ob-cal-plot', ObCalPlot);
 </script>

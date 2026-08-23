@@ -28,40 +28,40 @@
               <div id="configModeBox"></div>
             </div>
           </details>
-          <div id="configStatusBar" class="status-bar" data-status="hidden"></div>
+          <div id="configStatusBar" class="status-bar" data-status="hidden" data-bind-status="Tab1ST.config.status"></div>
           <hr>
           <!-- ファイル層 -->
-          <details id="fileSection" data-type="disabled">
+          <details id="rawSection" data-type="disabled">
             <summary>読込と検証</summary>
             <div class="flex-row">
-              <button id="fileLoadBtn" data-type="primary" data-action="Tab1.loadFile">データを取得</button>
+              <button id="rawLoadBtn" data-type="primary" data-action="Tab1.loadFile">データを取得</button>
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
-            <div id="fileArea" style="display: none;">
-              <div id="fileBox"></div>
+            <div id="rawArea" style="display: none;">
+              <div id="rawBox"></div>
             </div>
-            <div id="fileBtnArea" class="field-row" style="display: none;">
-              <button id="fileMakeBtn" data-type="primary" class="outline" data-action="Tab1.makeFileList" disabled>リスト生成</button>
-              <button id="fileValdBtn" data-type="primary" class="outline" data-action="Tab1.validateFileList" disabled>検証</button>
+            <div id="rawBtnArea" class="field-row" style="display: none;">
+              <button id="rawMakeBtn" data-type="primary" class="outline" data-action="Tab1.makeFileList" disabled>リスト生成</button>
+              <button id="rawValdBtn" data-type="primary" class="outline" data-action="Tab1.validateFileList" disabled>検証</button>
             </div>
           </details>
-          <div id="fileStatusBar" class="status-bar" data-status="hidden"></div>
+          <div id="rawStatusBar" class="status-bar" data-status="hidden" data-bind-status="Tab1ST.raw.status"></div>
           <hr>
           <!-- 抽出層 -->
-          <details id="exacSection" data-type="disabled">
+          <details id="extrSection" data-type="disabled">
             <summary>抽出と格納</summary>
             <div class="flex-row">
-              <button id="exacBtn" data-type="primary" data-action="Tab1.extractFile" disabled>データを抽出</button>
-              <span class="txt-btninfo" id="exacInfoTxt">読込シート「Results」</span>
+              <button id="extrBtn" data-type="primary" data-action="Tab1.extractFile" disabled>データを抽出</button>
+              <span class="txt-btninfo" id="extrInfoTxt">読込シート「Results」</span>
             </div>
-            <div id="exacArea" style="display: none;">
-              <div id="exacBox"></div>
+            <div id="extrArea" style="display: none;">
+              <div id="extrBox"></div>
             </div>
-            <div id="exacBtnArea" class="field-row">
-              <button id="exacPushBtn" data-type="primary" class="outline" style="display: none;" data-action="Tab1.pushExacData" disabled>PXRFに格納</button>
+            <div id="extrBtnArea" class="field-row">
+              <button id="extrPushBtn" data-type="primary" class="outline" style="display: none;" data-action="Tab1.pushExtrData" disabled>PXRFに格納</button>
             </div>
           </details>
-          <div id="exacStatusBar" class="status-bar" data-status="hidden"></div>
+          <div id="extrStatusBar" class="status-bar" data-status="hidden" data-bind-status="Tab1ST.extr.status"></div>
         </fieldset>
       </div>
 
@@ -69,86 +69,86 @@
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset">
           <!-- dataset層 -->
-          <details id="datasetSection" open>
+          <details id="dsetSection" open>
             <summary>データ読込・選択</summary>
-            <div id="datasetArea" style="display: none;">
-              <label>dataset選択</label>
-              <ob-multi-select id="datasetBoxEl" data-change-item="Tab2.toggleDataset" data-change-all="Tab2.toggleAllDataset" data-bind-selected="Tab2ST.dataset.filter"></ob-multi-select>
+            <div id="dsetArea" style="display: none;">
+              <label>データセット選択</label>
+              <ob-multi-select id="dsetBoxEl" data-change-item="Tab2.toggleDataset" data-change-all="Tab2.toggleAllDataset" data-bind-opts="Tab2ST.dset.available" data-bind-refs="Tab2ST.dset.filter"></ob-multi-select>
             </div>
             <div class="field-row">
-              <button id="datasetLoadBtn" data-type="primary" data-action="Tab2.loadData">データを読込</button>
-              <button id="datasetFilterBtn" data-type="primary" class="outline" data-action="Tab2.filterData" disabled>データを確定</button>
+              <button id="dsetLoadBtn" data-type="primary" data-action="Tab2.loadData">データを読込</button>
+              <button id="dsetFilterBtn" data-type="primary" class="outline" data-action="Tab2.filterData" disabled>データを確定</button>
             </div>
           </details>
-          <div id="datasetLoadBar" class="status-bar" data-status="hidden"></div>
+          <div id="dsetLoadBar" class="status-bar" data-status="hidden" data-bind-status="Tab2ST.dset.status"></div>
           <hr>
           <!-- シンボル層 -->
-          <details id="symbolSection" data-type="disabled">
+          <details id="symbSection" data-type="disabled">
             <summary>シンボル設定</summary>
-            <div id="symbolArea" style="display: none;">
+            <div id="symbArea" style="display: none;">
               <label>属性選択</label>
               <div class="field-row" style="margin-top: var(--unit)">
-                <div id="symbolAxisBox"></div>
-                <button id="symbolResetBtn" data-type="primary" class="outline" data-action="Tab2.resetSymbolRules">リセット</button>
+                <div id="symbAxisBox"></div>
+                <button id="symbResetBtn" data-type="primary" class="outline" data-action="Tab2.resetSymbolRules">リセット</button>
               </div>
               <label>シンボル設定</label>
-              <div id="symbolBox" class="scroll-y">
+              <div id="symbBox" class="scroll-y">
                 <ob-symbol-table id="symbolTableEl"></ob-symbol-table>
               </div>
             </div>
             <div class="field-row">
-              <button id="symbolBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
+              <button id="symbBtn" data-type="primary" data-action="Tab2.setSymbolMap" disabled>シンボル確定</button>
             </div>
           </details>
-          <div id="symbolStatusBar" class="status-bar" data-status="hidden"></div>
+          <div id="symbStatusBar" class="status-bar" data-status="hidden" data-bind-status="Tab2ST.symb.status"></div>
           <hr>
           <!-- 補正＆プレビュー層 -->
-          <details id="previewSection" data-type="disabled">
+          <details id="prevSection" data-type="disabled">
             <summary>補正＆プレビュー</summary>
-            <div id="previewArea">
-              <div id="previewChartBox"></div>
-              <div id="previewStatsTable"></div>
+            <div id="prevArea">
+              <div id="prevChartBox"></div>
+              <div id="prevStatsTable"></div>
               <div class="field-row">
                 <div class="field-col">
                   <label>プレビュー値</label>
-                  <div id="previewValueBox"></div>
+                  <div id="prevValueBox"></div>
                 </div>
                 <div class="field-col">
                   <label>補正方法</label>
-                  <div id="previewCorrectionBox"></div>
+                  <div id="prevCorrectionBox"></div>
                 </div>
               </div>
               <div class="field-row">
-                <div id="previewLODBox" class="field-col"></div>
-                <div id="previewCalToggleBox" class="field-col"></div>
+                <div id="prevLODBox" class="field-col"></div>
+                <div id="prevCalToggleBox" class="field-col"></div>
               </div>
               <div class="field-row">
-                <button id="previewMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
+                <button id="prevMakeBtn" data-type="primary" data-action="Tab2.makePreview" disabled>プレビュー更新</button>
               </div>
               <label>Obsidianモード計測値</label>
-              <ob-multi-select id="previewModeBoxEl" data-change-item="Tab2.togglePreviewMode" data-change-all="Tab2.toggleAllPreviewMode" data-bind-selected="Tab2ST.preview.modeMap"></ob-multi-select>
-              <label>検量線適用</label>
-              <ob-multi-select id="previewCalElementBoxEl" data-change-item="Tab2.toggleCalElement" data-change-all="Tab2.toggleAllCalElement" data-bind-selected="Tab2ST.preview.calElementMap"></ob-multi-select>
+              <ob-multi-select id="prevModeBoxEl" data-change-item="Tab2.togglePreviewMode" data-change-all="Tab2.toggleAllPreviewMode" data-bind-refs="Tab2ST.prev.modeMap"></ob-multi-select>
+              <label>検量線適用対象</label>
+              <ob-multi-select id="prevCalElementBoxEl" data-change-item="Tab2.toggleCalElement" data-change-all="Tab2.toggleAllCalElement" data-bind-refs="Tab2ST.prev.calElementMap"></ob-multi-select>
               <label>対象Item</label>
-              <ob-multi-select id="previewItemBoxEl" data-change-item="Tab2.togglePreviewItem" data-change-all="Tab2.toggleAllPreviewItem" data-bind-selected="Tab2ST.preview.itemMap"></ob-multi-select>
-              <div id="previewSaveBox" style="display: none; margin-top: calc(var(--unit) * 3);">
+              <ob-multi-select id="prevItemBoxEl" data-change-item="Tab2.togglePreviewItem" data-change-all="Tab2.toggleAllPreviewItem" data-bind-refs="Tab2ST.prev.itemMap"></ob-multi-select>
+              <div id="prevSaveBox" style="display: none; margin-top: calc(var(--unit) * 3);">
                 <label>検量線を保存する</label>
                 <div class="field-row">
-                  <input type="text" id="previewSaveInput" class="form-control" placeholder="インデックス名を入力" data-bind="Tab2ST.preview.saveIndexName">
-                  <button id="previewSaveBtn" data-type="primary" class="outline" data-action="Tab2.saveCorrection">補正出力</button>
+                  <input type="text" id="prevSaveInput" class="form-control" placeholder="インデックス名を入力" data-bind="Tab2ST.prev.saveIndexName">
+                  <button id="prevSaveBtn" data-type="primary" class="outline" data-action="Tab2.saveCorrection">補正出力</button>
                 </div>
               </div>
             </div>
           </details>
-          <div id="previewBar" class="status-bar" data-status="hidden"></div>
+          <div id="prevBar" class="status-bar" data-status="hidden" data-bind-status="Tab2ST.prev.status"></div>
           <hr>
           <!-- レポート層 -->
-          <details id="reportSection" data-type="disabled">
+          <details id="repoSection" data-type="disabled">
             <summary>レポート作成</summary>
             <div class="field-row">
               <button id="reportOpenBtn" data-type="primary" data-action="Tab2.openReport">PDF用レポートを作成</button>
             </div>
-            <div id="reportStatusBar" class="status-bar" data-status="hidden"></div>
+            <div id="reportStatusBar" class="status-bar" data-status="hidden" data-bind-status="Tab2ST.repo.status"></div>
           </details>
         </fieldset>
       </div>

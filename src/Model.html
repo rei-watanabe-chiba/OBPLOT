@@ -1,197 +1,76 @@
-<!-- Model.html *必ず先頭include -->
+<!-- Model.html -->
 <script>
   // --- global ---
   const GLOBAL_CONFIG = {
-    fileSheetName: "File",
-    fileHeader: ['file', 'mode', 'id', 'sub_id', 'info'],
-    resultsSheetName: "Results",
-    filelistSheetName: "ファイルリスト",
-    filelistHeader: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'],
-    extractSheetName: "抽出データ",
-    pxrfSheetName: "PXRF",
-    wdxrfSheetName: "WDXRF",
-    correctionSheetName: "Correction",
-    validModes: ["mudrock", "obsidian"],
-    propFileEdited: "isFileListEdited",
+    fileSheetName: "File", fileHeader: ['file', 'mode', 'id', 'sub_id', 'info'], resultsSheetName: "Results",
+    filelistSheetName: "ファイルリスト", filelistHeader: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'],
+    extractSheetName: "抽出データ", pxrfSheetName: "PXRF", wdxrfSheetName: "WDXRF", correctionSheetName: "Correction",
+    validModes: ["mudrock", "obsidian"], propFileEdited: "isFileListEdited",
     optionalElements: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
     valueElement: ["K", "Ca", "Ti", "Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
     valueLogic: ["Mn * 100 / Fe", "log10(Fe/K)"],
     fileFields: [
-      { key: "file", label: "file *必須", required: true },
-      { key: "mode", label: "mode *必須", required: true },
-      { key: "id", label: "id *必須", required: true },
-      { key: "sub_id", label: "sub_id", required: false },
-      { key: "info", label: "info", required: false }
+      { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
+      { key: "id", label: "id *必須", required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
     ],
-    configModes: [
-      { value: "", label: "モードを選択してください", disabled: true, hidden: true },
-      { value: "Dual", label: "Dualモード" },
-      { value: "Single", label: "Singleモード" }
+    configModes: [{ value: "", label: "モードを選択", disabled: true, hidden: true }, { value: "Dual", label: "Dualモード" }, { value: "Single", label: "Singleモード" }],
+    extrFields: [
+      { key: "dset", label: "dset *必須", placeholder: "データセット名", bind: "Tab1ST.extr.refs.dset" },
+      { key: "item", label: "item", placeholder: "計測情報", bind: "Tab1ST.extr.refs.item" },
+      { key: "date", label: "date", placeholder: "計測日", bind: "Tab1ST.extr.refs.date" }
     ],
-    exacFields: [
-      { key: "dataset", label: "dataset *必須", placeholder: "データセット・遺跡名", bind: "Tab1ST.exac.map.dataset" },
-      { key: "item", label: "item", placeholder: "計測情報（任意）", bind: "Tab1ST.exac.map.item" },
-      { key: "date", label: "date", placeholder: "計測日（任意）", bind: "Tab1ST.exac.map.date" }
-    ],
-    symbolAxes: [
-      { value: "dataset", label: "dataset" },
-      { value: "item", label: "item" },
-      { value: "Group", label: "Group" },
-      { value: "Source", label: "Source" }
-    ],
-    symbolShapes: [
-      { val: 'emptyCircle', label: '○' },
-      { val: 'circle', label: '●' },
-      { val: 'triangle', label: '▲' },
-      { val: 'square', label: '■' },
-      { val: 'cross', label: '✖' }
-    ],
-    symbolColors: [
-      { val: 'var(--grey600)', label: 'Gray' },
-      { val: 'var(--main-blue)', label: 'Blue' },
-      { val: 'var(--main-green)', label: 'Green' },
-      { val: 'var(--main-red)', label: 'Red' },
-      { val: '#fbbc04', label: 'Yellow' }
-    ],
+    symbAxes: [{ value: "dset", label: "dset" }, { value: "item", label: "item" }, { value: "Group", label: "Group" }, { value: "Source", label: "Source" }],
+    symbShapes: [{ val: 'emptyCircle', label: '○' }, { val: 'circle', label: '●' }, { val: 'triangle', label: '▲' }, { val: 'square', label: '■' }, { val: 'cross', label: '✖' }],
+    symbColors: [{ val: 'var(--grey600)', label: 'Gray' }, { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' }, { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' }],
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
     mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 }
   };
-  
   // --- htmlID ---
-  // (省略せずに残します)
   const Tab1UI = {
-    tabSet: "tab1Fieldset",
-    configSection: "configSection",
-    configBar: "configStatusBar",
-    configArea: "configArea",
-    configModeBox: "configModeBox",
-    fileSection: "fileSection",
-    fileLoadBtn: "fileLoadBtn",
-    fileBar: "fileStatusBar",
-    fileArea: "fileArea",
-    fileBox: "fileBox",
-    fileBtnBox:"fileBtnArea",
-    fileMakeBtn: "fileMakeBtn",
-    fileValdBtn: "fileValdBtn",
-    exacSection: "exacSection",
-    exacBar: "exacStatusBar",
-    exacBtn: "exacBtn",
-    exacArea: "exacArea",
-    exacPushBtn: "exacPushBtn",
-    exacBox: "exacBox"
-  }
-
+    tabSet: "tab1Fieldset", configSection: "configSection", configBar: "configStatusBar", configArea: "configArea", configModeBox: "configModeBox",
+    rawSection: "rawSection", rawLoadBtn: "rawLoadBtn", rawBar: "rawStatusBar", rawArea: "rawArea", rawBox: "rawBox", rawBtnBox:"rawBtnArea", rawMakeBtn: "rawMakeBtn", rawValdBtn: "rawValdBtn",
+    extrSection: "extrSection", extrBar: "extrStatusBar", extrBtn: "extrBtn", extrArea: "extrArea", extrPushBtn: "extrPushBtn", extrBox: "extrBox"
+  };
   const Tab2UI = {
     tabSet: "tab2Fieldset",
-    datasetSection: "datasetSection",
-    datasetLoadBtn: "datasetLoadBtn",
-    datasetfilterBtn: "datasetFilterBtn",
-    datasetloadBar: "datasetLoadBar",
-    datasetArea: "datasetArea",
-    datasetBox: "datasetBox",
-    symbolSection: "symbolSection",
-    symbolArea: "symbolArea",
-    symbolAxisBox: "symbolAxisBox",
-    symbolBox: "symbolBox",
-    symbolBtn: "symbolBtn",
-    symbolBar: "symbolStatusBar", 
-    previewSection: "previewSection",
-    previewModeBox: "previewModeBox",
-    previewItemBox: "previewItemBox",
-    previewCorrectionBox: "previewCorrectionBox",
-    previewValueBox: "previewValueBox",
-    previewLODBox: "previewLODBox",
-    previewCalToggleBox: "previewCalToggleBox",
-    previewMakeBtn: "previewMakeBtn",
-    previewChartBox: "previewChartBox",
-    previewStatsTable: "previewStatsTable",
-    previewBar: "previewBar",
-    previewSaveBox: "previewSaveBox",
-    previewSaveInput: "previewSaveInput",
-    previewSaveBtn: "previewSaveBtn",
-    reportSection: "reportSection",
-    reppBtn: "reportOpenBtn",
-    repoBar: "reportStatusBar"
+    dsetSection: "dsetSection", dsetLoadBtn: "dsetLoadBtn", dsetfilterBtn: "dsetFilterBtn", dsetloadBar: "dsetLoadBar", dsetArea: "dsetArea", dsetBox: "dsetBox",
+    symbSection: "symbSection", symbArea: "symbArea", symbAxisBox: "symbAxisBox", symbBox: "symbBox", symbBtn: "symbBtn", symbBar: "symbStatusBar", 
+    prevSection: "prevSection", prevModeBox: "prevModeBox", prevItemBox: "prevItemBox", prevCorrectionBox: "prevCorrectionBox", prevValueBox: "prevValueBox", prevLODBox: "prevLODBox", prevCalToggleBox: "prevCalToggleBox", prevMakeBtn: "prevMakeBtn", prevChartBox: "prevChartBox", prevStatsTable: "prevStatsTable", prevBar: "prevBar", prevSaveBox: "prevSaveBox", prevSaveInput: "prevSaveInput", prevSaveBtn: "prevSaveBtn",
+    repoSection: "repoSection", reppBtn: "reportOpenBtn", repoBar: "reportStatusBar"
   };
-
   // --- フェーズ定義 ---
   const TAB1_PHASE = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
   const TAB2_PHASE = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
-
   // --- 状態管理クラス定義 ---
   class AppState {
-    #state; 
-    #initialState;
-    #listeners; 
-    
+    #state; #initialState; #listeners; 
     constructor() {
-      // 初期状態の定義
-      const initialStateDef = {
+      const initDef = {
         GLB: { activeTab: "tab1", isLocked: false },
         Tab1ST: {
-          phase: TAB1_PHASE.INIT,
-          config: { status: [], mode: "" },
-          file: { data: null, status: [], cachedStatus: [], map: {}, isMapError: [true, true, true, false, false] },
-          exac: { status: [], cachedStatus: [], map: { dataset: "", item: "", date: "" }, isMapError: [true, false, false] }
+          phase: TAB1_PHASE.INIT, config: { status: [], mode: "" },
+          raw: { data: null, status: [], cachedStatus: [], refs: {}, isRefsErr: [true, true, true, false, false] },
+          extr: { status: [], cachedStatus: [], refs: { dset: "", item: "", date: "" }, isRefsErr: [true, false, false] }
         },
         Tab2ST: {
           phase: TAB2_PHASE.INIT,
-          dataset: {
-            rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null },
-            availableDatasets: [],
-            filter: [],
-            basePXRF: null, 
-            baseWDXRF: null,
-            status: []
-          },
-          symbol: { 
-            baseKey: "dataset", 
-            rules: [{ id: "default", target: "", shape: "emptyCircle", color: "var(--grey600)" }], 
-            status: [] 
-          },
-          preview: {
-            modeMap: [...GLOBAL_CONFIG.optionalElements],
-            itemMap: [], 
-            calElementMap: [...GLOBAL_CONFIG.valueElement], // 新規追加
-            value: GLOBAL_CONFIG.valueElement[0], // 変更
-            correction: "new",
-            lodEnabled: false,
-            calEnabled: false,
-            saveIndexName: "",
-            correctionLogic: {}, 
-            previewData: null,
-            statsData: null,
-            status: []
-          },
-          report: { 
-            values: [], 
-            corrections: [],
-            status: []
-          }
+          dset: { rawData: { correction: [], mergedPXRF: null, wdxrfObjs: null }, available: [], filter: [], basePXRF: null, baseWDXRF: null, status: [] },
+          symb: { baseKey: "dset", rules: [{ key: "default", target: "", shape: "emptyCircle", color: "var(--grey600)" }], status: [] },
+          prev: { modeMap: [...GLOBAL_CONFIG.optionalElements], itemMap: [], calElementMap: [...GLOBAL_CONFIG.valueElement], val: GLOBAL_CONFIG.valueElement[0], correction: "new", lodEnabled: false, calEnabled: false, saveIndexName: "", correctionLogic: {}, prevData: null, statsData: null, status: [] },
+          repo: { values: [], corrections: [], status: [] }
         }
       };
-      
-      this.#initialState = JSON.parse(JSON.stringify(initialStateDef));
-      this.#state = JSON.parse(JSON.stringify(initialStateDef));
+      this.#initialState = JSON.parse(JSON.stringify(initDef));
+      this.#state = JSON.parse(JSON.stringify(initDef));
       this.#listeners = {};
     }
-    
-    // Proxy
-    get proxy() {
-      return this.#state;
-    }
-
-    // state取得
+    get proxy() { return this.#state; }
     get(paths) {
       const resolve = p => (Array.isArray(p) ? p : p.split('.')).reduce((o, k) => o?.[k], this.#state);
       return Array.isArray(paths) ? paths.map(resolve) : resolve(paths);
     }
-    
-    // state更新
     set(updates, value) {
-      if (typeof updates === 'object' && !Array.isArray(updates)) {
-        return Object.entries(updates).forEach(([k, v]) => this.set(k, v));
-      }
+      if (typeof updates === 'object' && !Array.isArray(updates)) return Object.entries(updates).forEach(([k, v]) => this.set(k, v));
       const keys = Array.isArray(updates) ? updates : updates.split('.');
       const last = keys.pop();
       const target = keys.reduce((o, k) => o[k] ??= {}, this.#state);
@@ -200,26 +79,19 @@
         this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(value));
       }
     }
-    
-    // state監視登録
     subscribe(path, callback) {
       const key = Array.isArray(path) ? path.join('.') : path;
       (this.#listeners[key] ??= []).push(callback);
     }
-
-    // セクションの初期化
     reset(paths) {
-      const pathArray = Array.isArray(paths) ? paths : [paths];
       const updates = {};
-      pathArray.forEach(path => {
-        const keys = path.split('.');
-        const initialVal = keys.reduce((o, k) => o?.[k], this.#initialState);
-        updates[path] = initialVal !== undefined ? JSON.parse(JSON.stringify(initialVal)) : null;
+      (Array.isArray(paths) ? paths : [paths]).forEach(p => {
+        const initialVal = p.split('.').reduce((o, k) => o?.[k], this.#initialState);
+        updates[p] = initialVal !== undefined ? JSON.parse(JSON.stringify(initialVal)) : null;
       });
       this.set(updates);
     }
   }
-
   // --- GAS通信(API)クラス ---
   class GasService {
     static #serverCall(funcName, ...args) {
@@ -236,8 +108,6 @@
     static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
   }
-
-  // --- 外部参照用 ---
   const API = GasService;
   const State = new AppState();
 </script>

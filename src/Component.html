@@ -1,35 +1,29 @@
 <!-- Component.html -->
 <script>
-  // --- 汎用DOM操作クラス ---
+  // --- 汎用DOM操作 ---
   class DOM {
-    // --- 要素取得 ---
-    static get = id => document.getElementById(id);
-    // --- テキスト設定 ---
-    static setDOM = (id, text) => { if (text !== undefined && this.get(id)) this.get(id).innerText = text; };
-    // --- 表示切替 ---
-    static toggle = (id, isShow) => { if (this.get(id)) this.get(id).style.display = isShow ? "" : "none"; };
-    // --- 開閉状態切替 ---
-    static open = (id, isOpen) => { if (this.get(id)?.tagName === "DETAILS") setTimeout(() => { this.get(id).open = isOpen; }, 200); };
-    // --- 無効化切替 ---
-    static setDisabled = (id, isDisabled) => { if (this.get(id)) this.get(id).disabled = isDisabled; };
-    // --- 属性設定 ---
-    static setAttr = (id, attr, val) => val ? this.get(id)?.setAttribute(attr, val) : this.get(id)?.removeAttribute(attr);
+    static el = id => document.getElementById(id);
+    static updateText = (id, text) => { if (text !== undefined && this.el(id)) this.el(id).innerText = text; };
+    static toggle = (id, isShow) => { if (this.el(id)) this.el(id).style.display = isShow ? "" : "none"; };
+    static open = (id, isOpen) => { if (this.el(id)?.tagName === "DETAILS") setTimeout(() => { this.el(id).open = isOpen; }, 200); };
+    static setDisabled = (id, isDisabled) => { if (this.el(id)) this.el(id).disabled = isDisabled; };
+    static setAttr = (id, attr, val) => val ? this.el(id)?.setAttribute(attr, val) : this.el(id)?.removeAttribute(attr);
   }
 
-  // --- 汎用DOM生成クラス ---
+  // --- 汎用DOM生成 ---
   class NewDOM {
-    // --- フォーム一括ビルダ ---
+    // --- フォーム一括構築 ---
     static buildFormFields(configArr, containerId, isClear = false) {
-      const container = DOM.get(containerId);
+      const container = DOM.el(containerId);
       if (!container || (!isClear && container.hasChildNodes())) return;
       if (isClear) container.replaceChildren(); // DOM初期化
-      const nodes = configArr.map(conf => {
+      container.append(...configArr.map(conf => {
         const { type, bind, change, field, options, hasEmpty, inputType, placeholder, label } = conf;
         const el = document.createElement(type === "select" ? "select" : "input");
         el.className = `field-${type} form-control`;
-        bind && el.setAttribute("data-bind", bind); // バインド設定
-        change && el.setAttribute("data-change", change);
-        field && el.setAttribute("data-field", field);
+        if (bind) el.dataset.bind = bind; // バインド付与
+        if (change) el.dataset.change = change;
+        if (field) el.dataset.field = field;
         if (type === "select") {
           hasEmpty !== false && el.add(new Option("---未選択---", ""));
           options?.forEach(opt => {
@@ -44,198 +38,145 @@
           if (placeholder) el.placeholder = placeholder;
         }
         if (label) {
-          const lbl = document.createElement("label"); // ラベルで包む
-          lbl.className = "field-label";
-          lbl.textContent = `${label} `;
-          lbl.appendChild(el);
-          return lbl;
+          const lbl = document.createElement("label"); // ラベル包装
+          lbl.className = "field-label"; lbl.textContent = `${label} `; lbl.appendChild(el); return lbl;
         }
         return el;
-      });
-      container.append(...nodes); // 一括追加
+      }));
     }
     // --- ステータス更新 ---
     static status(id, status = null) {
-      const el = DOM.get(id);
-      if (!el) return;
-      [el.dataset.status, el.innerText] = status?.length ? status : ["hidden", ""];
+      const el = DOM.el(id);
+      if (el) [el.dataset.status, el.innerText] = status?.length ? status : ["hidden", ""];
     }
-    // --- 汎用ダイアログ ---
+    // --- 汎用確認ダイアログ ---
     static confirm(title, msg, barObj = null) {
-      const saveStatus = barObj ? DOM.get(barObj)?.innerText : "";
+      const saveStatus = barObj ? DOM.el(barObj)?.innerText : "";
       if (barObj) this.status(barObj, ["loading", "実行中..."]);
-      return new Promise((resolve) => {
-        const dialog = DOM.get("universalConfirm");
-        DOM.setDOM("uDialogTitle", title);
-        DOM.setDOM("uDialogMessage", msg);
+      return new Promise(resolve => {
+        const dialog = DOM.el("universalConfirm");
+        DOM.updateText("uDialogTitle", title);
+        DOM.updateText("uDialogMessage", msg);
         dialog.showModal(); 
-        DOM.get("uDialogConfirmBtn").onclick = () => { dialog.close(); resolve(true); };
-        DOM.get("uDialogCancelBtn").onclick = () => {
+        DOM.el("uDialogConfirmBtn").onclick = () => { dialog.close(); resolve(true); };
+        DOM.el("uDialogCancelBtn").onclick = () => {
           dialog.close(); // 状態復元
           if (barObj) this.status(barObj, saveStatus ? ["message", saveStatus] : ["hidden", ""]);
           resolve(false);
         };
       });
     }
-    // --- トグルビルダ ---
+    // --- トグル構築 ---
     static buildToggle(config, containerId, isClear = false) {
-      const container = DOM.get(containerId);
+      const container = DOM.el(containerId);
       if (!container || (!isClear && container.hasChildNodes())) return;
       if (isClear) container.replaceChildren(); // DOM初期化
       container.insertAdjacentHTML('beforeend', Tpl.Toggle.row(config.label, config.bind, config.change, config.checked));
     }
     // --- 統計表描画 ---
-    static statsTable(stats, containerId = Tab2UI.previewStatsTable) {
-      const container = DOM.get(containerId);
+    static statsTable(stats, containerId = Tab2UI.prevStatsTable) {
+      const container = DOM.el(containerId);
       if (!container) return;
-      if (!stats) { container.replaceChildren(); return; } // 初期化
-      const rowsHtml = DataUtils.createStatsRows(stats).map(([label, val]) => Tpl.Stats.row(label, val)).join('');
-      container.innerHTML = Tpl.Stats.container(rowsHtml);
+      if (!stats) return container.replaceChildren(); // 初期化
+      container.innerHTML = Tpl.Stats.container(DataUtils.createStatsRows(stats).map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
     }
     // --- エラー状態更新 ---
     static inputs(mapBoxId, errorFlags) {
-      DOM.get(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => {
-        s.classList.toggle('has-error', !!errorFlags?.[idx]); // CSS切替
-      });
+      DOM.el(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errorFlags?.[idx]));
     }
   }
 
-  // --- 汎用ポップオーバー初期化 ---
+  // --- ポップオーバー ---
   class ObPopover extends HTMLElement {
     connectedCallback() {
       setTimeout(() => {
-        const summary = this.querySelector('.popover-summary');
-        const content = this.querySelector('.popover-content');
+        const summary = this.querySelector('.popover-summary'), content = this.querySelector('.popover-content');
         if (!summary || !content) return;
-        const uid = this.id || `pop_${Math.random().toString(36).substr(2, 9)}`;
-        const anchorName = `--anchor-${uid}`;
-        summary.setAttribute('popovertarget', uid);
-        summary.style.anchorName = anchorName;
-        content.id = uid;
-        content.setAttribute('popover', 'auto');
-        content.style.positionAnchor = anchorName;
+        const uid = this.id || `pop_${Math.random().toString(36).substr(2, 9)}`, anchorName = `--anchor-${uid}`;
+        summary.setAttribute('popovertarget', uid); summary.style.anchorName = anchorName;
+        content.id = uid; content.setAttribute('popover', 'auto'); content.style.positionAnchor = anchorName;
       }, 0);
     }
   }
 
-  // --- 汎用マルチ選択生成 ---
+  // --- マルチセレクト ---
   class ObMultiSelect extends HTMLElement {
-    #dataChangeItem;
-    #dataChangeAll;
-    // 初期化
+    #dataChangeItem; #dataChangeAll;
     connectedCallback() {
-      this.#dataChangeItem = this.getAttribute('data-change-item');
-      this.#dataChangeAll = this.getAttribute('data-change-all');
-      this.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "checkbox-container");
+      this.#dataChangeItem = this.dataset.changeItem; this.#dataChangeAll = this.dataset.changeAll;
+      this.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "cb-container");
     }
-    // オプション描画
-    set options(arr) {
+    set opts(arr) {
       const container = this.querySelector('.popover-content');
       if (!container) return;
-      if (!arr?.length) { container.innerHTML = '<div class="txt-btninfo">データなし</div>'; return; }
-      const itemsHtml = arr.map(item => Tpl.MultiSelect.item(item, this.#dataChangeItem)).join('');
-      const allHtml = this.#dataChangeAll ? Tpl.MultiSelect.selectAll(this.#dataChangeAll) : '';
-      container.innerHTML = allHtml + itemsHtml;
+      if (!arr?.length) return (container.innerHTML = '<div class="txt-btninfo">データなし</div>');
+      container.innerHTML = (this.#dataChangeAll ? Tpl.MultiSelect.selectAll(this.#dataChangeAll) : '') + arr.map(item => Tpl.MultiSelect.item(item, this.#dataChangeItem)).join('');
     }
-    // 選択状態反映
-    set selected(vals) {
+    set refs(vals) {
       const summary = this.querySelector('.popover-summary');
       if (summary) summary.innerHTML = vals?.length ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>` : '<span style="color:var(--grey400)">未選択</span>';
       const cbs = this.querySelectorAll('.dataset-cb');
       cbs.forEach(cb => cb.checked = Array.isArray(vals) && vals.includes(cb.value));
-      // 全選択連動
       const allCb = this.querySelector('.select-all-cb');
       if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
     }
   }
 
-  // --- シンボル定義テーブル生成 ---
+  // --- シンボルテーブル ---
   class ObSymbolTable extends HTMLElement {
-    #data = null;
-    static #COLS = [
-      { key: 'target', className: 'symbol-col-target', hasColor: false },
-      { key: 'shape', className: 'symbol-col-shape', hasColor: false },
-      { key: 'color', className: 'symbol-col-color', hasColor: true }
-    ];
-    // データ注入と初期化
-    set tableData(val) { this.#data = val; this.#render(); }
-    clear() { this.#data = null; this.replaceChildren(); }
-    // セレクトUI生成
+    #src = null;
+    static #COLS = [{ key: 'target', className: 'symb-col-target', hasColor: false }, { key: 'shape', className: 'symb-col-shape', hasColor: false }, { key: 'color', className: 'symb-col-color', hasColor: true }];
+    set src(val) { this.#src = val; this.#render(); }
+    clear() { this.#src = null; this.replaceChildren(); }
     #buildSelectHtml(opts, currentVal, type, idx, hasColor, actionsConfig) {
       let currentLabel = "未選択", currentColor = "";
       const itemsHtml = opts.map(opt => {
         if (opt.val === currentVal) { currentLabel = opt.label; currentColor = opt.val; }
         return Tpl.Symbol.item(opt, type, idx, hasColor, actionsConfig.update);
       }).join('');
-      const summaryHtml = Tpl.Symbol.summary(currentLabel, currentColor, hasColor, currentVal);
-      return Tpl.Common.popover(summaryHtml, itemsHtml, "single-summary", "");
+      return Tpl.Common.popover(Tpl.Symbol.summary(currentLabel, currentColor, hasColor, currentVal), itemsHtml, "single-summary", "");
     }
-    // テーブル描画
     #render() {
-      const { rules, optionsConfig, actionsConfig } = this.#data || {};
-      if (!rules?.length || !optionsConfig) { this.clear(); return; }
-      const rowsHtml = [...rules, { isAddRow: true }].map((rule, idx) => {
+      const { rules, optionsConfig, actionsConfig } = this.#src || {};
+      if (!rules?.length || !optionsConfig) return this.clear();
+      this.innerHTML = [...rules, { isAddRow: true }].map((rule, idx) => {
         if (rule.isAddRow) return Tpl.Symbol.addRow(actionsConfig.add, ObSymbolTable.#COLS);
-        const isDefault = rule.id === "default";
-        const btnHtml = Tpl.Symbol.btn(actionsConfig.remove, rule.id, "-", isDefault);
-        const colsHtml = ObSymbolTable.#COLS.map(col => {
-          if (col.key === 'target' && isDefault) return Tpl.Symbol.col(col.className, '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>');
-          return Tpl.Symbol.col(col.className, this.#buildSelectHtml(optionsConfig[col.key], rule[col.key], col.key, idx, col.hasColor, actionsConfig));
-        }).join('');
+        const isDefault = rule.key === "default";
+        const btnHtml = Tpl.Symbol.btn(actionsConfig.remove, rule.key, "-", isDefault);
+        const colsHtml = ObSymbolTable.#COLS.map(col => Tpl.Symbol.col(col.className, (col.key === 'target' && isDefault) ? '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>' : this.#buildSelectHtml(optionsConfig[col.key], rule[col.key], col.key, idx, col.hasColor, actionsConfig))).join('');
         return Tpl.Symbol.row(btnHtml, colsHtml);
       }).join('');
-      this.innerHTML = rowsHtml;
     }
   }
 
-  // --- 条件判定付き疑似テンプレート管理 ---
+  // --- テンプレート ---
   const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
   class Tpl {
     static Common = class {
-      // --- ポップオーバーHTML ---
-      static popover(summaryHtml, contentHtml, summaryClasses = "", contentClasses = "") {
-        return html`<ob-popover><button type="button" class="popover-summary ${summaryClasses}">${summaryHtml}</button><div class="popover-content scroll-y ${contentClasses}">${contentHtml}</div></ob-popover>`;
-      }
-      // --- カラーボックス生成 ---
+      static popover(summaryHtml, contentHtml, summaryClasses = "", contentClasses = "") { return html`<ob-popover><button type="button" class="popover-summary ${summaryClasses}">${summaryHtml}</button><div class="popover-content scroll-y ${contentClasses}">${contentHtml}</div></ob-popover>`; }
       static colorBox(color) { return color ? html`<span class="color-box" style="background: ${color}"></span>` : ""; }
-      // --- バッジ生成 ---
       static badge(val) { return html`<span class="badge">${val}</span>`; }
     };
     static Toggle = class {
-      // --- トグル行HTML ---
-      static row(label, bindPath, changePath, isChecked) {
-        return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isChecked ? "checked" : ""}><span class="toggle-slider"></span></label></div>`;
-      }
+      static row(label, bindPath, changePath, isChecked) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isChecked ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
     };
     static Stats = class {
-      // --- 統計行HTML ---
       static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
-      // --- 統計コンテナHTML ---
       static container(rowsHtml) { return html`<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`; }
     };
     static MultiSelect = class {
-      // --- 選択肢項目HTML ---
-      static item(val, dataChange) { return html`<label class="checkbox-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }
-      // --- 全選択項目HTML ---
-      static selectAll(dataChange) { return html`<label class="checkbox-item select-all"><input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked><span>すべて選択</span></label>`; }
+      static item(val, dataChange) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }
+      static selectAll(dataChange) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked><span>すべて選択</span></label>`; }
     };
     static Symbol = class {
-      // --- サマリーHTML ---
       static summary(label, color, hasColor, hasVal) { return html`${(hasColor && hasVal) ? Tpl.Common.colorBox(color) : ""}${label}`; }
-      // --- シンボル項目HTML ---
       static item(opt, type, idx, hasColor, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-symbol-idx="${idx}" data-symbol-type="${type}" value="${opt.val}" popovertargetaction="hide">${hasColor ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
-      // --- ボタンHTML ---
-      static btn(action, id, text, disabled) { return html`<button type="button" class="icon-btn" data-action="${action}" ${id ? html`data-rule-id="${id}"` : ""} ${disabled ? "disabled" : ""}>${text}</button>`; }
-      // --- カラムHTML ---
+      static btn(action, key, text, disabled) { return html`<button type="button" class="icon-btn" data-action="${action}" ${key ? html`data-rule-key="${key}"` : ""} ${disabled ? "disabled" : ""}>${text}</button>`; }
       static col(className, contentHtml) { return html`<div class="${className}">${contentHtml}</div>`; }
-      // --- レコード行HTML ---
-      static row(btnHtml, colsHtml) { return html`<div class="symbol-table-row"><div class="symbol-col-btn">${btnHtml}</div>${colsHtml}</div>`; }
-      // --- 追加行HTML ---
+      static row(btnHtml, colsHtml) { return html`<div class="symb-table-row"><div class="symb-col-btn">${btnHtml}</div>${colsHtml}</div>`; }
       static addRow(actionAdd, colsArr) { return this.row(this.btn(actionAdd, "", "+", false), colsArr.map(c => this.col(c.className, "")).join('')); }
     };
   }
 
-  customElements.define('ob-popover', ObPopover);
-  customElements.define('ob-multi-select', ObMultiSelect);
-  customElements.define('ob-symbol-table', ObSymbolTable);
+  customElements.define('ob-popover', ObPopover); customElements.define('ob-multi-select', ObMultiSelect); customElements.define('ob-symbol-table', ObSymbolTable);
 </script>

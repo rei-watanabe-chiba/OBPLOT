@@ -4,9 +4,8 @@
     // --- 再配列処理 ---
     static remapArry(data, indexArr, newHeader = null) {
       if (!data?.length) return [];
-      const [rawHeader, ...body] = data;
       const remap = row => indexArr.map(idx => idx !== -1 ? (row?.[idx] ?? "") : "");
-      return [newHeader ?? remap(rawHeader), ...body.map(remap)];
+      return [newHeader ?? remap(data[0]), ...data.slice(1).map(remap)];
     }
     // --- セレクタ配列判定 ---
     static validateSelect(values, quota = values.length) {
@@ -14,20 +13,14 @@
       return values.map((v, i) => i < quota ? (!v || checkVals.indexOf(v) !== checkVals.lastIndexOf(v)) : false);
     }
     // --- 汎用キーソート ---
-    static sortKeysByValue(obj) {
-      return Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
-    }
+    static sortKeysByValue = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
     // --- 有効数値の抽出 ---
-    static getValidNumbers(arr, requirePositive = false) {
-      return arr.map(Number).filter(v => !isNaN(v) && (!requirePositive || v > 0));
-    }
+    static getValidNumbers = (arr, requirePositive = false) => arr.map(Number).filter(v => !isNaN(v) && (!requirePositive || v > 0));
     // --- 統計表データ生成 ---
     static createStatsRows(stats, digits = 3, formatRules = null) {
       if (!stats) return [];
       const fmt = v => (v != null && !isNaN(v)) ? Number(v).toFixed(digits) : "-";
-      // 置換用メタ生成
       const meta = { ...stats, sign: stats.intercept >= 0 ? "+" : "-", abs_intercept: Math.abs(stats.intercept ?? 0) };
-      // カスタムルール適用
       if (formatRules?.length) {
         return formatRules.map(({ key, label }) => {
           if (!key) return [label ?? "", ""];
@@ -35,7 +28,6 @@
           return [label ?? "", valStr];
         });
       }
-      // 宣言的配列生成
       return [
         stats.count != null ? ["データ個数", stats.count] : null,
         (stats.r != null && stats.r2 != null) ? ["相関係数", `R = ${fmt(stats.r)} , R² = ${fmt(stats.r2)}`] : null,
@@ -44,19 +36,9 @@
         stats.err3Sigma != null ? ["器械Err3σ", fmt(stats.err3Sigma)] : null
       ].filter(Boolean);
     }
-    // --- Nice Numbers本体 ---
+    // --- Nice Numbers計算 ---
     static calcNiceScale(xVals, yVals, desiredTicks = 4) {
       if (!xVals?.length || !yVals?.length) return { niceMin: 0, niceMax: 0, niceTicks: [] };
-      const { niceMin, niceMax, niceStep, decimals } = this.#calcScaleMath(xVals, yVals, desiredTicks);
-      const ticksCount = Math.round((niceMax - niceMin) / niceStep) + 1;
-      const niceTicks = Array.from({ length: ticksCount }, (_, i) => {
-        const val = niceMin + (i * niceStep);
-        return { v: val, f: this.#formatScaleLabel(val, decimals) };
-      });
-      return { niceMin, niceMax, niceTicks };
-    }
-    // --- Nice Numbers計算 ---
-    static #calcScaleMath(xVals, yVals, desiredTicks) {
       const [xMin, xMax, yMin, yMax] = [Math.min(...xVals), Math.max(...xVals), Math.min(...yVals), Math.max(...yVals)];
       const isAllPos = xMin >= 0 && yMin >= 0;
       const rawMin = isAllPos ? 0 : Math.min(xMin, yMin);
@@ -66,81 +48,59 @@
       const frac = rawStep / Math.pow(10, exp);
       const niceFrac = frac <= 1.2 ? 1 : (frac <= 2.5 ? 2 : (frac <= 6.0 ? 5 : 10));
       const niceStep = niceFrac * Math.pow(10, exp);
-      return {
-        niceMin: isAllPos ? 0 : Math.floor(rawMin / niceStep) * niceStep,
-        niceMax: Math.ceil(rawMax / niceStep) * niceStep,
-        niceStep,
-        decimals: exp < 0 ? Math.abs(exp) : 0
-      };
-    }
-    // --- ラベル文字列化 ---
-    static #formatScaleLabel(val, decimals) {
-      if (Math.abs(val) >= 1000) return `${(val / 1000).toFixed(0)}k`;
-      return decimals > 0 ? val.toFixed(decimals) : val.toLocaleString();
+      const niceMin = isAllPos ? 0 : Math.floor(rawMin / niceStep) * niceStep;
+      const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
+      const decimals = exp < 0 ? Math.abs(exp) : 0;
+      const niceTicks = Array.from({ length: Math.round((niceMax - niceMin) / niceStep) + 1 }, (_, i) => {
+        const val = niceMin + (i * niceStep);
+        return { v: val, f: Math.abs(val) >= 1000 ? `${(val / 1000).toFixed(0)}k` : (decimals > 0 ? val.toFixed(decimals) : val.toLocaleString()) };
+      });
+      return { niceMin, niceMax, niceTicks };
     }
   }
 
-  // --- Tab1 ファイルデータ検証・作成 ---
+  // --- Tab1 ファイルデータ検証 ---
   class FileValidator {
-    static #COL = { FILE: 0, MODE: 1, ID: 2, SUB_ID: 3, INFO: 4 };
-    static #getScanID = (id, sub_id) => sub_id ? `${id}_${sub_id}` : `${id}`;
     // --- リスト検証 ---
     static run(sheetData, outHeader, validModes, exacMode) {
       if (!sheetData?.length) return [];
-      const [, ...body] = sheetData;
-      // 集計
-      const stats = body.reduce((acc, row) => {
-        const file = row[this.#COL.FILE];
-        const scanId = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
-        acc.file.set(file, (acc.file.get(file) || 0) + 1);
-        const s = acc.scan.get(scanId) || { modes: new Set(), count: 0 };
-        s.modes.add(row[this.#COL.MODE]);
-        s.count++;
-        acc.scan.set(scanId, s);
+      const [header, ...body] = sheetData;
+      const getIdx = key => header.findIndex(h => h === key); // 走査型バインド
+      const colFile = getIdx('file'), colMode = getIdx('mode'), colId = getIdx('id'), colSub = getIdx('sub_id');
+      const getScanID = r => r[colSub] ? `${r[colId]}_${r[colSub]}` : `${r[colId]}`;
+      const stats = body.reduce((acc, r) => {
+        acc.file.set(r[colFile], (acc.file.get(r[colFile]) || 0) + 1);
+        const sId = getScanID(r);
+        const s = acc.scan.get(sId) || { modes: new Set(), count: 0 };
+        s.modes.add(r[colMode]); s.count++; acc.scan.set(sId, s);
         return acc;
       }, { file: new Map(), scan: new Map() });
-      // 検証ルール定義
       const rules = [
-        { check: r => !/^\d+$/.test(r[this.#COL.FILE] ?? ""), err: " file形式" },
-        { check: r => !validModes.includes(r[this.#COL.MODE]), err: " mode形式" },
-        { check: r => !r[this.#COL.ID], err: " id形式" },
-        { check: r => stats.file.get(r[this.#COL.FILE]) > 1, err: " file重複" },
+        { check: r => !/^\d+$/.test(r[colFile] ?? ""), err: " file形式" },
+        { check: r => !validModes.includes(r[colMode]), err: " mode形式" },
+        { check: r => !r[colId], err: " id形式" },
+        { check: r => stats.file.get(r[colFile]) > 1, err: " file重複" },
         { check: r => {
-            const s = stats.scan.get(this.#getScanID(r[this.#COL.ID], r[this.#COL.SUB_ID]));
-            if (exacMode === "Single") return s.count > 1;
-            return !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
-          }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式"
-        }
+            const s = stats.scan.get(getScanID(r));
+            return exacMode === "Single" ? s.count > 1 : !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
+          }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式" }
       ];
-      // データ出力
-      return [
-        [...outHeader, "error"],
-        ...body.map(row => {
-          const scanId = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
-          const errorMsg = rules.filter(r => r.check(row)).map(r => r.err).join(",");
-          return [...row, scanId, errorMsg];
-        })
-      ];
+      return [[...outHeader, "error"], ...body.map(r => [...r, getScanID(r), rules.filter(rule => rule.check(r)).map(rule => rule.err).join(",")])];
     }
   }
 
   // --- Tab1 抽出データ作成 ---
   class DataExtractor {
     // --- データ抽出 ---
-    static run(fileDT, resultDT, exacMap) {
+    static run(fileDT, resultDT, extrRefs) {
       if (!fileDT?.length || !resultDT?.length) return [];
       const resultMap = new Map(resultDT.slice(1).map(r => [String(r[0]), r]));
-      // 集計とソート
-      const scanIDMap = fileDT.slice(1).reduce((map, [file, mode, id, , , scanId]) => {
-        const entry = map.get(scanId) || { id, files: {} };
-        entry.files[String(mode).toLowerCase()] = file;
-        map.set(scanId, entry);
-        return map;
+      const scanIDMap = fileDT.slice(1).reduce((map, r) => {
+        const entry = map.get(r[5]) || { id: r[2], files: {} };
+        entry.files[String(r[1]).toLowerCase()] = r[0]; map.set(r[5], entry); return map;
       }, new Map());
-      const obKeys = DataUtils.sortKeysByValue(GLOBAL_CONFIG.obsidianIndex);
-      const mdKeys = DataUtils.sortKeysByValue(GLOBAL_CONFIG.mudrockIndex);
+      const obKeys = DataUtils.sortKeysByValue(GLOBAL_CONFIG.obsidianIndex), mdKeys = DataUtils.sortKeysByValue(GLOBAL_CONFIG.mudrockIndex);
       const format = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
-      // 抽出パイプライン
       const extract = (file, keys, idxObj) => {
         const row = resultMap.get(String(file ?? ""));
         return keys.reduce((acc, k) => {
@@ -150,66 +110,54 @@
           return acc;
         }, { vals: [], errs: [] });
       };
-      // データ出力
-      const header = [
-        '計測ID', 'ID', 'dataset', 'item', 'date',
-        ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`),
-        ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)
-      ];
-      const body = Array.from(scanIDMap, ([scanId, { id, files }]) => {
-        const ob = extract(files.obsidian, obKeys, GLOBAL_CONFIG.obsidianIndex);
-        const mu = extract(files.mudrock, mdKeys, GLOBAL_CONFIG.mudrockIndex);
-        return [scanId, id, exacMap.dataset, exacMap.item, exacMap.date, ...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
-      });
-      return [header, ...body];
+      const header = ['計測ID', 'ID', 'dset', 'item', 'date', ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`), ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)];
+      return [header, ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+        const ob = extract(files.obsidian, obKeys, GLOBAL_CONFIG.obsidianIndex), mu = extract(files.mudrock, mdKeys, GLOBAL_CONFIG.mudrockIndex);
+        return [scanId, id, extrRefs.dset, extrRefs.item, extrRefs.date, ...ob.vals, ...mu.vals, ...ob.errs, ...mu.errs];
+      })];
     }
   }
   
-  // --- Tab1 PXRF重複検証・統合 ---
+  // --- Tab1 PXRF重複検証 ---
   class PxrfValidator {
+    // --- 重複検証 ---
     static run(existingDT, newDT) {
       if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
       const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
       const filteredEx = existingDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
-      return filteredEx.length !== existingDT.length - 1 
-        ? { isDup: true, data: [existingDT[0], ...filteredEx, ...newDT.slice(1)] } 
-        : { isDup: false, data: null };
+      return filteredEx.length !== existingDT.length - 1 ? { isDup: true, data: [existingDT[0], ...filteredEx, ...newDT.slice(1)] } : { isDup: false, data: null };
     }
   }
 
   // --- Tab2 データオブジェクト変換 ---
   class DataManager {
+    // --- オブジェクト配列化 ---
     static #toObjArray(data) {
       const [header, ...body] = data;
       return body.map(row => header.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: row[i] }), {}));
     }
-    // 読込
+    // --- 読込 ---
     static load(pxrfData, wdxrfData) {
-      const pxrfObjs = this.#toObjArray(pxrfData);
-      const wdxrfObjs = this.#toObjArray(wdxrfData);    
+      const pxrfObjs = this.#toObjArray(pxrfData), wdxrfObjs = this.#toObjArray(wdxrfData);    
       const clean = str => String(str ?? "").replace(/\s+/g, "").toUpperCase();
-      const wdxrfMap = new Map(wdxrfObjs.map(o => [`${clean(o.dataset)}_${clean(o.ID || o.id)}`, o]));
-      const datasets = new Set();
+      const wdxrfMap = new Map(wdxrfObjs.map(o => [`${clean(o.dset || o.dataset)}_${clean(o.ID || o.id)}`, o]));
+      const dsets = new Set();
       pxrfObjs.forEach(pObj => {
-        const wObj = wdxrfMap.get(`${clean(pObj.dataset)}_${clean(pObj.ID || pObj.id)}`);
-        pObj.Group = wObj?.Group ?? "Unknown";
-        pObj.Source = wObj?.Source ?? "Unknown";
-        if (pObj.dataset) datasets.add(pObj.dataset);
+        const wObj = wdxrfMap.get(`${clean(pObj.dset || pObj.dataset)}_${clean(pObj.ID || pObj.id)}`);
+        pObj.Group = wObj?.Group ?? "Unknown"; pObj.Source = wObj?.Source ?? "Unknown";
+        if (pObj.dset || pObj.dataset) dsets.add(pObj.dset || pObj.dataset);
       });
-      return { mergedPXRF: pxrfObjs, wdxrfObjs, datasets: [...datasets] };
+      return { mergedPXRF: pxrfObjs, wdxrfObjs, dsets: [...dsets] };
     }
-    // フィルタ
-    static filter(mergedPXRF, wdxrfObjs, selectedDatasets) {
-      const targetSet = new Set(selectedDatasets);
-      const basePXRF = mergedPXRF.filter(obj => targetSet.has(obj.dataset)).map(row => ({
-        dataset: row.dataset, id: row.id, ID: row.ID, item: row.item, Item: row.Item, Group: row.Group, Source: row.Source,
-        ...Object.fromEntries(GLOBAL_CONFIG.valueElement.flatMap(el => [
-          [`ob_${el}`, row[`ob_${el}`]], [`md_${el}`, row[`md_${el}`]],
-          [`ob_${el}_Err`, row[`ob_${el}_Err`]], [`md_${el}_Err`, row[`md_${el}_Err`]]
-        ]))
+    // --- フィルタ ---
+    static filter(mergedPXRF, wdxrfObjs, selectedDsets) {
+      const targetSet = new Set(selectedDsets);
+      const basePXRF = mergedPXRF.filter(obj => targetSet.has(obj.dset || obj.dataset)).map(row => ({
+        dset: row.dset || row.dataset, id: row.id, ID: row.ID, item: row.item, Item: row.Item, Group: row.Group, Source: row.Source,
+        ...Object.fromEntries(GLOBAL_CONFIG.valueElement.flatMap(el => [[`ob_${el}`, row[`ob_${el}`]], [`md_${el}`, row[`md_${el}`]], [`ob_${el}_Err`, row[`ob_${el}_Err`]], [`md_${el}_Err`, row[`md_${el}_Err`]]]))
       }));
-      const baseWDXRF = wdxrfObjs.filter(obj => targetSet.has(obj.dataset)).map(row => ({
-        dataset: row.dataset, id: row.id, ID: row.ID, Group: row.Group, Source: row.Source,
+      const baseWDXRF = wdxrfObjs.filter(obj => targetSet.has(obj.dset || obj.dataset)).map(row => ({
+        dset: row.dset || row.dataset, id: row.id, ID: row.ID, Group: row.Group, Source: row.Source,
         ...Object.fromEntries(GLOBAL_CONFIG.valueElement.map(el => [el, row[el]]))
       }));
       return { basePXRF, baseWDXRF };
@@ -218,102 +166,71 @@
 
   // --- Tab2 プレビューデータ生成 ---
   class PreviewManager {
+    // --- データ生成パイプライン統合 ---
     static buildPreviewData(basePXRF, baseWDXRF, config) {
       if (!basePXRF?.length || !baseWDXRF?.length) return [];
-      const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID ?? w.id}`, w]));
+      const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dset}_${w.ID ?? w.id}`, w]));
       const minMap = config.lodEnabled ? this.#getMinMap(basePXRF, config) : {};
-      const rawProcessed = basePXRF.filter(r => !config.itemMap?.length || config.itemMap.includes(r.item ?? r.Item)).map(this.#formatAndLOD(config, minMap));
-      const calCoeffs = this.#resolveCoeffs(rawProcessed, wdxrfMap, config);
-      return rawProcessed.map(this.#applyCalibration(config, calCoeffs)).map(this.#calcFinalValue(config, wdxrfMap)).filter(Boolean);
+      const calCoeffs = this.#resolveCoeffs(basePXRF, wdxrfMap, config, minMap);
+      return basePXRF.reduce((acc, row) => {
+        if (config.itemMap?.length && !config.itemMap.includes(row.item ?? row.Item)) return acc;
+        const pId = row.ID ?? row.id; // 安全なID抽出
+        const w = wdxrfMap.get(`${row.dset}_${pId}`);
+        if (!w) return acc;
+        const pData = { dset: row.dset, id: pId, item: row.item ?? row.Item, group: row.Group ?? "Unknown", Group: row.Group ?? "Unknown", Source: row.Source !== "Unknown" ? row.Source : (w.Source ?? "Unknown") };
+        GLOBAL_CONFIG.valueElement.forEach(el => {
+          const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
+          const rawVal = row[`${prefix}_${el}`];
+          const isLod = typeof rawVal === 'string' && rawVal.includes('LOD');
+          let val = (isLod && config.lodEnabled) ? (minMap[el] ?? null) : (rawVal != null && rawVal !== "" && !isNaN(Number(rawVal)) ? Number(rawVal) : null);
+          if (calCoeffs?.[el] && val != null) val = (val - calCoeffs[el].int) / calCoeffs[el].slp;
+          pData[el] = val; pData[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
+        });
+        const xVal = CalcProcessor.evaluate(config.val, w), yVal = CalcProcessor.evaluate(config.val, pData);
+        if (xVal != null && yVal != null) acc.push({ ...pData, x: xVal, y: yVal, err: GLOBAL_CONFIG.valueElement.includes(config.val) ? (pData[`${config.val}_Err`] ?? null) : null });
+        return acc;
+      }, []);
     }
-    // LOD最小値取得（メーカーでータ取得後、GLB定数代入に置換予定）
+    // --- LOD最小値取得 ---
     static #getMinMap(basePXRF, config) {
-      const minMap = {};
-      GLOBAL_CONFIG.valueElement.forEach(el => {
+      return Object.fromEntries(GLOBAL_CONFIG.valueElement.map(el => {
         const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
         const nums = DataUtils.getValidNumbers(basePXRF.map(r => r[`${prefix}_${el}`]), true);
-        minMap[el] = nums.length ? Math.min(...nums) : null;
-      });
-      return minMap;
+        return [el, nums.length ? Math.min(...nums) : null];
+      }));
     }
-    // LOD変換適用
-    static #formatAndLOD = (config, minMap) => (row) => {
-      const newRow = { dataset: row.dataset, id: row.ID ?? row.id, item: row.item ?? row.Item, group: row.Group ?? "Unknown", Group: row.Group ?? "Unknown", Source: row.Source ?? "Unknown" };
-      GLOBAL_CONFIG.valueElement.forEach(el => {
-        const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
-        const rawVal = row[`${prefix}_${el}`];
-        const isLod = typeof rawVal === 'string' && rawVal.includes('LOD');
-        newRow[el] = (isLod && config.lodEnabled) ? (minMap[el] ?? null) : (rawVal != null && rawVal !== "" && !isNaN(Number(rawVal)) ? Number(rawVal) : null);
-        newRow[`${el}_Err`] = row[`${prefix}_${el}_Err`] ?? null;
-      });
-      return newRow;
-    };
-    // 検量線算出
-    static #resolveCoeffs(rawProcessed, wdxrfMap, config) {
+    // --- 検量線算出 ---
+    static #resolveCoeffs(basePXRF, wdxrfMap, config, minMap) {
       if (!config.calEnabled || !config.calElementMap?.length) return null;
-      const calCoeffs = {};
-      // 新規検量線採用
       if (config.correction === "new") {
-        config.calElementMap.forEach(el => {
-          const wVals = [], pVals = [];
-          rawProcessed.forEach(p => {
-            const w = wdxrfMap.get(`${p.dataset}_${p.id}`);
-            if (w && p[el] != null && w[el] != null) { wVals.push(Number(w[el])); pVals.push(Number(p[el])); }
-          });
-          const coeffs = CalcProcessor.calcCalibrationCoeffs(wVals, pVals);
-          if (coeffs) calCoeffs[el] = coeffs;
-        });
-      // 既存検量線採用
-      } else if (config.correctionData?.length > 1) {
-        const header = config.correctionData[0];
-        const row = config.correctionData.find(r => r[0] === config.correction);
-        if (row) {
-          config.calElementMap.forEach(el => {
-            const slpIdx = header.indexOf(`${el}_slp`);
-            const intIdx = header.indexOf(`${el}_int`);
-            if (slpIdx !== -1 && intIdx !== -1 && row[slpIdx] !== "") {
-              const slpNum = Number(row[slpIdx]);
-              if (slpNum !== 0) calCoeffs[el] = { slp: slpNum, int: Number(row[intIdx]) };
-            }
-          });
-        }
+        return Object.fromEntries(config.calElementMap.map(el => {
+          const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
+          const vals = basePXRF.reduce((acc, p) => {
+            const pId = p.ID ?? p.id; // 安全なID抽出
+            const w = wdxrfMap.get(`${p.dset}_${pId}`);
+            if (!w || w[el] == null) return acc;
+            const raw = p[`${prefix}_${el}`];
+            const val = (typeof raw === 'string' && raw.includes('LOD') && config.lodEnabled) ? minMap[el] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
+            if (val != null) { acc.w.push(Number(w[el])); acc.p.push(val); }
+            return acc;
+          }, { w: [], p: [] });
+          return [el, CalcProcessor.calcCalibrationCoeffs(vals.w, vals.p)];
+        }).filter(([, v]) => v));
       }
-      return calCoeffs;
+      const row = config.correctionData?.find(r => r[0] === config.correction);
+      if (!row) return null;
+      return Object.fromEntries(config.calElementMap.map(el => {
+        const sIdx = config.correctionData[0].indexOf(`${el}_slp`), iIdx = config.correctionData[0].indexOf(`${el}_int`);
+        return sIdx !== -1 && iIdx !== -1 && row[sIdx] !== "" ? [el, { slp: Number(row[sIdx]), int: Number(row[iIdx]) }] : [el, null];
+      }).filter(([, v]) => v));
     }
-    // 検量線適用
-    static #applyCalibration = (config, calCoeffs) => (row) => {
-      if (!calCoeffs) return row;
-      const corrected = { ...row };
-      config.calElementMap?.forEach(el => {
-        if (calCoeffs[el] && corrected[el] != null) corrected[el] = (corrected[el] - calCoeffs[el].int) / calCoeffs[el].slp;
-      });
-      return corrected;
-    };
-    // データ整形
-    static #calcFinalValue = (config, wdxrfMap) => (row) => {
-      const w = wdxrfMap.get(`${row.dataset}_${row.id}`);
-      if (!w) return null;
-      const yVal = CalcProcessor.evaluate(config.value, row);
-      const xVal = CalcProcessor.evaluate(config.value, w);
-      if (xVal == null || yVal == null) return null;
-      const errVal = GLOBAL_CONFIG.valueElement.includes(config.value) ? (row[`${config.value}_Err`] ?? null) : null;
-      return { x: xVal, y: yVal, err: errVal, id: row.id, group: row.group, dataset: row.dataset, item: row.item, Group: row.Group, Source: row.Source !== "Unknown" ? row.Source : (w.Source ?? "Unknown") };
-    };
-    // 検量線適用データ整形
+    // --- 検量線適用データ整形 ---
     static generateCorrectionRow(basePXRF, baseWDXRF, config, indexName) {
       const newRow = [indexName];
       GLOBAL_CONFIG.valueElement.forEach(el => {
-        if (!config.calElementMap?.includes(el)) {
-          newRow.push("", "");
-          return;
-        }
-        const tempConfig = { ...config, value: el, calEnabled: false };
-        const data = this.buildPreviewData(basePXRF, baseWDXRF, tempConfig);
-        if (!data.length) {
-          newRow.push("", "");
-          return;
-        }
-        const coeffs = CalcProcessor.calcCalibrationCoeffs(data.map(d => d.x), data.map(d => d.y));
+        if (!config.calElementMap?.includes(el)) { newRow.push("", ""); return; }
+        const data = this.buildPreviewData(basePXRF, baseWDXRF, { ...config, val: el, calEnabled: false });
+        const coeffs = data.length ? CalcProcessor.calcCalibrationCoeffs(data.map(d => d.x), data.map(d => d.y)) : null;
         newRow.push(coeffs?.slp ?? "", coeffs?.int ?? "");
       });
       return newRow;
@@ -322,62 +239,42 @@
 
   // --- 数式評価 ---
   class CalcProcessor {
+    // --- カスタム数式評価 ---
     static evaluate(formula, rowData) {
       if (!formula) return null;
       try {
-        const keys = Object.keys(rowData);
-        const vals = Object.values(rowData);
+        const keys = Object.keys(rowData), vals = Object.values(rowData);
         const mathFns = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
         const fn = new Function(...keys, `${mathFns} return ${formula};`);
         const result = fn(...vals);
         return isNaN(result) || !isFinite(result) ? null : result;
-      } catch (e) {
-        return null;
-      }
+      } catch (e) { return null; }
     }
-    // 検量線係数計算
+    // --- 検量線係数計算 ---
     static calcCalibrationCoeffs(wdxrfVals, pxrfVals) {
       if (!wdxrfVals?.length || wdxrfVals.length < 2 || wdxrfVals.length !== pxrfVals?.length) return null;
       try {
         const data = wdxrfVals.map((x, i) => [x, pxrfVals[i]]);
         const { m: slope, b: intercept } = ss.linearRegression(data);
-        if (isNaN(slope) || isNaN(intercept) || slope === 0) return null;
-        return { slp: slope, int: intercept };
-      } catch (e) {
-        return null;
-      }
+        return (isNaN(slope) || isNaN(intercept) || slope === 0) ? null : { slp: slope, int: intercept };
+      } catch (e) { return null; }
     }
     // --- 回帰・相関計算 ---
     static calcRegression(xArr, yArr, errArr) {
       if (!xArr?.length || xArr.length !== yArr?.length) return null;
-      const n = xArr.length;
-      // 単回帰算出
-      const data = xArr.map((x, i) => [x, yArr[i]]);
+      const n = xArr.length, data = xArr.map((x, i) => [x, yArr[i]]);
       const { m: slope, b: intercept } = ss.linearRegression(data);
-      const r = ss.sampleCorrelation(xArr, yArr);
-      const r2 = r * r;
-      // 残差標準偏差算出
+      const r = ss.sampleCorrelation(xArr, yArr), r2 = r * r;
       let ssRes = 0, maxRes = 0;
-      xArr.forEach((x, i) => {
-        const res = Math.abs(yArr[i] - (slope * x + intercept));
-        ssRes += res * res;
-        maxRes = Math.max(maxRes, res);
-      });
+      xArr.forEach((x, i) => { const res = Math.abs(yArr[i] - (slope * x + intercept)); ssRes += res * res; maxRes = Math.max(maxRes, res); });
       const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
-      // 器械Err3σ算出
       let err3Sigma = 0;
       if (errArr?.length > 2) {
         const meanErr = errArr.reduce((a, b) => a + b, 0) / errArr.length;
-        const ssErr = errArr.reduce((a, b) => a + (b - meanErr) ** 2, 0);
-        err3Sigma = Math.sqrt(ssErr / (errArr.length - 1)) * 3;
+        err3Sigma = Math.sqrt(errArr.reduce((a, b) => a + (b - meanErr) ** 2, 0) / (errArr.length - 1)) * 3;
       }
       return { count: n, slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
     }
   }
-
-  const Mtd = {
-    Utils: DataUtils,
-    Tab1: { FileValidator, DataExtractor, PxrfValidator },
-    Tab2: { DataManager, PreviewManager, CalcProcessor }
-  };
+  const Mtd = { Utils: DataUtils, Tab1: { FileValidator, DataExtractor, PxrfValidator }, Tab2: { DataManager, PreviewManager, CalcProcessor } };
 </script>
