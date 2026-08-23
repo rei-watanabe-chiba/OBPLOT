@@ -59,4 +59,4 @@
 - `Report.html`: [Template] レポート出力用静的HTML
 
 ## 6. 開発状況と次ステップ
-- **次ステップ**: 未定
+- **次ステップ**: Method.htmlとstate定義方法の改修
