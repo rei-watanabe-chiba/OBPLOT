@@ -1,73 +1,35 @@
 <!-- View.html -->
 <script>
-  // --- 起動時DOM構築 ---
+  // --- UI初期化 ---
   class UIInit {
+    // Tab1構築
     static buildTab1() {
-      // Tab1 モード選択
-      NewDOM.buildFormFields([{
-        type: "select", options: GLOBAL_CONFIG.configModes, bind: "Tab1ST.config.mode", hasEmpty: false
-      }], Tab1UI.configModeBox);
-
-      // Tab1 計測属性入力
-      NewDOM.buildFormFields(GLOBAL_CONFIG.exacFields.map(f => ({
-        type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder
-      })), Tab1UI.exacBox);
+      NewDOM.buildFormFields([{ type: "select", options: GLOBAL_CONFIG.configModes, bind: "Tab1ST.config.mode", hasEmpty: false }], Tab1UI.configModeBox);
+      NewDOM.buildFormFields(GLOBAL_CONFIG.exacFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })), Tab1UI.exacBox);
     }
-
+    // Tab2構築
     static buildTab2() {
-      // Tab2 シンボル属性選択
-      NewDOM.buildFormFields([{
-        type: "select", options: GLOBAL_CONFIG.symbolAxes, change: "Tab2.confirmAndChangeAxis", hasEmpty: false
-      }], Tab2UI.symbolAxisBox);
-
-      // Tab2 補正方法選択
-      NewDOM.buildFormFields([{
-        type: "select", bind: "Tab2ST.preview.correction", hasEmpty: false,
-        options: [{ label: "新規検量線", value: "new" }]
-      }], Tab2UI.previewCorrectionBox);
-
-      // Tab2 プレビュー値選択
-      const valueOptions = [...GLOBAL_CONFIG.valueElement, ...GLOBAL_CONFIG.valueLogic].map(v => ({ label: v, value: v }));
-      NewDOM.buildFormFields([{
-        type: "select", bind: "Tab2ST.preview.value", hasEmpty: false,
-        options: valueOptions
-      }], Tab2UI.previewValueBox);
-
-      if (GLOBAL_CONFIG.valueLogic.length) {
-        State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
-      }
-      
-      // Tab2 LOD置換トグル（追加）
-      NewDOM.buildToggle({
-        label: "LOD置換",
-        bind: "Tab2ST.preview.lodEnabled"
-      }, Tab2UI.previewLODBox);
-
-      // Tab2 検量線適用トグル [新規]
-      NewDOM.buildToggle({
-        label: "検量線適用",
-        bind: "Tab2ST.preview.calEnabled"
-      }, Tab2UI.previewCalToggleBox);
-
-      // 静的要素の初期化DI
+      NewDOM.buildFormFields([{ type: "select", options: GLOBAL_CONFIG.symbolAxes, change: "Tab2.confirmAndChangeAxis", hasEmpty: false }], Tab2UI.symbolAxisBox);
+      NewDOM.buildFormFields([{ type: "select", bind: "Tab2ST.preview.correction", hasEmpty: false, options: [{ label: "新規検量線", value: "new" }] }], Tab2UI.previewCorrectionBox);
+      NewDOM.buildFormFields([{ type: "select", bind: "Tab2ST.preview.value", hasEmpty: false, options: [...GLOBAL_CONFIG.valueElement, ...GLOBAL_CONFIG.valueLogic].map(v => ({ label: v, value: v })) }], Tab2UI.previewValueBox);
+      if (GLOBAL_CONFIG.valueLogic.length) State.set("Tab2ST.preview.value", GLOBAL_CONFIG.valueLogic[0]);
+      NewDOM.buildToggle({ label: "LOD置換", bind: "Tab2ST.preview.lodEnabled" }, Tab2UI.previewLODBox);
+      NewDOM.buildToggle({ label: "検量線適用", bind: "Tab2ST.preview.calEnabled" }, Tab2UI.previewCalToggleBox);
       const previewModeEl = DOM.get("previewModeBoxEl");
-      if (previewModeEl) previewModeEl.options = GLOBAL_CONFIG.optionalElements;
+      if (previewModeEl) previewModeEl.options = GLOBAL_CONFIG.optionalElements; // 静的DI
       const previewCalEl = DOM.get("previewCalElementBoxEl");
       if (previewCalEl) previewCalEl.options = GLOBAL_CONFIG.valueElement;
     }
-
+    // 初期化
     static build() { this.buildTab1(); this.buildTab2(); }
   }
 
-  // --- フェーズ連動UI制御 ---
+  // --- PhaseUI管理 ---
   class UIPhase {
     static #TAB1_RULES = {
       [Tab1UI.fileLoadBtn]: p => ({ text: p <= TAB1_PHASE.READY ? "データを取得" : "データを再取得", disabled: false }),
       [Tab1UI.fileMakeBtn]: p => ({ disabled: p < TAB1_PHASE.READY }),
-      [Tab1UI.fileValdBtn]: p => ({ 
-        disabled: p < TAB1_PHASE.INVALID || State.get("Tab1ST.file.isMapError").some(Boolean), 
-        className: p === TAB1_PHASE.INVALID ? "" : "outline" 
-      }),
+      [Tab1UI.fileValdBtn]: p => ({ disabled: p < TAB1_PHASE.INVALID || State.get("Tab1ST.file.isMapError").some(Boolean), className: p === TAB1_PHASE.INVALID ? "" : "outline" }),
       [Tab1UI.fileArea]: p => ({ show: p >= TAB1_PHASE.LOAD }),
       [Tab1UI.fileBtnBox]: p => ({ show: p >= TAB1_PHASE.LOAD }),
       [Tab1UI.exacArea]: p => ({ show: p >= TAB1_PHASE.VALID }),
@@ -93,50 +55,49 @@
       [Tab2UI.reppBtn]: p => ({ disabled: p < TAB2_PHASE.PREVIEWED }),
       [Tab2UI.reportSection]: p => ({ active: p >= TAB2_PHASE.PREVIEWED, disabled: p < TAB2_PHASE.PREVIEWED })
     };
+    // --- 宣言的UI適用 ---
     static #apply(rulesObj, phase) {
       Object.entries(rulesObj).forEach(([id, ruleFn]) => {
-        const rule = ruleFn(phase);
-        if (rule.show !== undefined) DOM.toggle(id, rule.show);
-        if (rule.disabled !== undefined) DOM.setDisabled(id, rule.disabled);
-        if (!id.includes('configSection') && rule.active !== undefined) DOM.open(id, rule.active);
-        if (rule.text !== undefined) DOM.setDOM(id, rule.text);
-        if (rule.className !== undefined && DOM.get(id)) DOM.get(id).className = rule.className;
+        const { show, disabled, active, text, className } = ruleFn(phase);
+        show !== undefined && DOM.toggle(id, show);
+        disabled !== undefined && DOM.setDisabled(id, disabled);
+        (!id.includes('configSection') && active !== undefined) && DOM.open(id, active); // config除外
+        text !== undefined && DOM.setDOM(id, text);
+        if (className !== undefined && DOM.get(id)) DOM.get(id).className = className;
         if (id.includes('Section')) {
-          DOM.setAttr(id, "data-state", rule.active ? "active" : null);
-          DOM.setAttr(id, "data-type", rule.disabled ? "disabled" : null);
+          DOM.setAttr(id, "data-state", active ? "active" : null);
+          DOM.setAttr(id, "data-type", disabled ? "disabled" : null); // 属性付与
         }
       });
     }
+    // --- Tab1フェーズ更新 ---
     static updateTab1PhaseUI(p) {
       this.#apply(this.#TAB1_RULES, p);
       if (p >= TAB1_PHASE.VALID && p < TAB1_PHASE.EXTRACT) State.set("Tab1ST.exac.cachedStatus", ["hidden", ""]);
       if (p >= TAB1_PHASE.EXTRACT) State.set("Tab1ST.exac.cachedStatus", State.get("Tab1ST.exac.status"));
     }
+    // --- Tab2フェーズ更新 ---
     static updateTab2PhaseUI(p) {
       this.#apply(this.#TAB2_RULES, p);
     }
   }
-
-  // --- state-UI 同期ヘルパー ---
+  // --- stateバインド ---
   const bindStatus = id => v => NewDOM.status(id, v);
   const setElProp = (id, prop) => v => { const el = DOM.get(id); if (el) el[prop] = v; };
   const bindError = (boxId, targetPhase) => flags => {
     NewDOM.inputs(boxId, flags);
-    if (State.get("Tab1ST.phase") === targetPhase) {
-      UIPhase.updateTab1PhaseUI(targetPhase);
-    }
+    if (State.get("Tab1ST.phase") === targetPhase) UIPhase.updateTab1PhaseUI(targetPhase); // エラー連動
   };
 
+  // --- state-UI管理 ---
   class UIStateUpdater {
     constructor() {
-      // --- 自動バインディング(DI)登録 ---
+      // --- 自動DI登録 ---
       document.querySelectorAll('[data-bind-options]').forEach(el => State.subscribe(el.getAttribute('data-bind-options'), v => el.options = v));
       document.querySelectorAll('[data-bind-selected]').forEach(el => State.subscribe(el.getAttribute('data-bind-selected'), v => el.selected = v));
-      document.querySelectorAll('[data-bind]').forEach(el => {
-        if (el.tagName === 'INPUT' && el.type === 'text') State.subscribe(el.getAttribute('data-bind'), v => el.value = v);
-      });
-      // --- 手動バインディング用マップ ---
-      const stateMap = {
+      document.querySelectorAll('[data-bind]').forEach(el => { if (el.tagName === 'INPUT' && el.type === 'text') State.subscribe(el.getAttribute('data-bind'), v => el.value = v); });
+      // --- 手動DIマップ登録群 ---
+      Object.entries({
         "GLB.isLocked": v => DOM.setDisabled(Tab1UI.tabSet, v),
         "Tab1ST.config.status": bindStatus(Tab1UI.configBar),
         "Tab1ST.file.status": bindStatus(Tab1UI.fileBar),
@@ -148,84 +109,56 @@
         "Tab1ST.phase": v => UIPhase.updateTab1PhaseUI(v),
         "Tab2ST.phase": v => {
           UIPhase.updateTab2PhaseUI(v);
-          if (v < TAB2_PHASE.PREVIEWED) {
-            DOM.get('ob-cal-plot-el')?.clear();
-            NewDOM.statsTable(null);
-          }
+          if (v < TAB2_PHASE.PREVIEWED) { DOM.get('ob-cal-plot-el')?.clear(); NewDOM.statsTable(null); } // 画面消去
         },
         "Tab1ST.file.data": data => {
-          // Fileシートデータの動的フォーム構築
-          if (data?.[0]) {
-            const opts = data[0].map(h => ({ label: h, value: h }));
-            const configs = GLOBAL_CONFIG.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "Tab1.updateFileMap", options: opts, hasEmpty: true }));
-            NewDOM.buildFormFields(configs, Tab1UI.fileBox, true);
-          } else {
-            DOM.get(Tab1UI.fileBox)?.replaceChildren();
-          }
+          if (data?.[0]) NewDOM.buildFormFields(GLOBAL_CONFIG.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "Tab1.updateFileMap", options: data[0].map(h => ({ label: h, value: h })), hasEmpty: true })), Tab1UI.fileBox, true);
+          else DOM.get(Tab1UI.fileBox)?.replaceChildren();
         },
         "Tab1ST.file.isMapError": bindError(Tab1UI.fileBox, TAB1_PHASE.LOAD),
         "Tab1ST.exac.isMapError": bindError(Tab1UI.exacBox, TAB1_PHASE.VALID),
         "Tab2ST.preview.correction": () => UIPhase.updateTab2PhaseUI(State.get("Tab2ST.phase")),
         "Tab2ST.preview.statsData": stats => NewDOM.statsTable(stats),
         "Tab2ST.preview.previewData": data => {
-          // グラフ描画データの注入
-          const stats = State.get("Tab2ST.preview.statsData");
-          const symbol = State.get("Tab2ST.symbol");
           let chartEl = DOM.get('ob-cal-plot-el');
-          if (!chartEl) {
-            chartEl = document.createElement('ob-cal-plot');
-            chartEl.id = 'ob-cal-plot-el';
-            DOM.get(Tab2UI.previewChartBox).replaceChildren(chartEl);
-          }
-          chartEl.drawData = { previewData: data, statsData: stats, symbolData: symbol };
+          if (!chartEl) { chartEl = document.createElement('ob-cal-plot'); chartEl.id = 'ob-cal-plot-el'; DOM.get(Tab2UI.previewChartBox).replaceChildren(chartEl); } // プロット生成
+          chartEl.drawData = { previewData: data, statsData: State.get("Tab2ST.preview.statsData"), symbolData: State.get("Tab2ST.symbol") };
         },
         "Tab2ST.dataset.rawData.correction": data => {
-          // 補正インデックスの動的構築
           if (!data) return;
-          const opts = [{ label: "新規検量線", value: "new" }];
-          if (data.length > 1) data.slice(1).forEach(row => { if (row[0]) opts.push({ label: row[0], value: row[0] }); });
+          const opts = [{ label: "新規検量線", value: "new" }, ...data.slice(1).filter(r => r[0]).map(r => ({ label: r[0], value: r[0] }))];
           NewDOM.buildFormFields([{ type: "select", bind: "Tab2ST.preview.correction", hasEmpty: false, options: opts }], Tab2UI.previewCorrectionBox, true);
-          const el = DOM.get(Tab2UI.previewCorrectionBox)?.querySelector('select');
+          const el = DOM.get(Tab2UI.previewCorrectionBox)?.querySelector('select'); // 選択復元
           if (el) el.value = State.get("Tab2ST.preview.correction");
         },
-        "Tab2ST.dataset.basePXRF": () => {
-          this.#renderSymbols();
-          this.#renderItems();
-        },
+        "Tab2ST.dataset.basePXRF": () => { this.#renderSymbols(); this.#renderItems(); },
         "Tab2ST.symbol.baseKey": val => {
           const select = DOM.get(Tab2UI.symbolAxisBox)?.querySelector('select');
-          if (select && select.value !== val) select.value = val;
+          if (select && select.value !== val) select.value = val; // 値同期
           this.#renderSymbols();
         },
         "Tab2ST.symbol.rules": () => this.#renderSymbols()
-      };
-      Object.entries(stateMap).forEach(([path, cb]) => State.subscribe(path, cb));
+      }).forEach(([path, cb]) => State.subscribe(path, cb));
     }
-
     // --- シンボル設定DI ---
     #renderSymbols() {
       const baseData = State.get("Tab2ST.dataset.basePXRF");
       const baseKey = State.get("Tab2ST.symbol.baseKey");
-      const rules = State.get("Tab2ST.symbol.rules");
       const symbolEl = DOM.get("symbolTableEl");
       if (!symbolEl) return;
-      if (!baseData || !baseData.length) { symbolEl.clear(); return; }
+      if (!baseData || !baseData.length) { symbolEl.clear(); return; } // 初期化
       const values = [...new Set(baseData.map(d => d[baseKey]).filter(Boolean))];
       symbolEl.tableData = {
-        rules,
-        optionsConfig: {
-          target: [{ val: "", label: "未選択" }, ...values.map(v => ({ val: v, label: v }))],
-          shape: GLOBAL_CONFIG.symbolShapes, color: GLOBAL_CONFIG.symbolColors
-        },
+        rules: State.get("Tab2ST.symbol.rules"),
+        optionsConfig: { target: [{ val: "", label: "未選択" }, ...values.map(v => ({ val: v, label: v }))], shape: GLOBAL_CONFIG.symbolShapes, color: GLOBAL_CONFIG.symbolColors },
         actionsConfig: { add: "Tab2.addSymbolRule", remove: "Tab2.removeSymbolRule", update: "Tab2.updateSymbolRule"}
       };
     }
-
-    // --- Item選択ドロップダウンDI ---
+    // --- Item選択DI ---
     #renderItems() {
       const baseData = State.get("Tab2ST.dataset.basePXRF");
       if (!baseData?.length) { setElProp("previewItemBoxEl", "options")([]); return; }
-      const items = [...new Set(baseData.map(d => d.item ?? d.Item).filter(Boolean))];
+      const items = [...new Set(baseData.map(d => d.item ?? d.Item).filter(Boolean))]; // Item抽出
       setElProp("previewItemBoxEl", "options")(items);
       State.set("Tab2ST.preview.itemMap", items);
     }

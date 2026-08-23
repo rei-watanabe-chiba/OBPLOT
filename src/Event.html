@@ -1,8 +1,7 @@
 <!-- Event.html -->
 <script>
-  // --- イベント管理・初期化クラス ---
   class Evt {
-    // --- 汎用：マルチセレクト切替 ---
+    // --- マルチセレクト切替 ---
     static toggleMultiSelect(target, statePath) {
       const container = target.closest('ob-multi-select');
       if (!container) return;
@@ -11,138 +10,85 @@
       if (allCb) allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
       State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
     }
+    // --- 全選択切替 ---
     static toggleAllMultiSelect(target, statePath) {
       const container = target.closest('ob-multi-select');
       if (!container) return;
       const itemCbs = container.querySelectorAll('.dataset-cb');
-      itemCbs.forEach(cb => { cb.checked = target.checked; });
+      itemCbs.forEach(cb => cb.checked = target.checked);
       State.set(statePath, target.checked ? [...itemCbs].map(cb => cb.value) : []);
     }
-
-    // --- イベントバインダ ---
-    static #bindMulti = (path) => (target) => this.toggleMultiSelect(target, path);
-    static #bindAll = (path) => (target) => this.toggleAllMultiSelect(target, path);
-
-    // --- Tab1変更移譲 ---
+    static #bindMulti = path => target => this.toggleMultiSelect(target, path);
+    static #bindAll = path => target => this.toggleAllMultiSelect(target, path);
+    // --- Tab1イベント群 ---
     static Tab1 = {
-      // --- リアクティブ状態監視：モード選択 ---
-      validateConfigMode: (mode) => {
+      validateConfigMode: mode => {
         if (!mode) return;
         const modeText = mode === "Dual" ? "obsidian + mudrockのセット抽出に対応" : "1ファイル単位で抽出（モード混在可）";
         const phase = State.get("Tab1ST.phase");
-        if (phase === TAB1_PHASE.INIT) {
-          State.set({ "Tab1ST.config.status": ["message", modeText], "Tab1ST.phase": TAB1_PHASE.READY });
-        } else if (phase >= TAB1_PHASE.INVALID) {
-          State.set({ "Tab1ST.file.status": ["error", "モード変更検知: 再検証"], "Tab1ST.config.status": ["message", modeText], "Tab1ST.phase": TAB1_PHASE.INVALID });
-        } else {
-          State.set("Tab1ST.config.status", ["message", modeText]);
-        }
+        const isInit = phase === TAB1_PHASE.INIT;
+        const isInvalid = phase >= TAB1_PHASE.INVALID;
+        isInvalid && State.set("Tab1ST.file.status", ["error", "モード変更検知: 再検証"]); // モード変更検証
+        State.set({ "Tab1ST.config.status": ["message", modeText], ...(isInit || isInvalid ? { "Tab1ST.phase": isInit ? TAB1_PHASE.READY : TAB1_PHASE.INVALID } : {}) });
       },
-      // --- リアクティブ状態監視：列選択 ---
-      updateFileMap: (target) => {
-        const field = target.getAttribute('data-field');
-        State.set(`Tab1ST.file.map.${field}`, target.value);
+      updateFileMap: target => {
+        State.set(`Tab1ST.file.map.${target.getAttribute('data-field')}`, target.value);
         Evt.Tab1.validateFileMap();
       },
       validateFileMap: () => {
-        const map = State.get("Tab1ST.file.map");
-        const flags = Mtd.Utils.validateSelect(GLOBAL_CONFIG.fileFields.map(f => map[f.key] || ""), 3);
-        const isErr = flags.some(Boolean);
-        State.set({
-          "Tab1ST.file.isMapError": flags,
-          "Tab1ST.file.status": isErr ? ["error", "エラー: 列選択"] : State.get("Tab1ST.file.cachedStatus")
-        });
+        const flags = Mtd.Utils.validateSelect(GLOBAL_CONFIG.fileFields.map(f => State.get(`Tab1ST.file.map.${f.key}`) || ""), 3);
+        State.set({ "Tab1ST.file.isMapError": flags, "Tab1ST.file.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("Tab1ST.file.cachedStatus") });
       },
-      // --- リアクティブ状態監視：計測属性 ---
       validateExacMap: () => {
         const isErr = !(State.get("Tab1ST.exac.map.dataset")?.trim());
-        State.set({
-          "Tab1ST.exac.isMapError": [isErr, false, false],
-          "Tab1ST.exac.status": isErr ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus")
-        });
+        State.set({ "Tab1ST.exac.isMapError": [isErr, false, false], "Tab1ST.exac.status": isErr ? ["error", "エラー: Dataset未入力"] : State.get("Tab1ST.exac.cachedStatus") });
       }
     };
-
-    // --- Tab2変更移譲 ---
+    // --- Tab2イベント群 ---
     static Tab2 = {
-      // リアクティブ状態監視：dataset選択
       toggleDataset: this.#bindMulti("Tab2ST.dataset.filter"),
       toggleAllDataset: this.#bindAll("Tab2ST.dataset.filter"),
-      // リアクティブ状態監視：シンボル設定
-      confirmAndChangeAxis: async (targetSelect) => {
-        const newVal = targetSelect.value;
-        const oldVal = State.get("Tab2ST.symbol.baseKey");
+      confirmAndChangeAxis: async targetSelect => {
+        const newVal = targetSelect.value, oldVal = State.get("Tab2ST.symbol.baseKey");
         if (newVal === oldVal) return;
-        const isConfirmed = await NewDOM.confirm("確認", "シンボル設定をリセットしますか？");
-        if (!isConfirmed) {
-          targetSelect.value = oldVal;
-          return;
-        }
-        State.set("Tab2ST.symbol.baseKey", newVal);
+        if (!await NewDOM.confirm("確認", "シンボル設定をリセットしますか？")) return (targetSelect.value = oldVal); // 元に戻す
+        State.set({ "Tab2ST.symbol.baseKey": newVal });
         State.reset("Tab2ST.symbol.rules");
       },
-      addSymbolRule: () => {
-        const rules = [...(State.get("Tab2ST.symbol.rules") || [])];
-        rules.push({ id: `rule_${Date.now()}`, target: "", shape: "circle", color: "var(--grey600)" });
-        State.set("Tab2ST.symbol.rules", rules);
-      },
-      removeSymbolRule: (targetBtn) => {
+      addSymbolRule: () => State.set("Tab2ST.symbol.rules", [...(State.get("Tab2ST.symbol.rules") || []), { id: `rule_${Date.now()}`, target: "", shape: "circle", color: "var(--grey600)" }]),
+      removeSymbolRule: targetBtn => {
         const id = targetBtn.getAttribute('data-rule-id');
-        if (!id) return;
-        const rules = (State.get("Tab2ST.symbol.rules") || []).filter(r => r.id !== id);
-        State.set("Tab2ST.symbol.rules", rules);
+        if (id) State.set("Tab2ST.symbol.rules", (State.get("Tab2ST.symbol.rules") || []).filter(r => r.id !== id));
       },
-      updateSymbolRule: (targetBtn) => {
-        const idx = targetBtn.getAttribute('data-symbol-idx');
-        const type = targetBtn.getAttribute('data-symbol-type');
+      updateSymbolRule: targetBtn => {
+        const idx = targetBtn.getAttribute('data-symbol-idx'), type = targetBtn.getAttribute('data-symbol-type');
         if (idx == null || !type) return;
         const rules = [...(State.get("Tab2ST.symbol.rules") || [])];
-        if (rules[idx]) {
-          rules[idx][type] = targetBtn.value;
-          State.set("Tab2ST.symbol.rules", rules);
-        }
+        if (rules[idx]) { rules[idx][type] = targetBtn.value; State.set("Tab2ST.symbol.rules", rules); } // ルール更新
       },
-      // リアクティブ状態監視：Obsidian元素
       togglePreviewMode: this.#bindMulti("Tab2ST.preview.modeMap"),
       toggleAllPreviewMode: this.#bindAll("Tab2ST.preview.modeMap"),
-      // リアクティブ状態監視：CalElement元素
       toggleCalElement: this.#bindMulti("Tab2ST.preview.calElementMap"),
       toggleAllCalElement: this.#bindAll("Tab2ST.preview.calElementMap"),
-      // リアクティブ状態監視：Item選択
       togglePreviewItem: this.#bindMulti("Tab2ST.preview.itemMap"),
       toggleAllPreviewItem: this.#bindAll("Tab2ST.preview.itemMap")
     };
-
-    // --- ボタン監視ルーター ---
+    // --- クリック監視 ---
     static #handleClick(e) {
-      const target = e.target;
-      const tabBtn = target.closest('.tab-btn');
-      if (tabBtn) { this.switchTab(tabBtn.getAttribute('data-target')); return; }
-      const actionBtn = target.closest('[data-action]');
-      if (actionBtn) {
-        const [namespace, methodName] = actionBtn.getAttribute('data-action').split('.');
-        // Ctrl層になければEvent(this)層を探す
-        if (Ctrl[namespace]?.[methodName]) {
-          Ctrl[namespace][methodName](actionBtn);
-        } else if (this[namespace]?.[methodName]) {
-          this[namespace][methodName](actionBtn);
-        }
-      }
+      const tabBtn = e.target.closest('.tab-btn');
+      if (tabBtn) return this.switchTab(tabBtn.getAttribute('data-target'));
+      const actionBtn = e.target.closest('[data-action]');
+      if (!actionBtn) return;
+      const [ns, method] = actionBtn.getAttribute('data-action').split('.');
+      (Ctrl[ns]?.[method] || this[ns]?.[method])?.(actionBtn); // 処理委譲
     }
-     // --- 変更監視ルーター ---
+    // --- 変更監視 ---
     static #handleChange(e) {
-      const target = e.target;
-      const bindPath = target.getAttribute('data-bind');
-      if (bindPath) {
-        const val = target.type === "checkbox" ? target.checked : target.value;
-        State.set(bindPath, val);
-      }
-      const changePath = target.getAttribute('data-change');
+      const target = e.target, bindPath = target.getAttribute('data-bind'), changePath = target.getAttribute('data-change');
+      if (bindPath) State.set(bindPath, target.type === "checkbox" ? target.checked : target.value);
       if (changePath) {
-        const [namespace, methodName] = changePath.split('.');
-        if (this[namespace] && typeof this[namespace][methodName] === 'function') {
-          this[namespace][methodName](target);
-        }
+        const [ns, method] = changePath.split('.');
+        this[ns]?.[method]?.(target); // 変更委譲
       }
     }
     // --- タブ切替 ---
@@ -153,24 +99,18 @@
       document.body.setAttribute('data-theme', tabId);
       State.set("GLB.activeTab", tabId);
     }
-
-    // --- アプリケーション初期化 ---
+    // --- 初期化 ---
     static async init() {
       UIInit.build();
       State.subscribe("Tab1ST.config.mode", Evt.Tab1.validateConfigMode);
       State.subscribe("Tab1ST.exac.map.dataset", Evt.Tab1.validateExacMap);
       this.switchTab(State.get("GLB.activeTab"));
-      State.set({
-        "GLB.isLocked": false, 
-        "Tab1ST.config.status": ["hidden", ""],
-        "Tab1ST.phase": TAB1_PHASE.INIT
-      });
+      State.set({ "GLB.isLocked": false, "Tab1ST.config.status": ["hidden", ""], "Tab1ST.phase": TAB1_PHASE.INIT });
       UIPhase.updateTab1PhaseUI(State.get("Tab1ST.phase"));
       UIPhase.updateTab2PhaseUI(State.get("Tab2ST.phase"));
       document.addEventListener("click", this.#handleClick.bind(this));
       document.addEventListener("change", this.#handleChange.bind(this));
     }
   }
-
   window.addEventListener("DOMContentLoaded", () => Evt.init());
 </script>

@@ -1,6 +1,5 @@
 <!-- Method.html -->
 <script>
-  // --- 共通ユーティリティ ---
   class DataUtils {
     // --- 再配列処理 ---
     static remapArry(data, indexArr, newHeader = null) {
@@ -9,123 +8,105 @@
       const remap = row => indexArr.map(idx => idx !== -1 ? (row?.[idx] ?? "") : "");
       return [newHeader ?? remap(rawHeader), ...body.map(remap)];
     }
-
     // --- セレクタ配列判定 ---
     static validateSelect(values, quota = values.length) {
       const checkVals = values.slice(0, quota);
       return values.map((v, i) => i < quota ? (!v || checkVals.indexOf(v) !== checkVals.lastIndexOf(v)) : false);
     }
-
-    // --- 統計表・テキスト動的生成 ---
+    // --- 汎用キーソート ---
+    static sortKeysByValue(obj) {
+      return Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
+    }
+    // --- 有効数値の抽出 ---
+    static getValidNumbers(arr, requirePositive = false) {
+      return arr.map(Number).filter(v => !isNaN(v) && (!requirePositive || v > 0));
+    }
+    // --- 統計表データ生成 ---
     static createStatsRows(stats, digits = 3, formatRules = null) {
       if (!stats) return [];
-      // --- 数値フォーマット ---
       const fmt = v => (v != null && !isNaN(v)) ? Number(v).toFixed(digits) : "-";
-      // --- 置換用メタデータ生成 ---
-      const meta = { ...stats };
-      if (stats.intercept != null) {
-        meta.sign = stats.intercept >= 0 ? "+" : "-";
-        meta.abs_intercept = Math.abs(stats.intercept);
-      }
-      // --- カスタムルール適用 (ECharts等用) ---
-      if (formatRules && Array.isArray(formatRules)) {
+      // 置換用メタ生成
+      const meta = { ...stats, sign: stats.intercept >= 0 ? "+" : "-", abs_intercept: Math.abs(stats.intercept ?? 0) };
+      // カスタムルール適用
+      if (formatRules?.length) {
         return formatRules.map(({ key, label }) => {
           if (!key) return [label ?? "", ""];
-          let valStr = "";
-          // 1. 完全一致キーの場合 (例: 'r2')
-          if (meta[key] !== undefined) {
-            valStr = meta[key] === meta.sign ? meta[key] : fmt(meta[key]);
-          } else {
-            // 2. テンプレート展開 (例: 'y = {slope}x {sign} {abs_intercept}')
-            valStr = key.replace(/\{(\w+)\}/g, (match, k) => {
-              if (meta[k] === undefined) return match;
-              return k === "sign" ? meta[k] : fmt(meta[k]);
-            });
-          }
+          const valStr = meta[key] !== undefined ? (meta[key] === meta.sign ? meta[key] : fmt(meta[key])) : key.replace(/\{(\w+)\}/g, (m, k) => meta[k] !== undefined ? (k === "sign" ? meta[k] : fmt(meta[k])) : m);
           return [label ?? "", valStr];
         });
       }
-      // --- デフォルトUI用生成 ---
-      const rows = [];
-      if (stats.count != null) rows.push(["データ個数", stats.count]);
-      if (stats.r != null && stats.r2 != null) rows.push(["相関係数", `R = ${fmt(stats.r)} , R² = ${fmt(stats.r2)}`]);
-      if (stats.slope != null && stats.intercept != null) {
-        rows.push(["回帰直線", `y = ${fmt(stats.slope)}x ${meta.sign} ${fmt(meta.abs_intercept)}`]);
-      }
-      if (stats.resStdDev != null) rows.push(["残差標準偏差", fmt(stats.resStdDev)]);
-      if (stats.err3Sigma != null) rows.push(["器械Err3σ", fmt(stats.err3Sigma)]);
-      return rows;
+      // 宣言的配列生成
+      return [
+        stats.count != null ? ["データ個数", stats.count] : null,
+        (stats.r != null && stats.r2 != null) ? ["相関係数", `R = ${fmt(stats.r)} , R² = ${fmt(stats.r2)}`] : null,
+        (stats.slope != null && stats.intercept != null) ? ["回帰直線", `y = ${fmt(stats.slope)}x ${meta.sign} ${fmt(meta.abs_intercept)}`] : null,
+        stats.resStdDev != null ? ["残差標準偏差", fmt(stats.resStdDev)] : null,
+        stats.err3Sigma != null ? ["器械Err3σ", fmt(stats.err3Sigma)] : null
+      ].filter(Boolean);
     }
-
-    // --- スケール計算 ---
+    // --- Nice Numbers本体 ---
     static calcNiceScale(xVals, yVals, desiredTicks = 4) {
       if (!xVals?.length || !yVals?.length) return { niceMin: 0, niceMax: 0, niceTicks: [] };
-      const [xMin, xMax] = [Math.min(...xVals), Math.max(...xVals)];
-      const [yMin, yMax] = [Math.min(...yVals), Math.max(...yVals)];
-
-      const isAllPositive = xMin >= 0 && yMin >= 0;
-      const rawMin = isAllPositive ? 0 : Math.min(xMin, yMin);
-      const rawMax = Math.max(xMax, yMax);
-
-      const range = rawMax - rawMin || 1;
-      const rawStep = range / (desiredTicks - 1);
-      const exponent = Math.floor(Math.log10(rawStep));
-      const fraction = rawStep / Math.pow(10, exponent);
-
-      let niceFraction = 10;
-      if (fraction <= 1.2) niceFraction = 1;
-      else if (fraction <= 2.5) niceFraction = 2;
-      else if (fraction <= 6.0) niceFraction = 5;
-
-      const niceStep = niceFraction * Math.pow(10, exponent);
-      const niceMin = isAllPositive ? 0 : Math.floor(rawMin / niceStep) * niceStep;
-      const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
+      const { niceMin, niceMax, niceStep, decimals } = this.#calcScaleMath(xVals, yVals, desiredTicks);
       const ticksCount = Math.round((niceMax - niceMin) / niceStep) + 1;
-
-      const niceTicks = [];
-      const decimals = exponent < 0 ? Math.abs(exponent) : 0;
-
-      for (let i = 0; i < ticksCount; i++) {
+      const niceTicks = Array.from({ length: ticksCount }, (_, i) => {
         const val = niceMin + (i * niceStep);
-        let label = "";
-        if (Math.abs(val) >= 1000) {
-          label = `${(val / 1000).toFixed(0)}k`;
-        } else if (decimals > 0) {
-          label = val.toFixed(decimals);
-        } else {
-          label = val.toLocaleString();
-        }
-        niceTicks.push({ v: val, f: label });
-      }
+        return { v: val, f: this.#formatScaleLabel(val, decimals) };
+      });
       return { niceMin, niceMax, niceTicks };
+    }
+    // --- Nice Numbers計算 ---
+    static #calcScaleMath(xVals, yVals, desiredTicks) {
+      const [xMin, xMax, yMin, yMax] = [Math.min(...xVals), Math.max(...xVals), Math.min(...yVals), Math.max(...yVals)];
+      const isAllPos = xMin >= 0 && yMin >= 0;
+      const rawMin = isAllPos ? 0 : Math.min(xMin, yMin);
+      const rawMax = Math.max(xMax, yMax);
+      const rawStep = (rawMax - rawMin || 1) / (desiredTicks - 1);
+      const exp = Math.floor(Math.log10(rawStep));
+      const frac = rawStep / Math.pow(10, exp);
+      const niceFrac = frac <= 1.2 ? 1 : (frac <= 2.5 ? 2 : (frac <= 6.0 ? 5 : 10));
+      const niceStep = niceFrac * Math.pow(10, exp);
+      return {
+        niceMin: isAllPos ? 0 : Math.floor(rawMin / niceStep) * niceStep,
+        niceMax: Math.ceil(rawMax / niceStep) * niceStep,
+        niceStep,
+        decimals: exp < 0 ? Math.abs(exp) : 0
+      };
+    }
+    // --- ラベル文字列化 ---
+    static #formatScaleLabel(val, decimals) {
+      if (Math.abs(val) >= 1000) return `${(val / 1000).toFixed(0)}k`;
+      return decimals > 0 ? val.toFixed(decimals) : val.toLocaleString();
     }
   }
 
-  // --- Tab1 ファイルリスト検証ロジック ---
+  // --- Tab1 ファイルデータ検証・作成 ---
   class FileValidator {
     static #COL = { FILE: 0, MODE: 1, ID: 2, SUB_ID: 3, INFO: 4 };
     static #getScanID = (id, sub_id) => sub_id ? `${id}_${sub_id}` : `${id}`;
+    // --- リスト検証 ---
     static run(sheetData, outHeader, validModes, exacMode) {
       if (!sheetData?.length) return [];
       const [, ...body] = sheetData;
-      const stats = { file: {}, scan: {} };
-      // カウント集計
-      for (const row of body) {
+      // 集計
+      const stats = body.reduce((acc, row) => {
         const file = row[this.#COL.FILE];
         const scanId = this.#getScanID(row[this.#COL.ID], row[this.#COL.SUB_ID]);
-        stats.file[file] = (stats.file[file] || 0) + 1;
-        stats.scan[scanId] ??= { modes: new Set(), count: 0 };
-        stats.scan[scanId].modes.add(row[this.#COL.MODE]);
-        stats.scan[scanId].count++;
-      }
-      // エラー判定
+        acc.file.set(file, (acc.file.get(file) || 0) + 1);
+        const s = acc.scan.get(scanId) || { modes: new Set(), count: 0 };
+        s.modes.add(row[this.#COL.MODE]);
+        s.count++;
+        acc.scan.set(scanId, s);
+        return acc;
+      }, { file: new Map(), scan: new Map() });
+      // 検証ルール定義
       const rules = [
         { check: r => !/^\d+$/.test(r[this.#COL.FILE] ?? ""), err: " file形式" },
         { check: r => !validModes.includes(r[this.#COL.MODE]), err: " mode形式" },
         { check: r => !r[this.#COL.ID], err: " id形式" },
-        { check: r => stats.file[r[this.#COL.FILE]] > 1, err: " file重複" },
+        { check: r => stats.file.get(r[this.#COL.FILE]) > 1, err: " file重複" },
         { check: r => {
-            const s = stats.scan[this.#getScanID(r[this.#COL.ID], r[this.#COL.SUB_ID])];
+            const s = stats.scan.get(this.#getScanID(r[this.#COL.ID], r[this.#COL.SUB_ID]));
             if (exacMode === "Single") return s.count > 1;
             return !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
           }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式"
@@ -143,22 +124,23 @@
     }
   }
 
-  // --- Tab1 Results抽出ロジック ---
+  // --- Tab1 抽出データ作成 ---
   class DataExtractor {
+    // --- データ抽出 ---
     static run(fileDT, resultDT, exacMap) {
       if (!fileDT?.length || !resultDT?.length) return [];
       const resultMap = new Map(resultDT.slice(1).map(r => [String(r[0]), r]));
-      const scanIDMap = new Map();
-      // マップ作成
-      for (const [file, mode, id, , , scanId] of fileDT.slice(1)) {
-        if (!scanIDMap.has(scanId)) scanIDMap.set(scanId, { id, files: {} });
-        scanIDMap.get(scanId).files[String(mode).toLowerCase()] = file;
-      }
-      const getKeys = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
-      const [obKeys, mdKeys] = [getKeys(GLOBAL_CONFIG.obsidianIndex), getKeys(GLOBAL_CONFIG.mudrockIndex)];
-      // 数値フォーマット
+      // 集計とソート
+      const scanIDMap = fileDT.slice(1).reduce((map, [file, mode, id, , , scanId]) => {
+        const entry = map.get(scanId) || { id, files: {} };
+        entry.files[String(mode).toLowerCase()] = file;
+        map.set(scanId, entry);
+        return map;
+      }, new Map());
+      const obKeys = DataUtils.sortKeysByValue(GLOBAL_CONFIG.obsidianIndex);
+      const mdKeys = DataUtils.sortKeysByValue(GLOBAL_CONFIG.mudrockIndex);
       const format = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
-      // データ抽出
+      // 抽出パイプライン
       const extract = (file, keys, idxObj) => {
         const row = resultMap.get(String(file ?? ""));
         return keys.reduce((acc, k) => {
@@ -183,11 +165,10 @@
     }
   }
   
-  // --- Tab1 PXRF重複検証・統合ロジック ---
+  // --- Tab1 PXRF重複検証・統合 ---
   class PxrfValidator {
     static run(existingDT, newDT) {
       if (!existingDT?.length || !newDT?.length) return { isDup: false, data: newDT };
-      // dataset_IDをキーとして突合
       const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
       const filteredEx = existingDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
       return filteredEx.length !== existingDT.length - 1 
@@ -196,14 +177,13 @@
     }
   }
 
-  // --- Tab2 データ取得ロジック ---
+  // --- Tab2 データオブジェクト変換 ---
   class DataManager {
-    // --- 行列変換 ---
     static #toObjArray(data) {
       const [header, ...body] = data;
       return body.map(row => header.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: row[i] }), {}));
     }
-    // --- 読み込みロジック ---
+    // 読込
     static load(pxrfData, wdxrfData) {
       const pxrfObjs = this.#toObjArray(pxrfData);
       const wdxrfObjs = this.#toObjArray(wdxrfData);    
@@ -218,60 +198,45 @@
       });
       return { mergedPXRF: pxrfObjs, wdxrfObjs, datasets: [...datasets] };
     }
-    // --- フィルターロジック ---
+    // フィルタ
     static filter(mergedPXRF, wdxrfObjs, selectedDatasets) {
       const targetSet = new Set(selectedDatasets);
-      // PXRF用削ぎ落とし
-      const basePXRF = mergedPXRF.filter(obj => targetSet.has(obj.dataset)).map(row => {
-        const newRow = { dataset: row.dataset, id: row.id, ID: row.ID, item: row.item, Item: row.Item, Group: row.Group, Source: row.Source };
-        GLOBAL_CONFIG.valueElement.forEach(el => {
-          newRow[`ob_${el}`] = row[`ob_${el}`];
-          newRow[`md_${el}`] = row[`md_${el}`];
-          newRow[`ob_${el}_Err`] = row[`ob_${el}_Err`];
-          newRow[`md_${el}_Err`] = row[`md_${el}_Err`];
-        });
-        return newRow;
-      });
-      // WDXRF用削ぎ落とし
-      const baseWDXRF = wdxrfObjs.filter(obj => targetSet.has(obj.dataset)).map(row => {
-        const newRow = { dataset: row.dataset, id: row.id, ID: row.ID, Group: row.Group, Source: row.Source };
-        GLOBAL_CONFIG.valueElement.forEach(el => {
-          newRow[el] = row[el]; // プレフィックスなし
-        });
-        return newRow;
-      });
+      const basePXRF = mergedPXRF.filter(obj => targetSet.has(obj.dataset)).map(row => ({
+        dataset: row.dataset, id: row.id, ID: row.ID, item: row.item, Item: row.Item, Group: row.Group, Source: row.Source,
+        ...Object.fromEntries(GLOBAL_CONFIG.valueElement.flatMap(el => [
+          [`ob_${el}`, row[`ob_${el}`]], [`md_${el}`, row[`md_${el}`]],
+          [`ob_${el}_Err`, row[`ob_${el}_Err`]], [`md_${el}_Err`, row[`md_${el}_Err`]]
+        ]))
+      }));
+      const baseWDXRF = wdxrfObjs.filter(obj => targetSet.has(obj.dataset)).map(row => ({
+        dataset: row.dataset, id: row.id, ID: row.ID, Group: row.Group, Source: row.Source,
+        ...Object.fromEntries(GLOBAL_CONFIG.valueElement.map(el => [el, row[el]]))
+      }));
       return { basePXRF, baseWDXRF };
     }
   }
 
-  // --- Tab2 プレビューデータ構築ロジック ---
+  // --- Tab2 プレビューデータ生成 ---
   class PreviewManager {
     static buildPreviewData(basePXRF, baseWDXRF, config) {
       if (!basePXRF?.length || !baseWDXRF?.length) return [];
       const wdxrfMap = new Map(baseWDXRF.map(w => [`${w.dataset}_${w.ID ?? w.id}`, w]));
       const minMap = config.lodEnabled ? this.#getMinMap(basePXRF, config) : {};
-      // 基礎整形とLODの適用
-      const rawProcessed = basePXRF
-        .filter(r => !config.itemMap?.length || config.itemMap.includes(r.item ?? r.Item))
-        .map(this.#formatAndLOD(config, minMap));
-      // 補正係数の算出と適用
+      const rawProcessed = basePXRF.filter(r => !config.itemMap?.length || config.itemMap.includes(r.item ?? r.Item)).map(this.#formatAndLOD(config, minMap));
       const calCoeffs = this.#resolveCoeffs(rawProcessed, wdxrfMap, config);
-      return rawProcessed
-        .map(this.#applyCalibration(config, calCoeffs))
-        .map(this.#calcFinalValue(config, wdxrfMap))
-        .filter(Boolean);
+      return rawProcessed.map(this.#applyCalibration(config, calCoeffs)).map(this.#calcFinalValue(config, wdxrfMap)).filter(Boolean);
     }
-    // LOD用最小値（メーカーから計測機器情報取得後、GLBで定数LODに切替予定）
+    // LOD最小値取得（メーカーでータ取得後、GLB定数代入に置換予定）
     static #getMinMap(basePXRF, config) {
       const minMap = {};
       GLOBAL_CONFIG.valueElement.forEach(el => {
         const prefix = (GLOBAL_CONFIG.optionalElements.includes(el) && config.modeMap?.includes(el)) ? 'ob' : 'md';
-        const nums = basePXRF.map(r => Number(r[`${prefix}_${el}`])).filter(v => !isNaN(v) && v > 0);
+        const nums = DataUtils.getValidNumbers(basePXRF.map(r => r[`${prefix}_${el}`]), true);
         minMap[el] = nums.length ? Math.min(...nums) : null;
       });
       return minMap;
     }
-    // LOD変換
+    // LOD変換適用
     static #formatAndLOD = (config, minMap) => (row) => {
       const newRow = { dataset: row.dataset, id: row.ID ?? row.id, item: row.item ?? row.Item, group: row.Group ?? "Unknown", Group: row.Group ?? "Unknown", Source: row.Source ?? "Unknown" };
       GLOBAL_CONFIG.valueElement.forEach(el => {
@@ -283,10 +248,11 @@
       });
       return newRow;
     };
-    // 検量線計算と適用
+    // 検量線算出
     static #resolveCoeffs(rawProcessed, wdxrfMap, config) {
       if (!config.calEnabled || !config.calElementMap?.length) return null;
       const calCoeffs = {};
+      // 新規検量線採用
       if (config.correction === "new") {
         config.calElementMap.forEach(el => {
           const wVals = [], pVals = [];
@@ -297,6 +263,7 @@
           const coeffs = CalcProcessor.calcCalibrationCoeffs(wVals, pVals);
           if (coeffs) calCoeffs[el] = coeffs;
         });
+      // 既存検量線採用
       } else if (config.correctionData?.length > 1) {
         const header = config.correctionData[0];
         const row = config.correctionData.find(r => r[0] === config.correction);
@@ -313,6 +280,7 @@
       }
       return calCoeffs;
     }
+    // 検量線適用
     static #applyCalibration = (config, calCoeffs) => (row) => {
       if (!calCoeffs) return row;
       const corrected = { ...row };
@@ -331,7 +299,7 @@
       const errVal = GLOBAL_CONFIG.valueElement.includes(config.value) ? (row[`${config.value}_Err`] ?? null) : null;
       return { x: xVal, y: yVal, err: errVal, id: row.id, group: row.group, dataset: row.dataset, item: row.item, Group: row.Group, Source: row.Source !== "Unknown" ? row.Source : (w.Source ?? "Unknown") };
     };
-    // 検量線補正データ整形
+    // 検量線適用データ整形
     static generateCorrectionRow(basePXRF, baseWDXRF, config, indexName) {
       const newRow = [indexName];
       GLOBAL_CONFIG.valueElement.forEach(el => {
@@ -339,7 +307,6 @@
           newRow.push("", "");
           return;
         }
-        // 生データ取得用に一時コンフィグを生成
         const tempConfig = { ...config, value: el, calEnabled: false };
         const data = this.buildPreviewData(basePXRF, baseWDXRF, tempConfig);
         if (!data.length) {
@@ -353,17 +320,14 @@
     }
   }
 
-  // --- Tab2 数式評価・統計ロジック ---
+  // --- 数式評価 ---
   class CalcProcessor {
     static evaluate(formula, rowData) {
       if (!formula) return null;
       try {
         const keys = Object.keys(rowData);
         const vals = Object.values(rowData);
-        const mathFns = Object.getOwnPropertyNames(Math)
-          .filter(k => typeof Math[k] === 'function')
-          .map(k => `const ${k} = Math.${k};`)
-          .join('');
+        const mathFns = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
         const fn = new Function(...keys, `${mathFns} return ${formula};`);
         const result = fn(...vals);
         return isNaN(result) || !isFinite(result) ? null : result;
@@ -371,8 +335,7 @@
         return null;
       }
     }
-
-    // --- 検量線係数の算出 (X: WDXRF, Y: PXRF) ---
+    // 検量線係数計算
     static calcCalibrationCoeffs(wdxrfVals, pxrfVals) {
       if (!wdxrfVals?.length || wdxrfVals.length < 2 || wdxrfVals.length !== pxrfVals?.length) return null;
       try {
@@ -381,19 +344,19 @@
         if (isNaN(slope) || isNaN(intercept) || slope === 0) return null;
         return { slp: slope, int: intercept };
       } catch (e) {
-        return null; // 算出エラー回避
+        return null;
       }
     }
-
-    // --- 単回帰・相関計算 ---
+    // --- 回帰・相関計算 ---
     static calcRegression(xArr, yArr, errArr) {
-      // (既存のまま変更なし)
       if (!xArr?.length || xArr.length !== yArr?.length) return null;
       const n = xArr.length;
+      // 単回帰算出
       const data = xArr.map((x, i) => [x, yArr[i]]);
       const { m: slope, b: intercept } = ss.linearRegression(data);
       const r = ss.sampleCorrelation(xArr, yArr);
       const r2 = r * r;
+      // 残差標準偏差算出
       let ssRes = 0, maxRes = 0;
       xArr.forEach((x, i) => {
         const res = Math.abs(yArr[i] - (slope * x + intercept));
@@ -401,6 +364,7 @@
         maxRes = Math.max(maxRes, res);
       });
       const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
+      // 器械Err3σ算出
       let err3Sigma = 0;
       if (errArr?.length > 2) {
         const meanErr = errArr.reduce((a, b) => a + b, 0) / errArr.length;
@@ -411,7 +375,6 @@
     }
   }
 
-  // --- 外部参照用 ---
   const Mtd = {
     Utils: DataUtils,
     Tab1: { FileValidator, DataExtractor, PxrfValidator },
