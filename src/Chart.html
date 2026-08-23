@@ -13,7 +13,6 @@
       return this.#cache.get(key);
     }
   }
-
   // --- プロット描画クラス ---
   class ObCalPlot extends HTMLElement {
     #box; #chart = null; #observer; #src = null;
@@ -59,16 +58,15 @@
       const baseKey = symbData?.baseKey;
       const rules = symbData?.rules || [];
       const defRule = rules.find(r => r.key === "default");
-      const getShape = shape => shape === 'square' ? 'rect' : (shape === 'cross' ? 'path://M -4,-4 L 4,4 M 4,-4 L -4,4' : (shape === 'emptyCircle' ? 'circle' : (shape || 'circle')));
-      
       const plotData = prevData.map(d => {
         const rule = rules.find(r => r.target !== "" && r.target === d[baseKey]) || defRule; // ルール適用
-        const shapeVal = rule.shape;
+        const shapeVal = rule.shape || 'circle'; // 形状値の直接利用
         const isEmpty = shapeVal === 'emptyCircle';
-        const shape = getShape(shapeVal);
+        const shape = isEmpty ? 'circle' : shapeVal; // ECharts用置換
         const baseColor = ThemeCache.get(rule.color);
         return {
-          value: [d.x, d.y], id: d.id, group: d.group, symbol: shape, symbolSize: shape.startsWith('path://') ? 7 : 6,
+          value: [d.x, d.y], id: d.id, group: d.group,
+          symbol: shape, symbolSize: shape.startsWith('path://') ? 7 : 6,
           itemStyle: { color: isEmpty ? 'transparent' : baseColor, borderColor: baseColor, borderWidth: isEmpty ? 1.5 : 1 }
         };
       });
@@ -76,9 +74,9 @@
       if (statsData?.slope != null && statsData?.intercept != null) {
         const { slope, intercept } = statsData;
         series.push({
-          type: 'line',
-          data: [[niceMin, slope * niceMin + intercept], [niceMax, slope * niceMax + intercept]], // 回帰直線
-          symbol: 'none', lineStyle: { color: ThemeCache.get('var(--grey400)'), width: 1, type: 'dashed', opacity: 0.5 }, animation: false, silent: true
+          type: 'line', data: [[niceMin, slope * niceMin + intercept], [niceMax, slope * niceMax + intercept]], // 回帰直線
+          symbol: 'none', lineStyle: { color: ThemeCache.get('var(--grey400)'), width: 1, type: 'dashed', opacity: 0.5 },
+          animation: false, silent: true
         });
       }
       const axisColor = ThemeCache.get('var(--grey400)');
@@ -87,21 +85,24 @@
       const option = {
         animation: false,
         grid: { left: 45, top: 25, width: gridPlotSize, height: gridPlotSize, show: true, borderColor: gridBorder, borderWidth: 1 },
-        tooltip: {
-          formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`, // ツールチップ
-          backgroundColor: 'rgba(255,255,255,0.95)', textStyle: { fontSize: 11, color: '#333' }
-        },
+        tooltip: { formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`, backgroundColor: 'rgba(255,255,255,0.95)', textStyle: { fontSize: 11, color: '#333' } },
         xAxis: {
-          type: 'value', name: 'WDXRF', nameLocation: 'middle', nameGap: 20, nameTextStyle: { fontSize: 11, color: axisColor },
-          min: niceMin, max: niceMax, interval: interval, axisLabel: { margin: 6, fontSize: 10, color: axisColor, formatter: val => fmtTick(val) },
+          type: 'value', name: 'WDXRF', nameLocation: 'middle',
+          nameGap: 20, nameTextStyle: { fontSize: 11, color: axisColor },
+          min: niceMin, max: niceMax, interval: interval,
+          axisLabel: { margin: 6, fontSize: 10, color: axisColor, formatter: val => fmtTick(val) },
           splitLine: { show: true, lineStyle: { color: gridBorder, type: 'solid', width: 0.3 } },
-          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } }, axisTick: { show: false, inside: true }
+          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
+          axisTick: { show: false, inside: true }
         },
         yAxis: {
-          type: 'value', name: 'PXRF', nameLocation: 'middle', nameGap: 22, nameTextStyle: { fontSize: 11, color: axisColor },
-          min: niceMin, max: niceMax, interval: interval, axisLabel: { rotate: 90, verticalAlign: 'middle', align: 'center', margin: 8, fontSize: 10, color: axisColor, formatter: val => (Math.abs(val - niceMin) < 1e-8) ? '' : fmtTick(val) },
+          type: 'value', name: 'PXRF', nameLocation: 'middle',
+          nameGap: 22, nameTextStyle: { fontSize: 11, color: axisColor },
+          min: niceMin, max: niceMax, interval: interval,
+          axisLabel: { rotate: 90, verticalAlign: 'middle', align: 'center', margin: 8, fontSize: 10, color: axisColor, formatter: val => (Math.abs(val - niceMin) < 1e-8) ? '' : fmtTick(val) },
           splitLine: { show: true, lineStyle: { color: gridBorder, type: 'solid', width: 0.3 } },
-          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } }, axisTick: { show: false, inside: true }
+          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
+          axisTick: { show: false, inside: true }
         },
         graphic: [{ type: 'text', left: 55, top: 35, style: { text: graphText, fontSize: 10, fill: axisColor, fontFamily: 'Roboto, sans-serif' } }], // テキスト注入
         series: series
