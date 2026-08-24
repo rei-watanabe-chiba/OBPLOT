@@ -13,20 +13,20 @@
     }
   }
   class T1Ctrl {
-    // --- File読込 ---
+    // --- tab1 File読込 ---
     static async loadRaw() {
-      if (!(await NewDOM.confirm("確認", State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？", T1UI.rawBar))) return;
+      if (!(await NewDOM.confirm("確認", State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？", "rawSec"))) return;
       await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => {
         const { data, message } = await API.fetchDT(GLB.Conf.fileSheetName, 5);
         State.reset(['T1ST.extr']); 
-        State.set({ "T1ST.raw.data": data, "T1ST.raw.refs": Object.fromEntries(GLB.Conf.fileFields.map(f => [f.key, ""])), "T1ST.raw.hasRefErr": [true, true, true, false, false], "T1ST.raw.cachedStatus": ["success", message], "T1ST.phase": T1_PHS.LOAD });
+        State.set({ "T1ST.raw.data": data, "T1ST.raw.refs": Object.fromEntries(GLB.Conf.fileFields.map(f => [f.key, ""])), "T1ST.raw.flags": [true, true, true, false, false], "T1ST.raw.cachedStatus": ["success", message], "T1ST.phase": T1_PHS.LOAD });
         Evt.T1.checkRawRefs(); return message; 
       });
     }
-    // --- リスト処理 ---
+    // --- tab1 リスト処理 ---
     static async procList(actionType, rawDT) {
       if (actionType === "validate") ({ data: rawDT } = await API.fetchDT(GLB.Conf.filelistSheetName, 5, 5));
-      const outData = Mtd.T1.FVald.valdList(rawDT, GLB.Conf.filelistHeader, GLB.Conf.validModes, State.get("T1ST.pref.mode"));
+      const outData = Mtd.T1.FVald.valdList(rawDT, GLB.Conf.filelistHeader, GLB.Conf.validModes, State.get("T1ST.pref.refs.mode"));
       const isAlert = outData.slice(1).some(r => r.at(-1) !== ""); // エラー判定
       await Promise.all([API.writeData(GLB.Conf.filelistSheetName, outData, "rule"), API.clearUserProperty(GLB.Conf.propFileEdited)]);
       const statusRes = isAlert ? ["alert", "出力完了, errあり"] : "出力完了, errなし";
@@ -35,22 +35,22 @@
       if (!isAlert) Evt.T1.checkExtrRefs();
       return statusRes;
     }
-    // --- リスト生成 ---
+    // --- tab1 リスト生成 ---
     static async makeList() {
       Evt.T1.checkRawRefs();
       const { raw } = State.proxy.T1ST;
-      if (raw.hasRefErr.some(Boolean)) return;
-      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", T1UI.rawBar)) return;
+      if (raw.flags.some(Boolean)) return;
+      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawSec")) return;
       await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => T1Ctrl.procList("make", Mtd.Util.remapArry(raw.data, GLB.Conf.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), GLB.Conf.fileHeader)));
     }
-    // --- リスト検証 ---
+    // --- tab1 リスト検証 ---
     static async valdList() {
-      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", T1UI.rawBar)) return;
+      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawSec")) return;
       await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => T1Ctrl.procList("validate", null));
     }
-    // --- データ抽出 ---
+    // --- tab1 データ抽出 ---
     static async runExtr() {
-      if (!await NewDOM.confirm("確認", "「抽出データ」を上書きしますか？", T1UI.extrBar)) return;
+      if (!await NewDOM.confirm("確認", "「抽出データ」を上書きしますか？", "extrSec")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
         if (await API.checkUserProperty(GLB.Conf.propFileEdited)) { State.set({ "T1ST.raw.status": ["error", "シート編集検知"], "T1ST.phase": T1_PHS.INVALID }); return; }
         const [fileRes, resDT] = await Promise.all([API.fetchDT(GLB.Conf.filelistSheetName, 6, 6), API.fetchDT(GLB.Conf.resultsSheetName)]);
@@ -60,76 +60,77 @@
         State.set("T1ST.phase", T1_PHS.EXTRACT); return `抽出: ${outData.length - 1} 件`;
       });
     }
-    // --- PXRF格納 ---
+    // --- tab1 PXRF格納 ---
     static async pushExtr() {
-      if (!await NewDOM.confirm("確認", "PXRFシートに格納しますか？", T1UI.extrBar)) return;
+      if (!await NewDOM.confirm("確認", "PXRFシートに格納しますか？", "extrSec")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
         const [extrRes, pxrfRes] = await Promise.all([API.fetchDT(GLB.Conf.extractSheetName), API.fetchDT(GLB.Conf.pxrfSheetName)]);
         const { isDup, data: mrgData } = Mtd.T1.PVald.checkPxrf(pxrfRes.data, extrRes.data);
-        if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？", T1UI.extrBar)) return;
+        if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？", "extrSec")) return;
         await API.writeData(GLB.Conf.pxrfSheetName, isDup ? mrgData : extrRes.data.slice(1), isDup ? "clear" : ["append"]);
         State.set("T1ST.phase", T1_PHS.OUTPUT); return `PXRF格納: ${extrRes.data.length - 1} 件`;
       });
     }
   }
   class T2Ctrl {
-    // --- データ読込 ---
+    // --- tab2 データ読込 ---
     static async loadDB() {
       await CoreCtrl.withAsyncLock("T2ST.asgn.status", async () => {
         State.set("T2ST.asgn.status", ["loading", "処理中..."]);
         const [pRes, wRes, cRes] = await Promise.all([API.fetchDT(GLB.Conf.pxrfSheetName), API.fetchDT(GLB.Conf.wdxrfSheetName), API.fetchDT(GLB.Conf.correctionSheetName).catch(() => ({ data: [] }))]);
         if (!pRes.data || pRes.data.length <= 1) throw new Error("PXRF不足");
         if (!wRes.data || wRes.data.length <= 1) throw new Error("WDXRF不足");
-        State.reset(['T2ST.asgn', 'T2ST.symb', 'T2ST.prev', 'T2ST.repo']);
+        State.reset(['T2ST.asgn', 'T2ST.symb', 'T2ST.calb', 'T2ST.prev', 'T2ST.repo']);
         const { wrapPXRF, wrapWDXRF, dbs } = Mtd.T2.mgmtDT.loadDB(pRes.data, wRes.data);
-        State.set({ "T2ST.asgn.rawDT.wrapPXRF": wrapPXRF, "T2ST.asgn.rawDT.wrapWDXRF": wrapWDXRF, "T2ST.asgn.rawDT.corrDT": cRes.data, "T2ST.asgn.available": dbs, "T2ST.asgn.filter": dbs, "T2ST.phase": T2_PHS.LOADED, "T2ST.prev.modeMap": [...GLB.Conf.optElms], "T2ST.prev.calElms": [...GLB.Conf.valElms] });
+        State.set({ "T2ST.asgn.data.wrapPXRF": wrapPXRF, "T2ST.asgn.data.wrapWDXRF": wrapWDXRF, "T2ST.asgn.data.corrDT": cRes.data, "T2ST.asgn.refs.available": dbs, "T2ST.asgn.refs.filter": dbs, "T2ST.phase": T2_PHS.LOADED, "T2ST.calb.refs.modeMap": [...GLB.Conf.optElms], "T2ST.calb.refs.calElms": [...GLB.Conf.valElms] });
         return `読込完了: database ${dbs.length}件`;
       });
     }
-    // --- データ確定 ---
+    // --- tab2 データ確定 ---
     static async fltrDB() {
       await CoreCtrl.withAsyncLock("T2ST.asgn.status", async () => {
         const { asgn } = State.proxy.T2ST;
-        if (!asgn.filter?.length) throw new Error("DB未選択"); // 未選択
-        State.reset(['T2ST.symb', 'T2ST.prev', 'T2ST.repo']);
-        const { pxrfDT, wdxrfDT } = Mtd.T2.mgmtDT.fltrDB(asgn.rawDT.wrapPXRF, asgn.rawDT.wrapWDXRF, asgn.filter);
-        State.set({ "T2ST.asgn.pxrfDT": pxrfDT, "T2ST.asgn.wdxrfDT": wdxrfDT, "T2ST.phase": T2_PHS.FILTERED }); return "データ更新";
+        if (!asgn.refs.filter?.length) throw new Error("DB未選択"); // 未選択判定
+        State.reset(['T2ST.symb', 'T2ST.calb', 'T2ST.prev', 'T2ST.repo']);
+        const { pxrfDT, wdxrfDT } = Mtd.T2.mgmtDT.fltrDB(asgn.data.wrapPXRF, asgn.data.wrapWDXRF, asgn.refs.filter);
+        State.set({ "T2ST.asgn.data.pxrfDT": pxrfDT, "T2ST.asgn.data.wdxrfDT": wdxrfDT, "T2ST.phase": T2_PHS.FILTERED }); return "データ更新";
       });
     }
-    // --- シンボル確定 ---
+    // --- tab2 シンボル確定 ---
     static async setSymb() { await CoreCtrl.withAsyncLock("T2ST.symb.status", async () => { State.set("T2ST.phase", T2_PHS.MAPPED); return "シンボル確定"; }); }
-    static async resetSymb() { State.reset("T2ST.symb.rls"); }
-    // --- プレビュー作成 ---
+    static async resetSymb() { State.reset("T2ST.symb.refs.rls"); }
+    // --- tab2 プレビュー作成 ---
     static async buildPrev() {
       await CoreCtrl.withAsyncLock("T2ST.prev.status", async () => {
-        const { prev, asgn } = State.proxy.T2ST;
-        const conf = { ...prev, corrDT: asgn.rawDT.corrDT };
-        const prevDT = Mtd.T2.mgmPrev.buildPrev(asgn.pxrfDT, asgn.wdxrfDT, conf);
+        const { prev, calb, asgn } = State.proxy.T2ST;
+        const conf = { ...prev.refs, ...calb.refs, corrDT: asgn.data.corrDT }; // パラメータ統合
+        const prevDT = Mtd.T2.mgmPrev.buildPrev(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf);
         if (!prevDT.length) throw new Error("対象データなし");
         const statsDT = Mtd.T2.Calc.calcReg(prevDT.map(d => d.x), prevDT.map(d => d.y), Mtd.Util.getValidNums(prevDT.map(d => d.err)));
         State.reset(['T2ST.repo']);
-        State.set({ "T2ST.prev.correctionLogic": statsDT, "T2ST.prev.statsDT": statsDT, "T2ST.prev.prevDT": prevDT, "T2ST.phase": T2_PHS.PREVIEWED }); return "プレビュー更新";
+        State.set({ "T2ST.prev.data.correctionLogic": statsDT, "T2ST.prev.data.statsDT": statsDT, "T2ST.prev.data.prevDT": prevDT, "T2ST.phase": T2_PHS.PREVIEWED }); return "プレビュー更新";
       });
     }
-    // --- 補正出力 ---
+    // --- tab2 補正出力 ---
     static async saveCorr() {
       await CoreCtrl.withAsyncLock("T2ST.prev.status", async () => {
-        const { prev, asgn } = State.proxy.T2ST;
-        const idxName = prev.saveIndexName?.trim();
+        const { prev, calb, asgn } = State.proxy.T2ST;
+        const idxName = prev.refs.saveIndexName?.trim();
         if (!idxName) throw new Error("名前が未入力です");
-        if (!prev.calElms?.length) throw new Error("元素が未選択です");
-        if (!await NewDOM.confirm("確認", `検量線を出力しますか？\n名前：${idxName}\n対象：${prev.calElms.join(', ')}`, T2UI.prevBar)) return;
-        const isDup = asgn.rawDT.corrDT?.slice(1).some(r => r[0] === idxName);
-        if (isDup && !await NewDOM.confirm("確認", "上書きしますか？", T2UI.prevBar)) return; // 上書き確認
-        const newRow = Mtd.T2.mgmPrev.genCorr(asgn.pxrfDT, asgn.wdxrfDT, prev, idxName);
-        let updData = asgn.rawDT.corrDT?.length ? [...asgn.rawDT.corrDT] : [['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]];
+        if (!calb.refs.calElms?.length) throw new Error("元素が未選択です");
+        if (!await NewDOM.confirm("確認", `検量線を出力しますか？\n名前：${idxName}\n対象：${calb.refs.calElms.join(', ')}`, "prevSec")) return;
+        const isDup = asgn.data.corrDT?.slice(1).some(r => r[0] === idxName);
+        if (isDup && !await NewDOM.confirm("確認", "上書きしますか？", "prevSec")) return; // 上書き確認
+        const conf = { ...prev.refs, ...calb.refs, corrDT: asgn.data.corrDT };
+        const newRow = Mtd.T2.mgmPrev.genCorr(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf, idxName);
+        let updData = asgn.data.corrDT?.length ? [...asgn.data.corrDT] : [['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]];
         if (isDup) updData[updData.findIndex(r => r[0] === idxName)] = newRow;
         else updData.push(newRow);
-        await API.writeData(GLB.Conf.correctionSheetName, isDup ? updData : (asgn.rawDT.corrDT?.length ? [newRow] : updData), (isDup || !asgn.rawDT.corrDT?.length) ? "clear" : ["append"]);
-        State.set({ "T2ST.asgn.rawDT.corrDT": updData, "T2ST.prev.saveIndexName": "" }); return `補正値を${isDup ? '上書き' : '保存'}しました`;
+        await API.writeData(GLB.Conf.correctionSheetName, isDup ? updData : (asgn.data.corrDT?.length ? [newRow] : updData), (isDup || !asgn.data.corrDT?.length) ? "clear" : ["append"]);
+        State.set({ "T2ST.asgn.data.corrDT": updData, "T2ST.prev.refs.saveIndexName": "" }); return `補正値を${isDup ? '上書き' : '保存'}しました`;
       });
     }
-    // --- レポート展開 ---
+    // --- tab2 レポート展開 ---
     static async openRepo() {
       await CoreCtrl.withAsyncLock("T2ST.repo.status", async () => {
         State.set("T2ST.repo.status", ["loading", "テンプレート取得中..."]);

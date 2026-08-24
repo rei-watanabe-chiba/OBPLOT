@@ -1,14 +1,19 @@
 <!-- src/Model.html -->
 <script>
-  // --- global ---
+  // --- 設定定数定義 ---
+  // シート・機能変更時は▼の項目を編集
   const GLB = {
     Conf: {
+      // ▼ シート名とヘッダー ---------------
       fileSheetName: "File", fileHeader: ['file', 'mode', 'id', 'sub_id', 'info'], resultsSheetName: "Results",
       filelistSheetName: "ファイルリスト", filelistHeader: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'],
       extractSheetName: "抽出データ", pxrfSheetName: "PXRF", wdxrfSheetName: "WDXRF", correctionSheetName: "Correction",
       validModes: ["mudrock", "obsidian"], propFileEdited: "isListMod",
+      // ▼ obsidianモード使い分け元素 ---------------
       optElms: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
+      // ▼ 可視化元素指定 ---------------
       valElms: ["K", "Ca", "Ti", "Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
+      // ▼ 可視化指数指定（文字列計算） ---------------
       valLgc: ["Mn * 100 / Fe", "log10(Fe/K)"],
       fileFields: [
         { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
@@ -21,88 +26,83 @@
         { key: "date", label: "date", placeholder: "計測日", bind: "T1ST.extr.refs.date" }
       ],
       symbAxes: [{ val: "DB", label: "database" }, { val: "item", label: "item" }, { val: "Group", label: "Group" }, { val: "Source", label: "Source" }],
+      // ▼ シンボル定義（echarts準拠) ---------------
       symbShapes: [{ val: 'emptyCircle', label: '○' }, { val: 'circle', label: '●' }, { val: 'triangle', label: '▲' }, { val: 'square', label: '■' }, { val: 'cross', label: '✖' }],
+      // ▼ シンボルカラー定義（echarts準拠) ---------------
       symbColors: [{ val: 'var(--grey600)', label: 'Gray' }, { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' }, { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' }],
+      symbBaseKey: "DB", symbDefShp: "emptyCircle", symbDefClr: "var(--grey600)",
+      initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
+      // ▼ Resultsシートインデックス ---------------
       obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
       mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 }
     }
   };
-  // --- htmlID ---
-  const T1UI = {
-    tabSet: "tab1Fieldset", prefSec: "prefSec", prefBar: "prefStatusBar", prefArea: "prefArea", prefModeBox: "prefModeBox",
-    rawSec: "rawSec", rawLoadBtn: "rawLoadBtn", rawBar: "rawStatusBar", rawArea: "rawArea", rawBox: "rawBox", rawBtnBox:"rawBtnBox", rawMakeBtn: "rawMakeBtn", rawValdBtn: "rawValdBtn",
-    extrSec: "extrSec", extrBar: "extrStatusBar", extrBtn: "extrBtn", extrArea: "extrArea", extrPushBtn: "extrPushBtn", extrBox: "extrBox"
-  };
-  const T2UI = {
-    tabSet: "tab2Fieldset",
-    asgnSec: "asgnSec", asgnLoadBtn: "asgnLoadBtn", asgnFltrBtn: "asgnFilterBtn", asgnLoadBar: "asgnLoadBar", asgnArea: "asgnArea", asgnBox: "asgnBox",
-    symbSec: "symbSec", symbArea: "symbArea", symbAxisBox: "symbAxisBox", symbBox: "symbBox", symbBtn: "symbBtn", symbBar: "symbStatusBar", 
-    prevSec: "prevSec", prevModeBox: "prevModeBox", prevItemBox: "prevItemBox", prevCorrBox: "prevCorrBox", prevValBox: "prevValBox", prevLodBox: "prevLodBox", prevCalTglBox: "prevCalTglBox", prevMakeBtn: "prevMakeBtn", prevChartBox: "prevChartBox", prevStatsTbl: "prevStatsTbl", prevBar: "prevBar", prevSaveBox: "prevSaveBox", prevSaveInp: "prevSaveInp", prevSaveBtn: "prevSaveBtn",
-    repoSec: "repoSec", reppBtn: "reportOpenBtn", repoBar: "reportStatusBar"
-  };
   // --- フェーズ定義 ---
   const T1_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
   const T2_PHS = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
-  // --- 状態管理クラス定義 ---
+  // --- AppState ---
   class AppState {
     #state; #initialState; #listeners; 
-    // state宣言：GLB/Tab → section → stateの名前空間
+    // --- セクション単位のstate生成 ---
     constructor() {
+      const createSec = (overrides = {}) => ({ status: [], data: null, refs: {}, flags: [], ...overrides }); // 共通構造の強制
       const initDef = {
         GLB: { activeTab: "tab1", isLocked: false },
         T1ST: {
           phase: T1_PHS.INIT,
-          pref: { status: [], mode: "" },
-          raw: { data: null, status: [], cachedStatus: [], refs: {}, hasRefErr: [true, true, true, false, false] },
-          extr: { status: [], cachedStatus: [], refs: { DB: "", item: "", date: "" }, hasRefErr: [true, false, false] }
+          pref: createSec({ refs: { mode: "" } }),
+          raw:  createSec({ flags: GLB.Conf.initFlags.raw }),
+          extr: createSec({ refs: { DB: "", item: "", date: "" }, flags: GLB.Conf.initFlags.extr })
         },
         T2ST: {
           phase: T2_PHS.INIT,
-          asgn: { rawDT: { corrDT: [], wrapPXRF: null, wrapWDXRF: null }, available: [], filter: [], pxrfDT: null, wdxrfDT: null, status: [] },
-          symb: { baseKey: "DB", rls: [{ key: "default", target: "", shp: "emptyCircle", clr: "var(--grey600)" }], status: [] },
-          prev: { modeMap: [...GLB.Conf.optElms], itemMap: [], calElms: [...GLB.Conf.valElms], val: GLB.Conf.valElms[0], correction: "new", useLOD: false, useCal: false, saveIndexName: "", correctionLogic: {}, prevDT: null, statsDT: null, status: [] },
-          repo: { values: [], corrections: [], status: [] }
+          asgn: createSec({ data: { corrDT: [], wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], filter: [] } }),
+          symb: createSec({ refs: { baseKey: GLB.Conf.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.Conf.symbDefShp, clr: GLB.Conf.symbDefClr }] } }),
+          calb: createSec({ refs: { modeMap: [...GLB.Conf.optElms], calElms: [...GLB.Conf.valElms], correction: "new", useLOD: false, useCal: false } }),
+          prev: createSec({ refs: { itemMap: [], val: GLB.Conf.valElms[0], saveIndexName: "" }, data: { correctionLogic: {}, prevDT: null, statsDT: null } }),
+          repo: createSec({ refs: { values: [], corrections: [] } })
         }
       };
       this.#initialState = JSON.parse(JSON.stringify(initDef));
       this.#state = JSON.parse(JSON.stringify(initDef));
       this.#listeners = {};
     }
-    // proxy化
+    // --- Proxy取得 ---
     get proxy() { return this.#state; }
-    // state取得
+    // --- State取得 ---
     get(paths) {
       const res = p => (Array.isArray(p) ? p : p.split('.')).reduce((o, k) => o?.[k], this.#state);
       return Array.isArray(paths) ? paths.map(res) : res(paths);
     }
-    // state注入
+    // --- State設定 ---
     set(updates, v) {
-      if (typeof updates === 'object' && !Array.isArray(updates)) return Object.entries(updates).forEach(([k, val]) => this.set(k, val));
+      if (typeof updates === 'object' && !Array.isArray(updates)) return Object.entries(updates).forEach(([k, val]) => this.set(k, val)); // 一括更新対応
       const keys = Array.isArray(updates) ? updates : updates.split('.');
       const last = keys.pop();
       const tgt = keys.reduce((o, k) => o[k] ??= {}, this.#state);
       if (tgt[last] !== v) {
         tgt[last] = v;
-        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(v));
+        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(v)); // 変更通知
       }
     }
-    // state登録
+    // --- 変更購読 ---
     subscribe(path, cb) {
       const key = Array.isArray(path) ? path.join('.') : path;
       (this.#listeners[key] ??= []).push(cb);
     }
-    // stateリセット
+    // --- State初期化 ---
     reset(paths) {
       const updates = {};
       (Array.isArray(paths) ? paths : [paths]).forEach(p => {
         const initVal = p.split('.').reduce((o, k) => o?.[k], this.#initialState);
-        updates[p] = initVal !== undefined ? JSON.parse(JSON.stringify(initVal)) : null;
+        updates[p] = initVal !== undefined ? JSON.parse(JSON.stringify(initVal)) : null; // 初期値の復元
       });
       this.set(updates);
     }
   }
-  // --- GAS通信(API)クラス ---
+  // --- Gas通信Service ---
   class GasService {
+    // --- GAS通信処理をバインド ---
     static #serverCall(funcName, ...args) {
       return new Promise((resolve, reject) => {
         google.script.run
@@ -111,6 +111,7 @@
           [funcName](...args);
       });
     }
+    // --- GAS通信処理をバインド ---
     static fetchDT(sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", sht, qCol, lCol); }
     static writeData(sht, data, opts = "clear") { return this.#serverCall("writeData", sht, data, opts); }
     static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }

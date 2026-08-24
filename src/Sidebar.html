@@ -3,155 +3,148 @@
 <html>
   <head>
     <base target="_top">
-    <!-- 統計計算ライブラリ (simple-statistics) -->
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
-    <!-- グラフ描画ライブラリ (Apache ECharts) -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <script>google.charts.load('current', {'packages':['corechart']});</script>
     <?!= include("CSS"); ?>
   </head>
   <body data-theme="tab1">
-    <!-- ナビゲーション -->
     <nav class="nav-tabs" id="nav">
       <button class="tab-btn active" data-target="tab1">データ抽出</button>
       <button class="tab-btn" data-target="tab2">グラフ作成</button>
     </nav>
     <main class="scroll-y">
-      <!-- 第1タブ -->
       <div id="tab1" class="tab-content active">
         <fieldset id="tab1Fieldset">
-          <!-- 設定層 -->
           <details id="prefSec" data-state="active" open>
             <summary>設定</summary>
-            <div id="prefArea">
-              <div id="prefModeBox"></div>
+            <div data-ui="area">
+              <div data-ui="mode-box"></div>
             </div>
           </details>
-          <div id="prefStatusBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.pref.status"></div>
+          <div id="prefBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.pref.status"></div>
           <hr>
-          <!-- ファイル層 -->
           <details id="rawSec" data-type="disabled">
             <summary>読込と検証</summary>
             <div class="flex-row">
-              <button id="rawLoadBtn" data-type="primary" data-action="T1Ctrl.loadRaw">データを取得</button>
+              <button data-ui="btn-load" data-type="primary">データを取得</button>
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
-            <div id="rawArea" style="display: none;">
-              <div id="rawBox"></div>
+            <div data-ui="area" style="display: none;">
+              <div data-ui="box"></div>
             </div>
-            <div id="rawBtnBox" class="field-row" style="display: none;">
-              <button id="rawMakeBtn" data-type="primary" class="outline" data-action="T1Ctrl.makeList" disabled>リスト生成</button>
-              <button id="rawValdBtn" data-type="primary" class="outline" data-action="T1Ctrl.valdList" disabled>検証</button>
+            <div data-ui="btn-box" class="field-row" style="display: none;">
+              <button data-ui="btn-make" data-type="primary" class="outline" disabled>リスト生成</button>
+              <button data-ui="btn-vald" data-type="primary" class="outline" disabled>検証</button>
             </div>
           </details>
-          <div id="rawStatusBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.raw.status"></div>
+          <div id="rawBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.raw.status"></div>
           <hr>
-          <!-- 抽出層 -->
           <details id="extrSec" data-type="disabled">
             <summary>抽出と格納</summary>
             <div class="flex-row">
-              <button id="extrBtn" data-type="primary" data-action="T1Ctrl.runExtr" disabled>データを抽出</button>
-              <span class="txt-btninfo" id="extrInfoTxt">読込シート「Results」</span>
+              <button data-ui="btn-extr" data-type="primary" disabled>データを抽出</button>
+              <span class="txt-btninfo">読込シート「Results」</span>
             </div>
-            <div id="extrArea" style="display: none;">
-              <div id="extrBox"></div>
+            <div data-ui="area" style="display: none;">
+              <div data-ui="box"></div>
             </div>
-            <div id="extrBtnArea" class="field-row">
-              <button id="extrPushBtn" data-type="primary" class="outline" style="display: none;" data-action="T1Ctrl.pushExtr" disabled>PXRFに格納</button>
+            <div class="field-row">
+              <button data-ui="btn-push" data-type="primary" class="outline" style="display: none;" disabled>PXRFに格納</button>
             </div>
           </details>
-          <div id="extrStatusBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.extr.status"></div>
+          <div id="extrBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.extr.status"></div>
         </fieldset>
       </div>
-      <!-- 第2タブ -->
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset">
-          <!-- asgn層 -->
           <details id="asgnSec" open>
             <summary>データ読込・選択</summary>
-            <div id="asgnArea" style="display: none;">
+            <div data-ui="area" style="display: none;">
               <label>データセット選択</label>
-              <ob-multi-select id="dsetBoxEl" data-change-item="T2.tglDB" data-change-all="T2.tglAllDB" data-bind-opts="T2ST.asgn.available" data-bind-refs="T2ST.asgn.filter"></ob-multi-select>
+              <ob-multi-select data-ui="dset-box" data-change-item="T2.tglDB" data-change-all="T2.tglAllDB" data-bind-opts="T2ST.asgn.refs.available" data-bind-refs="T2ST.asgn.refs.filter"></ob-multi-select>
             </div>
             <div class="field-row">
-              <button id="asgnLoadBtn" data-type="primary" data-action="T2Ctrl.loadDB">データを読込</button>
-              <button id="asgnFilterBtn" data-type="primary" class="outline" data-action="T2Ctrl.fltrDB" disabled>データを確定</button>
+              <button data-ui="btn-load" data-type="primary">データを読込</button>
+              <button data-ui="btn-fltr" data-type="primary" class="outline" disabled>データを確定</button>
             </div>
           </details>
-          <div id="asgnLoadBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.asgn.status"></div>
+          <div id="asgnBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.asgn.status"></div>
           <hr>
-          <!-- シンボル層 -->
           <details id="symbSec" data-type="disabled">
             <summary>シンボル設定</summary>
-            <div id="symbArea" style="display: none;">
+            <div data-ui="area" style="display: none;">
               <label>属性選択</label>
               <div class="field-row" style="margin-top: var(--unit)">
-                <div id="symbAxisBox"></div>
-                <button id="symbResetBtn" data-type="primary" class="outline" data-action="T2Ctrl.resetSymb">リセット</button>
+                <div data-ui="axis-box"></div>
+                <button data-ui="btn-reset" data-type="primary" class="outline">リセット</button>
               </div>
               <label>シンボル設定</label>
-              <div id="symbBox" class="scroll-y">
-                <ob-symbol-table id="symbolTableEl"></ob-symbol-table>
+              <div class="scroll-y" style="max-height: calc(var(--unit) * 50); border: 1px solid var(--grey200); border-radius: var(--unit); padding: var(--unit) calc(var(--unit) * 2);">
+                <ob-symbol-table data-ui="symb-tbl"></ob-symbol-table>
               </div>
             </div>
             <div class="field-row">
-              <button id="symbBtn" data-type="primary" data-action="T2Ctrl.setSymb" disabled>シンボル確定</button>
+              <button data-ui="btn-symb" data-type="primary" disabled>シンボル確定</button>
             </div>
           </details>
-          <div id="symbStatusBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.symb.status"></div>
+          <div id="symbBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.symb.status"></div>
           <hr>
-          <!-- 補正＆プレビュー層 -->
           <details id="prevSec" data-type="disabled">
-            <summary>補正＆プレビュー</summary>
-            <div id="prevArea">
-              <div id="prevChartBox"></div>
-              <div id="prevStatsTbl"></div>
+            <summary>プレビューと補正</summary>
+            <div data-ui="area">
               <div class="field-row">
                 <div class="field-col">
                   <label>プレビュー値</label>
-                  <div id="prevValBox"></div>
-                </div>
-                <div class="field-col">
-                  <label>補正方法</label>
-                  <div id="prevCorrBox"></div>
+                  <div data-ui="val-box"></div>
                 </div>
               </div>
-              <div class="field-row">
-                <div id="prevLodBox" class="field-col"></div>
-                <div id="prevCalTglBox" class="field-col"></div>
-              </div>
-              <div class="field-row">
-                <button id="prevMakeBtn" data-type="primary" data-action="T2Ctrl.buildPrev" disabled>プレビュー更新</button>
-              </div>
-              <label>Obsidianモード計測値</label>
-              <ob-multi-select id="prevModeBoxEl" data-change-item="T2.tglPrevMode" data-change-all="T2.tglAllPrevMode" data-bind-refs="T2ST.prev.modeMap"></ob-multi-select>
-              <label>検量線適用対象</label>
-              <ob-multi-select id="prevCalElementBoxEl" data-change-item="T2.tglCalElm" data-change-all="T2.tglAllCalElm" data-bind-refs="T2ST.prev.calElms"></ob-multi-select>
               <label>対象Item</label>
-              <ob-multi-select id="prevItemBoxEl" data-change-item="T2.tglPrevItem" data-change-all="T2.tglAllPrevItem" data-bind-refs="T2ST.prev.itemMap"></ob-multi-select>
-              <div id="prevSaveBox" style="display: none; margin-top: calc(var(--unit) * 3);">
+              <ob-multi-select data-ui="item-box" data-change-item="T2.tglPrevItem" data-change-all="T2.tglAllPrevItem" data-bind-refs="T2ST.prev.refs.itemMap"></ob-multi-select>
+              <div class="field-row">
+                <button data-ui="btn-make" data-type="primary" disabled>プレビュー更新</button>
+              </div>
+              <div data-ui="chart-box"></div>
+              <div data-ui="stats-tbl"></div>
+              <hr style="margin: calc(var(--unit) * 4) 0 calc(var(--unit) * 2);">
+              <details id="calbSec" open>
+                <summary>補正設定</summary>
+                <div class="field-row">
+                  <div class="field-col">
+                    <label>補正方法</label>
+                    <div data-ui="corr-box"></div>
+                  </div>
+                </div>
+                <label>Obsidianモード計測値</label>
+                <ob-multi-select data-ui="mode-box" data-change-item="T2.tglPrevMode" data-change-all="T2.tglAllPrevMode" data-bind-refs="T2ST.calb.refs.modeMap"></ob-multi-select>
+                <label>検量線適用対象</label>
+                <ob-multi-select data-ui="cal-elm-box" data-change-item="T2.tglCalElm" data-change-all="T2.tglAllCalElm" data-bind-refs="T2ST.calb.refs.calElms"></ob-multi-select>
+                <div class="field-row">
+                  <div data-ui="lod-box" class="field-col"></div>
+                  <div data-ui="cal-tgl-box" class="field-col"></div>
+                </div>
+              </details>
+              <div data-ui="save-box" style="display: none; margin-top: calc(var(--unit) * 3);">
                 <label>検量線を保存する</label>
                 <div class="field-row">
-                  <input type="text" id="prevSaveInp" class="form-control" placeholder="インデックス名を入力" data-bind="T2ST.prev.saveIndexName">
-                  <button id="prevSaveBtn" data-type="primary" class="outline" data-action="T2Ctrl.saveCorr">補正出力</button>
+                  <input type="text" class="form-control" placeholder="インデックス名を入力" data-bind="T2ST.prev.refs.saveIndexName">
+                  <button data-ui="btn-save" data-type="primary" class="outline">補正出力</button>
                 </div>
               </div>
             </div>
           </details>
           <div id="prevBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.prev.status"></div>
           <hr>
-          <!-- レポート層 -->
           <details id="repoSec" data-type="disabled">
             <summary>レポート作成</summary>
             <div class="field-row">
-              <button id="reportOpenBtn" data-type="primary" data-action="T2Ctrl.openRepo">PDF用レポートを作成</button>
+              <button data-ui="btn-repo" data-type="primary">PDF用レポートを作成</button>
             </div>
-            <div id="reportStatusBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.repo.status"></div>
           </details>
+          <div id="repoBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.repo.status"></div>
         </fieldset>
       </div>
     </main>
-    <!-- HTML5 Native Dialog -->
     <dialog id="universalConfirm">
       <h3 id="uDialogTitle">確認</h3>
       <p id="uDialogMessage"></p>

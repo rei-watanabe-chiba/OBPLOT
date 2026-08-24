@@ -1,26 +1,26 @@
 <!-- src/Component.html -->
 <script>
-  // --- 汎用DOM操作 ---
+  // --- DOM ---
   class DOM {
-    static el = id => document.getElementById(id);
-    static updateText = (id, text) => { if (text !== undefined && this.el(id)) this.el(id).innerText = text; };
-    static tgl = (id, isShow) => { if (this.el(id)) this.el(id).style.display = isShow ? "" : "none"; };
-    static open = (id, isOpen) => { if (this.el(id)?.tagName === "DETAILS") setTimeout(() => { this.el(id).open = isOpen; }, 200); };
-    static setDis = (id, isDis) => { if (this.el(id)) this.el(id).disabled = isDis; };
-    static setAttr = (id, attr, val) => val ? this.el(id)?.setAttribute(attr, val) : this.el(id)?.removeAttribute(attr);
+    static el = ref => typeof ref === "string" ? document.getElementById(ref) : ref;
+    static updateText = (ref, text) => { if (text !== undefined && this.el(ref)) this.el(ref).innerText = text; };
+    static tgl = (ref, isShow) => { if (this.el(ref)) this.el(ref).style.display = isShow ? "" : "none"; };
+    static open = (ref, isOpen) => { if (this.el(ref)?.tagName === "DETAILS") setTimeout(() => { this.el(ref).open = isOpen; }, 200); };
+    static setDis = (ref, isDis) => { if (this.el(ref)) this.el(ref).disabled = isDis; };
+    static setAttr = (ref, attr, val) => val ? this.el(ref)?.setAttribute(attr, val) : this.el(ref)?.removeAttribute(attr);
   }
-  // --- 汎用DOM生成 ---
+  // --- NewDOM ---
   class NewDOM {
     // --- フォーム一括構築 ---
-    static buildFormFields(confArr, cntrId, isClear = false) {
-      const cntr = DOM.el(cntrId);
+    static buildFormFields(confArr, ref, isClear = false) {
+      const cntr = DOM.el(ref);
       if (!cntr || (!isClear && cntr.hasChildNodes())) return;
-      if (isClear) cntr.replaceChildren(); // DOM初期化
+      if (isClear) cntr.replaceChildren();
       cntr.append(...confArr.map(conf => {
         const { type, bind, change, field, opts, hasEmpty, inputType, placeholder, label } = conf;
         const elm = document.createElement(type === "select" ? "select" : "input");
         elm.className = `field-${type} form-control`;
-        if (bind) elm.dataset.bind = bind; // バインド付与
+        if (bind) elm.dataset.bind = bind;
         if (change) elm.dataset.change = change;
         if (field) elm.dataset.field = field;
         if (type === "select") {
@@ -37,22 +37,22 @@
           if (placeholder) elm.placeholder = placeholder;
         }
         if (label) {
-          const lbl = document.createElement("label"); // ラベル包装
+          const lbl = document.createElement("label");
           lbl.className = "field-label"; lbl.textContent = `${label} `; lbl.appendChild(elm); return lbl;
         }
         return elm;
       }));
     }
     // --- ステータス更新 ---
-    static status(id, status = null) {
-      const elm = DOM.el(id);
-      if (elm) [elm.dataset.status, elm.innerText] = status?.length ? status : ["hidden", ""];
+    static status(ref, status = null) {
+      const elm = DOM.el(ref);
+      if (elm) [elm.dataset.status, elm.innerText] = status?.length ? status : ["hidden", ""]; // UI状態更新
     }
     // --- 汎用確認ダイアログ ---
-    static confirm(title, msg, barObj = null) {
-      const elm = DOM.el(barObj);
-      const svStat = elm ? [elm.dataset.status || "hidden", elm.innerText] : null; // 状態の完全退避
-      if (barObj) this.status(barObj, ["loading", "実行中..."]);
+    static confirm(title, msg, ref = null) {
+      const elm = DOM.el(ref);
+      const svStat = elm ? [elm.dataset.status || "hidden", elm.innerText] : null;
+      if (elm) this.status(elm, ["loading", "実行中..."]); // ローディング遷移
       return new Promise(resolve => {
         const dlg = DOM.el("universalConfirm");
         DOM.updateText("uDialogTitle", title);
@@ -60,32 +60,32 @@
         dlg.showModal(); 
         DOM.el("uDialogConfirmBtn").onclick = () => { dlg.close(); resolve(true); };
         DOM.el("uDialogCancelBtn").onclick = () => {
-          dlg.close(); // 状態復元
-          if (barObj) this.status(barObj, svStat);
+          dlg.close();
+          if (elm) this.status(elm, svStat); // 状態復元
           resolve(false);
         };
       });
     }
     // --- トグル構築 ---
-    static buildToggle(conf, cntrId, isClear = false) {
-      const cntr = DOM.el(cntrId);
+    static buildToggle(conf, ref, isClear = false) {
+      const cntr = DOM.el(ref);
       if (!cntr || (!isClear && cntr.hasChildNodes())) return;
-      if (isClear) cntr.replaceChildren(); // DOM初期化
+      if (isClear) cntr.replaceChildren();
       cntr.insertAdjacentHTML('beforeend', Tpl.Toggle.row(conf.label, conf.bind, conf.change, conf.isCheck));
     }
-    // --- 統計表描画 ---
-    static buildStats(statsDT, cntrId = T2UI.prevStatsTbl) {
-      const cntr = DOM.el(cntrId);
+    // --- 統計表構築 ---
+    static buildStats(statsDT, ref) {
+      const cntr = DOM.el(ref);
       if (!cntr) return;
-      if (!statsDT) return cntr.replaceChildren(); // 初期化
+      if (!statsDT) return cntr.replaceChildren();
       cntr.innerHTML = Tpl.Stats.cntr(Mtd.Util.buildStats(statsDT).map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
     }
     // --- エラー状態更新 ---
-    static inputs(mapBoxId, errFlags) {
-      DOM.el(mapBoxId)?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
+    static inputs(ref, errFlags) {
+      DOM.el(ref)?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
     }
   }
-  // --- ポップオーバー ---
+  // --- ObPopover ---
   class ObPopover extends HTMLElement {
     connectedCallback() {
       setTimeout(() => {
@@ -93,11 +93,11 @@
         if (!sum || !cnt) return;
         const uid = this.id || `pop_${Math.random().toString(36).substr(2, 9)}`, anchorName = `--anchor-${uid}`;
         sum.setAttribute('popovertarget', uid); sum.style.anchorName = anchorName;
-        cnt.id = uid; cnt.setAttribute('popover', 'auto'); cnt.style.positionAnchor = anchorName;
+        cnt.id = uid; cnt.setAttribute('popover', 'auto'); cnt.style.positionAnchor = anchorName; // Popover紐付け
       }, 0);
     }
   }
-  // --- マルチセレクト ---
+  // --- ObMultiSelect ---
   class ObMultiSelect extends HTMLElement {
     #dataChangeItem; #dataChangeAll;
     connectedCallback() {
@@ -116,10 +116,10 @@
       const cbs = this.querySelectorAll('.dataset-cb');
       cbs.forEach(cb => cb.checked = Array.isArray(vals) && vals.includes(cb.value));
       const allCb = this.querySelector('.select-all-cb');
-      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
+      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked); // 全選択判定
     }
   }
-  // --- シンボルテーブル ---
+  // --- ObSymbolTable ---
   class ObSymbolTable extends HTMLElement {
     #src = null;
     static #COLS = [{ key: 'target', className: 'symb-col-target', hasClr: false }, { key: 'shp', className: 'symb-col-shape', hasClr: false }, { key: 'clr', className: 'symb-col-color', hasClr: true }];
@@ -145,7 +145,7 @@
       }).join('');
     }
   }
-  // --- テンプレート ---
+  // --- Tpl ---
   const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
   class Tpl {
     static Common = class {

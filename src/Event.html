@@ -1,6 +1,15 @@
 <!-- src/Event.html -->
 <script>
   class Evt {
+    // --- アクション辞書 ---
+    static #ACTION_MAP = {
+      rawSec:  { 'btn-load': 'T1Ctrl.loadRaw', 'btn-make': 'T1Ctrl.makeList', 'btn-vald': 'T1Ctrl.valdList' },
+      extrSec: { 'btn-extr': 'T1Ctrl.runExtr', 'btn-push': 'T1Ctrl.pushExtr' },
+      asgnSec: { 'btn-load': 'T2Ctrl.loadDB', 'btn-fltr': 'T2Ctrl.fltrDB' },
+      symbSec: { 'btn-reset': 'T2Ctrl.resetSymb', 'btn-symb': 'T2Ctrl.setSymb' },
+      prevSec: { 'btn-make': 'T2Ctrl.buildPrev', 'btn-save': 'T2Ctrl.saveCorr' },
+      repoSec: { 'btn-repo': 'T2Ctrl.openRepo' }
+    };
     // --- マルチセレクト切替 ---
     static tglMulti(tgt, statePath) {
       const cntr = tgt.closest('ob-multi-select');
@@ -34,49 +43,53 @@
       },
       checkRawRefs: () => {
         const flags = Mtd.Util.validateSelect(GLB.Conf.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
-        State.set({ "T1ST.raw.hasRefErr": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") });
+        State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") }); // 状態更新
       },
       checkExtrRefs: () => {
         const isErr = !(State.get("T1ST.extr.refs.DB")?.trim());
-        State.set({ "T1ST.extr.hasRefErr": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", "エラー: DB未入力"] : State.get("T1ST.extr.cachedStatus") });
+        State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", "エラー: DB未入力"] : State.get("T1ST.extr.cachedStatus") }); // 状態更新
       }
     };
     // --- Tab2イベント群 ---
     static T2 = {
-      tglDB: this.#bindMulti("T2ST.asgn.filter"),
-      tglAllDB: this.#bindAll("T2ST.asgn.filter"),
+      tglDB: this.#bindMulti("T2ST.asgn.refs.filter"),
+      tglAllDB: this.#bindAll("T2ST.asgn.refs.filter"),
       checkAxis: async tgtSelect => {
-        const newVal = tgtSelect.value, oldVal = State.get("T2ST.symb.baseKey");
+        const newVal = tgtSelect.value, oldVal = State.get("T2ST.symb.refs.baseKey");
         if (newVal === oldVal) return;
         if (!await NewDOM.confirm("確認", "リセットしますか？")) return (tgtSelect.value = oldVal); // 元に戻す
-        State.set({ "T2ST.symb.baseKey": newVal }); State.reset("T2ST.symb.rls");
+        State.set({ "T2ST.symb.refs.baseKey": newVal }); State.reset("T2ST.symb.refs.rls");
       },
-      addSymb: () => State.set("T2ST.symb.rls", [...(State.get("T2ST.symb.rls") || []), { key: `rule_${Date.now()}`, target: "", shp: "circle", clr: "var(--grey600)" }]),
+      addSymb: () => State.set("T2ST.symb.refs.rls", [...(State.get("T2ST.symb.refs.rls") || []), { key: `rule_${Date.now()}`, target: "", shp: GLB.Conf.symbDefShp, clr: GLB.Conf.symbDefClr }]),
       removeSymb: tgtBtn => {
         const key = tgtBtn.dataset.ruleKey;
-        if (key) State.set("T2ST.symb.rls", (State.get("T2ST.symb.rls") || []).filter(r => r.key !== key));
+        if (key) State.set("T2ST.symb.refs.rls", (State.get("T2ST.symb.refs.rls") || []).filter(r => r.key !== key));
       },
       renewSymb: tgtBtn => {
         const idx = tgtBtn.dataset.symbolIdx, type = tgtBtn.dataset.symbolType;
         if (idx == null || !type) return;
-        const rls = [...(State.get("T2ST.symb.rls") || [])];
-        if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("T2ST.symb.rls", rls); } // ルール更新
+        const rls = [...(State.get("T2ST.symb.refs.rls") || [])];
+        if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("T2ST.symb.refs.rls", rls); } // ルール更新
       },
-      tglPrevMode: this.#bindMulti("T2ST.prev.modeMap"),
-      tglAllPrevMode: this.#bindAll("T2ST.prev.modeMap"),
-      tglCalElm: this.#bindMulti("T2ST.prev.calElms"),
-      tglAllCalElm: this.#bindAll("T2ST.prev.calElms"),
-      tglPrevItem: this.#bindMulti("T2ST.prev.itemMap"),
-      tglAllPrevItem: this.#bindAll("T2ST.prev.itemMap")
+      tglPrevMode: this.#bindMulti("T2ST.calb.refs.modeMap"),
+      tglAllPrevMode: this.#bindAll("T2ST.calb.refs.modeMap"),
+      tglCalElm: this.#bindMulti("T2ST.calb.refs.calElms"),
+      tglAllCalElm: this.#bindAll("T2ST.calb.refs.calElms"),
+      tglPrevItem: this.#bindMulti("T2ST.prev.refs.itemMap"),
+      tglAllPrevItem: this.#bindAll("T2ST.prev.refs.itemMap")
     };
     // --- クリック監視 ---
     static #handleClick(e) {
       const tabBtn = e.target.closest('.tab-btn');
       if (tabBtn) return this.switchTab(tabBtn.dataset.target);
-      const actionBtn = e.target.closest('[data-action]');
-      if (!actionBtn) return;
-      const [ns, method] = actionBtn.dataset.action.split('.');
-      (Ctrl[ns]?.[method] || this[ns]?.[method])?.(actionBtn); // 処理委譲
+      const btn = e.target.closest('[data-ui^="btn-"]'); // btn識別
+      if (!btn) return;
+      const secId = btn.closest('details')?.id; // 親取得
+      const actPath = this.#ACTION_MAP[secId]?.[btn.dataset.ui]; // パス特定
+      if (actPath) {
+        const [ns, method] = actPath.split('.');
+        (Ctrl[ns]?.[method] || this[ns]?.[method])?.(btn); // 処理委譲
+      }
     }
     // --- 変更監視 ---
     static #handleChange(e) {
@@ -98,7 +111,7 @@
     // --- 初期化 ---
     static async init() {
       UI.Init.build();
-      State.subscribe("T1ST.pref.mode", Evt.T1.checkT1Pref);
+      State.subscribe("T1ST.pref.refs.mode", Evt.T1.checkT1Pref);
       State.subscribe("T1ST.extr.refs.DB", Evt.T1.checkExtrRefs);
       this.switchTab(State.get("GLB.activeTab"));
       State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
