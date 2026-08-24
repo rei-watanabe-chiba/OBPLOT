@@ -32,7 +32,7 @@
     static T1 = {
       checkT1Pref: mode => {
         if (!mode) return;
-        const modeText = mode === "Dual" ? "セット抽出対応" : "1ファイル単位抽出";
+        const modeText = mode === "Dual" ? "Obsidian/mudrockセット抽出" : "1ファイル単位抽出（モード混在可）";
         const phs = State.get("T1ST.phase"), isInit = phs === T1_PHS.INIT, isInvalid = phs >= T1_PHS.INVALID;
         isInvalid && State.set("T1ST.raw.status", ["error", "モード変更検知"]); // 再検証要求
         State.set({ "T1ST.pref.status": ["message", modeText], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
@@ -82,13 +82,23 @@
     static #handleClick(e) {
       const tabBtn = e.target.closest('.tab-btn');
       if (tabBtn) return this.switchTab(tabBtn.dataset.target);
-      const btn = e.target.closest('[data-ui^="btn-"]'); // btn識別
-      if (!btn) return;
-      const secId = btn.closest('details')?.id; // 親取得
-      const actPath = this.#ACTION_MAP[secId]?.[btn.dataset.ui]; // パス特定
+      let actPath = null, btn = null;
+      // 動的コンポーネント内の処理検知
+      const actBtn = e.target.closest('[data-action]');
+      if (actBtn) {
+        btn = actBtn;
+        actPath = btn.dataset.action;
+      } else {
+        // 静的コンポーネントの処理検知
+        btn = e.target.closest('[data-ui^="btn-"]');
+        if (btn) {
+          const secId = btn.closest('details')?.id;
+          actPath = this.#ACTION_MAP[secId]?.[btn.dataset.ui];
+        }
+      }
       if (actPath) {
         const [ns, method] = actPath.split('.');
-        (Ctrl[ns]?.[method] || this[ns]?.[method])?.(btn); // 処理委譲
+        (Ctrl[ns]?.[method] || this[ns]?.[method])?.(btn);
       }
     }
     // --- 変更監視 ---

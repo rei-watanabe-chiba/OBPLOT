@@ -23,7 +23,7 @@
         <fieldset id="tab1Fieldset">
           <!-- pref -->
           <details id="prefSec" data-state="active" open>
-            <summary>設定</summary>
+            <summary>抽出設定</summary>
             <div data-ui="area">
               <div data-ui="mode-box"></div>
             </div>
@@ -105,6 +105,8 @@
           <!-- prev -->
           <details id="prevSec" data-type="disabled">
             <summary>プレビューと補正</summary>
+            <div data-ui="chart-box"></div>
+            <div data-ui="stats-tbl"></div>
             <div data-ui="area">
               <div class="field-row">
                 <div class="field-col">
@@ -117,11 +119,9 @@
               <div class="field-row">
                 <button data-ui="btn-make" data-type="primary" disabled>プレビュー更新</button>
               </div>
-              <div data-ui="chart-box"></div>
-              <div data-ui="stats-tbl"></div>
               <hr style="margin: calc(var(--unit) * 4) 0 calc(var(--unit) * 2);">
               <!-- calb(subsection) -->
-              <details id="calbSec" open>
+              <details id="calbSec" class="sub-sec" open>
                 <summary>補正設定</summary>
                 <div class="field-row">
                   <div class="field-col">
@@ -138,10 +138,9 @@
                   <div data-ui="cal-tgl-box" class="field-col"></div>
                 </div>
                 <div data-ui="save-box" style="display: none; margin-top: calc(var(--unit) * 3);">
-                  <label>検量線を保存する</label>
                   <div class="field-row">
                     <input type="text" class="form-control" placeholder="インデックス名を入力" data-bind="T2ST.prev.refs.saveIndexName">
-                    <button data-ui="btn-save" data-type="primary" class="outline">補正出力</button>
+                    <button data-ui="btn-save" data-type="primary">検量線出力</button>
                   </div>
                 </div>
               </details>
@@ -170,7 +169,7 @@
         <button id="uDialogConfirmBtn" data-type="primary">OK</button>
       </div>
     </dialog>
-    
+
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>
     <?!= include('Component'); ?>

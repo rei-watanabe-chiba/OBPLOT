@@ -213,10 +213,10 @@
         }
       }
       &.outline {
-        --btn-bg: transparent;
+        --btn-bg: var(--bg-color);
         --btn-border: currentColor;
         &[data-type="primary"] { --btn-color: var(--theme-color); }
-        &:not(:disabled):hover { --btn-bg: color-mix(in srgb, currentColor 10%, transparent); }
+        &:not(:disabled):hover { --btn-bg: color-mix(in srgb, currentColor 10%, var(--bg-color);); }
       }
       &:disabled {
         --btn-bg: var(--grey200);
@@ -224,7 +224,7 @@
         --btn-border: transparent;
         cursor: not-allowed;
         &.outline {
-          --btn-bg: transparent;
+          --btn-bg: var(--bg-color);
           --btn-color: var(--grey400);
           --btn-border: var(--grey400);
         }
@@ -302,6 +302,18 @@
       }
     }
     details[open] summary::after { transform: rotate(-135deg); }
+    details.sub-sec {
+      background-color: var(--grey50);
+      border: 1px solid var(--grey200);
+      border-radius: var(--unit);
+      padding: calc(var(--unit) * 2);
+      padding-bottom: calc(var(--unit) * 0.5);
+      &[open]{ padding-bottom: calc(var(--unit) * 2); }
+    }
+    details.sub-sec summary {
+      font-size: 13px;
+      padding: 0;
+    }
     /* --- ダイアログ --- */
     dialog {
       width: calc(var(--unit) * 70);
@@ -410,7 +422,10 @@
     }
     ob-multi-select .popover-summary {
       height: var(--control-height);
-      width: 276px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: center; 
       padding: 0 calc(var(--unit) * 6) 0 calc(var(--unit) * 2);
       font-weight: normal;
       &:hover { background-color: var(--bg-color-hover); }

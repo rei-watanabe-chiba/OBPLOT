@@ -28,7 +28,7 @@
   class UIPhase {
     // --- Tab1ルール ---
     static #T1_RLS = {
-      pref: { sec: p => ({ isOpen: p === T1_PHS.INIT, isDis: false }) },
+      pref: { sec: p => ({ isActive: p === T1_PHS.INIT, isDis: false }) },
       raw: {
         sec: p => ({ isOpen: p >= T1_PHS.READY && p < T1_PHS.VALID, isDis: p < T1_PHS.READY }),
         'btn-load': p => ({ text: p <= T1_PHS.READY ? "データを取得" : "再取得", isDis: false }),
@@ -63,6 +63,9 @@
         'btn-make': p => ({ isDis: p < T2_PHS.MAPPED }),
         'save-box': p => ({ isShow: p >= T2_PHS.MAPPED && State.get("T2ST.calb.refs.correction") === "new" })
       },
+      calb: {
+        sec: p => ({ isOpen: p === T2_PHS.MAPPED ? true : undefined, isActive: p >= T2_PHS.MAPPED })
+      },
       repo: {
         sec: p => ({ isOpen: p >= T2_PHS.PREVIEWED, isDis: p < T2_PHS.PREVIEWED }),
         'btn-repo': p => ({ isDis: p < T2_PHS.PREVIEWED })
@@ -74,21 +77,24 @@
         const secElm = DOM.el(`${secKey}Sec`);
         if (!secElm) return;
         Object.entries(roles).forEach(([role, rlFn]) => {
-          const target = role === 'sec' ? secElm : secElm.querySelector(`[data-ui="${role}"]`); // 役割で相対取得
+          const target = role === 'sec' ? secElm : secElm.querySelector(`[data-ui="${role}"]`);
           if (!target) return;
-          const { isShow, isDis, isOpen, text, className } = rlFn(phs);
+          const { isShow, isDis, isOpen, isActive, text, className } = rlFn(phs); // isActiveを追加
           isShow !== undefined && DOM.tgl(target, isShow);
           isDis !== undefined && DOM.setDis(target, isDis);
-          (role !== 'sec' && isOpen !== undefined) && DOM.open(target, isOpen);
+          isOpen !== undefined && DOM.open(target, isOpen);
           text !== undefined && DOM.updateText(target, text);
           if (className !== undefined) target.className = className;
-          if (role === 'sec') { DOM.setAttr(target, "data-state", isOpen ? "active" : null); DOM.setAttr(target, "data-type", isDis ? "disabled" : null); } // セクション属性
+          if (role === 'sec') { 
+            DOM.setAttr(target, "data-state", (isActive ?? isOpen) ? "active" : null); 
+            DOM.setAttr(target, "data-type", isDis ? "disabled" : null); 
+          }
         });
       });
     }
     static renewT1Phs(p) {
       this.#apply(this.#T1_RLS, p);
-      if (p >= T1_PHS.VALID && p < T1_PHS.EXTRACT) State.set("T1ST.extr.status", ["hidden", ""]); // 通知非表示
+      if (p >= T1_PHS.VALID && p < T1_PHS.EXTRACT) State.set("T1ST.extr.status", ["hidden", ""]);
     }
     static renewT2Phs(p) { this.#apply(this.#T2_RLS, p); }
   }

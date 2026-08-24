@@ -15,7 +15,7 @@
   class T1Ctrl {
     // --- tab1 File読込 ---
     static async loadRaw() {
-      if (!(await NewDOM.confirm("確認", State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？", "rawSec"))) return;
+      if (!(await NewDOM.confirm("確認", State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？", "rawBar"))) return;
       await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => {
         const { data, message } = await API.fetchDT(GLB.Conf.fileSheetName, 5);
         State.reset(['T1ST.extr']); 
@@ -40,17 +40,17 @@
       Evt.T1.checkRawRefs();
       const { raw } = State.proxy.T1ST;
       if (raw.flags.some(Boolean)) return;
-      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawSec")) return;
+      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => T1Ctrl.procList("make", Mtd.Util.remapArry(raw.data, GLB.Conf.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), GLB.Conf.fileHeader)));
     }
     // --- tab1 リスト検証 ---
     static async valdList() {
-      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawSec")) return;
+      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => T1Ctrl.procList("validate", null));
     }
     // --- tab1 データ抽出 ---
     static async runExtr() {
-      if (!await NewDOM.confirm("確認", "「抽出データ」を上書きしますか？", "extrSec")) return;
+      if (!await NewDOM.confirm("確認", "「抽出データ」を上書きしますか？", "extrBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
         if (await API.checkUserProperty(GLB.Conf.propFileEdited)) { State.set({ "T1ST.raw.status": ["error", "シート編集検知"], "T1ST.phase": T1_PHS.INVALID }); return; }
         const [fileRes, resDT] = await Promise.all([API.fetchDT(GLB.Conf.filelistSheetName, 6, 6), API.fetchDT(GLB.Conf.resultsSheetName)]);
@@ -62,11 +62,11 @@
     }
     // --- tab1 PXRF格納 ---
     static async pushExtr() {
-      if (!await NewDOM.confirm("確認", "PXRFシートに格納しますか？", "extrSec")) return;
+      if (!await NewDOM.confirm("確認", "PXRFシートに格納しますか？", "extrBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
         const [extrRes, pxrfRes] = await Promise.all([API.fetchDT(GLB.Conf.extractSheetName), API.fetchDT(GLB.Conf.pxrfSheetName)]);
         const { isDup, data: mrgData } = Mtd.T1.PVald.checkPxrf(pxrfRes.data, extrRes.data);
-        if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？", "extrSec")) return;
+        if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？", "extrBar")) return;
         await API.writeData(GLB.Conf.pxrfSheetName, isDup ? mrgData : extrRes.data.slice(1), isDup ? "clear" : ["append"]);
         State.set("T1ST.phase", T1_PHS.OUTPUT); return `PXRF格納: ${extrRes.data.length - 1} 件`;
       });
@@ -118,9 +118,9 @@
         const idxName = prev.refs.saveIndexName?.trim();
         if (!idxName) throw new Error("名前が未入力です");
         if (!calb.refs.calElms?.length) throw new Error("元素が未選択です");
-        if (!await NewDOM.confirm("確認", `検量線を出力しますか？\n名前：${idxName}\n対象：${calb.refs.calElms.join(', ')}`, "prevSec")) return;
+        if (!await NewDOM.confirm("確認", `検量線を出力しますか？\n名前：${idxName}\n対象：${calb.refs.calElms.join(', ')}`, "prevBar")) return;
         const isDup = asgn.data.corrDT?.slice(1).some(r => r[0] === idxName);
-        if (isDup && !await NewDOM.confirm("確認", "上書きしますか？", "prevSec")) return; // 上書き確認
+        if (isDup && !await NewDOM.confirm("確認", "上書きしますか？", "prevBar")) return; // 上書き確認
         const conf = { ...prev.refs, ...calb.refs, corrDT: asgn.data.corrDT };
         const newRow = Mtd.T2.mgmPrev.genCorr(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf, idxName);
         let updData = asgn.data.corrDT?.length ? [...asgn.data.corrDT] : [['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]];
