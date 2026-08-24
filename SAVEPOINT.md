@@ -6,10 +6,10 @@
 - **状態管理 (Single Source of Truth)**: 
   - `AppState` による厳格なObserver (Pub/Sub) モデル。状態はセクションごとに階層化。
   - **[Why]**: DOMを状態の正とせず、Stateの変更のみがUIを駆動する（単方向データフロー）ことで、予測不可能な副作用を排除する。
-  - **[How]**: 状態取得時の冗長性を排除するため、`const { prev } = State.proxy.Tab2ST;` のように Proxy 経由の分割代入を利用する。
+  - **[How]**: 状態取得時の冗長性を排除するため、`const { prev } = State.proxy.Tab2ST;` のように Proxy 経由の分割代入を利用する。各セクションの初期状態はファクトリ関数によって生成し、階層スキーマを厳格に保証する。
 - **プレゼンテーション (Declarative UI & Auto DI)**: 
-  - **[Why]**: UI構造とビジネスロジックを分離。DOM操作による状態のバイパス（Hack）を根絶し、手動バインディングによる保守性のボトルネックを解消するため。
-  - **[How]**: `<ob-popover>` 等の Web Components で振る舞いを隠蔽。HTML要素に付与した `data-bind-*` 属性（`dataset` プロパティ）を起動時に走査し、Stateのパスを自動購読（Auto Subscribe）する汎用リスナーによってDIを完全自動化する。
+  - **[Why]**: UI構造とビジネスロジック、およびイベント発火の責務を完全に分離し、HTML側のスケルトン化（ID属性の廃止）を極めるため。DOM操作による状態のバイパス（Hack）を根絶し、手動バインディングによる保守性のボトルネックを解消する。
+  - **[How]**: `<ob-popover>` 等の Web Components で振る舞いを隠蔽。HTML要素に対して、イベント発火の目印となる `data-action` と、UI状態制御の目印となる `data-ui` を明確に分けて付与する。起動時にこれらの属性を走査し、セクション起点の相対参照と自動購読（Auto Subscribe）によるDIを完全自動化する。
 - **将来的な拡張性 (Add-in Portability)**:
   - **[Why]**: 将来的に「Office Add-in + GitHub Pages」等のローカル配布環境への移植を前提とするため。
   - **[How]**: 非同期通信のためのGAS通信層 (`GasService`) 以外は、標準Web技術 (ES6, Web Components, CSS Nesting) に完全準拠する。
@@ -28,26 +28,28 @@
    - **[Why]**: 可読性を保ちつつ、冗長な代入やガード節を極小化するため。
    - **[Rule]**: オプショナルチェイニング (`?.`) と Null合体演算子 (`??`) で安全なフォールバックを1行で完結させる。
    - **[Rule]**: 動的プロパティ生成は手動代入を避け、`...Object.fromEntries()` を活用し、宣言的に記述する。
-4. **命名規則の厳守 (予約語・DOMプロパティ競合回避)**:
-   - **[Why]**: `HTMLElement.dataset` 等のDOM標準プロパティとの衝突によるサイレントバグを完全に回避し、コードの認知負荷を下げるため。
-   - **[Rule]**: 汎用プロパティ（`map`, `set`, `get`, `value`）や衝突リスクのある名称（`dataset`）は禁止し、高度な短縮形（`raw`, `extr`, `prev`, `symb`, `refs`, `val`）でシステム全体を統一する。※ただし、ドメイン固有の重要キー（資料IDとしての `id`, `ID` 等）とstate操作におけるget, setは例外とする。
+4. **命名規則の厳守とStateスキーマの画一化**:
+   - **[Why]**: `HTMLElement.dataset` 等のDOM標準プロパティとの衝突によるサイレントバグを完全に回避し、同時にState構造の差異によるバグを防ぎ他層からの推測可能性を高めるため。
+   - **[Rule]**: 各セクションのStateは `{ status, data, refs, flags }` の共通階層構造（スキーマ）に強制統一する。
+   - **[Rule]**: 汎用プロパティ（`map`, `set`, `get`, `value`）や衝突リスクのある名称（`dataset`）は禁止し、高度な短縮形（`raw`, `extr`, `prev`, `symb`, `calb`等）でシステム全体を統一する。※ただし、ドメイン固有の重要キー（資料IDとしての `id`, `ID` 等）とstate操作におけるget, setは例外とする。
 5. **厳格なコメント・フォーマット規約**:
    - **[Rule]**: 関数ブロックの先頭には必ず `// --- 機能名 ---` を付与。
    - **[Rule]**: 処理内のコメントは、処理の意図（Why）を「15文字以内」で記述。
    - **[Rule]**: クラスやメソッド間、ブロック間の**空行（ブランク行）は完全に削除**し、情報密度を最大化する。
 
 ## 3. アーキテクチャ・パイプライン（データフロー）
-- **[コマンド (非同期実行等)]**: `User Action -> Evt Router -> Controller <-> API/Method -> State.set -> View (Auto DI) -> Web Components`
-- **[リアクティブ (入力選択等)]**: `User Input -> Evt Router -> State.set -> View (Auto DI) -> Web Components`
+- **[コマンド (非同期実行等)]**: `User Action (data-action) -> Evt Router -> Controller <-> API/Method -> State.set -> View Engine (data-ui) -> Web Components`
+- **[リアクティブ (入力選択等)]**: `User Input -> Evt Router -> State.set -> View Engine (data-ui) -> Web Components`
 
 ## 4. フェーズ・ステートマシン（状態遷移定義）
 - **Tab 1 (データ抽出)**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
 - **Tab 2 (グラフ作成)**: `INIT(1) -> LOADED(2) -> FILTERED(3) -> MAPPED(4) -> PREVIEWED(5)`
 - **[Why]**: フェーズ遷移に伴うUIの表示/非活性制御を命令的な `if` 分岐で行わず、`UIPhase` の定数マップに基づく宣言的ルールエンジンに集約するため。
+- **[How]**: UIルールの定義をフラットな羅列から「セクション空間」ごとのネスト構造に整理し、親セクションと `data-ui` 属性を組み合わせた相対DOM参照エンジンによって、HTML要素の特定と状態適用を完全自動化する。
 
 ## 5. ディレクトリ構造と関数一覧（モジュール責務）
 - `Code.js`: [API] バックエンドAPI (GAS通信, I/O)
-- `Sidebar.html`: [UI] 静的ベース構造 (Auto DI属性の保持)
+- `Sidebar.html`: [UI] 静的ベース構造 (Auto DI属性とイベントルーター属性の保持)
 - `CSS.html`: [Style] トークン定義, カスケードレイヤー (`reset`, `base`, `components`, `utilities`)
 - `Model.html`: [Model] 状態管理 (`AppState`), 定数 (`GLB.Conf`), APIラッパー (`API`)
 - `Method.html`: [Logic] 純粋関数群 (`Mtd.Util`, `Mtd.T1`, `Mtd.T2`)
@@ -59,4 +61,4 @@
 - `Report.html`: [Template] レポート出力用静的HTML
 
 ## 6. 開発状況と次ステップ
-- **次ステップ**: Method.htmlとstate定義方法の改修
+- **次ステップ**: 動作確認とエラー対応
