@@ -4,7 +4,7 @@
 - **実行環境**: Google Apps Script (V8 runtime) / HTML Service (Sidebar & Blob URL)
 - **コア・パラダイム**: SPA型 MVMS (Model-View-Method-Service) + Web Components + Presenter パターン
 - **状態管理 (Single Source of Truth)**: 
-  - `AppState` による厳格なObserver (Pub/Sub) モデル。状態はセクションごとに階層化。
+  - `AppState` による厳格なObserver (Pub/Sub) モデル。状態はセクションごとに階層化。軽量な refs と phase のバックアップと再起動時検証。
   - **[Why]**: DOMを状態の正とせず、Stateの変更のみがUIを駆動する（単方向データフロー）ことで、予測不可能な副作用を排除する。
   - **[How]**: 状態取得時の冗長性を排除するため、`const { prev } = State.proxy.Tab2ST;` のように Proxy 経由の分割代入を利用する。各セクションの初期状態はファクトリ関数によって生成し、階層スキーマを厳格に保証する。
 - **プレゼンテーション (Declarative UI & Auto DI)**: 
@@ -56,7 +56,7 @@
 - `Component.html`: [Component] DOMビルダー (`NewDOM`), Web Components, テンプレート (`Tpl`)
 - `View.html`: [View] UIルールエンジン (`UI.Phs`), DIバインディングエンジン (`UI.StateUpd`)
 - `Controller.html`: [Controller] 非同期フロー制御 (`CoreCtrl`, `T1Ctrl`, `T2Ctrl`)
-- `Event.html`: [Event] イベント委譲ルーター (`Evt`)
+- `Event.html`: [Event] イベント委譲ルーター (`Evt`), アイドル検知 (`IdlTm`), バックアップ管理 (`MakeBU`)
 - `Chart.html`: [Component] グラフ描画 (`<ob-cal-plot>`)
 - `Report.html`: [Template] レポート出力用静的HTML
 
