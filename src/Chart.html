@@ -15,15 +15,27 @@
   }
   // --- プロット描画クラス ---
   class ObCalPlot extends HTMLElement {
-    #box; #chart = null; #observer; #src = null;
+    #box; #chart = null; #observer; #src = null; #lastW = 0;
     constructor() {
       super();
       this.#box = document.createElement('div');
       this.#box.style.cssText = 'width: 100%; position: relative;';
-      this.#observer = new ResizeObserver(() => { if (this.#chart && this.#box.clientWidth > 0) this.#chart.resize(); }); // リサイズ検知
+      // **超重要**高さ変動による無限ループ防止
+      this.#observer = new ResizeObserver(() => {
+        const curW = this.clientWidth;
+        if (curW > 0 && curW !== this.#lastW && this.#src) {
+          this.#lastW = curW;
+          if (this.#chart) this.#chart.resize();
+          this.#render();
+        }
+      });
     }
     // --- 接続コールバック ---
     connectedCallback() {
+      this.style.display = 'grid';
+      // **超重要**幅拡張を防止（minmax制約）
+      this.style.gridTemplateColumns = 'minmax(0, 1fr)';
+      this.style.width = '100%';
       this.appendChild(this.#box);
       this.#observer.observe(this.#box);
     }
@@ -47,6 +59,11 @@
     #render() {
       const { prevDT, statsDT, symb, gph } = this.#src || {};
       if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
+      
+      const containerWidth = this.clientWidth;
+      if (containerWidth === 0) return; // 非表示時はスキップ
+      this.#lastW = containerWidth;
+      
       const rS = gph?.style || GLB.Conf.defaultGraphStyle;
       const STYLE = {
         font: rS.font,
@@ -62,7 +79,7 @@
       const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
       const gridTop = GAP.padT + overY, gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick, gridRight = GAP.padR;
-      const containerWidth = this.parentElement?.clientWidth || 276, plotSize = containerWidth - gridLeft - gridRight, containerHeight = plotSize + gridTop + gridBottom;
+      const plotSize = containerWidth - gridLeft - gridRight, containerHeight = plotSize + gridTop + gridBottom;
       this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
       this.#box.style.backgroundColor = STYLE.bgOuter;
       if (!this.#chart) this.#chart = echarts.init(this.#box);
