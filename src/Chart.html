@@ -1,7 +1,7 @@
 <!-- src/Chart.html -->
 <script>
   // --- テーマキャッシュ ---
-  class ThemeCache {
+  class CSSToken {
     static #cache = new Map();
     // --- カラー変数変換 ---
     static get(varStr) {
@@ -43,31 +43,45 @@
       if (this.#chart) this.#chart.clear();
       this.#box.style.height = '0px'; // 領域リセット
     }
-    // --- 散布図描画本体 ---
+    // --- 散布図描画本体: **認知度向上のために文字数制限撤廃** ---
     #render() {
       const { prevDT, statsDT, symb } = this.#src || {};
-      if (!prevDT?.length || typeof echarts === 'undefined') return this.clear(); // データ不足
-      const size = this.parentElement?.clientWidth || 276;
-      this.#box.style.height = `${size}px`;
-      this.#box.style.width = `${size}px`; // 正方形維持
+      if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
+      const STYLE = {
+        // フォント要素: base(tick目盛, name軸名), stats統計量, tipラベル
+        font: "'Roboto', 'Noto Sans JP', sans-serif",
+        fontS: { tick: 10, name: 11, stats: 10, tip: 11 },
+        fontC: { base: CSSToken.get('var(--grey600)'), stats: CSSToken.get('var(--grey600)'), tip: CSSToken.get('var(--text-main)') },
+        symbol: { baseSize: 6, pathSize: 7, borderW: 1},
+        // ライン要素: grid目盛, axis軸線, reg回帰線
+        lineW: { grid: 0.3, axis: 0.8, regW: 0.6, regD: [5, 5] },
+        lineC: { grid: CSSToken.get('var(--grey200)'), axis: CSSToken.get('var(--grey400)'), reg: CSSToken.get('var(--grey600)')},
+        // 背景色: bgplotグラフエリア, bgOuter背景色, bgTipラベル
+        bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
+      };
+      // 余白設定
+      const GAP = { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 };
+      // 以降動的計算と設定値注入
+      const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
+      const gridTop = GAP.padT + overY, gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
+      const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick, gridRight = GAP.padR;
+      const containerWidth = this.parentElement?.clientWidth || 276, plotSize = containerWidth - gridLeft - gridRight, containerHeight = plotSize + gridTop + gridBottom;
+      this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
+      this.#box.style.backgroundColor = STYLE.bgOuter;
       if (!this.#chart) this.#chart = echarts.init(this.#box);
       const { niceMin, niceMax, niceTicks } = Mtd.Util.calcScale(prevDT.map(d => d.x), prevDT.map(d => d.y));
       const itv = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
       const fmtTick = v => { const tck = niceTicks.find(t => Math.abs(t.v - v) < 1e-8); return tck ? tck.f : v; }; // 刻みフォーマット
       const graphText = Mtd.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n');
-      const baseKey = symb?.baseKey;
-      const rls = symb?.rls || [];
-      const defRl = rls.find(r => r.key === "default");
+      const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
       const plotDT = prevDT.map(d => {
         const rl = rls.find(r => r.target !== "" && r.target === d[baseKey]) || defRl; // ルール適用
-        const shpVal = rl.shp || 'circle'; // 形状値の直接利用
-        const isEmpty = shpVal === 'emptyCircle';
-        const shp = isEmpty ? 'circle' : shpVal; // ECharts用置換
-        const bClr = ThemeCache.get(rl.clr);
+        const isEmpty = rl.shp === 'emptyCircle', shp = isEmpty ? 'circle' : (rl.shp || 'circle');
+        const bClr = CSSToken.get(rl.clr);
         return {
           value: [d.x, d.y], id: d.id, group: d.group,
-          symbol: shp, symbolSize: shp.startsWith('path://') ? 7 : 6,
-          itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: isEmpty ? 1.5 : 1 }
+          symbol: shp, symbolSize: shp.startsWith('path://') ? STYLE.symbol.pathSize : STYLE.symbol.baseSize,
+          itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW }
         };
       });
       const series = [{ type: 'scatter', data: plotDT, animation: false }];
@@ -75,36 +89,34 @@
         const { slope, intercept } = statsDT;
         series.push({
           type: 'line', data: [[niceMin, slope * niceMin + intercept], [niceMax, slope * niceMax + intercept]], // 回帰直線
-          symbol: 'none', lineStyle: { color: ThemeCache.get('var(--grey400)'), width: 1, type: 'dashed', opacity: 0.5 },
+          symbol: 'none', lineStyle: { color: STYLE.lineC.reg, width: STYLE.lineW.regW, type: STYLE.lineW.regD, opacity: 0.5 },
           animation: false, silent: true
         });
       }
-      const axisColor = ThemeCache.get('var(--grey400)');
-      const gridBorder = ThemeCache.get('var(--grey200)');
-      const gridPlotSize = size - 70;
       const opt = {
         animation: false,
-        grid: { left: 45, top: 25, width: gridPlotSize, height: gridPlotSize, show: true, borderColor: gridBorder, borderWidth: 1 },
-        tooltip: { formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`, backgroundColor: 'rgba(255,255,255,0.95)', textStyle: { fontSize: 11, color: '#333' } },
+        textStyle: { fontFamily: STYLE.font },
+        grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSize, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: STYLE.lineW.axis },
+        tooltip: { formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`, backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
         xAxis: {
           type: 'value', name: 'WDXRF', nameLocation: 'middle',
-          nameGap: 20, nameTextStyle: { fontSize: 11, color: axisColor },
+          nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },
           min: niceMin, max: niceMax, interval: itv,
-          axisLabel: { margin: 6, fontSize: 10, color: axisColor, formatter: v => fmtTick(v) },
-          splitLine: { show: true, lineStyle: { color: gridBorder, type: 'solid', width: 0.3 } },
-          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
+          axisLabel: { margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => fmtTick(v) },
+          splitLine: { show: true, lineStyle: { color: STYLE.lineC.grid, type: 'solid', width: STYLE.lineW.grid } },
+          axisLine: { show: true, onZero: false, lineStyle: { color: STYLE.lineC.axis, width: STYLE.lineW.axis } },
           axisTick: { show: false, inside: true }
         },
         yAxis: {
           type: 'value', name: 'PXRF', nameLocation: 'middle',
-          nameGap: 22, nameTextStyle: { fontSize: 11, color: axisColor },
+          nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },
           min: niceMin, max: niceMax, interval: itv,
-          axisLabel: { rotate: 90, verticalAlign: 'middle', align: 'center', margin: 8, fontSize: 10, color: axisColor, formatter: v => (Math.abs(v - niceMin) < 1e-8) ? '' : fmtTick(v) },
-          splitLine: { show: true, lineStyle: { color: gridBorder, type: 'solid', width: 0.3 } },
-          axisLine: { show: true, onZero: false, lineStyle: { color: axisColor, width: 0.5 } },
+          axisLabel: { rotate: 90, margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => (Math.abs(v - niceMin) < 1e-8) ? '' : fmtTick(v) },
+          splitLine: { show: true, lineStyle: { color: STYLE.lineC.grid, type: 'solid', width: STYLE.lineW.grid } },
+          axisLine: { show: true, onZero: false, lineStyle: { color: STYLE.lineC.axis, width: STYLE.lineW.axis } },
           axisTick: { show: false, inside: true }
         },
-        graphic: [{ type: 'text', left: 55, top: 35, style: { text: graphText, fontSize: 10, fill: axisColor, fontFamily: 'Roboto, sans-serif' } }], // テキスト注入
+        graphic: [{ type: 'text', left: gridLeft + STYLE.fontS.tick, top: gridTop + STYLE.fontS.tick, style: { text: graphText, fontFamily: STYLE.font, fontSize: STYLE.fontS.stats, fill: STYLE.fontC.stats } }],
         series: series
       };
       this.#chart.setOption(opt);
