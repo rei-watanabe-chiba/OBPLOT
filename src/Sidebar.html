@@ -8,14 +8,20 @@
     <script>google.charts.load('current', {'packages':['corechart']});</script>
     <?!= include("CSS"); ?>
   </head>
+
+  <!-- sidebar上部タブ -->
   <body data-theme="tab1">
     <nav class="nav-tabs" id="nav">
       <button class="tab-btn active" data-target="tab1">データ抽出</button>
       <button class="tab-btn" data-target="tab2">グラフ作成</button>
     </nav>
+
+    <!-- sidebarメイン -->
     <main class="scroll-y">
+      <!-- Tab1 データ抽出-->
       <div id="tab1" class="tab-content active">
         <fieldset id="tab1Fieldset">
+          <!-- pref -->
           <details id="prefSec" data-state="active" open>
             <summary>設定</summary>
             <div data-ui="area">
@@ -24,6 +30,7 @@
           </details>
           <div id="prefBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.pref.status"></div>
           <hr>
+          <!-- raw -->
           <details id="rawSec" data-type="disabled">
             <summary>読込と検証</summary>
             <div class="flex-row">
@@ -40,6 +47,7 @@
           </details>
           <div id="rawBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.raw.status"></div>
           <hr>
+          <!-- extr -->
           <details id="extrSec" data-type="disabled">
             <summary>抽出と格納</summary>
             <div class="flex-row">
@@ -56,8 +64,11 @@
           <div id="extrBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.extr.status"></div>
         </fieldset>
       </div>
+
+      <!-- Tab2 グラフ作成 -->
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset">
+          <!-- asgn -->
           <details id="asgnSec" open>
             <summary>データ読込・選択</summary>
             <div data-ui="area" style="display: none;">
@@ -71,6 +82,7 @@
           </details>
           <div id="asgnBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.asgn.status"></div>
           <hr>
+          <!-- symb -->
           <details id="symbSec" data-type="disabled">
             <summary>シンボル設定</summary>
             <div data-ui="area" style="display: none;">
@@ -90,6 +102,7 @@
           </details>
           <div id="symbBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.symb.status"></div>
           <hr>
+          <!-- prev -->
           <details id="prevSec" data-type="disabled">
             <summary>プレビューと補正</summary>
             <div data-ui="area">
@@ -107,6 +120,7 @@
               <div data-ui="chart-box"></div>
               <div data-ui="stats-tbl"></div>
               <hr style="margin: calc(var(--unit) * 4) 0 calc(var(--unit) * 2);">
+              <!-- calb(subsection) -->
               <details id="calbSec" open>
                 <summary>補正設定</summary>
                 <div class="field-row">
@@ -123,18 +137,19 @@
                   <div data-ui="lod-box" class="field-col"></div>
                   <div data-ui="cal-tgl-box" class="field-col"></div>
                 </div>
-              </details>
-              <div data-ui="save-box" style="display: none; margin-top: calc(var(--unit) * 3);">
-                <label>検量線を保存する</label>
-                <div class="field-row">
-                  <input type="text" class="form-control" placeholder="インデックス名を入力" data-bind="T2ST.prev.refs.saveIndexName">
-                  <button data-ui="btn-save" data-type="primary" class="outline">補正出力</button>
+                <div data-ui="save-box" style="display: none; margin-top: calc(var(--unit) * 3);">
+                  <label>検量線を保存する</label>
+                  <div class="field-row">
+                    <input type="text" class="form-control" placeholder="インデックス名を入力" data-bind="T2ST.prev.refs.saveIndexName">
+                    <button data-ui="btn-save" data-type="primary" class="outline">補正出力</button>
+                  </div>
                 </div>
-              </div>
+              </details>
             </div>
           </details>
           <div id="prevBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.prev.status"></div>
           <hr>
+          <!-- repo -->
           <details id="repoSec" data-type="disabled">
             <summary>レポート作成</summary>
             <div class="field-row">
@@ -145,6 +160,8 @@
         </fieldset>
       </div>
     </main>
+
+    <!-- ダイアログ -->
     <dialog id="universalConfirm">
       <h3 id="uDialogTitle">確認</h3>
       <p id="uDialogMessage"></p>
@@ -153,6 +170,7 @@
         <button id="uDialogConfirmBtn" data-type="primary">OK</button>
       </div>
     </dialog>
+    
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>
     <?!= include('Component'); ?>
