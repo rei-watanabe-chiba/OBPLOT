@@ -43,25 +43,22 @@
       if (this.#chart) this.#chart.clear();
       this.#box.style.height = '0px'; // 領域リセット
     }
-    // --- 散布図描画本体: **認知度向上のために文字数制限撤廃** ---
+    // --- 散布図描画本体 ---
     #render() {
-      const { prevDT, statsDT, symb } = this.#src || {};
+      const { prevDT, statsDT, symb, gph } = this.#src || {};
       if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
+      const rS = gph?.style || GLB.Conf.defaultGraphStyle;
       const STYLE = {
-        // フォント要素: base(tick目盛, name軸名), stats統計量, tipラベル
-        font: "'Roboto', 'Noto Sans JP', sans-serif",
-        fontS: { tick: 10, name: 11, stats: 10, tip: 11 },
-        fontC: { base: CSSToken.get('var(--grey600)'), stats: CSSToken.get('var(--grey600)'), tip: CSSToken.get('var(--text-main)') },
-        symbol: { baseSize: 6, pathSize: 7, borderW: 1},
-        // ライン要素: grid目盛, axis軸線, reg回帰線
-        lineW: { grid: 0.3, axis: 0.8, regW: 0.6, regD: [5, 5] },
-        lineC: { grid: CSSToken.get('var(--grey200)'), axis: CSSToken.get('var(--grey400)'), reg: CSSToken.get('var(--grey600)')},
-        // 背景色: bgplotグラフエリア, bgOuter背景色, bgTipラベル
-        bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
+        font: rS.font,
+        fontS: { ...rS.fontS },
+        fontC: { base: CSSToken.get(rS.fontC.base), stats: CSSToken.get(rS.fontC.stats), tip: CSSToken.get(rS.fontC.tip) },
+        symbol: { ...rS.symbol },
+        lineW: { ...rS.lineW },
+        lineC: { grid: CSSToken.get(rS.lineC.grid), axis: CSSToken.get(rS.lineC.axis), reg: CSSToken.get(rS.lineC.reg)},
+        bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
-      // 余白設定
-      const GAP = { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 };
-      // 以降動的計算と設定値注入
+      const GAP = { ...(gph?.gap || GLB.Conf.defaultGraphGap) };
+      // 動的計算と設定値注入
       const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
       const gridTop = GAP.padT + overY, gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick, gridRight = GAP.padR;

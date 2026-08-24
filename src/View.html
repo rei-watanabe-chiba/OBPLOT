@@ -156,8 +156,8 @@
           const bx = DOM.el("prevSec")?.querySelector('[data-ui="chart-box"]');
           let chartElm = bx?.querySelector('ob-cal-plot');
           if (!chartElm && bx) { chartElm = document.createElement('ob-cal-plot'); bx.replaceChildren(chartElm); }
-          if (chartElm) chartElm.src = { prevDT: data, statsDT: State.get("T2ST.prev.data.statsDT"), symb: State.get("T2ST.symb.refs") };
-          if (data?.length) DOM.open("calbSec", false); // プレビュー成功時に閉じる
+          if (chartElm) chartElm.src = { prevDT: data, statsDT: State.get("T2ST.prev.data.statsDT"), symb: State.get("T2ST.symb.refs"), gph: State.get("T2ST.gph") };
+          if (data?.length && State.get("T2ST.phase") === T2_PHS.MAPPED) DOM.open("calbSec", false);
         }
       }).forEach(([path, cb]) => State.subscribe(path, cb));
     }
