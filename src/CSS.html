@@ -74,12 +74,13 @@
     .field-row {
       display: flex;
       align-items: center;
-      gap: 0 calc(var(--unit) * 2);
+      gap: 0 var(--unit);
       width: 100%;
       margin: calc(var(--unit) * 2) 0;
       & > * {
         flex: 1;
         min-width: 0;
+        margin: var(--unit);
       }
     }
     .field-col {
@@ -205,7 +206,7 @@
       transition: all var(--transition-speed);
       &:focus { outline: none; }
       &:focus-visible {
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-color) 30%, transparent);
+        box-shadow: 0 0 6px color-mix(in srgb, var(--theme-color) 70%, transparent);
       }
       &[data-type="primary"] {
         --btn-bg: var(--theme-color);
