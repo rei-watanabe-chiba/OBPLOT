@@ -9,7 +9,10 @@
         if (typeof res === "string") State.set(statusPath, ["success", res]);
         else if (Array.isArray(res)) State.set(statusPath, res);
       } catch (err) { State.set(statusPath, ["error", err.message]); } // エラー捕捉
-      finally { if (finallyFn) await finallyFn(); State.set("GLB.isLocked", false); }
+      finally {
+        if (finallyFn) await finallyFn();
+        State.set("GLB.isLocked", false);
+      }
     }
   }
   class T1Ctrl {

@@ -203,6 +203,10 @@
       border-radius: var(--unit);
       cursor: pointer;
       transition: all var(--transition-speed);
+      &:focus { outline: none; }
+      &:focus-visible {
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-color) 30%, transparent);
+      }
       &[data-type="primary"] {
         --btn-bg: var(--theme-color);
         --btn-color: #fff;

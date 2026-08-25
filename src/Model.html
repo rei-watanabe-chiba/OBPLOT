@@ -99,7 +99,8 @@
       const tgt = keys.reduce((o, k) => o[k] ??= {}, this.#state);
       if (tgt[last] !== v) {
         tgt[last] = v;
-        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(v)); // 変更通知
+        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(v)); // 個別変更通知
+        this.#listeners['*']?.forEach(cb => cb()); // 全体変更通知
       }
     }
     // --- 変更購読 ---

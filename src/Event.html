@@ -1,5 +1,36 @@
 <!-- src/Event.html -->
 <script>
+  // --- バックアップ管理 ---
+  class MakeBU {
+    static #K = "OBP_BU";
+    static #isQ = false;
+    // 変更監視と多重発火防止
+    static init() { State.subscribe('*', () => this.#queue()); }
+    static #queue() {
+      if (this.#isQ) return;
+      this.#isQ = true;
+      queueMicrotask(() => { this.save(); this.#isQ = false; });
+    }
+    // phase, refs, status保存
+    static save() {
+      const { phase, asgn, symb, calb, prev } = State.proxy.T2ST;
+      phase < T2_PHS.LOADED ? this.clear() : localStorage.setItem(this.#K, JSON.stringify({ phase, asgn: { r: asgn.refs, s: asgn.status }, symb: { r: symb.refs, s: symb.status }, calb: { r: calb.refs, s: calb.status }, prev: { r: prev.refs, s: prev.status } }));
+    }
+    // state安全取得
+    static load() {
+      try { return JSON.parse(localStorage.getItem(this.#K)); } catch (e) { return null; } 
+    }
+    static clear() { localStorage.removeItem(this.#K); }
+  }
+  // --- アイドル検知 ---
+  class IdlTm {
+    static #MS = 300000;
+    static #tm = null;
+    static init() {
+      const rst = () => { clearTimeout(this.#tm); this.#tm = setTimeout(() => DOM.el("idleToast")?.showModal(), this.#MS); };
+      ['mousemove', 'keydown', 'touchstart'].forEach(e => document.addEventListener(e, rst)); rst();
+    }
+  }
   class Evt {
     // --- アクション辞書 ---
     static #ACTION_MAP = {
@@ -119,15 +150,40 @@
       document.body.setAttribute('data-theme', tabId);
       State.set("GLB.activeTab", tabId);
     }
+    // --- 状態復元 ---
+    static async #restore(bu) {
+      if (!bu || !(await NewDOM.confirm("復元", "前回の作業状態を復元しますか？"))) return false;
+      this.switchTab("tab2");
+      await T2Ctrl.loadDB();
+      if (State.get("T2ST.phase") < T2_PHS.LOADED) return true; // 中断 (エラー表示を維持)
+      State.set({ "T2ST.asgn.refs.available": bu.asgn.r.available, "T2ST.asgn.refs.filter": bu.asgn.r.filter });
+      if (bu.phase < T2_PHS.FILTERED) { State.set("T2ST.asgn.status", bu.asgn.s); return true; } // 中断＆ステータス復元
+      await T2Ctrl.fltrDB();
+      if (State.get("T2ST.phase") < T2_PHS.FILTERED) return true; // 中断 (エラー表示を維持)
+      State.set({
+        "T2ST.symb.refs.baseKey": bu.symb.r.baseKey, "T2ST.symb.refs.rls": bu.symb.r.rls,
+        "T2ST.calb.refs.modeMap": bu.calb.r.modeMap, "T2ST.calb.refs.calElms": bu.calb.r.calElms, "T2ST.calb.refs.correction": bu.calb.r.correction, "T2ST.calb.refs.useLOD": bu.calb.r.useLOD, "T2ST.calb.refs.useCal": bu.calb.r.useCal,
+        "T2ST.prev.refs.itemMap": bu.prev.r.itemMap, "T2ST.prev.refs.val": bu.prev.r.val, "T2ST.prev.refs.saveIndexName": bu.prev.r.saveIndexName
+      });
+      if (bu.phase >= T2_PHS.PREVIEWED) await T2Ctrl.buildPrev();
+      
+      // 到達フェーズ一致でステータス復元
+      if (State.get("T2ST.phase") === bu.phase) {
+        State.set({ "T2ST.asgn.status": bu.asgn.s, "T2ST.symb.status": bu.symb.s, "T2ST.calb.status": bu.calb.s, "T2ST.prev.status": bu.prev.s });
+      }
+      return true;
+    }
     // --- 初期化 ---
     static async init() {
       UI.Init.build();
       State.subscribe("T1ST.pref.refs.mode", Evt.T1.checkT1Pref);
       State.subscribe("T1ST.extr.refs.DB", Evt.T1.checkExtrRefs);
-      this.switchTab(State.get("GLB.activeTab"));
+      if (!(await this.#restore(MakeBU.load()))) { MakeBU.clear(); this.switchTab(State.get("GLB.activeTab")); } // 通常起動
+      MakeBU.init(); // 全監視開始
       State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
       UI.Phs.renewT1Phs(State.get("T1ST.phase")); UI.Phs.renewT2Phs(State.get("T2ST.phase"));
       document.addEventListener("click", this.#handleClick.bind(this)); document.addEventListener("change", this.#handleChange.bind(this));
+      IdlTm.init();
     }
   }
   window.addEventListener("DOMContentLoaded", () => Evt.init());
