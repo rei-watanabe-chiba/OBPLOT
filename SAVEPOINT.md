@@ -61,12 +61,4 @@
 - `Report.html`: [Template] レポート出力用静的HTML
 
 ## 6. 開発状況と次ステップ
-- 将来的な拡張性 (Add-in Portability)にむけた機能代替の必要性検討
-- **Why**: excel+HTML+office addin+github pagesの実行環境に向けたコード共有と機能欠落可能性の確認
-- **How**: GASとexcel+でコード共有を前提として、上記設計の実装可能性と機能代替の必要性を検証する。
-- **Do**: 全コードを精査し外部依存機能の割り出し。公式ドキュメントや関連情報を収集し代替機能やローカル・githubホスト環境構築を検討する。以下の項目については対処確定済みなのでスコープから外すこと。
-- localStorage: 既存Eventコードにガードを設置し、エクセルのプロパティを呼び出すように改修する。
-- GAS通信: アダプターコードを用意し、modelにガードを設置し、エクセル機能への置換
-- html include: githubに結合htmlを更新時動的生成することで対応
-- HTML本体: excel用をgithubに作成
-- 読み取り分離: excel用init.htmlを作成し、呼び出しファイルルートを変えて共通コードと専用コードを分離
+- 合意を得たGAS to Office Web Add-in 実装要件定義書に基づく改修
