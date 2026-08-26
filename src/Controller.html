@@ -148,11 +148,32 @@
         State.set({ "T2ST.asgn.data.corrDT": updData, "T2ST.prev.refs.saveIndexName": "" }); return `補正値を${isDup ? '上書き' : '保存'}しました`;
       });
     }
-    // --- tab2 レポート展開 ---
+    // --- tab2 レポート展開（ダミー実装） ---
     static async openRepo() {
       await CoreCtrl.withAsyncLock("T2ST.repo.status", async () => {
         State.set("T2ST.repo.status", ["loading", "テンプレート取得中..."]);
-        window.open(URL.createObjectURL(new Blob([await API.getReportTemplate()], { type: 'text/html' })), '_blank'); return "別タブで展開しました";
+        
+        // テンプレート取得とダミー置換
+        const template = await API.getReportTemplate();
+        const dummyHtml = template.replace('</body>', `<script>console.log("Dummy SPA Active");<\/script></body>`);
+        const blob = new Blob([dummyHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        
+        if (typeof Office !== 'undefined') {
+          // Excel環境: ダウンロードとして提供
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = "OBPLOT_Report_Dummy.html";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          return "レポートをダウンロードしました";
+        } else {
+          // GAS環境: 別タブ展開
+          window.open(url, '_blank'); 
+          return "別タブで展開しました";
+        }
       });
     }
   }

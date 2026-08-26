@@ -1,18 +1,91 @@
 <!-- src/PlatformAdapter.html -->
 <script>
-  // --- Excel用通信API ---
-  class ExcelAdapter {
-    static async fetchDT(sht, qCol = null, lCol = null) { return { data: [], message: "" }; }
-    static async writeData(sht, data, opts = "clear") { return "Dummy"; }
-    static async checkUserProperty(id) { return false; }
-    static async clearUserProperty(id) { return true; }
-    static async getReportTemplate() { return ""; }
-    static async initSheets(rawShts, appShts, appHeads) { return { rawNew: false }; } // セクション3で実装
-  }
   // --- Excel用ストレージ ---
   class OfficeStorageAdapter {
-    static save(key, data) { }
-    static load(key) { return null; }
-    static clear(key) { }
+    static save(key, data) {
+      Office.context.document.settings.set(key, data);
+      Office.context.document.settings.saveAsync();
+    }
+    static load(key) {
+      return Office.context.document.settings.get(key);
+    }
+    static clear(key) {
+      Office.context.document.settings.remove(key);
+      Office.context.document.settings.saveAsync();
+    }
+  }
+
+  // --- Excel用通信API ---
+  class ExcelAdapter {
+    static async #run(fn) {
+      try { return await Excel.run(fn); }
+      catch (e) { throw new Error(`[EXCEL_ERR] ${e.message}`); }
+    }
+    static async fetchDT(shtName, qCol = null, lCol = null) {
+      return this.#run(async (ctx) => {
+        const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
+        await ctx.sync();
+        if (sht.isNullObject) throw new Error(`シート「${shtName}」不在`);
+        const rng = sht.getUsedRangeOrNullObject();
+        rng.load("values");
+        await ctx.sync();
+        if (rng.isNullObject || !rng.values || rng.values.length <= 1) throw new Error("データが1行以下");
+        const raw = rng.values;
+        if (qCol && raw[0].length < qCol) throw new Error("データ列不足");
+        const data = lCol ? raw.map(r => r.slice(0, lCol)) : raw;
+        return { data, message: `取得: ${data.length} 行` };
+      });
+    }
+    static async writeData(shtName, data, opts = "clear") {
+      return this.#run(async (ctx) => {
+        const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
+        await ctx.sync();
+        if (sht.isNullObject) throw new Error(`シート「${shtName}」不在`);
+        const oArr = [].concat(opts);
+        if (oArr.includes("clear")) {
+          sht.getUsedRangeOrNullObject().clear();
+          await ctx.sync();
+        }
+        let sRow = 0;
+        if (oArr.includes("append")) {
+          const uRng = sht.getUsedRangeOrNullObject();
+          uRng.load("rowCount");
+          await ctx.sync();
+          sRow = uRng.isNullObject ? 0 : uRng.rowCount;
+        }
+        const tRng = sht.getRangeByIndexes(sRow, 0, data.length, data[0].length);
+        tRng.values = data;
+        // ※Excel版での書式ルール拡張(rule)は安全のためスキップ
+        await ctx.sync();
+        return "書き出し完了";
+      });
+    }
+    static async checkUserProperty(id) { return OfficeStorageAdapter.load(id) === "true"; }
+    static async clearUserProperty(id) { OfficeStorageAdapter.clear(id); return true; }
+    static async getReportTemplate() {
+      // ビルド時に注入される定数を優先し、なければfetch
+      if (window.__REPORT_TEMPLATE__) return window.__REPORT_TEMPLATE__;
+      const res = await fetch('Report.html');
+      if (!res.ok) throw new Error("テンプレート取得失敗");
+      return await res.text();
+    }
+    static async initSheets(rawShts, appShts, appHeads) {
+      return this.#run(async (ctx) => {
+        const shts = ctx.workbook.worksheets;
+        shts.load("items/name");
+        await ctx.sync();
+        const exNms = new Set(shts.items.map(s => s.name));
+        let rawNew = false;
+        rawShts.forEach(n => { if (!exNms.has(n)) { shts.add(n); rawNew = true; } });
+        appShts.forEach((n, i) => {
+          if (!exNms.has(n)) {
+            const nSht = shts.add(n);
+            if (appHeads?.[i]?.length) nSht.getRangeByIndexes(0, 0, 1, appHeads[i].length).values = [appHeads[i]];
+          }
+        });
+        await ctx.sync();
+        return { rawNew };
+      });
+    }
   }
 </script>
