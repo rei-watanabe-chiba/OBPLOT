@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
-  <Id>a1b2c3d4-e5f6-7890-1234-567890abcdef</Id>
+  <Id>f9e8d7c6-b5a4-3210-9876-543210fedcba</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>OBPLOT Developer</ProviderName>
   <DefaultLocale>ja-JP</DefaultLocale>
   <DisplayName DefaultValue="OBPLOT 1.0"/>
   <Description DefaultValue="PXRF Data Analyzer"/>
-  <IconUrl DefaultValue="https://developer.microsoft.com/en-us/fabric"/>
+  <IconUrl DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_32.png"/>
   <Hosts>
     <Host Name="Workbook"/>
   </Hosts>
