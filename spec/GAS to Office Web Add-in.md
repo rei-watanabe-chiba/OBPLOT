@@ -9,14 +9,13 @@
 配布・実行環境とアドイン設定を整備する。
   - GitHub公開リポジトリ：ソースの一元管理とPages公開。
   - manifest.xml：Excelにアドインを認識させる設定。
-  - setup.bat：エンドユーザー向け環境構築自動化バッチ。
+  - OBPLOT_ADDIN.xlsx：エンドユーザー向け専用テンプレートファイル（Document-bound Add-in）
   - GitHub Actions（build.yml）：自動結合とデプロイ用スクリプト。
 
 ## 3. エンドユーザーの実行方法
 ユーザー負担を最小化しセットアップを自動化。
-  - GAS：共有スプレッドシートのカスタムメニューから起動。
-  - Excel：setup.batを1度実行し環境設定を自動完了。
-  - Excel：リボンに追加されたボタンから最新UIを直接ロード。
+  - GAS：配布スプレッドシートのカスタムメニューから起動。
+  - Excel：配布OBPLOT_ADDIN.xlsxをダウンロードして起動
 
 ## 4. 設計思想（フロントエンドロジックの共有）
 SPAアーキテクチャ維持と環境差異の動的吸収。
@@ -32,7 +31,7 @@ SPAアーキテクチャ維持と環境差異の動的吸収。
 
 > 【アプローチA（GitHub Actionsによる自動ビルド）の詳細】  
 > リポジトリ上のソースコードは綺麗な分割状態（src/配下）を維持する。開発者がコードをPushすると、GitHub Actionsが自動的に `src/` 配下のファイルを1枚のHTMLに結合（ビルド）し、GitHub Pagesへデプロイする。  
-> これにより、動的ローダー（アプローチB）が抱えるCSP（セキュリティポリシー）違反やDOM Based XSSのリスクを完全に回避し、エンドユーザーには常に安全で高速な単一ファイルを提供する。
+> これにより、CSP（セキュリティポリシー）違反やDOM Based XSSのリスクを完全に回避し、エンドユーザーには常に安全で高速な単一ファイルを提供する。
 
 
 ## 6. 重要な技術要件
@@ -64,8 +63,14 @@ SPAアーキテクチャ維持と環境差異の動的吸収。
 > });
 > ```
 
-## 7. 必要な改修と新規作成ファイル
-DI実装とExcel用アダプターを構築する。
-  - Model/Event.html：環境判定とAPI/StorageのDI化。
-  - Method/Controller：シート初期化とレポート出力の分岐追加。
-  - Adapter.html：Excel.run等を用いたExcel専用処理の実装。
+## 7. 現在の進捗状況
+- web版エクセルにて、エンドユーザー向け専用テンプレートファイル起動確認まで到達
+- 現在、表示しているWebページ（App.html）内部のレンダリングエラーが発生中
+- コンソールに以下のエラーあり
+App.html?et=:8 Uncaught ReferenceError: google is not defined
+    at App.html?et=:8:13
+(anonymous) @ App.html?et=:8
+App.html?et=:613 Uncaught SyntaxError: Unexpected end of input (at App.html?et=:613:83)
+App.html?et=:615 Uncaught ReferenceError: google is not defined
+    at App.html?et=:615:7
+
