@@ -1,0 +1,4 @@
+有効確認
+
+npm install -g office-addin-manifest
+npx office-addin-manifest validate infra/manifest.xml
