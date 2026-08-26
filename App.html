@@ -1,0 +1,2225 @@
+<!-- src/Sidebar.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script>google.charts.load('current', {'packages':['corechart']});</script>
+    <!-- src/CSS.html -->
+<style>
+  /* --- レイヤー定義 --- */
+  @layer reset, base, components, utilities;
+  /* --- 1. Reset --- */
+  @layer reset {
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    fieldset { border: none; }
+  }
+  /* --- 2. Base --- */
+  @layer base {
+    :root {
+      --unit: 4px;
+      --control-height: calc(var(--unit) * 8.5);
+      --main-blue: #1A73E8;
+      --main-blue-hover: #1F41B6;
+      --main-green: #34A853;
+      --main-green-hover: #1F843C;
+      --main-red: #ea4335;
+      --grey50: #ECEFF1;
+      --grey200: #B0BEC5;
+      --grey400: #78909C;
+      --grey600: #546E7A;
+      --bg-color: #FFF;
+      --bg-color-hover: #F5F5F5;
+      --text-main: #202124;
+      --transition-speed: 0.2s;
+      interpolate-size: allow-keywords;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    body {
+      --theme-color: var(--main-blue);
+      --theme-hover: var(--main-blue-hover);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+      font-family: 'Roboto', 'Noto Sans JP', sans-serif;
+      font-size: 13px;
+      color: var(--text-main);
+      background-color: var(--bg-color);
+      overflow-x: hidden;
+      user-select: none;
+    }
+    body[data-theme="tab2"] {
+      --theme-color: var(--main-green);
+      --theme-hover: var(--main-green-hover);
+    }
+    main {
+      padding: calc(var(--unit) * 2) calc(var(--unit) * 3) calc(var(--unit) * 3);
+      overflow-x: hidden;
+    }
+    hr {
+      margin: calc(var(--unit) * 3) 0;
+      border: none;
+      border-top: 1.5px solid var(--grey200);
+    }
+  }
+  /* --- 3. Utilities --- */
+  @layer utilities {
+    .scroll-y {
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--grey200) transparent;
+    }
+    .flex-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 0 var(--unit);
+      width: 100%;
+      margin: calc(var(--unit) * 2) 0;
+      & > * {
+        flex: 1;
+        min-width: 0;
+        margin: var(--unit);
+      }
+    }
+    .field-col {
+      flex: 1;
+      min-width: 0;
+    }
+    .txt-btninfo {
+      margin-left: calc(var(--unit) * 2);
+      font-size: 11px;
+      color: var(--grey600);
+    }
+    .badge {
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: var(--unit);
+      padding: calc(var(--unit) * 0.5) calc(var(--unit) * 1.5);
+      font-size: 12px;
+      line-height: 1.2;
+      color: var(--text-main);
+      background-color: var(--grey50);
+      border: 1px solid var(--grey200);
+      border-radius: var(--unit);
+    }
+    .badge-wrapper {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      mask-image: linear-gradient(to right, black 85%, transparent 100%);
+      .badge { flex-shrink: 0; }
+    }
+    .color-box {
+      display: inline-block;
+      flex: 0 0 12px;
+      height: 12px;
+      margin-right: 6px;
+      border: 1px solid var(--grey400);
+      border-radius: 2px;
+    }
+  }
+  /* --- 4. Components --- */
+  @layer components {
+    /* --- タブナビ --- */
+    .nav-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--grey200);
+      .tab-btn {
+        flex: 1;
+        padding: calc(var(--unit) * 2.5) 0;
+        height: auto;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--grey400);
+        background: none;
+        border: none;
+        border-radius: 0;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        transition: all var(--transition-speed);
+        &:hover { background-color: var(--bg-color-hover); }
+        &.active {
+          color: var(--theme-color);
+          border-bottom-color: currentColor;
+        }
+      }
+    }
+    .tab-content { display: none; &.active { display: block; } }
+    /* --- フォーム --- */
+    label {
+      display: block;
+      margin: var(--unit) calc(var(--unit) * 0.5);
+      color: var(--grey600);
+    }
+    .form-control, input, select {
+      box-sizing: border-box;
+      height: var(--control-height);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text-main);
+      background-color: var(--bg-color);
+      border: 1px solid var(--grey400);
+      border-radius: var(--unit);
+      transition: all var(--transition-speed);
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+      &:not(:disabled) {
+        cursor: pointer;
+        &:hover { filter: brightness(0.95); }
+      }
+      &:focus {
+        outline: none;
+        border-color: var(--theme-color);
+      }
+      &.has-error {
+        background-color: color-mix(in srgb, var(--main-red) 10%, #fff);
+        border-color: var(--main-red);
+      }
+    }
+    input, select {
+      flex: 1;
+      width: 100%;
+      padding: 0 calc(var(--unit) * 2);
+    }
+    input[type="text"]:not(:disabled) { cursor: text; }
+    /* --- ボタン --- */
+    button {
+      --btn-bg: transparent;
+      --btn-color: var(--text-main);
+      --btn-border: transparent;
+      flex: 1;
+      height: var(--control-height);
+      padding: 0;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--btn-color);
+      background-color: var(--btn-bg);
+      border: 1px solid var(--btn-border);
+      border-radius: var(--unit);
+      cursor: pointer;
+      transition: all var(--transition-speed);
+      &:focus { outline: none; }
+      &:focus-visible {
+        box-shadow: 0 0 6px color-mix(in srgb, var(--theme-color) 70%, transparent);
+      }
+      &[data-type="primary"] {
+        --btn-bg: var(--theme-color);
+        --btn-color: #fff;
+        --btn-border: var(--theme-color);
+        &:not(:disabled):hover {
+          --btn-bg: var(--theme-hover);
+          --btn-border: var(--theme-hover);
+        }
+      }
+      &.outline {
+        --btn-bg: var(--bg-color);
+        --btn-border: currentColor;
+        &[data-type="primary"] { --btn-color: var(--theme-color); }
+        &:not(:disabled):hover { --btn-bg: color-mix(in srgb, currentColor 10%, var(--bg-color);); }
+      }
+      &:disabled {
+        --btn-bg: var(--grey200);
+        --btn-color: #fff;
+        --btn-border: transparent;
+        cursor: not-allowed;
+        &.outline {
+          --btn-bg: var(--bg-color);
+          --btn-color: var(--grey400);
+          --btn-border: var(--grey400);
+        }
+      }
+    }
+    .icon-btn {
+      flex: none;
+      width: calc(var(--unit) * 5);
+      height: calc(var(--unit) * 5);
+      padding: 0;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 0.5;
+      --btn-color: var(--grey600);
+      --btn-border: var(--grey200);
+      &:not(:disabled):hover {
+        --btn-bg: var(--bg-color-hover);
+        --btn-color: var(--theme-color);
+        --btn-border: var(--theme-color);
+      }
+      &:disabled {
+        opacity: 0.2;
+        --btn-bg: transparent;
+        --btn-color: var(--grey400);
+        --btn-border: var(--grey400);
+      }
+    }
+    /* --- アコーディオン --- */
+    details {
+      margin: var(--unit) 0;
+      transition: opacity var(--transition-speed);
+      &[data-type="disabled"] {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      &[data-state="active"] summary {
+        margin-bottom: calc(var(--unit) * 2);
+        color: var(--theme-color);
+      }
+      &[data-state="disabled"] summary { cursor: not-allowed; }
+      &::details-content {
+        height: 0;
+        opacity: 0;
+        overflow: clip;
+        transition: height 0.4s ease, opacity 0.4s ease, content-visibility 0.4s ease allow-discrete;
+      }
+      &[open]::details-content {
+        height: auto;
+        height: calc-size(auto, size);
+        opacity: 1;
+      }
+    }
+    summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: calc(var(--unit) * 1.5);
+      font-size: 14px;
+      font-weight: 600;
+      list-style: none;
+      color: var(--grey600);
+      cursor: pointer;
+      transition: color var(--transition-speed);
+      &::marker { display: none; }
+      &::after {
+        display: block;
+        width: calc(var(--unit) * 1.5);
+        height: calc(var(--unit) * 1.5);
+        content: "";
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: rotate(45deg);
+        transition: transform 0.2s ease;
+      }
+    }
+    details[open] summary::after { transform: rotate(-135deg); }
+    details.sub-sec {
+      background-color: var(--grey50);
+      border: 1px solid var(--grey200);
+      border-radius: var(--unit);
+      padding: calc(var(--unit) * 2);
+      padding-bottom: calc(var(--unit) * 0.5);
+      &[open]{ padding-bottom: calc(var(--unit) * 2); }
+    }
+    details.sub-sec summary {
+      font-size: 13px;
+      padding: 0;
+    }
+    /* --- ダイアログ --- */
+    dialog {
+      width: calc(var(--unit) * 70);
+      margin: auto;
+      padding: calc(var(--unit) * 5);
+      border: none;
+      border-radius: calc(var(--unit) * 2);
+      h3 {
+        margin-bottom: calc(var(--unit) * 3);
+        font-size: 16px;
+        color: var(--text-main);
+      }
+      p {
+        margin-bottom: calc(var(--unit) * 5);
+        line-height: 1.5;
+        color: var(--grey600);
+      }
+      .field-row {
+        gap: calc(var(--unit) * 3);
+        margin-bottom: 0;
+      }
+      &::backdrop {
+        background-color: color-mix(in srgb, var(--text-main) 30%, transparent);
+        backdrop-filter: blur(2px);
+      }
+    }
+    /* --- ステータスバー --- */
+    .status-bar {
+      --status-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: calc(var(--unit) * 2);
+      max-height: calc(var(--unit) * 12.5);
+      margin: calc(var(--unit) * 1.5) 0;
+      padding: calc(var(--unit) * 2) calc(var(--unit) * 3);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--status-color);
+      background-color: color-mix(in srgb, var(--status-color) 10%, transparent);
+      border: 1px solid transparent;
+      border-radius: var(--unit);
+      opacity: 1;
+      transition: all 0.3s ease;
+      &[data-status="hidden"] {
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+        opacity: 0;
+        pointer-events: none;
+      }
+      &[data-status="loading"], &[data-status="message"] {
+        --status-color: var(--grey600);
+        background-color: transparent;
+      }
+      &[data-status="loading"]::before {
+        display: block;
+        width: calc(var(--unit) * 3.5);
+        height: calc(var(--unit) * 3.5);
+        content: "";
+        border: 2px solid var(--grey200);
+        border-top-color: var(--theme-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      &[data-status="message"] { padding:calc(var(--unit) * 0.5) calc(var(--unit) * 3) }
+      &[data-status="success"] { --status-color: var(--main-green); }
+      &[data-status="error"], &[data-status="alert"] { --status-color: var(--main-red); }
+    }
+    /* --- ポップオーバー --- */
+    ob-popover {
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .popover-summary {
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+      width: 100%;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+    .popover-content {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      border: 1px solid var(--grey200);
+      border-radius: var(--unit);
+      box-shadow: 0 var(--unit) calc(var(--unit) * 2) color-mix(in srgb, var(--text-main) 20%, transparent);
+      top: calc(anchor(bottom) + 2px);
+      left: anchor(left);
+      min-width: anchor-size(width);
+      max-width: fit-content;
+      max-height: calc(var(--unit) * 40);
+    }
+    /* --- ob-multi-select --- */
+    ob-multi-select {
+      display: block;
+      margin: var(--unit) 0;
+    }
+    ob-multi-select .popover-summary {
+      height: var(--control-height);
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: center; 
+      padding: 0 calc(var(--unit) * 6) 0 calc(var(--unit) * 2);
+      font-weight: normal;
+      &:hover { background-color: var(--bg-color-hover); }
+    }
+    /* --- ob-symbol-table --- */
+    .single-summary {
+      height: calc(var(--unit) * 7);
+      padding: var(--unit) calc(var(--unit) * 1.5);
+      font-size: 12px;
+      background-color: transparent;
+      border: none;
+      border-bottom: 1px solid transparent;
+      border-radius: 0;
+      &:hover {
+        background-color: var(--bg-color-hover);
+        border-bottom: 1px solid var(--grey200);
+      }
+    }
+    .single-select-item {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: calc(var(--unit) * 1.5) calc(var(--unit) * 2);
+      font-size: 12px;
+      text-align: left;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--grey50);
+      cursor: pointer;
+      &:hover { background-color: var(--bg-color-hover); }
+    }
+    #symbBox {
+      max-height: calc(var(--unit) * 50);
+      border: 1px solid var(--grey200);
+      border-radius: var(--unit);
+      padding: var(--unit) calc(var(--unit) * 2);
+    }
+    .symb-table-row {
+      display: flex;
+      align-items: center;
+      gap: var(--unit);
+      margin-bottom: var(--unit);
+      padding-bottom: calc(var(--unit) * 0.5);
+      border-bottom: 1px solid var(--grey50);
+      .symb-col-btn {
+        flex: 0 0 calc(var(--unit) * 6);
+        text-align: center;
+      }
+      .symb-col-target {
+        flex: 2.5;
+        min-width: 0;
+      }
+      .symb-col-shape {
+        flex: 1;
+        min-width: 0;
+      }
+      .symb-col-color {
+        flex: 1.5;
+        min-width: 0;
+      }
+    }
+    /* --- リスト・チェック --- */
+    .cb-container {
+      max-height: calc(var(--unit) * 35);
+      overflow-y: auto;
+    }
+    .cb-item {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--unit) * 2);
+      margin: 0;
+      padding: var(--unit) calc(var(--unit) * 2);
+      border-bottom: 1px solid var(--grey200);
+      cursor: pointer;
+      &:last-child { border-bottom: none; }
+      input[type="checkbox"] {
+        flex: none;
+        width: 14px;
+        height: 14px;
+        margin: 0;
+        padding: 0;
+        cursor: pointer;
+      }
+      span {
+        flex: 1;
+        font-size: 12px;
+        font-weight: normal;
+      }
+      &.select-all {
+        border-bottom: 1px solid var(--grey400);
+        span { font-weight: 500; }
+      }
+    }
+    /* --- トグルスイッチ --- */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: calc(var(--unit) * 3);
+      margin: calc(var(--unit) * 1.5) 0;
+    }
+    .toggle-label {
+      font-size: 13px;
+      color: var(--grey600);
+      line-height: 1.2;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-flex;
+      width: calc(var(--unit) * 9);
+      height: calc(var(--unit) * 5);
+      flex: none;
+      margin: 0;
+      input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        margin: 0;
+        padding: 0;
+      }
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--grey200);
+      border-radius: calc(var(--unit) * 2.5);
+      transition: all var(--transition-speed);
+      &::before {
+        position: absolute;
+        content: "";
+        height: calc(var(--unit) * 3.5);
+        width: calc(var(--unit) * 3.5);
+        left: calc(var(--unit) * 0.75);
+        bottom: calc(var(--unit) * 0.75);
+        background-color: #fff;
+        border-radius: 50%;
+        transition: all var(--transition-speed);
+      }
+    }
+    .toggle-switch input:checked + .toggle-slider { background-color: var(--theme-color); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(calc(var(--unit) * 4)); }
+    /* --- 統計テーブル --- */
+    .stats-container {
+      margin-top: calc(var(--unit) * 1.5);
+      padding: calc(var(--unit) * 2);
+      font-size: 11px;
+      background-color: var(--grey50);
+      border: 1px solid var(--grey200);
+      border-radius: var(--unit);
+      user-select: text;
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        align-items: center;
+        row-gap: var(--unit);
+        column-gap: calc(var(--unit) * 2);
+      }
+      .stats-label {
+        font-weight: 500;
+        color: var(--grey600);
+      }
+      .stats-val { font-weight: 700; }
+    }
+  }
+</style>
+  <script>window.__REPORT_TEMPLATE__ = `<!-- 【新規確認】Report.html がプロジェクト内に存在し、大文字小文字も含めて正しく記述されているか確認してください -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+        const data = google.visualization.arrayToDataTable([
+          ['Age', 'Weight'],
+          [ 8, 12],
+          [ 4, 5.5],
+          [ 11, 14],
+          [ 4, 5],
+          [ 3, 3.5],
+          [ 6.5, 7]
+        ]);
+
+        const options = {
+          title: 'Age vs. Weight comparison',
+          hAxis: {title: 'Age', minValue: 0, maxValue: 15},
+          vAxis: {title: 'Weight', minValue: 0, maxValue: 15},
+          legend: 'none'
+        };
+
+        const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
+        chart.draw(data, options);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="chart_div" style="width: 900px; height: 500px;"></div>
+  </body>
+</html>`;</script></head>
+
+  <!-- sidebar上部タブ -->
+  <body data-theme="tab1">
+    <nav class="nav-tabs" id="nav">
+      <button class="tab-btn active" data-target="tab1">データ抽出</button>
+      <button class="tab-btn" data-target="tab2">グラフ作成</button>
+    </nav>
+
+    <!-- sidebarメイン -->
+    <main class="scroll-y">
+      <!-- Tab1 データ抽出-->
+      <div id="tab1" class="tab-content active">
+        <fieldset id="tab1Fieldset">
+          <!-- pref -->
+          <details id="prefSec" data-state="active" open>
+            <summary>抽出設定</summary>
+            <div data-ui="area">
+              <div data-ui="mode-box"></div>
+            </div>
+          </details>
+          <div id="prefBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.pref.status"></div>
+          <hr>
+          <!-- raw -->
+          <details id="rawSec" data-type="disabled">
+            <summary>読込と検証</summary>
+            <div class="flex-row">
+              <button data-ui="btn-load" data-type="primary">データを取得</button>
+              <span class="txt-btninfo">読込シート「File」</span>
+            </div>
+            <div data-ui="area" style="display: none;">
+              <div data-ui="box"></div>
+            </div>
+            <div data-ui="btn-box" class="field-row" style="display: none;">
+              <button data-ui="btn-make" data-type="primary" class="outline" disabled>リスト生成</button>
+              <button data-ui="btn-vald" data-type="primary" class="outline" disabled>検証</button>
+            </div>
+          </details>
+          <div id="rawBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.raw.status"></div>
+          <hr>
+          <!-- extr -->
+          <details id="extrSec" data-type="disabled">
+            <summary>抽出と格納</summary>
+            <div class="flex-row">
+              <button data-ui="btn-extr" data-type="primary" disabled>データを抽出</button>
+              <span class="txt-btninfo">読込シート「Results」</span>
+            </div>
+            <div data-ui="area" style="display: none;">
+              <div data-ui="box"></div>
+            </div>
+            <div class="field-row">
+              <button data-ui="btn-push" data-type="primary" class="outline" style="display: none;" disabled>PXRFに格納</button>
+            </div>
+          </details>
+          <div id="extrBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.extr.status"></div>
+        </fieldset>
+      </div>
+
+      <!-- Tab2 グラフ作成 -->
+      <div id="tab2" class="tab-content">
+        <fieldset id="tab2Fieldset">
+          <!-- asgn -->
+          <details id="asgnSec" open>
+            <summary>データ読込・選択</summary>
+            <div data-ui="area" style="display: none;">
+              <label>データセット選択</label>
+              <ob-multi-select data-ui="dset-box" data-change-item="T2.tglDB" data-change-all="T2.tglAllDB" data-bind-opts="T2ST.asgn.refs.available" data-bind-refs="T2ST.asgn.refs.filter"></ob-multi-select>
+            </div>
+            <div class="field-row">
+              <button data-ui="btn-load" data-type="primary">データを読込</button>
+              <button data-ui="btn-fltr" data-type="primary" class="outline" disabled>データを確定</button>
+            </div>
+          </details>
+          <div id="asgnBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.asgn.status"></div>
+          <hr>
+          <!-- symb -->
+          <details id="symbSec" data-type="disabled">
+            <summary>シンボル設定</summary>
+            <div data-ui="area" style="display: none;">
+              <label>属性選択</label>
+              <div class="field-row" style="margin-top: var(--unit)">
+                <div data-ui="axis-box"></div>
+                <button data-ui="btn-reset" data-type="primary" class="outline">リセット</button>
+              </div>
+              <label>シンボル設定</label>
+              <div class="scroll-y" style="max-height: calc(var(--unit) * 50); border: 1px solid var(--grey200); border-radius: var(--unit); padding: var(--unit) calc(var(--unit) * 2);">
+                <ob-symbol-table data-ui="symb-tbl"></ob-symbol-table>
+              </div>
+            </div>
+            <div class="field-row">
+              <button data-ui="btn-symb" data-type="primary" disabled>シンボル確定</button>
+            </div>
+          </details>
+          <div id="symbBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.symb.status"></div>
+          <hr>
+          <!-- prev -->
+          <details id="prevSec" data-type="disabled">
+            <summary>プレビューと補正</summary>
+            <div data-ui="chart-box"></div>
+            <div data-ui="stats-tbl"></div>
+            <div data-ui="area">
+              <div class="field-row">
+                <div class="field-col">
+                  <label>プレビュー値</label>
+                  <div data-ui="val-box"></div>
+                </div>
+              </div>
+              <label>対象Item</label>
+              <ob-multi-select data-ui="item-box" data-change-item="T2.tglPrevItem" data-change-all="T2.tglAllPrevItem" data-bind-refs="T2ST.prev.refs.itemMap"></ob-multi-select>
+              <div class="field-row">
+                <button data-ui="btn-make" data-type="primary" disabled>プレビュー更新</button>
+              </div>
+              <hr style="margin: calc(var(--unit) * 4) 0 calc(var(--unit) * 2);">
+              <!-- calb(subsection) -->
+              <details id="calbSec" class="sub-sec" open>
+                <summary>補正設定</summary>
+                <div class="field-row">
+                  <div class="field-col">
+                    <label>補正方法</label>
+                    <div data-ui="corr-box"></div>
+                  </div>
+                </div>
+                <label>Obsidianモード計測値</label>
+                <ob-multi-select data-ui="mode-box" data-change-item="T2.tglPrevMode" data-change-all="T2.tglAllPrevMode" data-bind-refs="T2ST.calb.refs.modeMap"></ob-multi-select>
+                <label>検量線適用対象</label>
+                <ob-multi-select data-ui="cal-elm-box" data-change-item="T2.tglCalElm" data-change-all="T2.tglAllCalElm" data-bind-refs="T2ST.calb.refs.calElms"></ob-multi-select>
+                <div class="field-row">
+                  <div data-ui="lod-box" class="field-col"></div>
+                  <div data-ui="cal-tgl-box" class="field-col"></div>
+                </div>
+                <div data-ui="save-box" style="display: none; margin-top: calc(var(--unit) * 3);">
+                  <div class="field-row">
+                    <input type="text" class="form-control" placeholder="インデックス名を入力" data-bind="T2ST.prev.refs.saveIndexName">
+                    <button data-ui="btn-save" data-type="primary">検量線出力</button>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </details>
+          <div id="prevBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.prev.status"></div>
+          <hr>
+          <!-- repo -->
+          <details id="repoSec" data-type="disabled">
+            <summary>レポート作成</summary>
+            <div class="field-row">
+              <button data-ui="btn-repo" data-type="primary">PDF用レポートを作成</button>
+            </div>
+          </details>
+          <div id="repoBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.repo.status"></div>
+        </fieldset>
+      </div>
+    </main>
+
+    <!-- ダイアログ -->
+    <dialog id="universalConfirm">
+      <h3 id="uDialogTitle">確認</h3>
+      <p id="uDialogMessage"></p>
+      <div class="field-row">
+        <button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button>
+        <button id="uDialogConfirmBtn" data-type="primary">OK</button>
+      </div>
+    </dialog>
+
+    <!-- src/PlatformAdapter.html -->
+<script>
+  // --- Excel用ストレージ ---
+  class OfficeStorageAdapter {
+    static save(key, data) {
+      Office.context.document.settings.set(key, data);
+      Office.context.document.settings.saveAsync();
+    }
+    static load(key) {
+      return Office.context.document.settings.get(key);
+    }
+    static clear(key) {
+      Office.context.document.settings.remove(key);
+      Office.context.document.settings.saveAsync();
+    }
+  }
+
+  // --- Excel用通信API ---
+  class ExcelAdapter {
+    static async #run(fn) {
+      try { return await Excel.run(fn); }
+      catch (e) { throw new Error(`[EXCEL_ERR] ${e.message}`); }
+    }
+    static async fetchDT(shtName, qCol = null, lCol = null) {
+      return this.#run(async (ctx) => {
+        const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
+        await ctx.sync();
+        if (sht.isNullObject) throw new Error(`シート「${shtName}」不在`);
+        const rng = sht.getUsedRangeOrNullObject();
+        rng.load("values");
+        await ctx.sync();
+        if (rng.isNullObject || !rng.values || rng.values.length <= 1) throw new Error("データが1行以下");
+        const raw = rng.values;
+        if (qCol && raw[0].length < qCol) throw new Error("データ列不足");
+        const data = lCol ? raw.map(r => r.slice(0, lCol)) : raw;
+        return { data, message: `取得: ${data.length} 行` };
+      });
+    }
+    static async writeData(shtName, data, opts = "clear") {
+      return this.#run(async (ctx) => {
+        const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
+        await ctx.sync();
+        if (sht.isNullObject) throw new Error(`シート「${shtName}」不在`);
+        const oArr = [].concat(opts);
+        if (oArr.includes("clear")) {
+          sht.getUsedRangeOrNullObject().clear();
+          await ctx.sync();
+        }
+        let sRow = 0;
+        if (oArr.includes("append")) {
+          const uRng = sht.getUsedRangeOrNullObject();
+          uRng.load("rowCount");
+          await ctx.sync();
+          sRow = uRng.isNullObject ? 0 : uRng.rowCount;
+        }
+        const tRng = sht.getRangeByIndexes(sRow, 0, data.length, data[0].length);
+        tRng.values = data;
+        // ※Excel版での書式ルール拡張(rule)は安全のためスキップ
+        await ctx.sync();
+        return "書き出し完了";
+      });
+    }
+    static async checkUserProperty(id) { return OfficeStorageAdapter.load(id) === "true"; }
+    static async clearUserProperty(id) { OfficeStorageAdapter.clear(id); return true; }
+    static async getReportTemplate() {
+      // ビルド時に注入される定数を優先し、なければfetch
+      if (window.__REPORT_TEMPLATE__) return window.__REPORT_TEMPLATE__;
+      const res = await fetch('Report.html');
+      if (!res.ok) throw new Error("テンプレート取得失敗");
+      return await res.text();
+    }
+    static async initSheets(rawShts, appShts, appHeads) {
+      return this.#run(async (ctx) => {
+        const shts = ctx.workbook.worksheets;
+        shts.load("items/name");
+        await ctx.sync();
+        const exNms = new Set(shts.items.map(s => s.name));
+        let rawNew = false;
+        rawShts.forEach(n => { if (!exNms.has(n)) { shts.add(n); rawNew = true; } });
+        appShts.forEach((n, i) => {
+          if (!exNms.has(n)) {
+            const nSht = shts.add(n);
+            if (appHeads?.[i]?.length) nSht.getRangeByIndexes(0, 0, 1, appHeads[i].length).values = [appHeads[i]];
+          }
+        });
+        await ctx.sync();
+        return { rawNew };
+      });
+    }
+  }
+</script>
+    <!-- src/Model.html -->
+<script>
+  // --- 設定定数定義 ---
+  // グラフロジックの変更は▼の項目を編集
+  // --- **GLB内は認知度向上のためにプロパティ名・コメントアウトの文字数制限撤廃** ---
+  // --- **リファクタリング時も既存コメントアウトを絶対保持すること** ---
+  const GLB = {
+    Conf: {
+      // ▼ valElms に元素を追加可能, valLgc に指数追加可能
+      // 可視化元素指定 ---------------
+      valElms: ["K", "Ca", "Ti", "Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
+      // 可視化指数指定（math.jsで計算可能な文字列で指定） ---------------
+      valLgc: ["Mn * 100 / Fe", "log10(Fe/K)"],
+      // オプション元素（def: mudrock, opt: obsidian） ---------------
+      optElms: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
+
+      // ▼ グラフの見た目は以下で変更可能
+      // シンボル定義（valはecharts準拠を調べること) ---------------
+      symbShapes: [{ val: 'emptyCircle', label: '○' }, { val: 'circle', label: '●' }, { val: 'triangle', label: '▲' }, { val: 'square', label: '■' }, { val: 'cross', label: '✖' }],
+      // シンボルカラー定義（valはCSS準拠) ---------------
+      symbColors: [{ val: 'var(--grey600)', label: 'Gray' }, { val: 'var(--text-main)', label: 'Black' }, { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' }, { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' }],
+      // シンボルデフォルト値
+      symbBaseKey: "DB", symbDefShp: "emptyCircle", symbDefClr: "var(--grey600)",
+      // グラフデフォルト設定 ---------------
+      defaultGraphStyle: {
+        // フォント要素: base(tick目盛, name軸名), stats統計量, tipラベル
+        font: "'Roboto', 'Noto Sans JP', sans-serif",
+        fontS: { tick: 10, name: 11, stats: 10, tip: 11 },
+        fontC: { base: 'var(--grey600)', stats: 'var(--grey600)', tip: 'var(--text-main)' },
+        symbol: { baseSize: 6, pathSize: 7, borderW: 1 },
+        // ライン要素: grid目盛, axis軸線, reg回帰線
+        lineW: { grid: 0.3, axis: 0.8, regW: 0.6, regD: [5, 5] },
+        lineC: { grid: 'var(--grey200)', axis: 'var(--grey400)', reg: 'var(--grey600)' },
+        // 背景色: bgplotグラフエリア, bgOuter背景色, bgTipラベル
+        bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
+      },
+      // グラフ余白
+      defaultGraphGap: { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 },
+
+      // 以降は処理・UI用定数のため編集不可
+      validModes: ["mudrock", "obsidian"],
+      obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
+      mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
+      rawShts: { file: "File", results: "Results", pxrf: "PXRF", wdxrf: "WDXRF" },
+      appShts: { filelist: "ファイルリスト", extract: "抽出データ", correction: "Correction" },
+      rawHeaders: { file: ['file', 'mode', 'id', 'sub_id', 'info'] },
+      appHeads: { filelist: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'] },
+      propFileEdited: "isListMod",
+      initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
+      extrFields: [
+        { key: "DB", label: "database *必須", placeholder: "データセット名", bind: "T1ST.extr.refs.DB" },
+        { key: "item", label: "item", placeholder: "計測情報", bind: "T1ST.extr.refs.item" },
+        { key: "date", label: "date", placeholder: "計測日", bind: "T1ST.extr.refs.date" }
+      ],
+      symbAxes: [{ val: "DB", label: "database" }, { val: "item", label: "item" }, { val: "Group", label: "Group" }, { val: "Source", label: "Source" }],
+      fileFields: [
+        { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
+        { key: "id", label: "id *必須", required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
+      ],
+      confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }]
+    }
+  };
+  // --- フェーズ定義 ---
+  const T1_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
+  const T2_PHS = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
+  // --- AppState ---
+  class AppState {
+    #state; #initialState; #listeners; 
+    // --- セクション単位のstate生成 ---
+    constructor() {
+      const createSec = (overrides = {}) => ({ status: [], data: null, refs: {}, flags: [], ...overrides }); // 共通構造の強制
+      const initDef = {
+        GLB: { activeTab: "tab1", isLocked: false },
+        T1ST: {
+          phase: T1_PHS.INIT,
+          pref: createSec({ refs: { mode: "" } }),
+          raw:  createSec({ flags: GLB.Conf.initFlags.raw }),
+          extr: createSec({ refs: { DB: "", item: "", date: "" }, flags: GLB.Conf.initFlags.extr })
+        },
+        T2ST: {
+          phase: T2_PHS.INIT,
+          asgn: createSec({ data: { corrDT: [], wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], filter: [] } }),
+          symb: createSec({ refs: { baseKey: GLB.Conf.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.Conf.symbDefShp, clr: GLB.Conf.symbDefClr }] } }),
+          calb: createSec({ refs: { modeMap: [...GLB.Conf.optElms], calElms: [...GLB.Conf.valElms], correction: "new", useLOD: false, useCal: false } }),
+          prev: createSec({ refs: { itemMap: [], val: GLB.Conf.valElms[0], saveIndexName: "" }, data: { correctionLogic: {}, prevDT: null, statsDT: null } }),
+          gph: { style: GLB.Conf.defaultGraphStyle, gap: GLB.Conf.defaultGraphGap },
+          repo: createSec({ refs: { values: [], corrections: [] } })
+        }
+      };
+      this.#initialState = JSON.parse(JSON.stringify(initDef));
+      this.#state = JSON.parse(JSON.stringify(initDef));
+      this.#listeners = {};
+    }
+    // --- Proxy取得 ---
+    get proxy() { return this.#state; }
+    // --- State取得 ---
+    get(paths) {
+      const res = p => (Array.isArray(p) ? p : p.split('.')).reduce((o, k) => o?.[k], this.#state);
+      return Array.isArray(paths) ? paths.map(res) : res(paths);
+    }
+    // --- State設定 ---
+    set(updates, v) {
+      if (typeof updates === 'object' && !Array.isArray(updates)) return Object.entries(updates).forEach(([k, val]) => this.set(k, val)); // 一括更新対応
+      const keys = Array.isArray(updates) ? updates : updates.split('.');
+      const last = keys.pop();
+      const tgt = keys.reduce((o, k) => o[k] ??= {}, this.#state);
+      if (tgt[last] !== v) {
+        tgt[last] = v;
+        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(v)); // 個別変更通知
+        this.#listeners['*']?.forEach(cb => cb()); // 全体変更通知
+      }
+    }
+    // --- 変更購読 ---
+    subscribe(path, cb) {
+      const key = Array.isArray(path) ? path.join('.') : path;
+      (this.#listeners[key] ??= []).push(cb);
+    }
+    // --- State初期化 ---
+    reset(paths) {
+      const updates = {};
+      (Array.isArray(paths) ? paths : [paths]).forEach(p => {
+        const initVal = p.split('.').reduce((o, k) => o?.[k], this.#initialState);
+        updates[p] = initVal !== undefined ? JSON.parse(JSON.stringify(initVal)) : null; // 初期値の復元
+      });
+      this.set(updates);
+    }
+  }
+  // --- Gas通信Service ---
+  class GasService {
+    // --- GAS通信処理をバインド ---
+    static #serverCall(funcName, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(r => r?.success ? resolve(r.payload) : reject(new Error(`[${r?.errorType || 'ERR'}] ${r?.message}`)))
+          .withFailureHandler(e => reject(new Error(`[NET_ERR] ${e.message}`)))
+          [funcName](...args);
+      });
+    }
+    // --- GAS通信処理をバインド ---
+    static fetchDT(sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", sht, qCol, lCol); }
+    static writeData(sht, data, opts = "clear") { return this.#serverCall("writeData", sht, data, opts); }
+    static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }
+    static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
+    static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
+    static initSheets(rawShts, appShts, appHeads) { return this.#serverCall("initSheets", rawShts, appShts, appHeads); }
+  }
+  // --- ローカルストレージ ---
+  class LocalStorageAdapter {
+    static save(key, val) { localStorage.setItem(key, val); }
+    static load(key) { return localStorage.getItem(key); }
+    static clear(key) { localStorage.removeItem(key); }
+  }
+  // --- 環境判定とDI ---
+  const isExcelEnv = typeof Office !== 'undefined';
+  const API = isExcelEnv ? ExcelAdapter : GasService;
+  const StorageAPI = isExcelEnv ? OfficeStorageAdapter : LocalStorageAdapter;
+  const State = new AppState();
+</script>
+    <!-- src/Method.html -->
+<script>
+  const Mtd = {
+    Util: class {
+      // --- 再配列処理 ---
+      static remapArry(data, idxArr, newHdr = null) {
+        if (!data?.length) return [];
+        const remap = r => idxArr.map(idx => idx !== -1 ? (r?.[idx] ?? "") : "");
+        return [newHdr ?? remap(data[0]), ...data.slice(1).map(remap)];
+      }
+      // --- セレクタ配列判定 ---
+      static validateSelect(vals, quota = vals.length) {
+        const chkVals = vals.slice(0, quota);
+        return vals.map((v, i) => i < quota ? (!v || chkVals.indexOf(v) !== chkVals.lastIndexOf(v)) : false);
+      }
+      // --- 汎用キーソート ---
+      static sortKeysByVal = obj => Object.keys(obj).sort((a, b) => obj[a] - obj[b]);
+      // --- 有効数値の抽出 ---
+      static getValidNums = (arr, reqPos = false) => arr.map(Number).filter(v => !isNaN(v) && (!reqPos || v > 0));
+      // --- 統計表データ生成 ---
+      static buildStats(statsDT, digits = 3, fmlRls = null) {
+        if (!statsDT) return [];
+        const fmt = v => (v != null && !isNaN(v)) ? Number(v).toFixed(digits) : "-";
+        const meta = { ...statsDT, sign: statsDT.intercept >= 0 ? "+" : "-", abs_intercept: Math.abs(statsDT.intercept ?? 0) };
+        if (fmlRls?.length) {
+          return fmlRls.map(({ key, label }) => {
+            if (!key) return [label ?? "", ""];
+            const valStr = meta[key] !== undefined ? (meta[key] === meta.sign ? meta[key] : fmt(meta[key])) : key.replace(/\{(\w+)\}/g, (m, k) => meta[k] !== undefined ? (k === "sign" ? meta[k] : fmt(meta[k])) : m);
+            return [label ?? "", valStr];
+          });
+        }
+        return [
+          statsDT.count != null ? ["データ個数", statsDT.count] : null,
+          (statsDT.r != null && statsDT.r2 != null) ? ["相関係数", `R = ${fmt(statsDT.r)} , R² = ${fmt(statsDT.r2)}`] : null,
+          (statsDT.slope != null && statsDT.intercept != null) ? ["回帰直線", `y = ${fmt(statsDT.slope)}x ${meta.sign} ${fmt(meta.abs_intercept)}`] : null,
+          statsDT.resStdDev != null ? ["残差標準偏差", fmt(statsDT.resStdDev)] : null,
+          statsDT.err3Sigma != null ? ["器械Err3σ", fmt(statsDT.err3Sigma)] : null
+        ].filter(Boolean);
+      }
+      // --- Nice Numbers計算 ---
+      static calcScale(xVals, yVals, desiredTicks = 4) {
+        if (!xVals?.length || !yVals?.length) return { niceMin: 0, niceMax: 0, niceTicks: [] };
+        const [xMin, xMax, yMin, yMax] = [Math.min(...xVals), Math.max(...xVals), Math.min(...yVals), Math.max(...yVals)];
+        const isAllPos = xMin >= 0 && yMin >= 0;
+        const rawMin = isAllPos ? 0 : Math.min(xMin, yMin);
+        const rawMax = Math.max(xMax, yMax);
+        const rawStep = (rawMax - rawMin || 1) / (desiredTicks - 1);
+        const exp = Math.floor(Math.log10(rawStep));
+        const frac = rawStep / Math.pow(10, exp);
+        const niceFrac = frac <= 1.2 ? 1 : (frac <= 2.5 ? 2 : (frac <= 6.0 ? 5 : 10));
+        const niceStep = niceFrac * Math.pow(10, exp);
+        const niceMin = isAllPos ? 0 : Math.floor(rawMin / niceStep) * niceStep;
+        const niceMax = Math.ceil(rawMax / niceStep) * niceStep;
+        const decimals = exp < 0 ? Math.abs(exp) : 0;
+        const niceTicks = Array.from({ length: Math.round((niceMax - niceMin) / niceStep) + 1 }, (_, i) => {
+          const v = niceMin + (i * niceStep);
+          return { v: v, f: Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : (decimals > 0 ? v.toFixed(decimals) : v.toLocaleString()) };
+        });
+        return { niceMin, niceMax, niceTicks };
+      }
+    },
+    T1: {
+      FVald: class {
+        // --- リスト検証 ---
+        static valdList(shtDT, outHdr, validMods, exacMode) {
+          if (!shtDT?.length) return [];
+          const [hdr, ...body] = shtDT;
+          const getIdx = k => hdr.findIndex(h => h === k); // 走査型バインド
+          const colFile = getIdx('file'), colMode = getIdx('mode'), colId = getIdx('id'), colSub = getIdx('sub_id');
+          const getScanID = r => r[colSub] ? `${r[colId]}_${r[colSub]}` : `${r[colId]}`;
+          const statsDT = body.reduce((acc, r) => {
+            acc.file.set(r[colFile], (acc.file.get(r[colFile]) || 0) + 1);
+            const sId = getScanID(r);
+            const s = acc.scan.get(sId) || { modes: new Set(), count: 0 };
+            s.modes.add(r[colMode]); s.count++; acc.scan.set(sId, s);
+            return acc;
+          }, { file: new Map(), scan: new Map() });
+          const rls = [
+            { check: r => !/^\d+$/.test(r[colFile] ?? ""), err: " file形式" },
+            { check: r => !validMods.includes(r[colMode]), err: " mode形式" },
+            { check: r => !r[colId], err: " id形式" },
+            { check: r => statsDT.file.get(r[colFile]) > 1, err: " file重複" },
+            { check: r => {
+                const s = statsDT.scan.get(getScanID(r));
+                return exacMode === "Single" ? s.count > 1 : !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
+              }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式" }
+          ];
+          return [[...outHdr, "error"], ...body.map(r => [...r, getScanID(r), rls.filter(rl => rl.check(r)).map(rl => rl.err).join(",")])];
+        }
+      },
+      Extr: class {
+        // --- データ抽出 ---
+        static runExtr(fileDT, resDT, extrRefs) {
+          if (!fileDT?.length || !resDT?.length) return [];
+          const resMap = new Map(resDT.slice(1).map(r => [String(r[0]), r]));
+          const scanIDMap = fileDT.slice(1).reduce((map, r) => {
+            const entry = map.get(r[5]) || { id: r[2], files: {} };
+            entry.files[String(r[1]).toLowerCase()] = r[0]; map.set(r[5], entry); return map;
+          }, new Map());
+          const obKeys = Mtd.Util.sortKeysByVal(GLB.Conf.obsidianIndex), mdKeys = Mtd.Util.sortKeysByVal(GLB.Conf.mudrockIndex);
+          const fmt = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
+          const extract = (file, keys, idxObj) => {
+            const r = resMap.get(String(file ?? ""));
+            return keys.reduce((acc, k) => {
+              const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
+              acc.vals.push(fmt(idx !== null ? (r?.[idx] ?? "") : ""));
+              acc.errs.push(fmt(idx !== null ? (r?.[idx + 1] ?? "") : ""));
+              return acc;
+            }, { vals: [], errs: [] });
+          };
+          const hdr = ['計測ID', 'ID', 'database', 'item', 'date', ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`), ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)];
+          return [hdr, ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+            const ob = extract(files.obsidian, obKeys, GLB.Conf.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.Conf.mudrockIndex);
+            return [scanId, id, extrRefs.DB, extrRefs.item, extrRefs.date, ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
+          })];
+        }
+      },
+      PVald: class {
+        // --- 重複検証 ---
+        static checkPxrf(pxrfDT, newDT) {
+          if (!pxrfDT?.length || !newDT?.length) return { isDup: false, data: newDT };
+          const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
+          const fltrEx = pxrfDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
+          return fltrEx.length !== pxrfDT.length - 1 ? { isDup: true, data: [pxrfDT[0], ...fltrEx, ...newDT.slice(1)] } : { isDup: false, data: null };
+        }
+      }
+    },
+    T2: {
+      mgmtDT: class {
+        // --- オブジェクト配列化 ---
+        static #toObjArray(data) {
+          const [hdr, ...body] = data;
+          return body.map(r => hdr.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: r[i] }), {}));
+        }
+        // --- 読込 ---
+        static loadDB(pxrfDT, wdxrfDT) {
+          const pObjs = this.#toObjArray(pxrfDT), wObjs = this.#toObjArray(wdxrfDT);    
+          const cln = s => String(s ?? "").replace(/\s+/g, "").toUpperCase();
+          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          const wMap = new Map(wObjs.map(o => [`${cln(getDB(o))}_${cln(o.ID || o.id)}`, o]));
+          const dbs = new Set();
+          pObjs.forEach(pObj => {
+            const wObj = wMap.get(`${cln(getDB(pObj))}_${cln(pObj.ID || pObj.id)}`);
+            pObj.Group = wObj?.Group ?? "Unknown"; pObj.Source = wObj?.Source ?? "Unknown";
+            pObj.DB = getDB(pObj); // DB名統一
+            if (pObj.DB) dbs.add(pObj.DB);
+          });
+          return { wrapPXRF: pObjs, wrapWDXRF: wObjs, dbs: [...dbs] };
+        }
+        // --- フィルタ ---
+        static fltrDB(wrapPXRF, wrapWDXRF, selDBs) {
+          const tgtSet = new Set(selDBs);
+          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          const pxrfDT = wrapPXRF.filter(obj => tgtSet.has(getDB(obj))).map(r => ({
+            DB: getDB(r), id: r.id, ID: r.ID, item: r.item, Item: r.Item, Group: r.Group, Source: r.Source,
+            ...Object.fromEntries(GLB.Conf.valElms.flatMap(elm => [[`ob_${elm}`, r[`ob_${elm}`]], [`md_${elm}`, r[`md_${elm}`]], [`ob_${elm}_Err`, r[`ob_${elm}_Err`]], [`md_${elm}_Err`, r[`md_${elm}_Err`]]]))
+          }));
+          const wdxrfDT = wrapWDXRF.filter(obj => tgtSet.has(getDB(obj))).map(r => ({
+            DB: getDB(r), id: r.id, ID: r.ID, Group: r.Group, Source: r.Source,
+            ...Object.fromEntries(GLB.Conf.valElms.map(elm => [elm, r[elm]]))
+          }));
+          return { pxrfDT, wdxrfDT };
+        }
+      },
+      mgmPrev: class {
+        // --- データ生成パイプライン統合 ---
+        static buildPrev(pxrfDT, wdxrfDT, conf) {
+          if (!pxrfDT?.length || !wdxrfDT?.length) return [];
+          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          const wMap = new Map(wdxrfDT.map(w => [`${getDB(w)}_${w.ID ?? w.id}`, w]));
+          const minMap = conf.useLOD ? this.#getMinMap(pxrfDT, conf) : {};
+          const cfs = this.#resCoeffs(pxrfDT, wMap, conf, minMap);
+          return pxrfDT.reduce((acc, r) => {
+            if (conf.itemMap?.length && !conf.itemMap.includes(r.item ?? r.Item)) return acc;
+            const pId = r.ID ?? r.id; // 安全なID抽出
+            const w = wMap.get(`${getDB(r)}_${pId}`);
+            if (!w) return acc;
+            const pDT = { DB: getDB(r), id: pId, item: r.item ?? r.Item, group: r.Group ?? "Unknown", Group: r.Group ?? "Unknown", Source: r.Source !== "Unknown" ? r.Source : (w.Source ?? "Unknown") };
+            GLB.Conf.valElms.forEach(elm => {
+              const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+              const rawV = r[`${pfx}_${elm}`];
+              const isLod = typeof rawV === 'string' && rawV.includes('LOD');
+              let val = (isLod && conf.useLOD) ? (minMap[elm] ?? null) : (rawV != null && rawV !== "" && !isNaN(Number(rawV)) ? Number(rawV) : null);
+              if (cfs?.[elm] && val != null) val = (val - cfs[elm].int) / cfs[elm].slp;
+              pDT[elm] = val; pDT[`${elm}_Err`] = r[`${pfx}_${elm}_Err`] ?? null;
+            });
+            const xVal = Mtd.T2.Calc.evaluate(conf.val, w), yVal = Mtd.T2.Calc.evaluate(conf.val, pDT);
+            if (xVal != null && yVal != null) acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.Conf.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
+            return acc;
+          }, []);
+        }
+        // --- LOD最小値取得 ---
+        static #getMinMap(pxrfDT, conf) {
+          return Object.fromEntries(GLB.Conf.valElms.map(elm => {
+            const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+            const nums = Mtd.Util.getValidNums(pxrfDT.map(r => r[`${pfx}_${elm}`]), true);
+            return [elm, nums.length ? Math.min(...nums) : null];
+          }));
+        }
+        // --- 検量線算出 ---
+        static #resCoeffs(pxrfDT, wMap, conf, minMap) {
+          if (!conf.useCal || !conf.calElms?.length) return null;
+          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          if (conf.correction === "new") {
+            return Object.fromEntries(conf.calElms.map(elm => {
+              const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+              const vList = pxrfDT.reduce((acc, p) => {
+                const pId = p.ID ?? p.id; // 安全なID抽出
+                const w = wMap.get(`${getDB(p)}_${pId}`);
+                if (!w || w[elm] == null) return acc;
+                const raw = p[`${pfx}_${elm}`];
+                const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
+                if (v != null) { acc.w.push(Number(w[elm])); acc.p.push(v); }
+                return acc;
+              }, { w: [], p: [] });
+              return [elm, Mtd.T2.Calc.calcCalib(vList.w, vList.p)];
+            }).filter(([, v]) => v));
+          }
+          const r = conf.corrDT?.find(rw => rw[0] === conf.correction);
+          if (!r) return null;
+          return Object.fromEntries(conf.calElms.map(elm => {
+            const sIdx = conf.corrDT[0].indexOf(`${elm}_slp`), iIdx = conf.corrDT[0].indexOf(`${elm}_int`);
+            return sIdx !== -1 && iIdx !== -1 && r[sIdx] !== "" ? [elm, { slp: Number(r[sIdx]), int: Number(r[iIdx]) }] : [elm, null];
+          }).filter(([, v]) => v));
+        }
+        // --- 検量線適用データ整形 ---
+        static genCorr(pxrfDT, wdxrfDT, conf, idxName) {
+          const newRow = [idxName];
+          GLB.Conf.valElms.forEach(elm => {
+            if (!conf.calElms?.includes(elm)) { newRow.push("", ""); return; }
+            const prevDT = this.buildPrev(pxrfDT, wdxrfDT, { ...conf, val: elm, useCal: false });
+            const cfs = prevDT.length ? Mtd.T2.Calc.calcCalib(prevDT.map(d => d.x), prevDT.map(d => d.y)) : null;
+            newRow.push(cfs?.slp ?? "", cfs?.int ?? "");
+          });
+          return newRow;
+        }
+      },
+      Calc: class {
+        // --- カスタム数式評価 ---
+        static evaluate(fml, rData) {
+          if (!fml) return null;
+          try {
+            const keys = Object.keys(rData), vals = Object.values(rData);
+            const mathFns = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
+            const fn = new Function(...keys, `${mathFns} return ${fml};`);
+            const res = fn(...vals);
+            return isNaN(res) || !isFinite(res) ? null : res;
+          } catch (e) { return null; }
+        }
+        // --- 検量線係数計算 ---
+        static calcCalib(wdxrfVals, pxrfVals) {
+          if (!wdxrfVals?.length || wdxrfVals.length < 2 || wdxrfVals.length !== pxrfVals?.length) return null;
+          try {
+            const d = wdxrfVals.map((x, i) => [x, pxrfVals[i]]);
+            const { m: slope, b: intercept } = ss.linearRegression(d);
+            return (isNaN(slope) || isNaN(intercept) || slope === 0) ? null : { slp: slope, int: intercept };
+          } catch (e) { return null; }
+        }
+        // --- 回帰・相関計算 ---
+        static calcReg(xArr, yArr, errArr) {
+          if (!xArr?.length || xArr.length !== yArr?.length) return null;
+          const n = xArr.length, d = xArr.map((x, i) => [x, yArr[i]]);
+          const { m: slope, b: intercept } = ss.linearRegression(d);
+          const r = ss.sampleCorrelation(xArr, yArr), r2 = r * r;
+          let ssRes = 0, maxRes = 0;
+          xArr.forEach((x, i) => { const res = Math.abs(yArr[i] - (slope * x + intercept)); ssRes += res * res; maxRes = Math.max(maxRes, res); });
+          const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
+          let err3Sigma = 0;
+          if (errArr?.length > 2) {
+            const meanErr = errArr.reduce((a, b) => a + b, 0) / errArr.length;
+            err3Sigma = Math.sqrt(errArr.reduce((a, b) => a + (b - meanErr) ** 2, 0) / (errArr.length - 1)) * 3;
+          }
+          return { count: n, slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
+        }
+      }
+    }
+  };
+</script>
+    <!-- src/Component.html -->
+<script>
+  // --- DOM ---
+  class DOM {
+    static el = ref => typeof ref === "string" ? document.getElementById(ref) : ref;
+    static updateText = (ref, text) => { if (text !== undefined && this.el(ref)) this.el(ref).innerText = text; };
+    static tgl = (ref, isShow) => { if (this.el(ref)) this.el(ref).style.display = isShow ? "" : "none"; };
+    static open = (ref, isOpen) => { if (this.el(ref)?.tagName === "DETAILS") setTimeout(() => { this.el(ref).open = isOpen; }, 200); };
+    static setDis = (ref, isDis) => { if (this.el(ref)) this.el(ref).disabled = isDis; };
+    static setAttr = (ref, attr, val) => val ? this.el(ref)?.setAttribute(attr, val) : this.el(ref)?.removeAttribute(attr);
+  }
+  // --- NewDOM ---
+  class NewDOM {
+    // --- フォーム一括構築 ---
+    static buildFormFields(confArr, ref, isClear = false) {
+      const cntr = DOM.el(ref);
+      if (!cntr || (!isClear && cntr.hasChildNodes())) return;
+      if (isClear) cntr.replaceChildren();
+      cntr.append(...confArr.map(conf => {
+        const { type, bind, change, field, opts, hasEmpty, inputType, placeholder, label } = conf;
+        const elm = document.createElement(type === "select" ? "select" : "input");
+        elm.className = `field-${type} form-control`;
+        if (bind) elm.dataset.bind = bind;
+        if (change) elm.dataset.change = change;
+        if (field) elm.dataset.field = field;
+        if (type === "select") {
+          hasEmpty !== false && elm.add(new Option("---未選択---", ""));
+          opts?.forEach(opt => {
+            const o = new Option(opt.label ?? opt, opt.val ?? opt);
+            if (opt.disabled) o.disabled = true;
+            if (opt.hidden) o.hidden = true;
+            if (opt.selected || opt.val === "") o.selected = true;
+            elm.add(o);
+          });
+        } else {
+          elm.type = inputType || "text";
+          if (placeholder) elm.placeholder = placeholder;
+        }
+        if (label) {
+          const lbl = document.createElement("label");
+          lbl.className = "field-label"; lbl.textContent = `${label} `; lbl.appendChild(elm); return lbl;
+        }
+        return elm;
+      }));
+    }
+    // --- ステータス更新 ---
+    static status(ref, status = null) {
+      const elm = DOM.el(ref);
+      if (elm) [elm.dataset.status, elm.innerText] = status?.length ? status : ["hidden", ""]; // UI状態更新
+    }
+    // --- 汎用確認ダイアログ ---
+    static confirm(title, msg, ref = null) {
+      const elm = DOM.el(ref);
+      const svStat = elm ? [elm.dataset.status || "hidden", elm.innerText] : null;
+      if (elm) this.status(elm, ["loading", "実行中..."]); // ローディング遷移
+      return new Promise(resolve => {
+        const dlg = DOM.el("universalConfirm");
+        DOM.updateText("uDialogTitle", title);
+        DOM.updateText("uDialogMessage", msg);
+        dlg.showModal(); 
+        DOM.el("uDialogConfirmBtn").onclick = () => { dlg.close(); resolve(true); };
+        DOM.el("uDialogCancelBtn").onclick = () => {
+          dlg.close();
+          if (elm) this.status(elm, svStat); // 状態復元
+          resolve(false);
+        };
+      });
+    }
+    // --- トグル構築 ---
+    static buildToggle(conf, ref, isClear = false) {
+      const cntr = DOM.el(ref);
+      if (!cntr || (!isClear && cntr.hasChildNodes())) return;
+      if (isClear) cntr.replaceChildren();
+      cntr.insertAdjacentHTML('beforeend', Tpl.Toggle.row(conf.label, conf.bind, conf.change, conf.isCheck));
+    }
+    // --- 統計表構築 ---
+    static buildStats(statsDT, ref) {
+      const cntr = DOM.el(ref);
+      if (!cntr) return;
+      if (!statsDT) return cntr.replaceChildren();
+      cntr.innerHTML = Tpl.Stats.cntr(Mtd.Util.buildStats(statsDT).map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
+    }
+    // --- エラー状態更新 ---
+    static inputs(ref, errFlags) {
+      DOM.el(ref)?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
+    }
+  }
+  // --- ObPopover ---
+  class ObPopover extends HTMLElement {
+    connectedCallback() {
+      setTimeout(() => {
+        const sum = this.querySelector('.popover-summary'), cnt = this.querySelector('.popover-content');
+        if (!sum || !cnt) return;
+        const uid = this.id || `pop_${Math.random().toString(36).substr(2, 9)}`, anchorName = `--anchor-${uid}`;
+        sum.setAttribute('popovertarget', uid); sum.style.anchorName = anchorName;
+        cnt.id = uid; cnt.setAttribute('popover', 'auto'); cnt.style.positionAnchor = anchorName; // Popover紐付け
+      }, 0);
+    }
+  }
+  // --- ObMultiSelect ---
+  class ObMultiSelect extends HTMLElement {
+    #dataChangeItem; #dataChangeAll;
+    connectedCallback() {
+      this.#dataChangeItem = this.dataset.changeItem; this.#dataChangeAll = this.dataset.changeAll;
+      this.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "cb-container");
+    }
+    set opts(arr) {
+      const cntr = this.querySelector('.popover-content');
+      if (!cntr) return;
+      if (!arr?.length) return (cntr.innerHTML = '<div class="txt-btninfo">データなし</div>');
+      cntr.innerHTML = (this.#dataChangeAll ? Tpl.MultiSelect.selectAll(this.#dataChangeAll) : '') + arr.map(item => Tpl.MultiSelect.item(item, this.#dataChangeItem)).join('');
+    }
+    set refs(vals) {
+      const sum = this.querySelector('.popover-summary');
+      if (sum) sum.innerHTML = vals?.length ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>` : '<span style="color:var(--grey400)">未選択</span>';
+      const cbs = this.querySelectorAll('.dataset-cb');
+      cbs.forEach(cb => cb.checked = Array.isArray(vals) && vals.includes(cb.value));
+      const allCb = this.querySelector('.select-all-cb');
+      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked); // 全選択判定
+    }
+  }
+  // --- ObSymbolTable ---
+  class ObSymbolTable extends HTMLElement {
+    #src = null;
+    static #COLS = [{ key: 'target', className: 'symb-col-target', hasClr: false }, { key: 'shp', className: 'symb-col-shape', hasClr: false }, { key: 'clr', className: 'symb-col-color', hasClr: true }];
+    set src(val) { this.#src = val; this.#render(); }
+    clear() { this.#src = null; this.replaceChildren(); }
+    #buildSelectHtml(opts, curVal, type, idx, hasClr, actsConf) {
+      let curLbl = "未選択", curClr = "";
+      const itemsHtml = opts.map(opt => {
+        if (opt.val === curVal) { curLbl = opt.label; curClr = opt.val; }
+        return Tpl.Symbol.item(opt, type, idx, hasClr, actsConf.update);
+      }).join('');
+      return Tpl.Common.popover(Tpl.Symbol.sum(curLbl, curClr, hasClr, curVal), itemsHtml, "single-summary", "");
+    }
+    #render() {
+      const { rls, optsConf, actsConf } = this.#src || {};
+      if (!rls?.length || !optsConf) return this.clear();
+      this.innerHTML = [...rls, { isAddRow: true }].map((rl, idx) => {
+        if (rl.isAddRow) return Tpl.Symbol.addRow(actsConf.add, ObSymbolTable.#COLS);
+        const isDef = rl.key === "default";
+        const btnHtml = Tpl.Symbol.btn(actsConf.remove, rl.key, "-", isDef);
+        const colsHtml = ObSymbolTable.#COLS.map(col => Tpl.Symbol.col(col.className, (col.key === 'target' && isDef) ? '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>' : this.#buildSelectHtml(optsConf[col.key], rl[col.key], col.key, idx, col.hasClr, actsConf))).join('');
+        return Tpl.Symbol.row(btnHtml, colsHtml);
+      }).join('');
+    }
+  }
+  // --- Tpl ---
+  const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
+  class Tpl {
+    static Common = class {
+      static popover(sumHtml, cntHtml, sumCls = "", cntCls = "") { return html`<ob-popover><button type="button" class="popover-summary ${sumCls}">${sumHtml}</button><div class="popover-content scroll-y ${cntCls}">${cntHtml}</div></ob-popover>`; }
+      static colorBox(clr) { return clr ? html`<span class="color-box" style="background: ${clr}"></span>` : ""; }
+      static badge(val) { return html`<span class="badge">${val}</span>`; }
+    };
+    static Toggle = class {
+      static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
+    };
+    static Stats = class {
+      static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
+      static cntr(rowsHtml) { return html`<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`; }
+    };
+    static MultiSelect = class {
+      static item(val, dataChange) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }
+      static selectAll(dataChange) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked><span>すべて選択</span></label>`; }
+    };
+    static Symbol = class {
+      static sum(label, clr, hasClr, hasVal) { return html`${(hasClr && hasVal) ? Tpl.Common.colorBox(clr) : ""}${label}`; }
+      static item(opt, type, idx, hasClr, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-symbol-idx="${idx}" data-symbol-type="${type}" value="${opt.val}" popovertargetaction="hide">${hasClr ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
+      static btn(action, key, text, dis) { return html`<button type="button" class="icon-btn" data-action="${action}" ${key ? html`data-rule-key="${key}"` : ""} ${dis ? "disabled" : ""}>${text}</button>`; }
+      static col(clsName, cntHtml) { return html`<div class="${clsName}">${cntHtml}</div>`; }
+      static row(btnHtml, colsHtml) { return html`<div class="symb-table-row"><div class="symb-col-btn">${btnHtml}</div>${colsHtml}</div>`; }
+      static addRow(actionAdd, colsArr) { return this.row(this.btn(actionAdd, "", "+", false), colsArr.map(c => this.col(c.className, "")).join('')); }
+    };
+  }
+  customElements.define('ob-popover', ObPopover); customElements.define('ob-multi-select', ObMultiSelect); customElements.define('ob-symbol-table', ObSymbolTable);
+</script>
+    <!-- src/Chart.html -->
+<script>
+  // --- テーマキャッシュ ---
+  class CSSToken {
+    static #cache = new Map();
+    // --- カラー変数変換 ---
+    static get(varStr) {
+      if (!varStr?.startsWith('var(')) return varStr;
+      const mch = varStr.match(/var\((--[^,\s)]+)/);
+      if (!mch) return varStr; // 変数以外は返却
+      const key = mch[1];
+      if (!this.#cache.has(key)) this.#cache.set(key, getComputedStyle(document.body).getPropertyValue(key).trim() || varStr); // 計算値保持
+      return this.#cache.get(key);
+    }
+  }
+  // --- プロット描画クラス ---
+  class ObCalPlot extends HTMLElement {
+    #box; #chart = null; #observer; #src = null; #lastW = 0;
+    constructor() {
+      super();
+      this.#box = document.createElement('div');
+      this.#box.style.cssText = 'width: 100%; position: relative;';
+      // **超重要**高さ変動による無限ループ防止
+      this.#observer = new ResizeObserver(() => {
+        const curW = this.clientWidth;
+        if (curW > 0 && curW !== this.#lastW && this.#src) {
+          this.#lastW = curW;
+          if (this.#chart) this.#chart.resize();
+          this.#render();
+        }
+      });
+    }
+    // --- 接続コールバック ---
+    connectedCallback() {
+      this.style.display = 'grid';
+      // **超重要**幅拡張を防止（minmax制約）
+      this.style.gridTemplateColumns = 'minmax(0, 1fr)';
+      this.style.width = '100%';
+      this.appendChild(this.#box);
+      this.#observer.observe(this.#box);
+    }
+    // --- 切断コールバック ---
+    disconnectedCallback() {
+      this.#observer.disconnect();
+      if (this.#chart) { this.#chart.dispose(); this.#chart = null; } // メモリ解放
+    }
+    // --- データ注入と描画 ---
+    set src(data) {
+      this.#src = data;
+      this.#render();
+    }
+    // --- 描画消去 ---
+    clear() {
+      this.#src = null;
+      if (this.#chart) this.#chart.clear();
+      this.#box.style.height = '0px'; // 領域リセット
+    }
+    // --- 散布図描画本体 ---
+    #render() {
+      const { prevDT, statsDT, symb, gph } = this.#src || {};
+      if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
+      
+      const containerWidth = this.clientWidth;
+      if (containerWidth === 0) return; // 非表示時はスキップ
+      this.#lastW = containerWidth;
+      
+      const rS = gph?.style || GLB.Conf.defaultGraphStyle;
+      const STYLE = {
+        font: rS.font,
+        fontS: { ...rS.fontS },
+        fontC: { base: CSSToken.get(rS.fontC.base), stats: CSSToken.get(rS.fontC.stats), tip: CSSToken.get(rS.fontC.tip) },
+        symbol: { ...rS.symbol },
+        lineW: { ...rS.lineW },
+        lineC: { grid: CSSToken.get(rS.lineC.grid), axis: CSSToken.get(rS.lineC.axis), reg: CSSToken.get(rS.lineC.reg)},
+        bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
+      };
+      const GAP = { ...(gph?.gap || GLB.Conf.defaultGraphGap) };
+      // 動的計算と設定値注入
+      const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
+      const gridTop = GAP.padT + overY, gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
+      const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick, gridRight = GAP.padR;
+      const plotSize = containerWidth - gridLeft - gridRight, containerHeight = plotSize + gridTop + gridBottom;
+      this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
+      this.#box.style.backgroundColor = STYLE.bgOuter;
+      if (!this.#chart) this.#chart = echarts.init(this.#box);
+      const { niceMin, niceMax, niceTicks } = Mtd.Util.calcScale(prevDT.map(d => d.x), prevDT.map(d => d.y));
+      const itv = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
+      const fmtTick = v => { const tck = niceTicks.find(t => Math.abs(t.v - v) < 1e-8); return tck ? tck.f : v; }; // 刻みフォーマット
+      const graphText = Mtd.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n');
+      const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
+      const plotDT = prevDT.map(d => {
+        const rl = rls.find(r => r.target !== "" && r.target === d[baseKey]) || defRl; // ルール適用
+        const isEmpty = rl.shp === 'emptyCircle', shp = isEmpty ? 'circle' : (rl.shp || 'circle');
+        const bClr = CSSToken.get(rl.clr);
+        return {
+          value: [d.x, d.y], id: d.id, group: d.group,
+          symbol: shp, symbolSize: shp.startsWith('path://') ? STYLE.symbol.pathSize : STYLE.symbol.baseSize,
+          itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW }
+        };
+      });
+      const series = [{ type: 'scatter', data: plotDT, animation: false }];
+      if (statsDT?.slope != null && statsDT?.intercept != null) {
+        const { slope, intercept } = statsDT;
+        series.push({
+          type: 'line', data: [[niceMin, slope * niceMin + intercept], [niceMax, slope * niceMax + intercept]], // 回帰直線
+          symbol: 'none', lineStyle: { color: STYLE.lineC.reg, width: STYLE.lineW.regW, type: STYLE.lineW.regD, opacity: 0.5 },
+          animation: false, silent: true
+        });
+      }
+      const opt = {
+        animation: false,
+        textStyle: { fontFamily: STYLE.font },
+        grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSize, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: STYLE.lineW.axis },
+        tooltip: { formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`, backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
+        xAxis: {
+          type: 'value', name: 'WDXRF', nameLocation: 'middle',
+          nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },
+          min: niceMin, max: niceMax, interval: itv,
+          axisLabel: { margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => fmtTick(v) },
+          splitLine: { show: true, lineStyle: { color: STYLE.lineC.grid, type: 'solid', width: STYLE.lineW.grid } },
+          axisLine: { show: true, onZero: false, lineStyle: { color: STYLE.lineC.axis, width: STYLE.lineW.axis } },
+          axisTick: { show: false, inside: true }
+        },
+        yAxis: {
+          type: 'value', name: 'PXRF', nameLocation: 'middle',
+          nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },
+          min: niceMin, max: niceMax, interval: itv,
+          axisLabel: { rotate: 90, margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => (Math.abs(v - niceMin) < 1e-8) ? '' : fmtTick(v) },
+          splitLine: { show: true, lineStyle: { color: STYLE.lineC.grid, type: 'solid', width: STYLE.lineW.grid } },
+          axisLine: { show: true, onZero: false, lineStyle: { color: STYLE.lineC.axis, width: STYLE.lineW.axis } },
+          axisTick: { show: false, inside: true }
+        },
+        graphic: [{ type: 'text', left: gridLeft + STYLE.fontS.tick, top: gridTop + STYLE.fontS.tick, style: { text: graphText, fontFamily: STYLE.font, fontSize: STYLE.fontS.stats, fill: STYLE.fontC.stats } }],
+        series: series
+      };
+      this.#chart.setOption(opt);
+    }
+  }
+  customElements.define('ob-cal-plot', ObCalPlot);
+</script>
+    <!-- src/View.html -->
+<script>
+  // --- UIInit ---
+  class UIInit {
+    // --- Tab1初期化 ---
+    static buildTab1() {
+      const pref = DOM.el("prefSec"), raw = DOM.el("rawSec"), extr = DOM.el("extrSec");
+      NewDOM.buildFormFields([{ type: "select", opts: GLB.Conf.confMods, bind: "T1ST.pref.refs.mode", hasEmpty: false }], pref?.querySelector('[data-ui="mode-box"]'));
+      NewDOM.buildFormFields(GLB.Conf.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })), extr?.querySelector('[data-ui="box"]'));
+    }
+    // --- Tab2初期化 ---
+    static buildTab2() {
+      const symb = DOM.el("symbSec"), prev = DOM.el("prevSec"), calb = DOM.el("calbSec");
+      NewDOM.buildFormFields([{ type: "select", opts: GLB.Conf.symbAxes, change: "T2.checkAxis", hasEmpty: false }], symb?.querySelector('[data-ui="axis-box"]'));
+      NewDOM.buildFormFields([{ type: "select", bind: "T2ST.calb.refs.correction", hasEmpty: false, opts: [{ label: "新規検量線", val: "new" }] }], calb?.querySelector('[data-ui="corr-box"]'));
+      NewDOM.buildFormFields([{ type: "select", bind: "T2ST.prev.refs.val", hasEmpty: false, opts: [...GLB.Conf.valElms, ...GLB.Conf.valLgc].map(v => ({ label: v, val: v })) }], prev?.querySelector('[data-ui="val-box"]'));
+      if (GLB.Conf.valLgc.length) State.set("T2ST.prev.refs.val", GLB.Conf.valLgc[0]);
+      NewDOM.buildToggle({ label: "LOD置換", bind: "T2ST.calb.refs.useLOD" }, calb?.querySelector('[data-ui="lod-box"]'));
+      NewDOM.buildToggle({ label: "検量線適用", bind: "T2ST.calb.refs.useCal" }, calb?.querySelector('[data-ui="cal-tgl-box"]'));
+      const prevModeElm = calb?.querySelector('[data-ui="mode-box"]');
+      if (prevModeElm) prevModeElm.opts = GLB.Conf.optElms;
+      const prevCalElm = calb?.querySelector('[data-ui="cal-elm-box"]');
+      if (prevCalElm) prevCalElm.opts = GLB.Conf.valElms;
+    }
+    static build() { this.buildTab1(); this.buildTab2(); }
+  }
+  // --- UIPhase（セクション単位でネスト） ---
+  class UIPhase {
+    // --- Tab1ルール ---
+    static #T1_RLS = {
+      pref: { sec: p => ({ isActive: p === T1_PHS.INIT, isDis: false }) },
+      raw: {
+        sec: p => ({ isOpen: p >= T1_PHS.READY && p < T1_PHS.VALID, isDis: p < T1_PHS.READY }),
+        'btn-load': p => ({ text: p <= T1_PHS.READY ? "データを取得" : "再取得", isDis: false }),
+        'btn-make': p => ({ isDis: p < T1_PHS.READY }),
+        'btn-vald': p => ({ isDis: p < T1_PHS.INVALID || State.get("T1ST.raw.flags").some(Boolean), className: p === T1_PHS.INVALID ? "" : "outline" }),
+        area: p => ({ isShow: p >= T1_PHS.LOAD }),
+        'btn-box': p => ({ isShow: p >= T1_PHS.LOAD })
+      },
+      extr: {
+        sec: p => ({ isOpen: p >= T1_PHS.VALID && p < T1_PHS.OUTPUT, isDis: p < T1_PHS.VALID }),
+        'btn-extr': p => ({ isDis: p < T1_PHS.VALID || State.get("T1ST.extr.flags").some(Boolean) }),
+        'btn-push': p => ({ isShow: p >= T1_PHS.EXTRACT, isDis: p < T1_PHS.EXTRACT }),
+        area: p => ({ isShow: p >= T1_PHS.VALID })
+      }
+    };
+    // --- Tab2ルール ---
+    static #T2_RLS = {
+      asgn: {
+        sec: p => ({ isOpen: p < T2_PHS.FILTERED, isDis: false }),
+        'btn-load': p => ({ isDis: false }),
+        'btn-fltr': p => ({ isDis: p < T2_PHS.LOADED }),
+        area: p => ({ isShow: p >= T2_PHS.LOADED })
+      },
+      symb: {
+        sec: p => ({ isOpen: p >= T2_PHS.FILTERED && p < T2_PHS.MAPPED, isDis: p < T2_PHS.FILTERED }),
+        'btn-symb': p => ({ isDis: p < T2_PHS.FILTERED }),
+        'axis-box': p => ({ isDis: p < T2_PHS.FILTERED }),
+        area: p => ({ isShow: p >= T2_PHS.FILTERED })
+      },
+      prev: {
+        sec: p => ({ isOpen: p >= T2_PHS.MAPPED, isDis: p < T2_PHS.MAPPED }),
+        'btn-make': p => ({ isDis: p < T2_PHS.MAPPED }),
+        'save-box': p => ({ isShow: p >= T2_PHS.MAPPED && State.get("T2ST.calb.refs.correction") === "new" })
+      },
+      calb: {
+        sec: p => ({ isOpen: p === T2_PHS.MAPPED ? true : undefined, isActive: p >= T2_PHS.MAPPED })
+      },
+      repo: {
+        sec: p => ({ isOpen: p >= T2_PHS.PREVIEWED, isDis: p < T2_PHS.PREVIEWED }),
+        'btn-repo': p => ({ isDis: p < T2_PHS.PREVIEWED })
+      }
+    };
+    // --- 宣言的UI適用 ---
+    static #apply(rlsMap, phs) {
+      Object.entries(rlsMap).forEach(([secKey, roles]) => {
+        const secElm = DOM.el(`${secKey}Sec`);
+        if (!secElm) return;
+        Object.entries(roles).forEach(([role, rlFn]) => {
+          const target = role === 'sec' ? secElm : secElm.querySelector(`[data-ui="${role}"]`);
+          if (!target) return;
+          const { isShow, isDis, isOpen, isActive, text, className } = rlFn(phs); // isActiveを追加
+          isShow !== undefined && DOM.tgl(target, isShow);
+          isDis !== undefined && DOM.setDis(target, isDis);
+          isOpen !== undefined && DOM.open(target, isOpen);
+          text !== undefined && DOM.updateText(target, text);
+          if (className !== undefined) target.className = className;
+          if (role === 'sec') { 
+            DOM.setAttr(target, "data-state", (isActive ?? isOpen) ? "active" : null); 
+            DOM.setAttr(target, "data-type", isDis ? "disabled" : null); 
+          }
+        });
+      });
+    }
+    static renewT1Phs(p) {
+      this.#apply(this.#T1_RLS, p);
+      if (p >= T1_PHS.VALID && p < T1_PHS.EXTRACT) State.set("T1ST.extr.status", ["hidden", ""]);
+    }
+    static renewT2Phs(p) { this.#apply(this.#T2_RLS, p); }
+  }
+  // --- UIStateUpdater ---
+  class UIStateUpdater {
+    constructor() {
+      // stete-UI同期
+      document.querySelectorAll('[data-bind-opts]').forEach(elm => State.subscribe(elm.dataset.bindOpts, v => elm.opts = v));
+      document.querySelectorAll('[data-bind-refs]').forEach(elm => State.subscribe(elm.dataset.bindRefs, v => elm.refs = v));
+      document.querySelectorAll('[data-bind-status]').forEach(elm => State.subscribe(elm.dataset.bindStatus, v => NewDOM.status(elm, v)));
+      document.querySelectorAll('[data-bind]').forEach(elm => { if (elm.tagName === 'INPUT' && elm.type === 'text') State.subscribe(elm.dataset.bind, v => elm.value = v); });
+      const bindErr = (secId, role, tgtPhs) => flags => { 
+        NewDOM.inputs(DOM.el(secId)?.querySelector(`[data-ui="${role}"]`), flags); 
+        if (State.get("T1ST.phase") === tgtPhs) UI.Phs.renewT1Phs(tgtPhs); 
+      };
+      // ダウングレード対応
+      State.subscribe("T1ST.raw.flags", bindErr("rawSec", "box", T1_PHS.LOAD));
+      State.subscribe("T1ST.extr.flags", bindErr("extrSec", "box", T1_PHS.VALID));
+      Object.entries({
+        // ▼ GLOBAL --------------------------------
+        "GLB.isLocked": v => { DOM.setDis(DOM.el("tab1Fieldset"), v); DOM.setDis(DOM.el("tab2Fieldset"), v); },
+        // ▼ T1: Tab1全般 --------------------------
+        "T1ST.phase": v => UI.Phs.renewT1Phs(v),
+        "T1ST.raw.data": data => {
+          const bx = DOM.el("rawSec")?.querySelector('[data-ui="box"]');
+          if (data?.[0]) NewDOM.buildFormFields(GLB.Conf.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "T1.renewRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })), bx, true);
+          else if (bx) bx.replaceChildren();
+        },
+        // ▼ T2: Tab2全般 --------------------------
+        "T2ST.phase": v => { 
+          UI.Phs.renewT2Phs(v); 
+          if (v < T2_PHS.PREVIEWED) { 
+            DOM.el(DOM.el("prevSec")?.querySelector('ob-cal-plot'))?.clear(); 
+            NewDOM.buildStats(null, DOM.el("prevSec")?.querySelector('[data-ui="stats-tbl"]')); 
+          } 
+        },
+        // ▼ T2: Asgn (データ読込) -----------------
+        "T2ST.asgn.data.pxrfDT": () => { this.#renderSymbs(); this.#renderItems(); },
+        "T2ST.asgn.data.corrDT": data => {
+          if (!data) return;
+          const bx = DOM.el("calbSec")?.querySelector('[data-ui="corr-box"]');
+          const opts = [{ label: "新規検量線", val: "new" }, ...data.slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
+          NewDOM.buildFormFields([{ type: "select", bind: "T2ST.calb.refs.correction", hasEmpty: false, opts: opts }], bx, true);
+          const elm = bx?.querySelector('select');
+          if (elm) elm.value = State.get("T2ST.calb.refs.correction");
+        },
+        // ▼ T2: Symb (シンボル設定) ---------------
+        "T2ST.symb.refs.baseKey": val => {
+          const sel = DOM.el("symbSec")?.querySelector('[data-ui="axis-box"] select');
+          if (sel && sel.value !== val) sel.value = val;
+          this.#renderSymbs();
+        },
+        "T2ST.symb.refs.rls": () => this.#renderSymbs(),
+        // ▼ T2: Calb (補正設定) -------------------
+        "T2ST.calb.refs.correction": () => UI.Phs.renewT2Phs(State.get("T2ST.phase")),
+        // ▼ T2: Prev (プレビュー表示) -------------
+        "T2ST.prev.data.statsDT": statsDT => NewDOM.buildStats(statsDT, DOM.el("prevSec")?.querySelector('[data-ui="stats-tbl"]')),
+        "T2ST.prev.data.prevDT": data => {
+          const bx = DOM.el("prevSec")?.querySelector('[data-ui="chart-box"]');
+          let chartElm = bx?.querySelector('ob-cal-plot');
+          if (!chartElm && bx) { chartElm = document.createElement('ob-cal-plot'); bx.replaceChildren(chartElm); }
+          if (chartElm) chartElm.src = { prevDT: data, statsDT: State.get("T2ST.prev.data.statsDT"), symb: State.get("T2ST.symb.refs"), gph: State.get("T2ST.gph") };
+          if (data?.length && State.get("T2ST.phase") === T2_PHS.MAPPED) DOM.open("calbSec", false);
+        }
+      }).forEach(([path, cb]) => State.subscribe(path, cb));
+    }
+    // --- シンボルDI ---
+    #renderSymbs() {
+      const baseDT = State.get("T2ST.asgn.data.pxrfDT"), baseKey = State.get("T2ST.symb.refs.baseKey"), symbElm = DOM.el("symbSec")?.querySelector('[data-ui="symb-tbl"]');
+      if (!symbElm) return;
+      if (!baseDT || !baseDT.length) return symbElm.clear();
+      const vals = [...new Set(baseDT.map(d => d[baseKey]).filter(Boolean))];
+      symbElm.src = {
+        rls: State.get("T2ST.symb.refs.rls"),
+        optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.Conf.symbShapes, clr: GLB.Conf.symbColors },
+        actsConf: { add: "T2.addSymb", remove: "T2.removeSymb", update: "T2.renewSymb"}
+      };
+    }
+    // --- Item抽出DI ---
+    #renderItems() {
+      const baseDT = State.get("T2ST.asgn.data.pxrfDT"), elm = DOM.el("prevSec")?.querySelector('[data-ui="item-box"]');
+      if (!baseDT?.length) { if(elm) elm.opts = []; return; }
+      const items = [...new Set(baseDT.map(d => d.item ?? d.Item).filter(Boolean))];
+      if(elm) elm.opts = items;
+      State.set("T2ST.prev.refs.itemMap", items);
+    }
+  }
+  const UI = { Init: UIInit, Phs: UIPhase, StateUpd: UIStateUpdater };
+  const uiState = new UI.StateUpd();
+</script>
+    <!-- src/Controller.html -->
+<script>
+  class CoreCtrl {
+    // --- シート初期化 ---
+    static async initApp() {
+      try {
+        const appHdrs = [
+          GLB.Conf.filelistHeader,
+          [], // 抽出データは実行時に動的生成
+          ['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]
+        ];
+        const res = await API.initSheets(Object.values(GLB.Conf.rawShts), Object.values(GLB.Conf.appShts), appHdrs);
+        return res.rawNew;
+      } catch (e) {
+        State.set("T1ST.raw.status", ["error", "シート初期化エラー"]);
+        return false;
+      }
+    }
+    // --- 非同期ラッパー ---
+    static async withAsyncLock(statusPath, processFn, finallyFn = null) {
+      State.set("GLB.isLocked", true);
+      try {
+        const res = await processFn();
+        if (typeof res === "string") State.set(statusPath, ["success", res]);
+        else if (Array.isArray(res)) State.set(statusPath, res);
+      } catch (err) { State.set(statusPath, ["error", err.message]); } // エラー捕捉
+      finally {
+        if (finallyFn) await finallyFn();
+        State.set("GLB.isLocked", false);
+      }
+    }
+  }
+  class T1Ctrl {
+    // --- tab1 File読込 ---
+    static async loadRaw() {
+      if (!(await NewDOM.confirm("確認", State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？", "rawBar"))) return;
+      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => {
+        const { data, message } = await API.fetchDT(GLB.Conf.rawShts.file, 5);
+        State.reset(['T1ST.extr']); 
+        State.set({ "T1ST.raw.data": data, "T1ST.raw.refs": Object.fromEntries(GLB.Conf.fileFields.map(f => [f.key, ""])), "T1ST.raw.flags": [true, true, true, false, false], "T1ST.raw.cachedStatus": ["success", message], "T1ST.phase": T1_PHS.LOAD });
+        Evt.T1.checkRawRefs(); return message; 
+      });
+    }
+    // --- tab1 リスト処理 ---
+    static async procList(actionType, rawDT) {
+      if (actionType === "validate") ({ data: rawDT } = await API.fetchDT(GLB.Conf.appShts.filelist, 5, 5));
+      const outData = Mtd.T1.FVald.valdList(rawDT, GLB.Conf.appHeads.filelist, GLB.Conf.validModes, State.get("T1ST.pref.refs.mode"));
+      const isAlert = outData.slice(1).some(r => r.at(-1) !== ""); // エラー判定
+      await Promise.all([API.writeData(GLB.Conf.appShts.filelist, outData, "rule"), API.clearUserProperty(GLB.Conf.propFileEdited)]);
+      const statusRes = isAlert ? ["alert", "出力完了, errあり"] : "出力完了, errなし";
+      if (isAlert) State.reset(['T1ST.extr']); // 初期化
+      State.set({ "T1ST.raw.cachedStatus": Array.isArray(statusRes) ? statusRes : ["success", statusRes], "T1ST.phase": isAlert ? T1_PHS.INVALID : T1_PHS.VALID });
+      if (!isAlert) Evt.T1.checkExtrRefs();
+      return statusRes;
+    }
+    // --- tab1 リスト生成 ---
+    static async makeList() {
+      Evt.T1.checkRawRefs();
+      const { raw } = State.proxy.T1ST;
+      if (raw.flags.some(Boolean)) return;
+      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawBar")) return;
+      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => T1Ctrl.procList("make", Mtd.Util.remapArry(raw.data, GLB.Conf.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), GLB.Conf.rawHeaders.file)));
+    }
+    // --- tab1 リスト検証 ---
+    static async valdList() {
+      if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawBar")) return;
+      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => T1Ctrl.procList("validate", null));
+    }
+    // --- tab1 データ抽出 ---
+    static async runExtr() {
+      if (!await NewDOM.confirm("確認", "「抽出データ」を上書きしますか？", "extrBar")) return;
+      await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
+        if (await API.checkUserProperty(GLB.Conf.propFileEdited)) { State.set({ "T1ST.raw.status": ["error", "シート編集検知"], "T1ST.phase": T1_PHS.INVALID }); return; }
+        const [fileRes, resDT] = await Promise.all([API.fetchDT(GLB.Conf.appShts.filelist, 6, 6), API.fetchDT(GLB.Conf.rawShts.results)]);
+        const outData = Mtd.T1.Extr.runExtr(fileRes.data, resDT.data, State.get("T1ST.extr.refs"));
+        if (!outData || outData.length <= 1) throw new Error("対象データなし");
+        await API.writeData(GLB.Conf.appShts.extract, outData);
+        State.set("T1ST.phase", T1_PHS.EXTRACT); return `抽出: ${outData.length - 1} 件`;
+      });
+    }
+    // --- tab1 PXRF格納 ---
+    static async pushExtr() {
+      if (!await NewDOM.confirm("確認", "PXRFシートに格納しますか？", "extrBar")) return;
+      await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
+        const [extrRes, pxrfRes] = await Promise.all([API.fetchDT(GLB.Conf.appShts.extract), API.fetchDT(GLB.Conf.rawShts.pxrf)]);
+        const { isDup, data: mrgData } = Mtd.T1.PVald.checkPxrf(pxrfRes.data, extrRes.data);
+        if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？", "extrBar")) return;
+        await API.writeData(GLB.Conf.rawShts.pxrf, isDup ? mrgData : extrRes.data.slice(1), isDup ? "clear" : ["append"]);
+        State.set("T1ST.phase", T1_PHS.OUTPUT); return `PXRF格納: ${extrRes.data.length - 1} 件`;
+      });
+    }
+  }
+  class T2Ctrl {
+    // --- tab2 データ読込 ---
+    static async loadDB() {
+      await CoreCtrl.withAsyncLock("T2ST.asgn.status", async () => {
+        State.set("T2ST.asgn.status", ["loading", "処理中..."]);
+        const [pRes, wRes, cRes] = await Promise.all([API.fetchDT(GLB.Conf.rawShts.pxrf), API.fetchDT(GLB.Conf.rawShts.wdxrf), API.fetchDT(GLB.Conf.appShts.correction).catch(() => ({ data: [] }))]);
+        if (!pRes.data || pRes.data.length <= 1) throw new Error("PXRF不足");
+        if (!wRes.data || wRes.data.length <= 1) throw new Error("WDXRF不足");
+        State.reset(['T2ST.asgn', 'T2ST.symb', 'T2ST.calb', 'T2ST.prev', 'T2ST.repo']);
+        const { wrapPXRF, wrapWDXRF, dbs } = Mtd.T2.mgmtDT.loadDB(pRes.data, wRes.data);
+        State.set({ "T2ST.asgn.data.wrapPXRF": wrapPXRF, "T2ST.asgn.data.wrapWDXRF": wrapWDXRF, "T2ST.asgn.data.corrDT": cRes.data, "T2ST.asgn.refs.available": dbs, "T2ST.asgn.refs.filter": dbs, "T2ST.phase": T2_PHS.LOADED, "T2ST.calb.refs.modeMap": [...GLB.Conf.optElms], "T2ST.calb.refs.calElms": [...GLB.Conf.valElms] });
+        return `読込完了: database ${dbs.length}件`;
+      });
+    }
+    // --- tab2 データ確定 ---
+    static async fltrDB() {
+      await CoreCtrl.withAsyncLock("T2ST.asgn.status", async () => {
+        const { asgn } = State.proxy.T2ST;
+        if (!asgn.refs.filter?.length) throw new Error("DB未選択"); // 未選択判定
+        State.reset(['T2ST.symb', 'T2ST.calb', 'T2ST.prev', 'T2ST.repo']);
+        const { pxrfDT, wdxrfDT } = Mtd.T2.mgmtDT.fltrDB(asgn.data.wrapPXRF, asgn.data.wrapWDXRF, asgn.refs.filter);
+        State.set({ "T2ST.asgn.data.pxrfDT": pxrfDT, "T2ST.asgn.data.wdxrfDT": wdxrfDT, "T2ST.phase": T2_PHS.FILTERED }); return "データ更新";
+      });
+    }
+    // --- tab2 シンボル確定 ---
+    static async setSymb() { await CoreCtrl.withAsyncLock("T2ST.symb.status", async () => { State.set("T2ST.phase", T2_PHS.MAPPED); return "シンボル確定"; }); }
+    static async resetSymb() { State.reset("T2ST.symb.refs.rls"); }
+    // --- tab2 プレビュー作成 ---
+    static async buildPrev() {
+      await CoreCtrl.withAsyncLock("T2ST.prev.status", async () => {
+        const { prev, calb, asgn } = State.proxy.T2ST;
+        const conf = { ...prev.refs, ...calb.refs, corrDT: asgn.data.corrDT }; // パラメータ統合
+        const prevDT = Mtd.T2.mgmPrev.buildPrev(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf);
+        if (!prevDT.length) throw new Error("対象データなし");
+        const statsDT = Mtd.T2.Calc.calcReg(prevDT.map(d => d.x), prevDT.map(d => d.y), Mtd.Util.getValidNums(prevDT.map(d => d.err)));
+        State.reset(['T2ST.repo']);
+        State.set({ "T2ST.prev.data.correctionLogic": statsDT, "T2ST.prev.data.statsDT": statsDT, "T2ST.prev.data.prevDT": prevDT, "T2ST.phase": T2_PHS.PREVIEWED }); return "プレビュー更新";
+      });
+    }
+    // --- tab2 補正出力 ---
+    static async saveCorr() {
+      await CoreCtrl.withAsyncLock("T2ST.prev.status", async () => {
+        const { prev, calb, asgn } = State.proxy.T2ST;
+        const idxName = prev.refs.saveIndexName?.trim();
+        if (!idxName) throw new Error("名前が未入力です");
+        if (!calb.refs.calElms?.length) throw new Error("元素が未選択です");
+        if (!await NewDOM.confirm("確認", `検量線を出力しますか？\n名前：${idxName}\n対象：${calb.refs.calElms.join(', ')}`, "prevBar")) return;
+        const isDup = asgn.data.corrDT?.slice(1).some(r => r[0] === idxName);
+        if (isDup && !await NewDOM.confirm("確認", "上書きしますか？", "prevBar")) return; // 上書き確認
+        const conf = { ...prev.refs, ...calb.refs, corrDT: asgn.data.corrDT };
+        const newRow = Mtd.T2.mgmPrev.genCorr(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf, idxName);
+        let updData = asgn.data.corrDT?.length ? [...asgn.data.corrDT] : [['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]];
+        if (isDup) updData[updData.findIndex(r => r[0] === idxName)] = newRow;
+        else updData.push(newRow);
+        await API.writeData(GLB.Conf.appShts.correction, isDup ? updData : (asgn.data.corrDT?.length ? [newRow] : updData), (isDup || !asgn.data.corrDT?.length) ? "clear" : ["append"]);
+        State.set({ "T2ST.asgn.data.corrDT": updData, "T2ST.prev.refs.saveIndexName": "" }); return `補正値を${isDup ? '上書き' : '保存'}しました`;
+      });
+    }
+    // --- tab2 レポート展開（ダミー実装） ---
+    static async openRepo() {
+      await CoreCtrl.withAsyncLock("T2ST.repo.status", async () => {
+        State.set("T2ST.repo.status", ["loading", "テンプレート取得中..."]);
+        
+        // テンプレート取得とダミー置換
+        const template = await API.getReportTemplate();
+        const dummyHtml = template.replace('</body>', `<script>console.log("Dummy SPA Active");<\/script></body>`);
+        const blob = new Blob([dummyHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        
+        if (typeof Office !== 'undefined') {
+          // Excel環境: ダウンロードとして提供
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = "OBPLOT_Report_Dummy.html";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          return "レポートをダウンロードしました";
+        } else {
+          // GAS環境: 別タブ展開
+          window.open(url, '_blank'); 
+          return "別タブで展開しました";
+        }
+      });
+    }
+  }
+  const Ctrl = { CoreCtrl, T1Ctrl, T2Ctrl };
+</script>
+    <!-- src/Event.html -->
+<script>
+  // --- バックアップ管理 ---
+  class MakeBU {
+    static #K = "OBP_BU";
+    static #isQ = false;
+    // 変更監視と多重発火防止
+    static init() { State.subscribe('*', () => this.#queue()); }
+    static #queue() {
+      if (this.#isQ) return;
+      this.#isQ = true;
+      queueMicrotask(() => { this.save(); this.#isQ = false; });
+    }
+    // phase, refs, status保存
+    static save() {
+      const { phase, asgn, symb, calb, prev } = State.proxy.T2ST;
+      phase < T2_PHS.LOADED ? this.clear() : StorageAPI.save(this.#K, JSON.stringify({ phase, asgn: { r: asgn.refs, s: asgn.status }, symb: { r: symb.refs, s: symb.status }, calb: { r: calb.refs, s: calb.status }, prev: { r: prev.refs, s: prev.status } }));
+    }
+    // state安全取得
+    static load() {
+      try { return JSON.parse(StorageAPI.load(this.#K)); } catch (e) { return null; } 
+    }
+    static clear() { StorageAPI.clear(this.#K); }
+  }
+  // --- アイドル検知 ---
+  class IdlTm {
+    static #MS = 300000;
+    static #tm = null;
+    static init() {
+      const rst = () => { clearTimeout(this.#tm); this.#tm = setTimeout(() => DOM.el("idleToast")?.showModal(), this.#MS); };
+      ['mousemove', 'keydown', 'touchstart'].forEach(e => document.addEventListener(e, rst)); rst();
+    }
+  }
+  class Evt {
+    // --- アクション辞書 ---
+    static #ACTION_MAP = {
+      rawSec:  { 'btn-load': 'T1Ctrl.loadRaw', 'btn-make': 'T1Ctrl.makeList', 'btn-vald': 'T1Ctrl.valdList' },
+      extrSec: { 'btn-extr': 'T1Ctrl.runExtr', 'btn-push': 'T1Ctrl.pushExtr' },
+      asgnSec: { 'btn-load': 'T2Ctrl.loadDB', 'btn-fltr': 'T2Ctrl.fltrDB' },
+      symbSec: { 'btn-reset': 'T2Ctrl.resetSymb', 'btn-symb': 'T2Ctrl.setSymb' },
+      prevSec: { 'btn-make': 'T2Ctrl.buildPrev', 'btn-save': 'T2Ctrl.saveCorr' },
+      calbSec: { 'btn-save': 'T2Ctrl.saveCorr' },
+      repoSec: { 'btn-repo': 'T2Ctrl.openRepo' }
+    };
+    // --- マルチセレクト切替 ---
+    static tglMulti(tgt, statePath) {
+      const cntr = tgt.closest('ob-multi-select');
+      if (!cntr) return;
+      const itemCbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
+      if (allCb) allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
+      State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
+    }
+    // --- 全選択切替 ---
+    static tglAllMulti(tgt, statePath) {
+      const cntr = tgt.closest('ob-multi-select');
+      if (!cntr) return;
+      const itemCbs = cntr.querySelectorAll('.dataset-cb');
+      itemCbs.forEach(cb => cb.checked = tgt.checked);
+      State.set(statePath, tgt.checked ? [...itemCbs].map(cb => cb.value) : []);
+    }
+    static #bindMulti = path => tgt => this.tglMulti(tgt, path);
+    static #bindAll = path => tgt => this.tglAllMulti(tgt, path);
+    // --- Tab1イベント群 ---
+    static T1 = {
+      checkT1Pref: mode => {
+        if (!mode) return;
+        const modeText = mode === "Dual" ? "Obsidian/mudrockセット抽出" : "1ファイル単位抽出（モード混在可）";
+        const phs = State.get("T1ST.phase"), isInit = phs === T1_PHS.INIT, isInvalid = phs >= T1_PHS.INVALID;
+        isInvalid && State.set("T1ST.raw.status", ["error", "モード変更検知"]); // 再検証要求
+        State.set({ "T1ST.pref.status": ["message", modeText], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
+      },
+      renewRawRefs: tgt => {
+        State.set(`T1ST.raw.refs.${tgt.dataset.field}`, tgt.value);
+        Evt.T1.checkRawRefs();
+      },
+      checkRawRefs: () => {
+        const flags = Mtd.Util.validateSelect(GLB.Conf.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
+        State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") }); // 状態更新
+      },
+      checkExtrRefs: () => {
+        const isErr = !(State.get("T1ST.extr.refs.DB")?.trim());
+        State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", "エラー: DB未入力"] : State.get("T1ST.extr.cachedStatus") }); // 状態更新
+      }
+    };
+    // --- Tab2イベント群 ---
+    static T2 = {
+      tglDB: this.#bindMulti("T2ST.asgn.refs.filter"),
+      tglAllDB: this.#bindAll("T2ST.asgn.refs.filter"),
+      checkAxis: async tgtSelect => {
+        const newVal = tgtSelect.value, oldVal = State.get("T2ST.symb.refs.baseKey");
+        if (newVal === oldVal) return;
+        if (!await NewDOM.confirm("確認", "リセットしますか？")) return (tgtSelect.value = oldVal); // 元に戻す
+        State.set({ "T2ST.symb.refs.baseKey": newVal }); State.reset("T2ST.symb.refs.rls");
+      },
+      addSymb: () => State.set("T2ST.symb.refs.rls", [...(State.get("T2ST.symb.refs.rls") || []), { key: `rule_${Date.now()}`, target: "", shp: GLB.Conf.symbDefShp, clr: GLB.Conf.symbDefClr }]),
+      removeSymb: tgtBtn => {
+        const key = tgtBtn.dataset.ruleKey;
+        if (key) State.set("T2ST.symb.refs.rls", (State.get("T2ST.symb.refs.rls") || []).filter(r => r.key !== key));
+      },
+      renewSymb: tgtBtn => {
+        const idx = tgtBtn.dataset.symbolIdx, type = tgtBtn.dataset.symbolType;
+        if (idx == null || !type) return;
+        const rls = [...(State.get("T2ST.symb.refs.rls") || [])];
+        if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("T2ST.symb.refs.rls", rls); } // ルール更新
+      },
+      tglPrevMode: this.#bindMulti("T2ST.calb.refs.modeMap"),
+      tglAllPrevMode: this.#bindAll("T2ST.calb.refs.modeMap"),
+      tglCalElm: this.#bindMulti("T2ST.calb.refs.calElms"),
+      tglAllCalElm: this.#bindAll("T2ST.calb.refs.calElms"),
+      tglPrevItem: this.#bindMulti("T2ST.prev.refs.itemMap"),
+      tglAllPrevItem: this.#bindAll("T2ST.prev.refs.itemMap")
+    };
+    // --- クリック監視 ---
+    static #handleClick(e) {
+      const tabBtn = e.target.closest('.tab-btn');
+      if (tabBtn) return this.switchTab(tabBtn.dataset.target);
+      let actPath = null, btn = null;
+      // 動的コンポーネント内の処理検知
+      const actBtn = e.target.closest('[data-action]');
+      if (actBtn) {
+        btn = actBtn;
+        actPath = btn.dataset.action;
+      } else {
+        // 静的コンポーネントの処理検知
+        btn = e.target.closest('[data-ui^="btn-"]');
+        if (btn) {
+          const secId = btn.closest('details')?.id;
+          actPath = this.#ACTION_MAP[secId]?.[btn.dataset.ui];
+        }
+      }
+      if (actPath) {
+        const [ns, method] = actPath.split('.');
+        (Ctrl[ns]?.[method] || this[ns]?.[method])?.(btn);
+      }
+    }
+    // --- 変更監視 ---
+    static #handleChange(e) {
+      const tgt = e.target, bindPath = tgt.dataset.bind, changePath = tgt.dataset.change;
+      if (bindPath) State.set(bindPath, tgt.type === "checkbox" ? tgt.checked : tgt.value);
+      if (changePath) {
+        const [ns, method] = changePath.split('.');
+        this[ns]?.[method]?.(tgt); // 変更委譲
+      }
+    }
+    // --- タブ切替 ---
+    static switchTab(tabId) {
+      document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
+      document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
+      document.getElementById(tabId)?.classList.add("active");
+      document.body.setAttribute('data-theme', tabId);
+      State.set("GLB.activeTab", tabId);
+    }
+    // --- 状態復元 ---
+    static async #restore(bu) {
+      if (!bu || !(await NewDOM.confirm("復元", "前回の作業状態を復元しますか？"))) return false;
+      this.switchTab("tab2");
+      await T2Ctrl.loadDB();
+      if (State.get("T2ST.phase") < T2_PHS.LOADED) return true; // 中断 (エラー表示を維持)
+      State.set({ "T2ST.asgn.refs.available": bu.asgn.r.available, "T2ST.asgn.refs.filter": bu.asgn.r.filter });
+      if (bu.phase < T2_PHS.FILTERED) { State.set("T2ST.asgn.status", bu.asgn.s); return true; } // 中断＆ステータス復元
+      await T2Ctrl.fltrDB();
+      if (State.get("T2ST.phase") < T2_PHS.FILTERED) return true; // 中断 (エラー表示を維持)
+      State.set({
+        "T2ST.symb.refs.baseKey": bu.symb.r.baseKey, "T2ST.symb.refs.rls": bu.symb.r.rls,
+        "T2ST.calb.refs.modeMap": bu.calb.r.modeMap, "T2ST.calb.refs.calElms": bu.calb.r.calElms, "T2ST.calb.refs.correction": bu.calb.r.correction, "T2ST.calb.refs.useLOD": bu.calb.r.useLOD, "T2ST.calb.refs.useCal": bu.calb.r.useCal,
+        "T2ST.prev.refs.itemMap": bu.prev.r.itemMap, "T2ST.prev.refs.val": bu.prev.r.val, "T2ST.prev.refs.saveIndexName": bu.prev.r.saveIndexName
+      });
+      if (bu.phase >= T2_PHS.PREVIEWED) await T2Ctrl.buildPrev();
+      
+      // 到達フェーズ一致でステータス復元
+      if (State.get("T2ST.phase") === bu.phase) {
+        State.set({ "T2ST.asgn.status": bu.asgn.s, "T2ST.symb.status": bu.symb.s, "T2ST.calb.status": bu.calb.s, "T2ST.prev.status": bu.prev.s });
+      }
+      return true;
+    }
+    // --- 初期化 ---
+    static async init() {
+      UI.Init.build();
+      State.subscribe("T1ST.pref.refs.mode", Evt.T1.checkT1Pref);
+      State.subscribe("T1ST.extr.refs.DB", Evt.T1.checkExtrRefs);
+      // シート初期化とロック判定
+      State.set("GLB.isLocked", true);
+      const isRawMissing = await Ctrl.CoreCtrl.initApp();
+      if (isRawMissing) {
+        MakeBU.clear(); // 新規作成時はバックアップを破棄
+        State.set({ 
+          "GLB.isLocked": true,
+          "T1ST.pref.status": ["alert", "入力データが不在です。生成したシートに入力してください"], 
+          "T1ST.phase": T1_PHS.INIT 
+        });
+        UI.Phs.renewT1Phs(State.get("T1ST.phase")); UI.Phs.renewT2Phs(State.get("T2ST.phase"));
+        return; // 後続のイベントバインドを行わずに処理中断
+      }
+      if (!(await this.#restore(MakeBU.load()))) { MakeBU.clear(); this.switchTab(State.get("GLB.activeTab")); } // 通常起動
+      MakeBU.init(); // 全監視開始
+      State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
+      UI.Phs.renewT1Phs(State.get("T1ST.phase")); UI.Phs.renewT2Phs(State.get("T2ST.phase"));
+      document.addEventListener("click", this.#handleClick.bind(this)); document.addEventListener("change", this.#handleChange.bind(this));
+      IdlTm.init();
+    }
+  }
+  // --- 起動イベントバインド ---
+  if (isExcelEnv) Office.onReady(() => Evt.init());
+  else window.addEventListener("DOMContentLoaded", () => Evt.init());
+</script>
+  </body>
+</html>
