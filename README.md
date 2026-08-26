@@ -1,5 +1,5 @@
 > [!NOTE]
-> https://github.com/rei-watanabe-chiba/OBPLOTは、
+> このページ https://github.com/rei-watanabe-chiba/OBPLOT は、  
 > 黒曜石の蛍光X線分析装置計測値データを抽出・可視化するアプリケーションの公開リポジトリです。
 
 ## アプリケーション概要
