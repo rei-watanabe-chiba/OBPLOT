@@ -7,13 +7,11 @@
   <DisplayName DefaultValue="OBPLOT 1.0"/>
   <Description DefaultValue="PXRF Data Analyzer"/>
   
-  <!-- 必須化されたサポートURLと高解像度アイコンを追加 -->
   <IconUrl DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_32.png"/>
   <HighResolutionIconUrl DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_64.png"/>
   <SupportUrl DefaultValue="https://github.com/rei-watanabe-chiba/OBPLOT"/>
 
   <AppDomains>
-    <!-- 外部ドメイン（GitHub Pages）のホワイトリスト化 -->
     <AppDomain>https://rei-watanabe-chiba.github.io</AppDomain>
   </AppDomains>
 
@@ -33,6 +31,12 @@
             <CustomTab id="ObplotTab">
               <Group id="ObplotGroup">
                 <Label resid="GroupLabel"/>
+                <!-- ▼ グループ折りたたみ時用のアイコン定義（必須）を追加 ▼ -->
+                <Icon>
+                  <bt:Image size="16" resid="Icon16"/>
+                  <bt:Image size="32" resid="Icon32"/>
+                  <bt:Image size="80" resid="Icon80"/>
+                </Icon>
                 <Control xsi:type="Button" id="ObplotOpenButton">
                   <Label resid="ButtonLabel"/>
                   <Supertip>
