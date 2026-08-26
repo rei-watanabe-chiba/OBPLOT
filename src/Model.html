@@ -1,43 +1,27 @@
 <!-- src/Model.html -->
 <script>
   // --- 設定定数定義 ---
-  // シート・機能変更時は▼の項目を編集
+  // グラフロジックの変更は▼の項目を編集
   // --- **GLB内は認知度向上のためにプロパティ名・コメントアウトの文字数制限撤廃** ---
   // --- **リファクタリング時も既存コメントアウトを絶対保持すること** ---
   const GLB = {
     Conf: {
-      // ▼ シート名とヘッダー ---------------
-      fileSheetName: "File", fileHeader: ['file', 'mode', 'id', 'sub_id', 'info'], resultsSheetName: "Results",
-      filelistSheetName: "ファイルリスト", filelistHeader: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'],
-      extractSheetName: "抽出データ", pxrfSheetName: "PXRF", wdxrfSheetName: "WDXRF", correctionSheetName: "Correction",
-      validModes: ["mudrock", "obsidian"], propFileEdited: "isListMod",
-      // ▼ obsidianモード使い分け元素 ---------------
-      optElms: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
-      // ▼ 可視化元素指定 ---------------
+      // ▼ valElms に元素を追加可能, valLgc に指数追加可能
+      // 可視化元素指定 ---------------
       valElms: ["K", "Ca", "Ti", "Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
-      // ▼ 可視化指数指定（文字列計算） ---------------
+      // 可視化指数指定（math.jsで計算可能な文字列で指定） ---------------
       valLgc: ["Mn * 100 / Fe", "log10(Fe/K)"],
-      fileFields: [
-        { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
-        { key: "id", label: "id *必須", required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
-      ],
-      confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }],
-      extrFields: [
-        { key: "DB", label: "database *必須", placeholder: "データセット名", bind: "T1ST.extr.refs.DB" },
-        { key: "item", label: "item", placeholder: "計測情報", bind: "T1ST.extr.refs.item" },
-        { key: "date", label: "date", placeholder: "計測日", bind: "T1ST.extr.refs.date" }
-      ],
-      symbAxes: [{ val: "DB", label: "database" }, { val: "item", label: "item" }, { val: "Group", label: "Group" }, { val: "Source", label: "Source" }],
-      // ▼ シンボル定義（echarts準拠) ---------------
+      // オプション元素（def: mudrock, opt: obsidian） ---------------
+      optElms: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
+
+      // ▼ グラフの見た目は以下で変更可能
+      // シンボル定義（valはecharts準拠を調べること) ---------------
       symbShapes: [{ val: 'emptyCircle', label: '○' }, { val: 'circle', label: '●' }, { val: 'triangle', label: '▲' }, { val: 'square', label: '■' }, { val: 'cross', label: '✖' }],
-      // ▼ シンボルカラー定義（echarts準拠) ---------------
+      // シンボルカラー定義（valはCSS準拠) ---------------
       symbColors: [{ val: 'var(--grey600)', label: 'Gray' }, { val: 'var(--text-main)', label: 'Black' }, { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' }, { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' }],
+      // シンボルデフォルト値
       symbBaseKey: "DB", symbDefShp: "emptyCircle", symbDefClr: "var(--grey600)",
-      initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
-      // ▼ Resultsシートインデックス ---------------
-      obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
-      mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
-      // ▼ グラフデフォルト設定 ---------------
+      // グラフデフォルト設定 ---------------
       defaultGraphStyle: {
         // フォント要素: base(tick目盛, name軸名), stats統計量, tipラベル
         font: "'Roboto', 'Noto Sans JP', sans-serif",
@@ -50,7 +34,30 @@
         // 背景色: bgplotグラフエリア, bgOuter背景色, bgTipラベル
         bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
       },
-      defaultGraphGap: { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 }
+      // グラフ余白
+      defaultGraphGap: { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 },
+
+      // 以降は処理・UI用定数のため編集不可
+      validModes: ["mudrock", "obsidian"],
+      obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
+      mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
+      rawShts: { file: "File", results: "Results", pxrf: "PXRF", wdxrf: "WDXRF" },
+      appShts: { filelist: "ファイルリスト", extract: "抽出データ", correction: "Correction" },
+      rawHeaders: { file: ['file', 'mode', 'id', 'sub_id', 'info'] },
+      appHeads: { filelist: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'] },
+      propFileEdited: "isListMod",
+      initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
+      extrFields: [
+        { key: "DB", label: "database *必須", placeholder: "データセット名", bind: "T1ST.extr.refs.DB" },
+        { key: "item", label: "item", placeholder: "計測情報", bind: "T1ST.extr.refs.item" },
+        { key: "date", label: "date", placeholder: "計測日", bind: "T1ST.extr.refs.date" }
+      ],
+      symbAxes: [{ val: "DB", label: "database" }, { val: "item", label: "item" }, { val: "Group", label: "Group" }, { val: "Source", label: "Source" }],
+      fileFields: [
+        { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
+        { key: "id", label: "id *必須", required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
+      ],
+      confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }]
     }
   };
   // --- フェーズ定義 ---
@@ -136,6 +143,15 @@
     static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
   }
-  const API = GasService;
+  // --- ローカルストレージ ---
+  class LocalStorageAdapter {
+    static save(key, val) { localStorage.setItem(key, val); }
+    static load(key) { return localStorage.getItem(key); }
+    static clear(key) { localStorage.removeItem(key); }
+  }
+  // --- 環境判定とDI ---
+  const isExcelEnv = typeof Office !== 'undefined';
+  const API = isExcelEnv ? ExcelAdapter : GasService;
+  const StorageAPI = isExcelEnv ? OfficeStorageAdapter : LocalStorageAdapter;
   const State = new AppState();
 </script>

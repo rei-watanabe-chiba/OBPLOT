@@ -14,13 +14,13 @@
     // phase, refs, status保存
     static save() {
       const { phase, asgn, symb, calb, prev } = State.proxy.T2ST;
-      phase < T2_PHS.LOADED ? this.clear() : localStorage.setItem(this.#K, JSON.stringify({ phase, asgn: { r: asgn.refs, s: asgn.status }, symb: { r: symb.refs, s: symb.status }, calb: { r: calb.refs, s: calb.status }, prev: { r: prev.refs, s: prev.status } }));
+      phase < T2_PHS.LOADED ? this.clear() : StorageAPI.save(this.#K, JSON.stringify({ phase, asgn: { r: asgn.refs, s: asgn.status }, symb: { r: symb.refs, s: symb.status }, calb: { r: calb.refs, s: calb.status }, prev: { r: prev.refs, s: prev.status } }));
     }
     // state安全取得
     static load() {
-      try { return JSON.parse(localStorage.getItem(this.#K)); } catch (e) { return null; } 
+      try { return JSON.parse(StorageAPI.load(this.#K)); } catch (e) { return null; } 
     }
-    static clear() { localStorage.removeItem(this.#K); }
+    static clear() { StorageAPI.clear(this.#K); }
   }
   // --- アイドル検知 ---
   class IdlTm {
@@ -178,6 +178,19 @@
       UI.Init.build();
       State.subscribe("T1ST.pref.refs.mode", Evt.T1.checkT1Pref);
       State.subscribe("T1ST.extr.refs.DB", Evt.T1.checkExtrRefs);
+      // シート初期化とロック判定
+      State.set("GLB.isLocked", true);
+      const isRawMissing = await Ctrl.CoreCtrl.initApp();
+      if (isRawMissing) {
+        MakeBU.clear(); // 新規作成時はバックアップを破棄
+        State.set({ 
+          "GLB.isLocked": true,
+          "T1ST.pref.status": ["alert", "入力データが不在です。生成したシートに入力してください"], 
+          "T1ST.phase": T1_PHS.INIT 
+        });
+        UI.Phs.renewT1Phs(State.get("T1ST.phase")); UI.Phs.renewT2Phs(State.get("T2ST.phase"));
+        return; // 後続のイベントバインドを行わずに処理中断
+      }
       if (!(await this.#restore(MakeBU.load()))) { MakeBU.clear(); this.switchTab(State.get("GLB.activeTab")); } // 通常起動
       MakeBU.init(); // 全監視開始
       State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
@@ -186,5 +199,7 @@
       IdlTm.init();
     }
   }
-  window.addEventListener("DOMContentLoaded", () => Evt.init());
+  // --- 起動イベントバインド ---
+  if (isExcelEnv) Office.onReady(() => Evt.init());
+  else window.addEventListener("DOMContentLoaded", () => Evt.init());
 </script>

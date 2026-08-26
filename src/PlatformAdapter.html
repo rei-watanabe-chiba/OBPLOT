@@ -1,0 +1,19 @@
+<!-- src/PlatformAdapter.html -->
+<script>
+  // --- Excel用通信API ---
+  class ExcelAdapter {
+    static async fetchDT(sht, qCol = null, lCol = null) { return { data: [], message: "" }; }
+    static async writeData(sht, data, opts = "clear") { return "Dummy"; }
+    static async checkUserProperty(id) { return false; }
+    static async clearUserProperty(id) { return true; }
+    static async getReportTemplate() { return ""; }
+    static async initSheets(rawShts, appShts, appHeads) { return { rawNew: false }; } // セクション3で実装
+    static initSheets(rawShts, appShts, appHeads) { return this.#serverCall("initSheets", rawShts, appShts, appHeads); }
+  }
+  // --- Excel用ストレージ ---
+  class OfficeStorageAdapter {
+    static save(key, data) { }
+    static load(key) { return null; }
+    static clear(key) { }
+  }
+</script>

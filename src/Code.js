@@ -61,3 +61,25 @@ function checkUserProperty(key) { return withErr(() => ApiResponse.success(Prope
 function clearUserProperty(key) { return withErr(() => { PropertiesService.getUserProperties().deleteProperty(key); return ApiResponse.success(true); }); }
 // --- Report取得 ---
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
+
+// --- シート不在防止---
+function initSheets(rawShts, appShts, appHeads) {
+  return withErr(() => {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let rawNew = false;
+    // 生データシートの確認・生成
+    rawShts.forEach(name => {
+      if (!ss.getSheetByName(name)) { ss.insertSheet(name); rawNew = true; }
+    });
+    // アプリ出力用シートの確認・生成（ヘッダー付与）
+    appShts.forEach((name, i) => {
+      if (!ss.getSheetByName(name)) {
+        const sht = ss.insertSheet(name);
+        if (appHeads && appHeads[i] && appHeads[i].length) {
+          sht.getRange(1, 1, 1, appHeads[i].length).setValues([appHeads[i]]);
+        }
+      }
+    });
+    return ApiResponse.success({ rawNew });
+  });
+}
