@@ -8,7 +8,6 @@
     static async clearUserProperty(id) { return true; }
     static async getReportTemplate() { return ""; }
     static async initSheets(rawShts, appShts, appHeads) { return { rawNew: false }; } // セクション3で実装
-    static initSheets(rawShts, appShts, appHeads) { return this.#serverCall("initSheets", rawShts, appShts, appHeads); }
   }
   // --- Excel用ストレージ ---
   class OfficeStorageAdapter {

@@ -44,7 +44,7 @@
     // --- tab1 リスト処理 ---
     static async procList(actionType, rawDT) {
       if (actionType === "validate") ({ data: rawDT } = await API.fetchDT(GLB.Conf.appShts.filelist, 5, 5));
-      const outData = Mtd.T1.FVald.valdList(rawDT, GLB.Conf.filelistHeader, GLB.Conf.validModes, State.get("T1ST.pref.refs.mode"));
+      const outData = Mtd.T1.FVald.valdList(rawDT, GLB.Conf.appHeads.filelist, GLB.Conf.validModes, State.get("T1ST.pref.refs.mode"));
       const isAlert = outData.slice(1).some(r => r.at(-1) !== ""); // エラー判定
       await Promise.all([API.writeData(GLB.Conf.appShts.filelist, outData, "rule"), API.clearUserProperty(GLB.Conf.propFileEdited)]);
       const statusRes = isAlert ? ["alert", "出力完了, errあり"] : "出力完了, errなし";

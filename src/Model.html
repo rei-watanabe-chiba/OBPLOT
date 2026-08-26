@@ -142,6 +142,7 @@
     static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }
     static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
+    static initSheets(rawShts, appShts, appHeads) { return this.#serverCall("initSheets", rawShts, appShts, appHeads); }
   }
   // --- ローカルストレージ ---
   class LocalStorageAdapter {
