@@ -61,4 +61,4 @@
 - `Report.html`: [Template] レポート出力用静的HTML
 
 ## 6. 開発状況と次ステップ
-- 合意を得たGAS to Office Web Add-in 実装要件定義書に基づく改修
+- 合意を得たGAS to Office Web Add-in 実装要件定義書に基づくリファクタリング
