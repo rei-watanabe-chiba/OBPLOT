@@ -1,6 +1,10 @@
 //--- 配布GAS用gsファイル ---
 function onOpen() {
-  OBPLOT_Lib.onOpen();
+  // スプレッドシートのメニューバーにサイドバー起動用の項目を追加
+  SpreadsheetApp.getUi()
+    .createMenu("OBPLOT1.0")
+    .addItem("サイドバーを表示", "showSidebar")
+    .addToUi();
 }
 
 function showSidebar() {
