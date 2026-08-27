@@ -1,3 +1,4 @@
+//--- src/Code.gs ---
 // --- DTO定義 ---
 class ApiResponse {
   static success(payload) { return { success: true, payload: JSON.parse(JSON.stringify(payload)) }; }
