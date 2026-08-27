@@ -160,6 +160,11 @@
       </div>
     </main>
 
+    <script>
+      // サーバー(doGet)から渡された初期IDを保持（ローカル開発時は空）
+      window.__INITIAL_SSID__ = "<?= typeof initialSsId !== 'undefined' ? initialSsId : '' ?>";
+    </script>
+
     <?!= include('PlatformAdapter'); ?>
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>

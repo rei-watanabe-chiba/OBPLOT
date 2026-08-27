@@ -7,19 +7,14 @@ const withErr = fn => {
   try { return fn(); } catch (e) { return ApiResponse.error("SYSTEM_ERR", e.message); }
 };
 
-// --- Webアプリ用エントリポイント ---
-function doGet(e) {
-  const tpl = HtmlService.createTemplateFromFile("Sidebar");
-  tpl.initialSsId = e.parameter.ssid || ""; // URLパラメータ（?ssid=XXX）を取得
-  return tpl.evaluate().setTitle("OBPLOT1.0").addMetaTag('viewport', 'width=device-width, initial-scale=1');
-}
-
 // --- メニュー追加 (GAS用) ---
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("OBPLOT1.0").addItem("サイドバーを表示", "showSidebar").addToUi();
 }
 function showSidebar() {
-  SpreadsheetApp.getUi().showSidebar(HtmlService.createTemplateFromFile("Sidebar").evaluate().setTitle("OBPLOT1.0").setWidth(300));
+  const tpl = HtmlService.createTemplateFromFile("Sidebar");
+  tpl.initialSsId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  SpreadsheetApp.getUi().showSidebar(tpl.evaluate().setTitle("OBPLOT1.0").setWidth(300));
 }
 function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
 
@@ -58,10 +53,10 @@ function writeData(ssId, shtName, data, opts = "clear") {
     return ApiResponse.success("書き出し完了");
   });
 }
-
+// --- レポートテンプレート取得 ---
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
 
-// --- 【新規】シート存在確認 (ドライラン) ---
+// --- シート存在確認 ---
 function checkSheets(ssId, reqShts) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
@@ -71,8 +66,7 @@ function checkSheets(ssId, reqShts) {
     return ApiResponse.success({ found, missing, ssName: ss.getName() });
   });
 }
-
-// --- 【新規】不足シート作成 ---
+// --- 不足シート作成 ---
 function createMissingSheets(ssId, missingShts, appHeadsMap) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
