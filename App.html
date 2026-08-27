@@ -133,29 +133,7 @@
   /* --- 4. Components --- */
   @layer components {
     /* --- タブナビ --- */
-    .nav-tabs {
-      display: flex;
-      border-bottom: 1px solid var(--grey200);
-      .tab-btn {
-        flex: 1;
-        padding: calc(var(--unit) * 2.5) 0;
-        height: auto;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--grey400);
-        background: none;
-        border: none;
-        border-radius: 0;
-        border-bottom: 2px solid transparent;
-        cursor: pointer;
-        transition: all var(--transition-speed);
-        &:hover { background-color: var(--bg-color-hover); }
-        &.active {
-          color: var(--theme-color);
-          border-bottom-color: currentColor;
-        }
-      }
-    }
+    .nav-tabs { display: none; }
     .tab-content { display: none; &.active { display: block; } }
     /* --- フォーム --- */
     label {
@@ -815,8 +793,8 @@
     </dialog>
 
     <script>
-      // サーバー(doGet)から渡された初期IDを保持（ローカル開発時は空）
       window.__INITIAL_SSID__ = "<?= typeof initialSsId !== 'undefined' ? initialSsId : '' ?>";
+      window.__APP_MODE__ = "<?= typeof appMode !== 'undefined' ? appMode : '' ?>";
     </script>
 
     <!-- src/PlatformAdapter.html -->
@@ -842,6 +820,8 @@
       try { return await Excel.run(fn); }
       catch (e) { throw new Error(`[EXCEL_ERR] ${e.message}`); }
     }
+
+    // --- データ取得 ---
     static async fetchDT(shtName, qCol = null, lCol = null) {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
@@ -857,6 +837,8 @@
         return { data, message: `取得: ${data.length} 行` };
       });
     }
+
+    // --- データ出力 ---
     static async writeData(shtName, data, opts = "clear") {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
@@ -881,32 +863,69 @@
         return "書き出し完了";
       });
     }
+
+    // --- レポートテンプレート取得 ---
     static async getReportTemplate() {
-      // ビルド時に注入される定数を優先し、なければfetch
       if (window.__REPORT_TEMPLATE__) return window.__REPORT_TEMPLATE__;
       const res = await fetch('Report.html');
       if (!res.ok) throw new Error("テンプレート取得失敗");
       return await res.text();
     }
-    static async initSheets(rawShts, appShts, appHeads) {
-      return this.#run(async (ctx) => {
-        const shts = ctx.workbook.worksheets;
-        shts.load("items/name");
-        await ctx.sync();
-        const exNms = new Set(shts.items.map(s => s.name));
-        let rawNew = false;
-        rawShts.forEach(n => { if (!exNms.has(n)) { shts.add(n); rawNew = true; } });
-        appShts.forEach((n, i) => {
-          if (!exNms.has(n)) {
-            const nSht = shts.add(n);
-            if (appHeads?.[i]?.length) nSht.getRangeByIndexes(0, 0, 1, appHeads[i].length).values = [appHeads[i]];
+
+    // --- 環境セットアップ ---
+    static async setupEnvironment(orderedShts, valElms, pxrfHdr, filelistHdr) {
+    return this.#run(async (ctx) => {
+      const shts = ctx.workbook.worksheets;
+      shts.load("items/name");
+      await ctx.sync();
+      const existingMap = new Map(shts.items.map(s => [s.name, s]));
+      // 1. 生成・リセットと検証
+      for (const name of orderedShts) {
+        let sht = existingMap.get(name);
+        if (!sht) {
+          sht = shts.add(name);
+          if (name === 'PXRF' || name === '抽出データ') sht.getRangeByIndexes(0, 0, 1, pxrfHdr.length).values = [pxrfHdr];
+          if (name === 'ファイルリスト') sht.getRangeByIndexes(0, 0, 1, filelistHdr.length).values = [filelistHdr];
+          existingMap.set(name, sht);
+        } else {
+          if (name === '抽出データ' || name === 'ファイルリスト') {
+            sht.getUsedRangeOrNullObject().clear();
+            if (name === 'ファイルリスト') sht.getRangeByIndexes(0, 0, 1, filelistHdr.length).values = [filelistHdr];
           }
-        });
-        await ctx.sync();
-        return { rawNew };
-      });
-    }
+          if (name === 'PXRF' || name === 'WDXRF') {
+            const uRng = sht.getUsedRangeOrNullObject();
+            uRng.load("columnCount");
+            await ctx.sync();
+            if (!uRng.isNullObject && uRng.columnCount > 0) {
+              const hdrRng = sht.getRangeByIndexes(0, 0, 1, uRng.columnCount);
+              hdrRng.load("values");
+              await ctx.sync();
+              const hdr = hdrRng.values[0];
+              if (name === 'PXRF' && JSON.stringify(hdr) !== JSON.stringify(pxrfHdr)) {
+                throw new Error(`【検証エラー】\nPXRFシートのヘッダーが規定と異なります。\nGitHub仕様をご確認ください。`);
+              }
+              if (name === 'WDXRF') {
+                const missing = valElms.filter(e => !hdr.includes(e));
+                if (missing.length > 0) throw new Error(`【検証エラー】\nWDXRFシートのヘッダーに必須元素 (${missing.join(',')}) が不足しています。`);
+              }
+            }
+          }
+        }
+      }
+      // 2. 並び順の強制
+      for (let i = 0; i < orderedShts.length; i++) existingMap.get(orderedShts[i]).position = i;
+      // 3. ヘッダーロック (入力規則)
+      for (const name of ['PXRF', 'WDXRF']) {
+        const sht = existingMap.get(name);
+        const row1 = sht.getRange("1:1");
+        row1.dataValidation.rule = { custom: { formula: "=FALSE" } };
+        row1.dataValidation.errorAlert = { message: "システム保護: ヘッダー行の編集は禁止されています。", showAlert: true, style: "Stop", title: "編集禁止" };
+      }
+      await ctx.sync();
+      return true;
+    });
   }
+}
 </script>
     <!-- src/Model.html -->
 <script>
@@ -1049,8 +1068,7 @@
     static fetchDT(ssId, sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", ssId, sht, qCol, lCol); }
     static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
-    static checkSheets(ssId, reqShts) { return this.#serverCall("checkSheets", ssId, reqShts); }
-    static createMissingSheets(ssId, missingShts, appHeadsMap) { return this.#serverCall("createMissingSheets", ssId, missingShts, appHeadsMap); }
+    static setupEnvironment(ssId, orderedShts, valElms, pxrfHdr, filelistHdr) { return this.#serverCall("setupEnvironment", ssId, orderedShts, valElms, pxrfHdr, filelistHdr); }
   }
   // --- ローカルストレージ ---
   class LocalStorageAdapter {
@@ -1868,30 +1886,15 @@
     static async connectApp(ssId) {
       State.set("GLB.isLocked", true);
       try {
-        const reqShts = [...Object.values(GLB.Conf.rawShts), ...Object.values(GLB.Conf.appShts)];
-        const res = await API.checkSheets(ssId, reqShts); 
-        if (res.missing.length > 0) {
-          let msg = `対象ファイル（${res.ssName}）に不足シートがあります。\n新規作成して接続しますか？\n[不足: ${res.missing.join(', ')}]`;
-          if (res.found.length > 0) {
-            msg = `対象ファイル（${res.ssName}）に以下のシートを作成します。\n[不足: ${res.missing.join(', ')}]\n\n「${res.found.join(', ')}」シートは既存のシートを利用しますか？`;
-          }
-          if (!await NewDOM.confirm("接続確認", msg)) {
-            State.set("GLB.isLocked", false);
-            return false;
-          }
-          const pxrfHdr = Mtd.Util.buildPxrfHeader();
-          const headsMap = {
-            [GLB.Conf.rawShts.pxrf]: pxrfHdr,
-            [GLB.Conf.appShts.extract]: pxrfHdr,
-            [GLB.Conf.appShts.filelist]: GLB.Conf.appHeads.filelist,
-            [GLB.Conf.appShts.correction]: ['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]
-          };
-          await API.createMissingSheets(ssId, res.missing, headsMap);
-        }
+        const orderedShts = ['ファイルリスト', 'File', 'Results', '抽出データ', 'PXRF', 'WDXRF'];
+        const pxrfHdr = Mtd.Util.buildPxrfHeader();
+        const filelistHdr = GLB.Conf.appHeads.filelist;
+        // 環境構築
+        await API.setupEnvironment(ssId, orderedShts, GLB.Conf.valElms, pxrfHdr, filelistHdr);
         State.set("GLB.ssId", ssId);
         return true;
       } catch (e) {
-        await NewDOM.confirm("接続エラー", `アクセスできませんでした。\n権限がないかURLが間違っています。\n${e.message}`);
+        await NewDOM.confirm("接続エラー", `アクセスできませんでした、またはシート構成が不正です。\n\n${e.message}`);
         State.set("GLB.isLocked", false);
         return false;
       }
@@ -2187,7 +2190,7 @@
     // --- クリック監視 ---
     static #handleClick(e) {
       const tabBtn = e.target.closest('.tab-btn');
-      if (tabBtn) return this.switchTab(tabBtn.dataset.target);
+      if (tabBtn) return this.switchAPP(tabBtn.dataset.target);
       let actPath = null, btn = null;
       // 動的コンポーネント内の処理検知
       const actBtn = e.target.closest('[data-action]');
@@ -2221,9 +2224,8 @@
       }
     }
     // --- タブ切替 ---
-    static switchTab(tabId) {
-      document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
-      document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
+    static switchAPP(tabId) {
+      document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
       document.getElementById(tabId)?.classList.add("active");
       document.body.setAttribute('data-theme', tabId);
       State.set("GLB.activeTab", tabId);
@@ -2233,7 +2235,7 @@
       const isAuto = StorageAPI.load("OBP_AUTO_RESTORE") === "true";
       if (isAuto) StorageAPI.clear("OBP_AUTO_RESTORE");
       if (!bu || (!isAuto && !(await NewDOM.confirm("復元", "前回の作業状態を復元しますか？")))) return false;
-      this.switchTab("tab2");
+      this.switchAPP("tab2");
       await T2Ctrl.loadDB();
       if (State.get("T2ST.phase") < T2_PHS.LOADED) return true;
       State.set({ "T2ST.asgn.refs.available": bu.asgn.r.available, "T2ST.asgn.refs.filter": bu.asgn.r.filter });
@@ -2258,7 +2260,7 @@
       if (!isConnected) return; 
       if (!(await this.#restore(MakeBU.load()))) { 
         MakeBU.clear(); 
-        this.switchTab(State.get("GLB.activeTab")); 
+        this.switchAPP(State.get("GLB.activeTab")); 
       }
       MakeBU.init(); 
       State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
@@ -2274,7 +2276,10 @@
       document.addEventListener("click", this.#handleClick.bind(this)); 
       document.addEventListener("change", this.#handleChange.bind(this));
       IdlTm.init();
-      // ssId 取得と接続開始
+      const urlParams = new URLSearchParams(window.location.search);
+      const activeMode = window.__APP_MODE__ || urlParams.get('mode') || 'tab1';
+      this.switchAPP(activeMode); // 該当のUIだけをアクティブ化
+
       const initSsId = window.__INITIAL_SSID__ || "";
       if (initSsId) {
         this.startSession(initSsId);
