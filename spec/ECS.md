@@ -63,14 +63,3 @@ SPAアーキテクチャ維持と環境差異の動的吸収。
 > });
 > ```
 
-## 7. 現在の進捗状況
-- web版エクセルにて、エンドユーザー向け専用テンプレートファイル起動確認まで到達
-- 現在、表示しているWebページ（App.html）内部のレンダリングエラーが発生中
-- コンソールに以下のエラーあり
-App.html?et=:8 Uncaught ReferenceError: google is not defined
-    at App.html?et=:8:13
-(anonymous) @ App.html?et=:8
-App.html?et=:613 Uncaught SyntaxError: Unexpected end of input (at App.html?et=:613:83)
-App.html?et=:615 Uncaught ReferenceError: google is not defined
-    at App.html?et=:615:7
-
