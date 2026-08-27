@@ -2238,9 +2238,10 @@
       IdlTm.init();
       // ssId 取得と接続開始
       const initSsId = window.__INITIAL_SSID__ || "";
-      if (initSsId) { this.startSession(initSsId); // パラメータがあれば直接接続 }
+      if (initSsId) {
+        this.startSession(initSsId);
+      }
     }
-  }
   // --- 起動イベントバインド ---
   if (isExcelEnv) Office.onReady(() => Evt.init());
   else window.addEventListener("DOMContentLoaded", () => Evt.init());
