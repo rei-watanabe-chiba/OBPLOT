@@ -51,17 +51,8 @@ function writeData(shtName, data, opts = "clear") {
     return ApiResponse.success("書き出し完了");
   });
 }
-// --- 編集検知 ---
-function onEdit(e) {
-  if (e?.source?.getActiveSheet().getName() === "ファイルリスト") PropertiesService.getUserProperties().setProperty("isListMod", "true");
-}
-// --- Prop確認 ---
-function checkUserProperty(key) { return withErr(() => ApiResponse.success(PropertiesService.getUserProperties().getProperty(key) === "true")); }
-// --- Prop消去 ---
-function clearUserProperty(key) { return withErr(() => { PropertiesService.getUserProperties().deleteProperty(key); return ApiResponse.success(true); }); }
 // --- Report取得 ---
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
-
 // --- シート不在防止---
 function initSheets(rawShts, appShts, appHeads) {
   return withErr(() => {

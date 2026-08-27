@@ -45,7 +45,6 @@
       appShts: { filelist: "ファイルリスト", extract: "抽出データ", correction: "Correction" },
       rawHeaders: { file: ['file', 'mode', 'id', 'sub_id', 'info'] },
       appHeads: { filelist: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'] },
-      propFileEdited: "isListMod",
       initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
       extrFields: [
         { key: "DB", label: "database *必須", placeholder: "データセット名", bind: "T1ST.extr.refs.DB" },
@@ -139,8 +138,6 @@
     // --- GAS通信処理をバインド ---
     static fetchDT(sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", sht, qCol, lCol); }
     static writeData(sht, data, opts = "clear") { return this.#serverCall("writeData", sht, data, opts); }
-    static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }
-    static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
     static initSheets(rawShts, appShts, appHeads) { return this.#serverCall("initSheets", rawShts, appShts, appHeads); }
   }

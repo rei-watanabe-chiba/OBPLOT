@@ -60,8 +60,6 @@
         return "書き出し完了";
       });
     }
-    static async checkUserProperty(id) { return OfficeStorageAdapter.load(id) === "true"; }
-    static async clearUserProperty(id) { OfficeStorageAdapter.clear(id); return true; }
     static async getReportTemplate() {
       // ビルド時に注入される定数を優先し、なければfetch
       if (window.__REPORT_TEMPLATE__) return window.__REPORT_TEMPLATE__;
