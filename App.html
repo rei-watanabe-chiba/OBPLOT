@@ -866,8 +866,6 @@
         return "書き出し完了";
       });
     }
-    static async checkUserProperty(id) { return OfficeStorageAdapter.load(id) === "true"; }
-    static async clearUserProperty(id) { OfficeStorageAdapter.clear(id); return true; }
     static async getReportTemplate() {
       // ビルド時に注入される定数を優先し、なければfetch
       if (window.__REPORT_TEMPLATE__) return window.__REPORT_TEMPLATE__;
@@ -942,7 +940,6 @@
       appShts: { filelist: "ファイルリスト", extract: "抽出データ", correction: "Correction" },
       rawHeaders: { file: ['file', 'mode', 'id', 'sub_id', 'info'] },
       appHeads: { filelist: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'] },
-      propFileEdited: "isListMod",
       initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
       extrFields: [
         { key: "DB", label: "database *必須", placeholder: "データセット名", bind: "T1ST.extr.refs.DB" },
@@ -1036,8 +1033,6 @@
     // --- GAS通信処理をバインド ---
     static fetchDT(sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", sht, qCol, lCol); }
     static writeData(sht, data, opts = "clear") { return this.#serverCall("writeData", sht, data, opts); }
-    static checkUserProperty(id) { return this.#serverCall("checkUserProperty", id); }
-    static clearUserProperty(id) { return this.#serverCall("clearUserProperty", id); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
     static initSheets(rawShts, appShts, appHeads) { return this.#serverCall("initSheets", rawShts, appShts, appHeads); }
   }
@@ -1879,16 +1874,17 @@
       });
     }
     // --- tab1 リスト処理 ---
-    static async procList(actionType, rawDT) {
-      if (actionType === "validate") ({ data: rawDT } = await API.fetchDT(GLB.Conf.appShts.filelist, 5, 5));
+    // --- tab1 共通state操作 ---
+    static async stateDI(rawDT) {
       const outData = Mtd.T1.FVald.valdList(rawDT, GLB.Conf.appHeads.filelist, GLB.Conf.validModes, State.get("T1ST.pref.refs.mode"));
       const isAlert = outData.slice(1).some(r => r.at(-1) !== ""); // エラー判定
-      await Promise.all([API.writeData(GLB.Conf.appShts.filelist, outData, "rule"), API.clearUserProperty(GLB.Conf.propFileEdited)]);
+      await API.writeData(GLB.Conf.appShts.filelist, outData, "rule");
       const statusRes = isAlert ? ["alert", "出力完了, errあり"] : "出力完了, errなし";
       if (isAlert) State.reset(['T1ST.extr']); // 初期化
       State.set({ "T1ST.raw.cachedStatus": Array.isArray(statusRes) ? statusRes : ["success", statusRes], "T1ST.phase": isAlert ? T1_PHS.INVALID : T1_PHS.VALID });
-      if (!isAlert) Evt.T1.checkExtrRefs();
-      return statusRes;
+      if (isAlert) throw new Error("ファイルリストにエラーがあります");
+      Evt.T1.checkExtrRefs();
+      return outData;
     }
     // --- tab1 リスト生成 ---
     static async makeList() {
@@ -1896,20 +1892,27 @@
       const { raw } = State.proxy.T1ST;
       if (raw.flags.some(Boolean)) return;
       if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawBar")) return;
-      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => T1Ctrl.procList("make", Mtd.Util.remapArry(raw.data, GLB.Conf.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), GLB.Conf.rawHeaders.file)));
+      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => {
+        const mappedData = Mtd.Util.remapArry(raw.data, GLB.Conf.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), GLB.Conf.rawHeaders.file);
+        return await T1Ctrl.stateDI(mappedData);
+      });
     }
     // --- tab1 リスト検証 ---
     static async valdList() {
       if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawBar")) return;
-      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => T1Ctrl.procList("validate", null));
+      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => {
+        const { data } = await API.fetchDT(GLB.Conf.appShts.filelist, 5, 5);
+        return await T1Ctrl.stateDI(data);
+      });
     }
     // --- tab1 データ抽出 ---
     static async runExtr() {
       if (!await NewDOM.confirm("確認", "「抽出データ」を上書きしますか？", "extrBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
-        if (await API.checkUserProperty(GLB.Conf.propFileEdited)) { State.set({ "T1ST.raw.status": ["error", "シート編集検知"], "T1ST.phase": T1_PHS.INVALID }); return; }
-        const [fileRes, resDT] = await Promise.all([API.fetchDT(GLB.Conf.appShts.filelist, 6, 6), API.fetchDT(GLB.Conf.rawShts.results)]);
-        const outData = Mtd.T1.Extr.runExtr(fileRes.data, resDT.data, State.get("T1ST.extr.refs"));
+        const { data: fileData } = await API.fetchDT(GLB.Conf.appShts.filelist, 5, 5);
+        const validFileDT = await T1Ctrl.stateDI(fileData);
+        const resDT = await API.fetchDT(GLB.Conf.rawShts.results);
+        const outData = Mtd.T1.Extr.runExtr(validFileDT, resDT.data, State.get("T1ST.extr.refs"));
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
         await API.writeData(GLB.Conf.appShts.extract, outData);
         State.set("T1ST.phase", T1_PHS.EXTRACT); return `抽出: ${outData.length - 1} 件`;
