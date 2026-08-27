@@ -13,11 +13,18 @@
 - **配布・連携モデル (GASライブラリ化 ＆ テンプレート配布)**:
   - **[Why]**: エンドユーザーのUXを最大限簡易化し、開発者はライブラリ側の更新のみで全環境へ最新ロジックを一括配信するため。
   - **[How]**: 本体をGASライブラリとして非公開デプロイし、配布用テンプレートシートには最低限のラッパー関数（onOpen, showSidebar およびAPI中継）のみを配置。
-- **将来的な拡張性 (Add-in Portability)**:
-  - **[Why]**: 将来的に「Office Add-in + GitHub」等のローカル配布環境への移植を前提とするため。
-  - **[How]**: 非同期通信のためのGAS通信層 (`GasService`) 以外は、標準Web技術 (ES6, Web Components, CSS Nesting) に完全準拠する。
+- **拡張性 (Add-in Portability)**:
+  - **[Why]**: GAS環境とOffice Web Add-in（Excel）環境の双方で、同一コードによる完全共有と単一管理を実現するため。
+  - **[How]**: GitHub Actions（`infra/build.js`）による自動ビルドで単一の静的HTMLを生成し、環境依存の通信・永続化処理はAdapterを用いて動的に切り替える。
 
-## 2. コア・コントラクト（絶対的制約とコーディング規約）
+## 2. マルチ環境実装原理
+- **環境差異の吸収**: `typeof Office !== 'undefined'` 等による環境検知を用い、API (通信) と Storage (永続化) を環境ごとにAdapterで切り替える。
+- **自動ビルド・デプロイ機構 (infra連携)**:
+  - `infra/build.js` を用いたGitHub Actionsにより、`src/` 配下のソース群を1枚の静的HTML（`App.html`等）に結合し、Pagesへデプロイする。
+  - **[Why]**: Excel環境特有のCSP（セキュリティポリシー）制限やXSSリスクを排除し、エンドユーザーへ安全かつ単一のファイルとして提供するため。
+- **独立型レポート機構**: 本体Stateの構造を動的コピーしてテンプレートへ注入し、データとロジックを内包した自己完結型のHTMLファイルを生成（GASはBlob展開、Excelはローカル保存）する。
+
+## 3. コア・コントラクト（絶対的制約とコーディング規約）
 機能追加やリファクタリング時は、以下の思想と制約を**必ず**遵守すること。
 
 1. **ビジネスロジックの純粋化 (Method層)**:
@@ -40,17 +47,17 @@
    - **[Rule]**: 処理内のコメントは、処理の意図（Why）を「15文字以内」で記述。
    - **[Rule]**: クラスやメソッド間、ブロック間の**空行（ブランク行）は完全に削除**し、情報密度を最大化する。
 
-## 3. アーキテクチャ・パイプライン（データフロー）
+## 4. アーキテクチャ・パイプライン（データフロー）
 - **[コマンド (非同期実行等)]**: `User Action (data-action) -> Evt Router -> Controller <-> API/Method -> State.set -> View Engine (data-ui) -> Web Components`
 - **[リアクティブ (入力選択等)]**: `User Input -> Evt Router -> State.set -> View Engine (data-ui) -> Web Components`
 
-## 4. フェーズ・ステートマシン（状態遷移定義）
+## 5. フェーズ・ステートマシン（状態遷移定義）
 - **Tab 1 (データ抽出)**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
 - **Tab 2 (グラフ作成)**: `INIT(1) -> LOADED(2) -> FILTERED(3) -> MAPPED(4) -> PREVIEWED(5)`
 - **[Why]**: フェーズ遷移に伴うUIの表示/非活性制御を命令的な `if` 分岐で行わず、`UIPhase` の定数マップに基づく宣言的ルールエンジンに集約するため。
 - **[How]**: UIルールの定義をフラットな羅列から「セクション空間」ごとのネスト構造に整理し、親セクションと `data-ui` 属性を組み合わせた相対DOM参照エンジンによって、HTML要素の特定と状態適用を完全自動化する。
 
-## 5. ディレクトリ構造と関数一覧（モジュール責務）
+## 6. ディレクトリ構造と関数一覧（モジュール責務）
 - `Code.js`: [API] バックエンドAPI (GAS通信, I/O)
 - `Sidebar.html`: [UI] 静的ベース構造 (Auto DI属性とイベントルーター属性の保持)
 - `CSS.html`: [Style] トークン定義, カスケードレイヤー (`reset`, `base`, `components`, `utilities`)
@@ -63,5 +70,5 @@
 - `Chart.html`: [Component] グラフ描画 (`<ob-cal-plot>`)
 - `Report.html`: [Template] レポート出力用静的HTML
 
-## 6. 開発状況と次ステップ
+## 7. 開発状況と次ステップ
 - 開発は一旦停止して、現状の配布共有スキーマの確認をする。
