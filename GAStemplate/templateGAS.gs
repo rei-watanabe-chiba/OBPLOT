@@ -1,3 +1,4 @@
+//--- 配布GAS用gsファイル ---
 function onOpen() {
   OBPLOT_Lib.onOpen();
 }
