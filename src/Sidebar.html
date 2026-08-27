@@ -160,6 +160,26 @@
       </div>
     </main>
 
+    <!-- ダイアログ -->
+    <dialog id="universalConfirm">
+      <h3 id="uDialogTitle">確認</h3>
+      <p id="uDialogMessage"></p>
+      <div class="field-row">
+        <button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button>
+        <button id="uDialogConfirmBtn" data-type="primary">OK</button>
+      </div>
+    </dialog>
+
+    <!-- アイドル通知ダイアログ -->
+    <dialog id="idleToast">
+      <h3>セッション警告</h3>
+      <p>一定時間操作がなかったため、GAS通信エラー回避のため再起動します</p>
+      <div class="field-row">
+        <button id="idleCancelBtn" class="outline">キャンセル</button>
+        <button id="idleOkBtn" data-type="primary">OK</button>
+      </div>
+    </dialog>
+
     <script>
       // サーバー(doGet)から渡された初期IDを保持（ローカル開発時は空）
       window.__INITIAL_SSID__ = "<?= typeof initialSsId !== 'undefined' ? initialSsId : '' ?>";

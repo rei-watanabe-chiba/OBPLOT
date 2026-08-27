@@ -3,6 +3,7 @@
   class CoreCtrl {
     // --- 最新ID取得 ---
     static get #ssId() { return State.get("GLB.ssId"); }
+    
     // --- 非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
@@ -13,41 +14,26 @@
       } catch (err) { State.set(statusPath, ["error", err.message]); }
       finally { if (finallyFn) await finallyFn(); State.set("GLB.isLocked", false); }
     }
-    // --- 接続先変更 ---
-    static changeConnection() {
-      State.set("GLB.ssId", "");
-      DOM.el("ssIdInput").value = "";
-      this.promptConnection();
-    }
-    // --- 接続要求ダイアログ ---
-    static promptConnection() {
-      const dlg = DOM.el("connectDialog");
-      dlg.showModal();
-      DOM.el("cDialogConfirmBtn").onclick = () => {
-        const rawInput = DOM.el("ssIdInput").value.trim();
-        if (!rawInput) return;
-        const m = rawInput.match(/\/d\/([a-zA-Z0-9-_]+)/); // URL抽出
-        dlg.close();
-        Evt.startSession(m ? m[1] : rawInput); // 接続フロー開始
-      };
-    }
+
     // --- アプリ接続フロー ---
     static async connectApp(ssId) {
       State.set("GLB.isLocked", true);
       try {
         const reqShts = [...Object.values(GLB.Conf.rawShts), ...Object.values(GLB.Conf.appShts)];
-        const res = await API.checkSheets(ssId, reqShts); // ドライラン実行
+        const res = await API.checkSheets(ssId, reqShts); 
         if (res.missing.length > 0) {
           let msg = `対象ファイル（${res.ssName}）に不足シートがあります。\n新規作成して接続しますか？\n[不足: ${res.missing.join(', ')}]`;
           if (res.found.length > 0) {
             msg = `対象ファイル（${res.ssName}）に以下のシートを作成します。\n[不足: ${res.missing.join(', ')}]\n\n「${res.found.join(', ')}」シートは既存のシートを利用しますか？`;
           }
           if (!await NewDOM.confirm("接続確認", msg)) {
-            this.promptConnection();
             State.set("GLB.isLocked", false);
             return false;
           }
+          const pxrfHdr = Mtd.Util.buildPxrfHeader();
           const headsMap = {
+            [GLB.Conf.rawShts.pxrf]: pxrfHdr,
+            [GLB.Conf.appShts.extract]: pxrfHdr,
             [GLB.Conf.appShts.filelist]: GLB.Conf.appHeads.filelist,
             [GLB.Conf.appShts.correction]: ['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]
           };
@@ -57,7 +43,6 @@
         return true;
       } catch (e) {
         await NewDOM.confirm("接続エラー", `アクセスできませんでした。\n権限がないかURLが間違っています。\n${e.message}`);
-        this.promptConnection();
         State.set("GLB.isLocked", false);
         return false;
       }
@@ -122,7 +107,8 @@
     static async pushExtr() {
       if (!await NewDOM.confirm("確認", "PXRFシートに格納しますか？", "extrBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
-        const [extrRes, pxrfRes] = await Promise.all([API.fetchDT(this.#ssId, GLB.Conf.appShts.extract), API.fetchDT(this.#ssId, GLB.Conf.rawShts.pxrf)]);
+        const extrRes = await API.fetchDT(this.#ssId, GLB.Conf.appShts.extract);
+        const pxrfRes = await API.fetchDT(this.#ssId, GLB.Conf.rawShts.pxrf).catch(() => ({ data: [Mtd.Util.buildPxrfHeader()] }));
         const { isDup, data: mrgData } = Mtd.T1.PVald.checkPxrf(pxrfRes.data, extrRes.data);
         if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？", "extrBar")) return;
         await API.writeData(this.#ssId, GLB.Conf.rawShts.pxrf, isDup ? mrgData : extrRes.data.slice(1), isDup ? "clear" : ["append"]);

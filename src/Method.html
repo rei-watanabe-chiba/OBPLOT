@@ -58,6 +58,11 @@
         });
         return { niceMin, niceMax, niceTicks };
       }
+      // PXRFヘッダー一元生成
+      static buildPxrfHeader() {
+        const obK = this.sortKeysByVal(GLB.Conf.obsidianIndex), mdK = this.sortKeysByVal(GLB.Conf.mudrockIndex);
+        return ['計測ID', 'ID', 'database', 'item', 'date', ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
+      }
     },
     T1: {
       FVald: class {
@@ -108,8 +113,7 @@
               return acc;
             }, { vals: [], errs: [] });
           };
-          const hdr = ['計測ID', 'ID', 'database', 'item', 'date', ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`), ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)];
-          return [hdr, ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+          return [Mtd.Util.buildPxrfHeader(), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
             const ob = extract(files.obsidian, obKeys, GLB.Conf.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.Conf.mudrockIndex);
             return [scanId, id, extrRefs.DB, extrRefs.item, extrRefs.date, ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
           })];
