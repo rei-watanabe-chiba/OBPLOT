@@ -92,10 +92,7 @@
         });
       });
     }
-    static renewT1Phs(p) {
-      this.#apply(this.#T1_RLS, p);
-      if (p >= T1_PHS.VALID && p < T1_PHS.EXTRACT) State.set("T1ST.extr.status", ["hidden", ""]);
-    }
+    static renewT1Phs(p) { this.#apply(this.#T1_RLS, p); }
     static renewT2Phs(p) { this.#apply(this.#T2_RLS, p); }
   }
   // --- UIStateUpdater ---

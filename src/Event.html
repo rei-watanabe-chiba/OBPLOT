@@ -61,13 +61,16 @@
     static #bindMulti = path => tgt => this.tglMulti(tgt, path);
     static #bindAll = path => tgt => this.tglAllMulti(tgt, path);
     // --- Tab1イベント群 ---
+    // --- Tab1イベント群 ---
     static T1 = {
       checkT1Pref: mode => {
         if (!mode) return;
-        const modeText = mode === "Dual" ? "Obsidian/mudrockセット抽出" : "1ファイル単位抽出（モード混在可）";
         const phs = State.get("T1ST.phase"), isInit = phs === T1_PHS.INIT, isInvalid = phs >= T1_PHS.INVALID;
-        isInvalid && State.set("T1ST.raw.status", ["error", "モード変更検知"]); // 再検証要求
-        State.set({ "T1ST.pref.status": ["message", modeText], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
+        if (isInvalid) { 
+          const errStat = ["error", "設定変更検知: リストの再生成・検証が必要です"];
+          State.set({ "T1ST.raw.status": errStat, "T1ST.raw.cachedStatus": errStat, "T1ST.extr.status": ["hidden", ""] });
+        }
+        State.set({ "T1ST.pref.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
       },
       renewRawRefs: tgt => {
         State.set(`T1ST.raw.refs.${tgt.dataset.field}`, tgt.value);
@@ -75,11 +78,11 @@
       },
       checkRawRefs: () => {
         const flags = Mtd.Util.validateSelect(GLB.Conf.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
-        State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") }); // 状態更新
+        State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") }); 
       },
       checkExtrRefs: () => {
         const isErr = !(State.get("T1ST.extr.refs.DB")?.trim());
-        State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", "エラー: DB未入力"] : State.get("T1ST.extr.cachedStatus") }); // 状態更新
+        State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", "エラー: DB未入力"] : ["hidden", ""] }); 
       }
     };
     // --- Tab2イベント群 ---
@@ -173,30 +176,35 @@
       }
       return true;
     }
+    // --- セッション開始 (接続完了後) ---
+    static async startSession(ssId) {
+      const isConnected = await Ctrl.CoreCtrl.connectApp(ssId);
+      if (!isConnected) return; // 失敗時はダイアログへ戻る
+      if (!(await this.#restore(MakeBU.load()))) { 
+        MakeBU.clear(); 
+        this.switchTab(State.get("GLB.activeTab")); 
+      }
+      MakeBU.init(); 
+      State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
+      UI.Phs.renewT1Phs(State.get("T1ST.phase")); 
+      UI.Phs.renewT2Phs(State.get("T2ST.phase"));
+    }
+
     // --- 初期化 ---
     static async init() {
       UI.Init.build();
       State.subscribe("T1ST.pref.refs.mode", Evt.T1.checkT1Pref);
       State.subscribe("T1ST.extr.refs.DB", Evt.T1.checkExtrRefs);
-      // シート初期化とロック判定
-      State.set("GLB.isLocked", true);
-      const isRawMissing = await Ctrl.CoreCtrl.initApp();
-      if (isRawMissing) {
-        MakeBU.clear(); // 新規作成時はバックアップを破棄
-        State.set({ 
-          "GLB.isLocked": true,
-          "T1ST.pref.status": ["alert", "入力データが不在です。生成したシートに入力してください"], 
-          "T1ST.phase": T1_PHS.INIT 
-        });
-        UI.Phs.renewT1Phs(State.get("T1ST.phase")); UI.Phs.renewT2Phs(State.get("T2ST.phase"));
-        return; // 後続のイベントバインドを行わずに処理中断
-      }
-      if (!(await this.#restore(MakeBU.load()))) { MakeBU.clear(); this.switchTab(State.get("GLB.activeTab")); } // 通常起動
-      MakeBU.init(); // 全監視開始
-      State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
-      UI.Phs.renewT1Phs(State.get("T1ST.phase")); UI.Phs.renewT2Phs(State.get("T2ST.phase"));
-      document.addEventListener("click", this.#handleClick.bind(this)); document.addEventListener("change", this.#handleChange.bind(this));
+      document.addEventListener("click", this.#handleClick.bind(this)); 
+      document.addEventListener("change", this.#handleChange.bind(this));
       IdlTm.init();
+      // ssId 取得と接続開始
+      const initSsId = window.__INITIAL_SSID__ || "";
+      if (initSsId) {
+        this.startSession(initSsId); // パラメータがあれば直接接続
+      } else {
+        Ctrl.CoreCtrl.promptConnection(); // なければダイアログを開く
+      }
     }
   }
   // --- 起動イベントバインド ---

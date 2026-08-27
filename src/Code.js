@@ -1,47 +1,54 @@
-// src/Code.js
 // --- DTO定義 ---
 class ApiResponse {
   static success(payload) { return { success: true, payload: JSON.parse(JSON.stringify(payload)) }; }
   static error(type, msg) { return { success: false, errorType: type, message: msg }; }
 }
-// --- エラーラッパー ---
 const withErr = fn => {
   try { return fn(); } catch (e) { return ApiResponse.error("SYSTEM_ERR", e.message); }
 };
-// --- メニュー追加 ---
+
+// --- Webアプリ用エントリポイント ---
+function doGet(e) {
+  const tpl = HtmlService.createTemplateFromFile("Sidebar");
+  tpl.initialSsId = e.parameter.ssid || ""; // URLパラメータ（?ssid=XXX）を取得
+  return tpl.evaluate().setTitle("OBPLOT1.0").addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// --- メニュー追加 (GAS用) ---
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("OBPLOT1.0").addItem("サイドバーを表示", "showSidebar").addToUi();
 }
-// --- サイドバー表示 ---
 function showSidebar() {
   SpreadsheetApp.getUi().showSidebar(HtmlService.createTemplateFromFile("Sidebar").evaluate().setTitle("OBPLOT1.0").setWidth(300));
 }
-// --- HTML読込 ---
 function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
-// --- シート取得共通 ---
-const getSht = name => SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+
+// --- シート操作共通 ---
+const getSht = (ssId, name) => SpreadsheetApp.openById(ssId).getSheetByName(name);
+
 // --- データ取得 ---
-function fetchDT(shtName, qCol = null, lCol = null) {
+function fetchDT(ssId, shtName, qCol = null, lCol = null) {
   return withErr(() => {
-    const sht = getSht(shtName);
+    const sht = getSht(ssId, shtName);
     if (!sht) return ApiResponse.error("SHEET_ERR", `シート「${shtName}」不在`);
     const rawDT = sht.getDataRange().getValues();
     if (rawDT.length <= 1) return ApiResponse.error("DATA_ERR", "データが1行以下");
-    if (qCol && rawDT[0].length < qCol) return ApiResponse.error("DATA_ERR", "データ列不足"); // 列数検証
-    const data = lCol ? rawDT.map(r => r.slice(0, lCol)) : rawDT; // 必要列のみ抽出
+    if (qCol && rawDT[0].length < qCol) return ApiResponse.error("DATA_ERR", "データ列不足"); 
+    const data = lCol ? rawDT.map(r => r.slice(0, lCol)) : rawDT; 
     return ApiResponse.success({ data, message: `取得: ${data.length} 行` });
   });
 }
+
 // --- データ出力 ---
-function writeData(shtName, data, opts = "clear") {
+function writeData(ssId, shtName, data, opts = "clear") {
   return withErr(() => {
-    const sht = getSht(shtName);
+    const sht = getSht(ssId, shtName);
     if (!sht) return ApiResponse.error("SHEET_ERR", `シート「${shtName}」不在`);
     const optArr = [].concat(opts);
-    if (optArr.includes("clear")) sht.clearContents(); // 既存消去
+    if (optArr.includes("clear")) sht.clearContents(); 
     const sRow = optArr.includes("append") ? (sht.getLastRow() || 1) + 1 : 1;
     sht.getRange(sRow, 1, data.length, data[0].length).setValues(data);
-    if (optArr.includes("rule")) { // 書式拡張
+    if (optArr.includes("rule")) { 
       const rls = sht.getConditionalFormatRules();
       if (rls.length) {
         rls[0] = rls[0].copy().setRanges([sht.getRange(1, 1, sht.getLastRow(), data[0].length)]).build();
@@ -51,26 +58,30 @@ function writeData(shtName, data, opts = "clear") {
     return ApiResponse.success("書き出し完了");
   });
 }
-// --- Report取得 ---
+
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
-// --- シート不在防止---
-function initSheets(rawShts, appShts, appHeads) {
+
+// --- 【新規】シート存在確認 (ドライラン) ---
+function checkSheets(ssId, reqShts) {
   return withErr(() => {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let rawNew = false;
-    // 生データシートの確認・生成
-    rawShts.forEach(name => {
-      if (!ss.getSheetByName(name)) { ss.insertSheet(name); rawNew = true; }
-    });
-    // アプリ出力用シートの確認・生成（ヘッダー付与）
-    appShts.forEach((name, i) => {
-      if (!ss.getSheetByName(name)) {
-        const sht = ss.insertSheet(name);
-        if (appHeads && appHeads[i] && appHeads[i].length) {
-          sht.getRange(1, 1, 1, appHeads[i].length).setValues([appHeads[i]]);
-        }
+    const ss = SpreadsheetApp.openById(ssId);
+    const existing = ss.getSheets().map(s => s.getName());
+    const found = reqShts.filter(s => existing.includes(s));
+    const missing = reqShts.filter(s => !existing.includes(s));
+    return ApiResponse.success({ found, missing, ssName: ss.getName() });
+  });
+}
+
+// --- 【新規】不足シート作成 ---
+function createMissingSheets(ssId, missingShts, appHeadsMap) {
+  return withErr(() => {
+    const ss = SpreadsheetApp.openById(ssId);
+    missingShts.forEach(name => {
+      const sht = ss.insertSheet(name);
+      if (appHeadsMap[name] && appHeadsMap[name].length) {
+        sht.getRange(1, 1, 1, appHeadsMap[name].length).setValues([appHeadsMap[name]]);
       }
     });
-    return ApiResponse.success({ rawNew });
+    return ApiResponse.success(true);
   });
 }

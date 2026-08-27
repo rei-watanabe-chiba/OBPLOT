@@ -69,7 +69,7 @@
     constructor() {
       const createSec = (overrides = {}) => ({ status: [], data: null, refs: {}, flags: [], ...overrides }); // 共通構造の強制
       const initDef = {
-        GLB: { activeTab: "tab1", isLocked: false },
+        GLB: { activeTab: "tab1", isLocked: false, ssId: "" },
         T1ST: {
           phase: T1_PHS.INIT,
           pref: createSec({ refs: { mode: "" } }),
@@ -136,10 +136,11 @@
       });
     }
     // --- GAS通信処理をバインド ---
-    static fetchDT(sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", sht, qCol, lCol); }
-    static writeData(sht, data, opts = "clear") { return this.#serverCall("writeData", sht, data, opts); }
+    static fetchDT(ssId, sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", ssId, sht, qCol, lCol); }
+    static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
-    static initSheets(rawShts, appShts, appHeads) { return this.#serverCall("initSheets", rawShts, appShts, appHeads); }
+    static checkSheets(ssId, reqShts) { return this.#serverCall("checkSheets", ssId, reqShts); }
+    static createMissingSheets(ssId, missingShts, appHeadsMap) { return this.#serverCall("createMissingSheets", ssId, missingShts, appHeadsMap); }
   }
   // --- ローカルストレージ ---
   class LocalStorageAdapter {
