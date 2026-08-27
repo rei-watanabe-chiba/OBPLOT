@@ -794,6 +794,26 @@
       </div>
     </main>
 
+    <!-- ダイアログ -->
+    <dialog id="universalConfirm">
+      <h3 id="uDialogTitle">確認</h3>
+      <p id="uDialogMessage"></p>
+      <div class="field-row">
+        <button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button>
+        <button id="uDialogConfirmBtn" data-type="primary">OK</button>
+      </div>
+    </dialog>
+
+    <!-- アイドル通知ダイアログ -->
+    <dialog id="idleToast">
+      <h3>セッション警告</h3>
+      <p>一定時間操作がなかったため、GAS通信エラー回避のため再起動します</p>
+      <div class="field-row">
+        <button id="idleCancelBtn" class="outline">キャンセル</button>
+        <button id="idleOkBtn" data-type="primary">OK</button>
+      </div>
+    </dialog>
+
     <script>
       // サーバー(doGet)から渡された初期IDを保持（ローカル開発時は空）
       window.__INITIAL_SSID__ = "<?= typeof initialSsId !== 'undefined' ? initialSsId : '' ?>";
@@ -1104,6 +1124,11 @@
         });
         return { niceMin, niceMax, niceTicks };
       }
+      // PXRFヘッダー一元生成
+      static buildPxrfHeader() {
+        const obK = this.sortKeysByVal(GLB.Conf.obsidianIndex), mdK = this.sortKeysByVal(GLB.Conf.mudrockIndex);
+        return ['計測ID', 'ID', 'database', 'item', 'date', ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
+      }
     },
     T1: {
       FVald: class {
@@ -1154,8 +1179,7 @@
               return acc;
             }, { vals: [], errs: [] });
           };
-          const hdr = ['計測ID', 'ID', 'database', 'item', 'date', ...obKeys.map(k => `ob_${k}`), ...mdKeys.map(k => `md_${k}`), ...obKeys.map(k => `ob_${k}_Err`), ...mdKeys.map(k => `md_${k}_Err`)];
-          return [hdr, ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+          return [Mtd.Util.buildPxrfHeader(), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
             const ob = extract(files.obsidian, obKeys, GLB.Conf.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.Conf.mudrockIndex);
             return [scanId, id, extrRefs.DB, extrRefs.item, extrRefs.date, ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
           })];
@@ -1828,6 +1852,7 @@
   class CoreCtrl {
     // --- 最新ID取得 ---
     static get #ssId() { return State.get("GLB.ssId"); }
+    
     // --- 非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
@@ -1838,41 +1863,26 @@
       } catch (err) { State.set(statusPath, ["error", err.message]); }
       finally { if (finallyFn) await finallyFn(); State.set("GLB.isLocked", false); }
     }
-    // --- 接続先変更 ---
-    static changeConnection() {
-      State.set("GLB.ssId", "");
-      DOM.el("ssIdInput").value = "";
-      this.promptConnection();
-    }
-    // --- 接続要求ダイアログ ---
-    static promptConnection() {
-      const dlg = DOM.el("connectDialog");
-      dlg.showModal();
-      DOM.el("cDialogConfirmBtn").onclick = () => {
-        const rawInput = DOM.el("ssIdInput").value.trim();
-        if (!rawInput) return;
-        const m = rawInput.match(/\/d\/([a-zA-Z0-9-_]+)/); // URL抽出
-        dlg.close();
-        Evt.startSession(m ? m[1] : rawInput); // 接続フロー開始
-      };
-    }
+
     // --- アプリ接続フロー ---
     static async connectApp(ssId) {
       State.set("GLB.isLocked", true);
       try {
         const reqShts = [...Object.values(GLB.Conf.rawShts), ...Object.values(GLB.Conf.appShts)];
-        const res = await API.checkSheets(ssId, reqShts); // ドライラン実行
+        const res = await API.checkSheets(ssId, reqShts); 
         if (res.missing.length > 0) {
           let msg = `対象ファイル（${res.ssName}）に不足シートがあります。\n新規作成して接続しますか？\n[不足: ${res.missing.join(', ')}]`;
           if (res.found.length > 0) {
             msg = `対象ファイル（${res.ssName}）に以下のシートを作成します。\n[不足: ${res.missing.join(', ')}]\n\n「${res.found.join(', ')}」シートは既存のシートを利用しますか？`;
           }
           if (!await NewDOM.confirm("接続確認", msg)) {
-            this.promptConnection();
             State.set("GLB.isLocked", false);
             return false;
           }
+          const pxrfHdr = Mtd.Util.buildPxrfHeader();
           const headsMap = {
+            [GLB.Conf.rawShts.pxrf]: pxrfHdr,
+            [GLB.Conf.appShts.extract]: pxrfHdr,
             [GLB.Conf.appShts.filelist]: GLB.Conf.appHeads.filelist,
             [GLB.Conf.appShts.correction]: ['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]
           };
@@ -1882,7 +1892,6 @@
         return true;
       } catch (e) {
         await NewDOM.confirm("接続エラー", `アクセスできませんでした。\n権限がないかURLが間違っています。\n${e.message}`);
-        this.promptConnection();
         State.set("GLB.isLocked", false);
         return false;
       }
@@ -1947,7 +1956,8 @@
     static async pushExtr() {
       if (!await NewDOM.confirm("確認", "PXRFシートに格納しますか？", "extrBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
-        const [extrRes, pxrfRes] = await Promise.all([API.fetchDT(this.#ssId, GLB.Conf.appShts.extract), API.fetchDT(this.#ssId, GLB.Conf.rawShts.pxrf)]);
+        const extrRes = await API.fetchDT(this.#ssId, GLB.Conf.appShts.extract);
+        const pxrfRes = await API.fetchDT(this.#ssId, GLB.Conf.rawShts.pxrf).catch(() => ({ data: [Mtd.Util.buildPxrfHeader()] }));
         const { isDup, data: mrgData } = Mtd.T1.PVald.checkPxrf(pxrfRes.data, extrRes.data);
         if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？", "extrBar")) return;
         await API.writeData(this.#ssId, GLB.Conf.rawShts.pxrf, isDup ? mrgData : extrRes.data.slice(1), isDup ? "clear" : ["append"]);
@@ -2062,13 +2072,36 @@
   }
   // --- アイドル検知 ---
   class IdlTm {
-    static #MS = 300000;
+    static #MS = 5 * 60000; // 5分
     static #tm = null;
     static init() {
-      const rst = () => { clearTimeout(this.#tm); this.#tm = setTimeout(() => DOM.el("idleToast")?.showModal(), this.#MS); };
-      ['mousemove', 'keydown', 'touchstart'].forEach(e => document.addEventListener(e, rst)); rst();
+      if (isExcelEnv) return;
+      const rst = () => { 
+        clearTimeout(this.#tm); 
+        this.#tm = setTimeout(() => {
+          const dlg = DOM.el("idleToast");
+          if (dlg && !dlg.open) {
+            dlg.showModal();
+            const forceReload = () => {
+              StorageAPI.save("OBP_AUTO_RESTORE", "true");
+              if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                  .withFailureHandler(() => google.script.host.close()) // 通信切断時はサイドバーを閉じる
+                  .showSidebar();
+              } else {
+                window.location.reload();
+              }
+            };
+            DOM.el("idleOkBtn").onclick = forceReload;
+            DOM.el("idleCancelBtn").onclick = forceReload;
+          }
+        }, this.#MS); 
+      };
+      ['mousemove', 'keydown', 'touchstart', 'click', 'scroll'].forEach(e => document.addEventListener(e, rst, { passive: true })); 
+      rst();
     }
   }
+  // --- メインクラス ---
   class Evt {
     // --- アクション辞書 ---
     static #ACTION_MAP = {
@@ -2171,7 +2204,11 @@
       }
       if (actPath) {
         const [ns, method] = actPath.split('.');
-        (Ctrl[ns]?.[method] || this[ns]?.[method])?.(btn);
+        if (Ctrl[ns]?.[method]) {
+          Ctrl[ns][method](btn);
+        } else if (this[ns]?.[method]) {
+          this[ns][method](btn);
+        }
       }
     }
     // --- 変更監視 ---
@@ -2193,31 +2230,32 @@
     }
     // --- 状態復元 ---
     static async #restore(bu) {
-      if (!bu || !(await NewDOM.confirm("復元", "前回の作業状態を復元しますか？"))) return false;
+      const isAuto = StorageAPI.load("OBP_AUTO_RESTORE") === "true";
+      if (isAuto) StorageAPI.clear("OBP_AUTO_RESTORE");
+      if (!bu || (!isAuto && !(await NewDOM.confirm("復元", "前回の作業状態を復元しますか？")))) return false;
       this.switchTab("tab2");
       await T2Ctrl.loadDB();
-      if (State.get("T2ST.phase") < T2_PHS.LOADED) return true; // 中断 (エラー表示を維持)
+      if (State.get("T2ST.phase") < T2_PHS.LOADED) return true;
       State.set({ "T2ST.asgn.refs.available": bu.asgn.r.available, "T2ST.asgn.refs.filter": bu.asgn.r.filter });
-      if (bu.phase < T2_PHS.FILTERED) { State.set("T2ST.asgn.status", bu.asgn.s); return true; } // 中断＆ステータス復元
+      if (bu.phase < T2_PHS.FILTERED) { State.set("T2ST.asgn.status", bu.asgn.s); return true; } 
       await T2Ctrl.fltrDB();
-      if (State.get("T2ST.phase") < T2_PHS.FILTERED) return true; // 中断 (エラー表示を維持)
+      if (State.get("T2ST.phase") < T2_PHS.FILTERED) return true;
       State.set({
         "T2ST.symb.refs.baseKey": bu.symb.r.baseKey, "T2ST.symb.refs.rls": bu.symb.r.rls,
         "T2ST.calb.refs.modeMap": bu.calb.r.modeMap, "T2ST.calb.refs.calElms": bu.calb.r.calElms, "T2ST.calb.refs.correction": bu.calb.r.correction, "T2ST.calb.refs.useLOD": bu.calb.r.useLOD, "T2ST.calb.refs.useCal": bu.calb.r.useCal,
         "T2ST.prev.refs.itemMap": bu.prev.r.itemMap, "T2ST.prev.refs.val": bu.prev.r.val, "T2ST.prev.refs.saveIndexName": bu.prev.r.saveIndexName
       });
       if (bu.phase >= T2_PHS.PREVIEWED) await T2Ctrl.buildPrev();
-      
-      // 到達フェーズ一致でステータス復元
       if (State.get("T2ST.phase") === bu.phase) {
         State.set({ "T2ST.asgn.status": bu.asgn.s, "T2ST.symb.status": bu.symb.s, "T2ST.calb.status": bu.calb.s, "T2ST.prev.status": bu.prev.s });
       }
       return true;
     }
+
     // --- セッション開始 (接続完了後) ---
     static async startSession(ssId) {
       const isConnected = await Ctrl.CoreCtrl.connectApp(ssId);
-      if (!isConnected) return; // 失敗時はダイアログへ戻る
+      if (!isConnected) return; 
       if (!(await this.#restore(MakeBU.load()))) { 
         MakeBU.clear(); 
         this.switchTab(State.get("GLB.activeTab")); 
@@ -2242,6 +2280,7 @@
         this.startSession(initSsId);
       }
     }
+  }
   // --- 起動イベントバインド ---
   if (isExcelEnv) Office.onReady(() => Evt.init());
   else window.addEventListener("DOMContentLoaded", () => Evt.init());
