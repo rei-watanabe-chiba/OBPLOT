@@ -21,6 +21,8 @@
       try { return await Excel.run(fn); }
       catch (e) { throw new Error(`[EXCEL_ERR] ${e.message}`); }
     }
+
+    // --- データ取得 ---
     static async fetchDT(shtName, qCol = null, lCol = null) {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
@@ -36,6 +38,8 @@
         return { data, message: `取得: ${data.length} 行` };
       });
     }
+
+    // --- データ出力 ---
     static async writeData(shtName, data, opts = "clear") {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
@@ -60,30 +64,67 @@
         return "書き出し完了";
       });
     }
+
+    // --- レポートテンプレート取得 ---
     static async getReportTemplate() {
-      // ビルド時に注入される定数を優先し、なければfetch
       if (window.__REPORT_TEMPLATE__) return window.__REPORT_TEMPLATE__;
       const res = await fetch('Report.html');
       if (!res.ok) throw new Error("テンプレート取得失敗");
       return await res.text();
     }
-    static async initSheets(rawShts, appShts, appHeads) {
-      return this.#run(async (ctx) => {
-        const shts = ctx.workbook.worksheets;
-        shts.load("items/name");
-        await ctx.sync();
-        const exNms = new Set(shts.items.map(s => s.name));
-        let rawNew = false;
-        rawShts.forEach(n => { if (!exNms.has(n)) { shts.add(n); rawNew = true; } });
-        appShts.forEach((n, i) => {
-          if (!exNms.has(n)) {
-            const nSht = shts.add(n);
-            if (appHeads?.[i]?.length) nSht.getRangeByIndexes(0, 0, 1, appHeads[i].length).values = [appHeads[i]];
+
+    // --- 環境セットアップ ---
+    static async setupEnvironment(orderedShts, valElms, pxrfHdr, filelistHdr) {
+    return this.#run(async (ctx) => {
+      const shts = ctx.workbook.worksheets;
+      shts.load("items/name");
+      await ctx.sync();
+      const existingMap = new Map(shts.items.map(s => [s.name, s]));
+      // 1. 生成・リセットと検証
+      for (const name of orderedShts) {
+        let sht = existingMap.get(name);
+        if (!sht) {
+          sht = shts.add(name);
+          if (name === 'PXRF' || name === '抽出データ') sht.getRangeByIndexes(0, 0, 1, pxrfHdr.length).values = [pxrfHdr];
+          if (name === 'ファイルリスト') sht.getRangeByIndexes(0, 0, 1, filelistHdr.length).values = [filelistHdr];
+          existingMap.set(name, sht);
+        } else {
+          if (name === '抽出データ' || name === 'ファイルリスト') {
+            sht.getUsedRangeOrNullObject().clear();
+            if (name === 'ファイルリスト') sht.getRangeByIndexes(0, 0, 1, filelistHdr.length).values = [filelistHdr];
           }
-        });
-        await ctx.sync();
-        return { rawNew };
-      });
-    }
+          if (name === 'PXRF' || name === 'WDXRF') {
+            const uRng = sht.getUsedRangeOrNullObject();
+            uRng.load("columnCount");
+            await ctx.sync();
+            if (!uRng.isNullObject && uRng.columnCount > 0) {
+              const hdrRng = sht.getRangeByIndexes(0, 0, 1, uRng.columnCount);
+              hdrRng.load("values");
+              await ctx.sync();
+              const hdr = hdrRng.values[0];
+              if (name === 'PXRF' && JSON.stringify(hdr) !== JSON.stringify(pxrfHdr)) {
+                throw new Error(`【検証エラー】\nPXRFシートのヘッダーが規定と異なります。\nGitHub仕様をご確認ください。`);
+              }
+              if (name === 'WDXRF') {
+                const missing = valElms.filter(e => !hdr.includes(e));
+                if (missing.length > 0) throw new Error(`【検証エラー】\nWDXRFシートのヘッダーに必須元素 (${missing.join(',')}) が不足しています。`);
+              }
+            }
+          }
+        }
+      }
+      // 2. 並び順の強制
+      for (let i = 0; i < orderedShts.length; i++) existingMap.get(orderedShts[i]).position = i;
+      // 3. ヘッダーロック (入力規則)
+      for (const name of ['PXRF', 'WDXRF']) {
+        const sht = existingMap.get(name);
+        const row1 = sht.getRange("1:1");
+        row1.dataValidation.rule = { custom: { formula: "=FALSE" } };
+        row1.dataValidation.errorAlert = { message: "システム保護: ヘッダー行の編集は禁止されています。", showAlert: true, style: "Stop", title: "編集禁止" };
+      }
+      await ctx.sync();
+      return true;
+    });
   }
+}
 </script>

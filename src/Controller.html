@@ -19,30 +19,15 @@
     static async connectApp(ssId) {
       State.set("GLB.isLocked", true);
       try {
-        const reqShts = [...Object.values(GLB.Conf.rawShts), ...Object.values(GLB.Conf.appShts)];
-        const res = await API.checkSheets(ssId, reqShts); 
-        if (res.missing.length > 0) {
-          let msg = `対象ファイル（${res.ssName}）に不足シートがあります。\n新規作成して接続しますか？\n[不足: ${res.missing.join(', ')}]`;
-          if (res.found.length > 0) {
-            msg = `対象ファイル（${res.ssName}）に以下のシートを作成します。\n[不足: ${res.missing.join(', ')}]\n\n「${res.found.join(', ')}」シートは既存のシートを利用しますか？`;
-          }
-          if (!await NewDOM.confirm("接続確認", msg)) {
-            State.set("GLB.isLocked", false);
-            return false;
-          }
-          const pxrfHdr = Mtd.Util.buildPxrfHeader();
-          const headsMap = {
-            [GLB.Conf.rawShts.pxrf]: pxrfHdr,
-            [GLB.Conf.appShts.extract]: pxrfHdr,
-            [GLB.Conf.appShts.filelist]: GLB.Conf.appHeads.filelist,
-            [GLB.Conf.appShts.correction]: ['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]
-          };
-          await API.createMissingSheets(ssId, res.missing, headsMap);
-        }
+        const orderedShts = ['ファイルリスト', 'File', 'Results', '抽出データ', 'PXRF', 'WDXRF'];
+        const pxrfHdr = Mtd.Util.buildPxrfHeader();
+        const filelistHdr = GLB.Conf.appHeads.filelist;
+        // 環境構築
+        await API.setupEnvironment(ssId, orderedShts, GLB.Conf.valElms, pxrfHdr, filelistHdr);
         State.set("GLB.ssId", ssId);
         return true;
       } catch (e) {
-        await NewDOM.confirm("接続エラー", `アクセスできませんでした。\n権限がないかURLが間違っています。\n${e.message}`);
+        await NewDOM.confirm("接続エラー", `アクセスできませんでした、またはシート構成が不正です。\n\n${e.message}`);
         State.set("GLB.isLocked", false);
         return false;
       }

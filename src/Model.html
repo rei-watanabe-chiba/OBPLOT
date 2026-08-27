@@ -139,8 +139,7 @@
     static fetchDT(ssId, sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", ssId, sht, qCol, lCol); }
     static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
-    static checkSheets(ssId, reqShts) { return this.#serverCall("checkSheets", ssId, reqShts); }
-    static createMissingSheets(ssId, missingShts, appHeadsMap) { return this.#serverCall("createMissingSheets", ssId, missingShts, appHeadsMap); }
+    static setupEnvironment(ssId, orderedShts, valElms, pxrfHdr, filelistHdr) { return this.#serverCall("setupEnvironment", ssId, orderedShts, valElms, pxrfHdr, filelistHdr); }
   }
   // --- ローカルストレージ ---
   class LocalStorageAdapter {

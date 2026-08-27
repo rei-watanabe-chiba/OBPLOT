@@ -139,7 +139,7 @@
     // --- クリック監視 ---
     static #handleClick(e) {
       const tabBtn = e.target.closest('.tab-btn');
-      if (tabBtn) return this.switchTab(tabBtn.dataset.target);
+      if (tabBtn) return this.switchAPP(tabBtn.dataset.target);
       let actPath = null, btn = null;
       // 動的コンポーネント内の処理検知
       const actBtn = e.target.closest('[data-action]');
@@ -173,9 +173,8 @@
       }
     }
     // --- タブ切替 ---
-    static switchTab(tabId) {
-      document.querySelectorAll(".tab-btn, .tab-content").forEach(el => el.classList.remove("active"));
-      document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
+    static switchAPP(tabId) {
+      document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
       document.getElementById(tabId)?.classList.add("active");
       document.body.setAttribute('data-theme', tabId);
       State.set("GLB.activeTab", tabId);
@@ -185,7 +184,7 @@
       const isAuto = StorageAPI.load("OBP_AUTO_RESTORE") === "true";
       if (isAuto) StorageAPI.clear("OBP_AUTO_RESTORE");
       if (!bu || (!isAuto && !(await NewDOM.confirm("復元", "前回の作業状態を復元しますか？")))) return false;
-      this.switchTab("tab2");
+      this.switchAPP("tab2");
       await T2Ctrl.loadDB();
       if (State.get("T2ST.phase") < T2_PHS.LOADED) return true;
       State.set({ "T2ST.asgn.refs.available": bu.asgn.r.available, "T2ST.asgn.refs.filter": bu.asgn.r.filter });
@@ -210,7 +209,7 @@
       if (!isConnected) return; 
       if (!(await this.#restore(MakeBU.load()))) { 
         MakeBU.clear(); 
-        this.switchTab(State.get("GLB.activeTab")); 
+        this.switchAPP(State.get("GLB.activeTab")); 
       }
       MakeBU.init(); 
       State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });
@@ -226,7 +225,10 @@
       document.addEventListener("click", this.#handleClick.bind(this)); 
       document.addEventListener("change", this.#handleChange.bind(this));
       IdlTm.init();
-      // ssId 取得と接続開始
+      const urlParams = new URLSearchParams(window.location.search);
+      const activeMode = window.__APP_MODE__ || urlParams.get('mode') || 'tab1';
+      this.switchAPP(activeMode); // 該当のUIだけをアクティブ化
+
       const initSsId = window.__INITIAL_SSID__ || "";
       if (initSsId) {
         this.startSession(initSsId);

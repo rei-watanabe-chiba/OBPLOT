@@ -10,13 +10,21 @@ const withErr = fn => {
 
 // --- メニュー追加 (GAS用) ---
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu("OBPLOT1.0").addItem("サイドバーを表示", "showSidebar").addToUi();
+  SpreadsheetApp.getUi().createMenu("OBPLOT1.0")
+    .addItem("データ抽出ツール", "showSidebarT1")
+    .addItem("グラフ作成ツール", "showSidebarT2")
+    .addToUi();
 }
-function showSidebar() {
+function showSidebarT1() { openSidebar("tab1", "データ抽出ツール"); }
+function showSidebarT2() { openSidebar("tab2", "グラフ作成ツール"); }
+function openSidebar(mode, title) {
   const tpl = HtmlService.createTemplateFromFile("Sidebar");
   tpl.initialSsId = SpreadsheetApp.getActiveSpreadsheet().getId();
-  SpreadsheetApp.getUi().showSidebar(tpl.evaluate().setTitle("OBPLOT1.0").setWidth(300));
+  tpl.appMode = mode;
+  SpreadsheetApp.getUi().showSidebar(tpl.evaluate().setTitle(`OBPLOT1.0: ${title}`).setWidth(300));
 }
+
+// --- HTMLバインド ---
 function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
 
 // --- シート操作共通 ---
@@ -54,29 +62,51 @@ function writeData(ssId, shtName, data, opts = "clear") {
     return ApiResponse.success("書き出し完了");
   });
 }
+
 // --- レポートテンプレート取得 ---
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
 
-// --- シート存在確認 ---
-function checkSheets(ssId, reqShts) {
+// --- 環境セットアップ ---
+function setupEnvironment(ssId, orderedShts, valElms, pxrfHdr, filelistHdr) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
-    const existing = ss.getSheets().map(s => s.getName());
-    const found = reqShts.filter(s => existing.includes(s));
-    const missing = reqShts.filter(s => !existing.includes(s));
-    return ApiResponse.success({ found, missing, ssName: ss.getName() });
-  });
-}
-// --- 不足シート作成 ---
-function createMissingSheets(ssId, missingShts, appHeadsMap) {
-  return withErr(() => {
-    const ss = SpreadsheetApp.openById(ssId);
-    missingShts.forEach(name => {
-      const sht = ss.insertSheet(name);
-      if (appHeadsMap[name] && appHeadsMap[name].length) {
-        sht.getRange(1, 1, 1, appHeadsMap[name].length).setValues([appHeadsMap[name]]);
+    const existingMap = new Map(ss.getSheets().map(s => [s.getName(), s]));
+    // 1. 生成・リセットと検証
+    orderedShts.forEach(name => {
+      let sht = existingMap.get(name);
+      if (!sht) {
+        sht = ss.insertSheet(name);
+        if (name === 'PXRF' || name === '抽出データ') sht.getRange(1, 1, 1, pxrfHdr.length).setValues([pxrfHdr]);
+        if (name === 'ファイルリスト') sht.getRange(1, 1, 1, filelistHdr.length).setValues([filelistHdr]);
+        existingMap.set(name, sht);
+      } else {
+        if (name === '抽出データ' || name === 'ファイルリスト') {
+          sht.clear();
+          if (name === 'ファイルリスト') sht.getRange(1, 1, 1, filelistHdr.length).setValues([filelistHdr]);
+        }
+        if (name === 'PXRF' || name === 'WDXRF') {
+          const hdr = sht.getRange(1, 1, 1, sht.getLastColumn() || 1).getValues()[0];
+          if (name === 'PXRF' && JSON.stringify(hdr) !== JSON.stringify(pxrfHdr)) {
+            throw new Error(`【検証エラー】\nPXRFシートのヘッダーが規定と異なります。\nGitHub仕様をご確認ください。`);
+          }
+          if (name === 'WDXRF') {
+            const missing = valElms.filter(e => !hdr.includes(e)); // 緩い規制（列順不動、必須元素の有無のみ確認）
+            if (missing.length > 0) throw new Error(`【検証エラー】\nWDXRFシートのヘッダーに必須元素 (${missing.join(',')}) が不足しています。`);
+          }
+        }
       }
     });
-    return ApiResponse.success(true);
+    // 2. 並び順の強制
+    orderedShts.forEach((name, idx) => {
+      const sht = existingMap.get(name);
+      if (sht.getIndex() !== idx + 1) { ss.setActiveSheet(sht); ss.moveActiveSheet(idx + 1); }
+    });
+    // 3. ヘッダーロック (入力規則)
+    ['PXRF', 'WDXRF'].forEach(name => {
+      const sht = existingMap.get(name);
+      const rule = SpreadsheetApp.newDataValidation().requireFormulaSatisfied('=FALSE').setAllowInvalid(false).setHelpText('システム保護: ヘッダー行の編集は禁止されています。').build();
+      sht.getRange('1:1').setDataValidation(rule);
+    });
+    return true;
   });
 }

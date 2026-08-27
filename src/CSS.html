@@ -125,29 +125,7 @@
   /* --- 4. Components --- */
   @layer components {
     /* --- タブナビ --- */
-    .nav-tabs {
-      display: flex;
-      border-bottom: 1px solid var(--grey200);
-      .tab-btn {
-        flex: 1;
-        padding: calc(var(--unit) * 2.5) 0;
-        height: auto;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--grey400);
-        background: none;
-        border: none;
-        border-radius: 0;
-        border-bottom: 2px solid transparent;
-        cursor: pointer;
-        transition: all var(--transition-speed);
-        &:hover { background-color: var(--bg-color-hover); }
-        &.active {
-          color: var(--theme-color);
-          border-bottom-color: currentColor;
-        }
-      }
-    }
+    .nav-tabs { display: none; }
     .tab-content { display: none; &.active { display: block; } }
     /* --- フォーム --- */
     label {
