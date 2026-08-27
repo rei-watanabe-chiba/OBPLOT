@@ -31,26 +31,29 @@
             <CustomTab id="ObplotTab">
               <Group id="ObplotGroup">
                 <Label resid="GroupLabel"/>
-                <!-- ▼ グループ折りたたみ時用のアイコン定義（必須）を追加 ▼ -->
                 <Icon>
                   <bt:Image size="16" resid="Icon16"/>
                   <bt:Image size="32" resid="Icon32"/>
                   <bt:Image size="80" resid="Icon80"/>
                 </Icon>
-                <Control xsi:type="Button" id="ObplotOpenButton">
-                  <Label resid="ButtonLabel"/>
-                  <Supertip>
-                    <Title resid="ButtonTitle"/>
-                    <Description resid="ButtonDesc"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="Icon16"/>
-                    <bt:Image size="32" resid="Icon32"/>
-                    <bt:Image size="80" resid="Icon80"/>
-                  </Icon>
+                <!-- ボタン1: データ抽出ツール -->
+                <Control xsi:type="Button" id="BtnTab1">
+                  <Label resid="Btn1Label"/>
+                  <Supertip><Title resid="Btn1Title"/><Description resid="Btn1Desc"/></Supertip>
+                  <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>ButtonId1</TaskpaneId>
-                    <SourceLocation resid="TaskpaneUrl"/>
+                    <TaskpaneId>PaneT1</TaskpaneId>
+                    <SourceLocation resid="UrlTab1"/>
+                  </Action>
+                </Control>
+                <!-- ボタン2: グラフ作成ツール -->
+                <Control xsi:type="Button" id="BtnTab2">
+                  <Label resid="Btn2Label"/>
+                  <Supertip><Title resid="Btn2Title"/><Description resid="Btn2Desc"/></Supertip>
+                  <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>PaneT2</TaskpaneId>
+                    <SourceLocation resid="UrlTab2"/>
                   </Action>
                 </Control>
               </Group>
@@ -67,16 +70,21 @@
         <bt:Image id="Icon80" DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="TaskpaneUrl" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html"/>
+        <!-- クエリパラメータでモードを分離 -->
+        <bt:Url id="UrlTab1" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab1"/>
+        <bt:Url id="UrlTab2" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab2"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="OBPLOT"/>
-        <bt:String id="ButtonLabel" DefaultValue="起動"/>
-        <bt:String id="ButtonTitle" DefaultValue="OBPLOT 1.0を起動"/>
         <bt:String id="TabLabel" DefaultValue="OBPLOT"/>
+        <bt:String id="Btn1Label" DefaultValue="抽出ツール"/>
+        <bt:String id="Btn1Title" DefaultValue="データ抽出ツールを起動"/>
+        <bt:String id="Btn2Label" DefaultValue="グラフツール"/>
+        <bt:String id="Btn2Title" DefaultValue="グラフ作成ツールを起動"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="ButtonDesc" DefaultValue="サイドバーを開きます"/>
+        <bt:String id="Btn1Desc" DefaultValue="ファイルリストの生成やデータ抽出を行います"/>
+        <bt:String id="Btn2Desc" DefaultValue="抽出データを用いたグラフ作成と検量線補正を行います"/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
