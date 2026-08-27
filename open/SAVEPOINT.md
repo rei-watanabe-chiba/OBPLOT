@@ -10,6 +10,9 @@
 - **プレゼンテーション (Declarative UI & Auto DI)**: 
   - **[Why]**: UI構造とビジネスロジック、およびイベント発火の責務を完全に分離し、HTML側のスケルトン化（ID属性の廃止）を極めるため。DOM操作による状態のバイパス（Hack）を根絶し、手動バインディングによる保守性のボトルネックを解消する。
   - **[How]**: `<ob-popover>` 等の Web Components で振る舞いを隠蔽。HTML要素に対して、イベント発火の目印となる `data-action` と、UI状態制御の目印となる `data-ui` を明確に分けて付与する。起動時にこれらの属性を走査し、セクション起点の相対参照と自動購読（Auto Subscribe）によるDIを完全自動化する。
+- **配布・連携モデル (GASライブラリ化 ＆ テンプレート配布)**:
+  - [Why]: エンドユーザーが自身のスプレッドシートからメニューおよびサイドバー経由で直感的に操作でき、開発者はライブラリ側の更新のみで全環境へ最新ロジックを一括配信するため。
+  - [How]: 本体をGASライブラリとして非公開デプロイし、配布用テンプレートシートには最低限のラッパー関数（onOpen, showSidebar およびAPI中継）のみを配置。起動時に SpreadsheetApp.getActiveSpreadsheet().getId() を自動取得してクライアントへ渡し、初期化時のID入力を完全自動化する。
 - **将来的な拡張性 (Add-in Portability)**:
   - **[Why]**: 将来的に「Office Add-in + GitHub」等のローカル配布環境への移植を前提とするため。
   - **[How]**: 非同期通信のためのGAS通信層 (`GasService`) 以外は、標準Web技術 (ES6, Web Components, CSS Nesting) に完全準拠する。
