@@ -7,7 +7,7 @@
   <DisplayName DefaultValue="OBPLOT 1.0"/>
   <Description DefaultValue="PXRF Data Analyzer"/>
   
-  <!-- 【修正】基本アイコンと高解像度アイコンをimageフォルダへ指定 -->
+  <!-- 画像URLを自作の image/ フォルダへ変更 -->
   <IconUrl DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon32.png"/>
   <HighResolutionIconUrl DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon64.png"/>
   <SupportUrl DefaultValue="https://github.com/rei-watanabe-chiba/OBPLOT"/>
@@ -64,14 +64,15 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <!-- 【修正】リボン用アイコン群をimageフォルダへ指定 -->
+        <!-- リボン用アイコン群を image/ フォルダへ変更 -->
         <bt:Image id="Icon16" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon16.png"/>
         <bt:Image id="Icon32" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon32.png"/>
         <bt:Image id="Icon80" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="UrlTab1" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab1"/>
-        <bt:Url id="UrlTab2" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab2"/>
+        <!-- ★重要：Web版Excelの強烈なキャッシュを破棄するため「&amp;v=2」を付与 -->
+        <bt:Url id="UrlTab1" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab1&amp;v=2"/>
+        <bt:Url id="UrlTab2" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab2&amp;v=2"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="OBPLOT"/>
