@@ -36,7 +36,8 @@
     }
 
     // --- データ取得 ---
-    static async fetchDT(shtName, qCol = null, lCol = null) {
+    // GAS版に合わせて第1引数に ssId（無視）
+    static async fetchDT(ssId, shtName, qCol = null, lCol = null) {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
         await ctx.sync();
@@ -53,7 +54,8 @@
     }
 
     // --- データ出力 ---
-    static async writeData(shtName, data, opts = "clear") {
+    // GAS版に合わせて第1引数に ssId（無視）
+    static async writeData(ssId, shtName, data, opts = "clear") {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
         await ctx.sync();
