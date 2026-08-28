@@ -84,7 +84,6 @@
     static #bindMulti = path => tgt => this.tglMulti(tgt, path);
     static #bindAll = path => tgt => this.tglAllMulti(tgt, path);
     // --- Tab1イベント群 ---
-    // --- Tab1イベント群 ---
     static T1 = {
       checkT1Pref: mode => {
         if (!mode) return;
@@ -230,8 +229,9 @@
       this.switchAPP(activeMode); // 該当のUIだけをアクティブ化
 
       const initSsId = window.__INITIAL_SSID__ || "";
-      if (initSsId) {
-        this.startSession(initSsId);
+      // ★修正点：Excel環境（__INITIAL_SSID__が空）でも初期セットアップを起動させる
+      if (initSsId || isExcelEnv) {
+        this.startSession(initSsId || "EXCEL_LOCAL_RUN");
       }
     }
   }
