@@ -57,16 +57,8 @@
         const dlg = DOM.el("universalConfirm");
         DOM.updateText("uDialogTitle", title);
         DOM.updateText("uDialogMessage", msg);
-        const closeDlg = () => {
-          try { dlg.close(); } catch (e) { dlg.removeAttribute('open'); dlg.classList.remove('dialog-fallback'); }
-        };
-        // サンドボックス制限回避
-        try {
-          dlg.showModal(); 
-        } catch (e) {
-          dlg.setAttribute('open', '');
-          dlg.classList.add('dialog-fallback');
-        }
+        const closeDlg = () => { dlg.close(); };
+        dlg.showModal();
         DOM.el("uDialogConfirmBtn").onclick = () => { closeDlg(); resolve(true); };
         DOM.el("uDialogCancelBtn").onclick = () => {
           closeDlg();
