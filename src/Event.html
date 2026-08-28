@@ -31,18 +31,12 @@
       const rst = () => { 
         clearTimeout(this.#tm); 
         this.#tm = setTimeout(() => {
-          const dlg = DOM.el("idleToast");
-          if (dlg && !dlg.open) {
-            dlg.showModal();
-            const forceReload = () => {
-              StorageAPI.save("OBP_AUTO_RESTORE", "true");
-              if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run.withFailureHandler(() => google.script.host.close()).showSidebar();
-              } else { window.location.reload(); }
-            };
-            DOM.el("idleOkBtn").onclick = forceReload;
-            DOM.el("idleCancelBtn").onclick = forceReload;
-          }
+          const forceReload = () => {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+              google.script.run.withFailureHandler(() => google.script.host.close()).showSidebar();
+            } else { window.location.reload(); }
+          };
+          NewDOM.toast("GAS通信エラー", "一定時間操作がなかったため、サイドバーを再起動してください", forceReload);
         }, this.#MS); 
       };
       ['mousemove', 'keydown', 'touchstart', 'click', 'scroll'].forEach(e => document.addEventListener(e, rst, { passive: true })); 
@@ -176,9 +170,7 @@
     }
     // --- 状態復元 ---
     static async #restore(bu) {
-      const isAuto = StorageAPI.load("OBP_AUTO_RESTORE") === "true";
-      if (isAuto) StorageAPI.clear("OBP_AUTO_RESTORE");
-      if (!bu || (!isAuto && !(await NewDOM.confirm("復元", "前回の作業状態を復元しますか？")))) return false;
+      if (!bu || !(await NewDOM.confirm("復元", "前回の作業状態を復元しますか？"))) return false;
       this.switchAPP("tab2");
       await T2Ctrl.loadDB();
       if (State.get("T2ST.phase") < T2_PHS.LOADED) return true;
@@ -197,13 +189,14 @@
       }
       return true;
     }
-    // --- セッション開始 (接続完了後) ---
+    // --- セッション開始 ---
     static async startSession(ssId) {
       const isConnected = await Ctrl.CoreCtrl.connectApp(ssId);
       if (!isConnected) return; 
-      if (!(await this.#restore(MakeBU.load()))) { 
-        MakeBU.clear(); 
-        this.switchAPP(State.get("GLB.activeTab")); 
+      if (State.get("GLB.activeTab") === "tab2") {
+        if (!(await this.#restore(MakeBU.load()))) { 
+          MakeBU.clear(); 
+        }
       }
       MakeBU.init(); 
       State.set({ "GLB.isLocked": false, "T1ST.pref.status": ["hidden", ""], "T1ST.phase": T1_PHS.INIT });

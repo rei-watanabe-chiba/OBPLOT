@@ -170,13 +170,12 @@
       </div>
     </dialog>
 
-    <!-- アイドル通知ダイアログ -->
+    <!-- 通知トースト -->
     <dialog id="idleToast">
-      <h3>セッション警告</h3>
-      <p>一定時間操作がなかったため、GAS通信エラー回避のため再起動します</p>
+      <h3 id="idleToastTitle"></h3>
+      <p id="idleToastMessage"></p>
       <div class="field-row">
-        <button id="idleCancelBtn" class="outline">キャンセル</button>
-        <button id="idleOkBtn" data-type="primary">OK</button>
+        <button id="idleToastOkBtn" data-type="primary">OK</button>
       </div>
     </dialog>
 

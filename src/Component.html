@@ -67,6 +67,18 @@
         };
       });
     }
+    // --- 汎用トーストダイアログ ---
+    static toast(title, msg, onOk = null) {
+      const dlg = DOM.el("idleToast");
+      if (!dlg) return;
+      DOM.updateText("idleToastTitle", title);
+      DOM.updateText("idleToastMessage", msg);
+      if (!dlg.open) dlg.showModal();
+      DOM.el("idleToastOkBtn").onclick = () => {
+        dlg.close();
+        if (onOk) onOk(); // 閉じた後に処理実行
+      };
+    }
     // --- トグル構築 ---
     static buildToggle(conf, ref, isClear = false) {
       const cntr = DOM.el(ref);
