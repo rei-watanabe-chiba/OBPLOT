@@ -21,6 +21,9 @@ sidebarHtml = sidebarHtml.replace(/<\?!= include\(['"]([^'"]+)['"]\); \?>/g, (ma
   return '';
 });
 
+// GAS固有のスクリプトレット(<?= ... ?>)を静的HTML用に空文字に置換
+sidebarHtml = sidebarHtml.replace(/<\?=[\s\S]*?\?>/g, '');
+
 // 別タブレポートの定数化と注入
 const reportHtml = fs.readFileSync(path.join(srcDir, 'Report.html'), 'utf-8');
 const escapedReport = reportHtml.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
