@@ -24,9 +24,14 @@ sidebarHtml = sidebarHtml.replace(/<\?!= include\(['"]([^'"]+)['"]\); \?>/g, (ma
 // GAS固有のスクリプトレット(<?= ... ?>)を静的HTML用に空文字に置換
 sidebarHtml = sidebarHtml.replace(/<\?=[\s\S]*?\?>/g, '');
 
-// 別タブレポートの定数化と注入
+// 別タブレポートの定数化と注入（※終了タグのエスケープ処理を追加）
 const reportHtml = fs.readFileSync(path.join(srcDir, 'Report.html'), 'utf-8');
-const escapedReport = reportHtml.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+const escapedReport = reportHtml
+  .replace(/\\/g, '\\\\')
+  .replace(/`/g, '\\`')
+  .replace(/\$\{/g, '\\${')
+  .replace(/<\/script>/ig, '<\\/script>'); // ブラウザパーサーの誤認防止
+
 const injectScript = `<script>window.__REPORT_TEMPLATE__ = \`${escapedReport}\`;<\/script>`;
 sidebarHtml = sidebarHtml.replace('</head>', `${injectScript}</head>`);
 
