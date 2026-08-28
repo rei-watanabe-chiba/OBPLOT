@@ -25,6 +25,10 @@ sidebarHtml = sidebarHtml.replace(/<\?!= include\(['"]([^'"]+)['"]\); \?>/g, (ma
 // GAS固有のスクリプトレット(<?= ... ?>)を静的HTML用に空文字に置換
 sidebarHtml = sidebarHtml.replace(/<\?=[\s\S]*?\?>/g, '');
 
+// Excel環境（App.html）の時だけ office.js を自動注入
+const officeScript = `<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" type="text/javascript"></script>`;
+sidebarHtml = sidebarHtml.replace('</head>', `${officeScript}\n</head>`);
+
 // 別タブレポートの定数化と注入
 const reportHtml = fs.readFileSync(path.join(srcDir, 'Report.html'), 'utf-8');
 const escapedReport = reportHtml
