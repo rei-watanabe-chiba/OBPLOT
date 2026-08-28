@@ -58,20 +58,28 @@
         });
         return { niceMin, niceMax, niceTicks };
       }
-      // PXRFヘッダー一元生成
-      static buildPxrfHeader() {
-        const obK = this.sortKeysByVal(GLB.Conf.obsidianIndex), mdK = this.sortKeysByVal(GLB.Conf.mudrockIndex);
-        return ['計測ID', 'ID', 'database', 'item', 'date', ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
+      // --- ヘッダー動的生成集約 ---
+      static buildHeader(type) {
+        const { key1, key2, p1, p2, wd1, wd2 } = GLB.idx;
+        const obK = this.sortKeysByVal(GLB.obsidianIndex), mdK = this.sortKeysByVal(GLB.mudrockIndex);
+        switch(type) {
+          case 'pxrf': return ['計測ID', key2, key1, p1, p2, ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
+          case 'wdxrf': return [key1, key2, wd1, wd2, ...GLB.valElms];
+          case 'corr': return ['IndexName', ...GLB.valElms.flatMap(e => [`${e}_slp`, `${e}_int`])];
+          case 'filelist': return ['file', 'mode', key2, 'sub_id', 'info', '計測ID'];
+          case 'rawFile': return ['file', 'mode', key2, 'sub_id', 'info'];
+          default: return [];
+        }
       }
     },
     T1: {
+      // --- リスト検証 ---
       FVald: class {
-        // --- リスト検証 ---
         static valdList(shtDT, outHdr, validMods, exacMode) {
           if (!shtDT?.length) return [];
           const [hdr, ...body] = shtDT;
           const getIdx = k => hdr.findIndex(h => h === k); // 走査型バインド
-          const colFile = getIdx('file'), colMode = getIdx('mode'), colId = getIdx('id'), colSub = getIdx('sub_id');
+          const colFile = getIdx('file'), colMode = getIdx('mode'), colId = getIdx(GLB.idx.key2), colSub = getIdx('sub_id');
           const getScanID = r => r[colSub] ? `${r[colId]}_${r[colSub]}` : `${r[colId]}`;
           const statsDT = body.reduce((acc, r) => {
             acc.file.set(r[colFile], (acc.file.get(r[colFile]) || 0) + 1);
@@ -93,8 +101,8 @@
           return [[...outHdr, "error"], ...body.map(r => [...r, getScanID(r), rls.filter(rl => rl.check(r)).map(rl => rl.err).join(",")])];
         }
       },
+      // --- データ抽出 ---
       Extr: class {
-        // --- データ抽出 ---
         static runExtr(fileDT, resDT, extrRefs) {
           if (!fileDT?.length || !resDT?.length) return [];
           const resMap = new Map(resDT.slice(1).map(r => [String(r[0]), r]));
@@ -102,7 +110,7 @@
             const entry = map.get(r[5]) || { id: r[2], files: {} };
             entry.files[String(r[1]).toLowerCase()] = r[0]; map.set(r[5], entry); return map;
           }, new Map());
-          const obKeys = Mtd.Util.sortKeysByVal(GLB.Conf.obsidianIndex), mdKeys = Mtd.Util.sortKeysByVal(GLB.Conf.mudrockIndex);
+          const obKeys = Mtd.Util.sortKeysByVal(GLB.obsidianIndex), mdKeys = Mtd.Util.sortKeysByVal(GLB.mudrockIndex);
           const fmt = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
           const extract = (file, keys, idxObj) => {
             const r = resMap.get(String(file ?? ""));
@@ -113,23 +121,26 @@
               return acc;
             }, { vals: [], errs: [] });
           };
-          return [Mtd.Util.buildPxrfHeader(), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
-            const ob = extract(files.obsidian, obKeys, GLB.Conf.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.Conf.mudrockIndex);
-            return [scanId, id, extrRefs.DB, extrRefs.item, extrRefs.date, ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
+          return [Mtd.Util.buildHeader('pxrf'), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+            const ob = extract(files.obsidian, obKeys, GLB.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.mudrockIndex);
+            return [scanId, id, extrRefs[GLB.idx.key1], extrRefs[GLB.idx.p1], extrRefs[GLB.idx.p2], ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
           })];
         }
       },
+      // --- PXRF重複検証 ---
       PVald: class {
-        // --- 重複検証 ---
         static checkPxrf(pxrfDT, newDT) {
           if (!pxrfDT?.length || !newDT?.length) return { isDup: false, data: newDT };
-          const newKeys = new Set(newDT.slice(1).map(r => `${r[2]}_${r[1]}`));
-          const fltrEx = pxrfDT.slice(1).filter(r => !newKeys.has(`${r[2]}_${r[1]}`));
+          const h = pxrfDT[0];
+          const iDB = h.indexOf(GLB.idx.key1), iID = h.indexOf(GLB.idx.key2);
+          const newKeys = new Set(newDT.slice(1).map(r => `${r[iDB]}_${r[iID]}`));
+          const fltrEx = pxrfDT.slice(1).filter(r => !newKeys.has(`${r[iDB]}_${r[iID]}`));
           return fltrEx.length !== pxrfDT.length - 1 ? { isDup: true, data: [pxrfDT[0], ...fltrEx, ...newDT.slice(1)] } : { isDup: false, data: null };
         }
       }
     },
     T2: {
+      // --- データ統合 ---
       mgmtDT: class {
         // --- オブジェクト配列化 ---
         static #toObjArray(data) {
@@ -138,50 +149,51 @@
         }
         // --- 読込 ---
         static loadDB(pxrfDT, wdxrfDT) {
-          const pObjs = this.#toObjArray(pxrfDT), wObjs = this.#toObjArray(wdxrfDT);    
-          const cln = s => String(s ?? "").replace(/\s+/g, "").toUpperCase();
-          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
-          const wMap = new Map(wObjs.map(o => [`${cln(getDB(o))}_${cln(o.ID || o.id)}`, o]));
+          const pObjs = this.#toObjArray(pxrfDT);
+          const wObjs = this.#toObjArray(wdxrfDT);
+          const { key1: k1, key2: k2, wd1: w1, wd2: w2 } = GLB.idx;
+          const wMap = new Map(wObjs.map(o => [`${o[k1]}_${o[k2]}`, o]));
           const dbs = new Set();
           pObjs.forEach(pObj => {
-            const wObj = wMap.get(`${cln(getDB(pObj))}_${cln(pObj.ID || pObj.id)}`);
-            pObj.Group = wObj?.Group ?? "Unknown"; pObj.Source = wObj?.Source ?? "Unknown";
-            pObj.DB = getDB(pObj); // DB名統一
-            if (pObj.DB) dbs.add(pObj.DB);
+            const wObj = wMap.get(`${pObj[k1]}_${pObj[k2]}`);
+            pObj[w1] = wObj?.[w1] ?? "Unknown"; 
+            pObj[w2] = wObj?.[w2] ?? "Unknown";
+            if (pObj[k1]) dbs.add(pObj[k1]);
           });
           return { wrapPXRF: pObjs, wrapWDXRF: wObjs, dbs: [...dbs] };
         }
         // --- フィルタ ---
         static fltrDB(wrapPXRF, wrapWDXRF, selDBs) {
           const tgtSet = new Set(selDBs);
-          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
-          const pxrfDT = wrapPXRF.filter(obj => tgtSet.has(getDB(obj))).map(r => ({
-            DB: getDB(r), id: r.id, ID: r.ID, item: r.item, Item: r.Item, Group: r.Group, Source: r.Source,
-            ...Object.fromEntries(GLB.Conf.valElms.flatMap(elm => [[`ob_${elm}`, r[`ob_${elm}`]], [`md_${elm}`, r[`md_${elm}`]], [`ob_${elm}_Err`, r[`ob_${elm}_Err`]], [`md_${elm}_Err`, r[`md_${elm}_Err`]]]))
+          const { key1: k1, key2: k2, p1: p1, wd1: w1, wd2: w2 } = GLB.idx;
+          const pxrfDT = wrapPXRF.filter(obj => tgtSet.has(obj[k1])).map(r => ({
+            [k1]: r[k1], [k2]: r[k2], [p1]: r[p1], [w1]: r[w1], [w2]: r[w2],
+            ...Object.fromEntries(GLB.valElms.flatMap(elm => [[`ob_${elm}`, r[`ob_${elm}`]], [`md_${elm}`, r[`md_${elm}`]], [`ob_${elm}_Err`, r[`ob_${elm}_Err`]], [`md_${elm}_Err`, r[`md_${elm}_Err`]]]))
           }));
-          const wdxrfDT = wrapWDXRF.filter(obj => tgtSet.has(getDB(obj))).map(r => ({
-            DB: getDB(r), id: r.id, ID: r.ID, Group: r.Group, Source: r.Source,
-            ...Object.fromEntries(GLB.Conf.valElms.map(elm => [elm, r[elm]]))
+          const wdxrfDT = wrapWDXRF.filter(obj => tgtSet.has(obj[k1])).map(r => ({
+            [k1]: r[k1], [k2]: r[k2], [w1]: r[w1], [w2]: r[w2],
+            ...Object.fromEntries(GLB.valElms.map(elm => [elm, r[elm]]))
           }));
           return { pxrfDT, wdxrfDT };
         }
       },
+      // --- プレビューデータ生成 ---
       mgmPrev: class {
         // --- データ生成パイプライン統合 ---
         static buildPrev(pxrfDT, wdxrfDT, conf) {
           if (!pxrfDT?.length || !wdxrfDT?.length) return [];
-          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
-          const wMap = new Map(wdxrfDT.map(w => [`${getDB(w)}_${w.ID ?? w.id}`, w]));
+          const { key1: k1, key2: k2, p1: p1, wd1: w1, wd2: w2 } = GLB.idx;
+          const wMap = new Map(wdxrfDT.map(w => [`${w[k1]}_${w[k2]}`, w]));
           const minMap = conf.useLOD ? this.#getMinMap(pxrfDT, conf) : {};
           const cfs = this.#resCoeffs(pxrfDT, wMap, conf, minMap);
           return pxrfDT.reduce((acc, r) => {
-            if (conf.itemMap?.length && !conf.itemMap.includes(r.item ?? r.Item)) return acc;
-            const pId = r.ID ?? r.id; // 安全なID抽出
-            const w = wMap.get(`${getDB(r)}_${pId}`);
+            const itemVal = r[p1];
+            if (conf.itemMap?.length && !conf.itemMap.includes(itemVal)) return acc;
+            const w = wMap.get(`${r[k1]}_${r[k2]}`);
             if (!w) return acc;
-            const pDT = { DB: getDB(r), id: pId, item: r.item ?? r.Item, group: r.Group ?? "Unknown", Group: r.Group ?? "Unknown", Source: r.Source !== "Unknown" ? r.Source : (w.Source ?? "Unknown") };
-            GLB.Conf.valElms.forEach(elm => {
-              const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+            const pDT = { [k1]: r[k1], [k2]: r[k2], [p1]: itemVal, [w1]: r[w1], [w2]: r[w2] };
+            GLB.valElms.forEach(elm => {
+              const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
               const rawV = r[`${pfx}_${elm}`];
               const isLod = typeof rawV === 'string' && rawV.includes('LOD');
               let val = (isLod && conf.useLOD) ? (minMap[elm] ?? null) : (rawV != null && rawV !== "" && !isNaN(Number(rawV)) ? Number(rawV) : null);
@@ -189,14 +201,14 @@
               pDT[elm] = val; pDT[`${elm}_Err`] = r[`${pfx}_${elm}_Err`] ?? null;
             });
             const xVal = Mtd.T2.Calc.evaluate(conf.val, w), yVal = Mtd.T2.Calc.evaluate(conf.val, pDT);
-            if (xVal != null && yVal != null) acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.Conf.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
+            if (xVal != null && yVal != null) acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
             return acc;
           }, []);
         }
         // --- LOD最小値取得 ---
         static #getMinMap(pxrfDT, conf) {
-          return Object.fromEntries(GLB.Conf.valElms.map(elm => {
-            const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+          return Object.fromEntries(GLB.valElms.map(elm => {
+            const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
             const nums = Mtd.Util.getValidNums(pxrfDT.map(r => r[`${pfx}_${elm}`]), true);
             return [elm, nums.length ? Math.min(...nums) : null];
           }));
@@ -204,13 +216,12 @@
         // --- 検量線算出 ---
         static #resCoeffs(pxrfDT, wMap, conf, minMap) {
           if (!conf.useCal || !conf.calElms?.length) return null;
-          const getDB = o => o.database || o.DB || o.dataset || o.dset; // DB名吸収
+          const { key1: k1, key2: k2 } = GLB.idx;
           if (conf.correction === "new") {
             return Object.fromEntries(conf.calElms.map(elm => {
-              const pfx = (GLB.Conf.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+              const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
               const vList = pxrfDT.reduce((acc, p) => {
-                const pId = p.ID ?? p.id; // 安全なID抽出
-                const w = wMap.get(`${getDB(p)}_${pId}`);
+                const w = wMap.get(`${p[k1]}_${p[k2]}`);
                 if (!w || w[elm] == null) return acc;
                 const raw = p[`${pfx}_${elm}`];
                 const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
@@ -230,7 +241,7 @@
         // --- 検量線適用データ整形 ---
         static genCorr(pxrfDT, wdxrfDT, conf, idxName) {
           const newRow = [idxName];
-          GLB.Conf.valElms.forEach(elm => {
+          GLB.valElms.forEach(elm => {
             if (!conf.calElms?.includes(elm)) { newRow.push("", ""); return; }
             const prevDT = this.buildPrev(pxrfDT, wdxrfDT, { ...conf, val: elm, useCal: false });
             const cfs = prevDT.length ? Mtd.T2.Calc.calcCalib(prevDT.map(d => d.x), prevDT.map(d => d.y)) : null;
@@ -239,14 +250,16 @@
           return newRow;
         }
       },
+      // --- 検量線データ生成 ---
       Calc: class {
+        // --- Math関数群の静的キャッシュ ---
+        static #MATH_FNS = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
         // --- カスタム数式評価 ---
         static evaluate(fml, rData) {
           if (!fml) return null;
           try {
             const keys = Object.keys(rData), vals = Object.values(rData);
-            const mathFns = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
-            const fn = new Function(...keys, `${mathFns} return ${fml};`);
+            const fn = new Function(...keys, `${this.#MATH_FNS} return ${fml};`);
             const res = fn(...vals);
             return isNaN(res) || !isFinite(res) ? null : res;
           } catch (e) { return null; }

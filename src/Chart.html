@@ -59,12 +59,10 @@
     #render() {
       const { prevDT, statsDT, symb, gph } = this.#src || {};
       if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
-      
       const containerWidth = this.clientWidth;
-      if (containerWidth === 0) return; // 非表示時はスキップ
+      if (containerWidth === 0) return;
       this.#lastW = containerWidth;
-      
-      const rS = gph?.style || GLB.Conf.defaultGraphStyle;
+      const rS = gph?.style || GLB.defaultGraphStyle;
       const STYLE = {
         font: rS.font,
         fontS: { ...rS.fontS },
@@ -74,8 +72,8 @@
         lineC: { grid: CSSToken.get(rS.lineC.grid), axis: CSSToken.get(rS.lineC.axis), reg: CSSToken.get(rS.lineC.reg)},
         bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
-      const GAP = { ...(gph?.gap || GLB.Conf.defaultGraphGap) };
-      // 動的計算と設定値注入
+      // 描画設定の注入と計算
+      const GAP = { ...(gph?.gap || GLB.defaultGraphGap) };
       const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
       const gridTop = GAP.padT + overY, gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick, gridRight = GAP.padR;
@@ -93,7 +91,7 @@
         const isEmpty = rl.shp === 'emptyCircle', shp = isEmpty ? 'circle' : (rl.shp || 'circle');
         const bClr = CSSToken.get(rl.clr);
         return {
-          value: [d.x, d.y], id: d.id, group: d.group,
+          value: [d.x, d.y], [GLB.idx.key2]: d[GLB.idx.key2], [GLB.idx.wd1]: d[GLB.idx.wd1],
           symbol: shp, symbolSize: shp.startsWith('path://') ? STYLE.symbol.pathSize : STYLE.symbol.baseSize,
           itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW }
         };
@@ -111,7 +109,7 @@
         animation: false,
         textStyle: { fontFamily: STYLE.font },
         grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSize, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: STYLE.lineW.axis },
-        tooltip: { formatter: p => p.componentSubType === 'line' ? '' : `ID: ${p.data.id || '-'}<br/>Group: ${p.data.group || '-'}`, backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
+        tooltip: { formatter: p => p.componentSubType === 'line' ? '' : `${GLB.idx.key2}: ${p.data[GLB.idx.key2] || '-'}<br/>${GLB.idx.wd1}: ${p.data[GLB.idx.wd1] || '-'}`, backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
         xAxis: {
           type: 'value', name: 'WDXRF', nameLocation: 'middle',
           nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },

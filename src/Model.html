@@ -1,63 +1,56 @@
 <!-- src/Model.html -->
 <script>
   // --- 設定定数定義 ---
-  // グラフロジックの変更は▼の項目を編集
   // --- **GLB内は認知度向上のためにプロパティ名・コメントアウトの文字数制限撤廃** ---
   // --- **リファクタリング時も既存コメントアウトを絶対保持すること** ---
+  // ▼ key: PXRF-WDXRF紐づけのキー, p: 計測情報, wd: 産地情報（ヘッダに連動）
+  const GLBidx = { key1: "database", key2: "ID", p1: "item", p2: "date", wd1: "Group", wd2: "Source" };
   const GLB = {
-    Conf: {
-      // ▼ valElms に元素を追加可能, valLgc に指数追加可能
-      // 可視化元素指定 ---------------
-      valElms: ["Al", "Si", "P", "K", "Ca", "Ti", "Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb", "Ba"],
-      // 可視化指数指定（math.jsで計算可能な文字列で指定） ---------------
-      valLgc: ["Mn * 100 / Fe", "log10(Fe/K)"],
-      // オプション元素（def: mudrock, opt: obsidian） ---------------
-      optElms: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
-
-      // ▼ グラフの見た目は以下で変更可能
-      // シンボル定義（valはecharts準拠を調べること) ---------------
-      symbShapes: [{ val: 'emptyCircle', label: '○' }, { val: 'circle', label: '●' }, { val: 'triangle', label: '▲' }, { val: 'square', label: '■' }, { val: 'cross', label: '✖' }],
-      // シンボルカラー定義（valはCSS準拠) ---------------
-      symbColors: [{ val: 'var(--grey600)', label: 'Gray' }, { val: 'var(--text-main)', label: 'Black' }, { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' }, { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' }],
-      // シンボルデフォルト値
-      symbBaseKey: "DB", symbDefShp: "emptyCircle", symbDefClr: "var(--grey600)",
-      // グラフデフォルト設定 ---------------
-      defaultGraphStyle: {
-        // フォント要素: base(tick目盛, name軸名), stats統計量, tipラベル
-        font: "'Roboto', 'Noto Sans JP', sans-serif",
-        fontS: { tick: 10, name: 11, stats: 10, tip: 11 },
-        fontC: { base: 'var(--grey600)', stats: 'var(--grey600)', tip: 'var(--text-main)' },
-        symbol: { baseSize: 6, pathSize: 7, borderW: 1 },
-        // ライン要素: grid目盛, axis軸線, reg回帰線
-        lineW: { grid: 0.3, axis: 0.8, regW: 0.6, regD: [5, 5] },
-        lineC: { grid: 'var(--grey200)', axis: 'var(--grey400)', reg: 'var(--grey600)' },
-        // 背景色: bgplotグラフエリア, bgOuter背景色, bgTipラベル
-        bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
-      },
-      // グラフ余白
-      defaultGraphGap: { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 },
-
-      // 以降は処理・UI用定数のため編集不可
-      validModes: ["mudrock", "obsidian"],
-      obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
-      mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
-      rawShts: { file: "File", results: "Results", pxrf: "PXRF", wdxrf: "WDXRF" },
-      appShts: { filelist: "ファイルリスト", extract: "抽出データ", correction: "Correction" },
-      rawHeaders: { file: ['file', 'mode', 'id', 'sub_id', 'info'] },
-      appHeads: { filelist: ['file', 'mode', 'id', 'sub_id', 'info', '計測ID'] },
-      initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
-      extrFields: [
-        { key: "DB", label: "database *必須", placeholder: "データセット名", bind: "T1ST.extr.refs.DB" },
-        { key: "item", label: "item", placeholder: "計測情報", bind: "T1ST.extr.refs.item" },
-        { key: "date", label: "date", placeholder: "計測日", bind: "T1ST.extr.refs.date" }
-      ],
-      symbAxes: [{ val: "DB", label: "database" }, { val: "item", label: "item" }, { val: "Group", label: "Group" }, { val: "Source", label: "Source" }],
-      fileFields: [
-        { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
-        { key: "id", label: "id *必須", required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
-      ],
-      confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }]
-    }
+    idx: GLBidx
+    // ▼ valElms に元素を追加可能, valLgc に指数追加可能
+    // 可視化元素指定 ---------------
+    valElms: ["Al", "Si", "P", "K", "Ca", "Ti", "Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb", "Ba"],
+    // 可視化指数指定（math.jsで計算可能な文字列で指定） ---------------
+    valLgc: ["Mn * 100 / Fe", "log10(Fe/K)"],
+    // オプション元素（def: mudrock, opt: obsidian） ---------------
+    optElms: ["Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb"],
+    // ▼ グラフの見た目は以下で変更可能
+    // シンボル定義（valはecharts準拠を調べること) ---------------
+    symbShapes: [{ val: 'emptyCircle', label: '○' }, { val: 'circle', label: '●' }, { val: 'triangle', label: '▲' }, { val: 'square', label: '■' }, { val: 'cross', label: '✖' }],
+    // シンボルカラー定義（valはCSS準拠) ---------------
+    symbColors: [{ val: 'var(--grey600)', label: 'Gray' }, { val: 'var(--text-main)', label: 'Black' }, { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' }, { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' }],
+    // シンボルデフォルト値
+    symbBaseKey: idx.key1, symbDefShp: "emptyCircle", symbDefClr: "var(--grey600)",
+    // グラフデフォルト設定 ---------------
+    defaultGraphStyle: {
+      font: "'Roboto', 'Noto Sans JP', sans-serif",
+      fontS: { tick: 10, name: 11, stats: 10, tip: 11 },
+      fontC: { base: 'var(--grey600)', stats: 'var(--grey600)', tip: 'var(--text-main)' },
+      symbol: { baseSize: 6, pathSize: 7, borderW: 1 },
+      lineW: { grid: 0.3, axis: 0.8, regW: 0.6, regD: [5, 5] },
+      lineC: { grid: 'var(--grey200)', axis: 'var(--grey400)', reg: 'var(--grey600)' },
+      bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
+    },
+    // グラフ余白
+    defaultGraphGap: { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 },
+    // 以降は処理・UI用定数のため編集不可
+    validModes: ["mudrock", "obsidian"],
+    obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
+    mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
+    rawShts: { file: "File", results: "Results", pxrf: "PXRF", wdxrf: "WDXRF" },
+    appShts: { filelist: "ファイルリスト", extract: "抽出データ", correction: "Correction" },
+    initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
+    extrFields: [
+      { key: idx.key1, label: `${idx.key1} *必須`, placeholder: "データセット名", bind: `T1ST.extr.refs.${idx.key1}` },
+      { key: idx.p1, label: idx.p1, placeholder: "計測情報", bind: `T1ST.extr.refs.${idx.p1}` },
+      { key: idx.p2, label: idx.p2, placeholder: "計測日", bind: `T1ST.extr.refs.${idx.p2}` }
+    ],
+    symbAxes: [{ val: idx.key1, label: idx.key1 }, { val: idx.p1, label: idx.p1 }, { val: idx.wd1, label: idx.wd1 }, { val: idx.wd2, label: idx.wd2 }],
+    fileFields: [
+      { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
+      { key: idx.key2, label: `${idx.key2} *必須`, required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
+    ],
+    confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }]
   };
   // --- フェーズ定義 ---
   const T1_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
@@ -73,16 +66,16 @@
         T1ST: {
           phase: T1_PHS.INIT,
           pref: createSec({ refs: { mode: "" } }),
-          raw:  createSec({ flags: GLB.Conf.initFlags.raw }),
-          extr: createSec({ refs: { DB: "", item: "", date: "" }, flags: GLB.Conf.initFlags.extr })
+          raw:  createSec({ flags: GLB.initFlags.raw }),
+          extr: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr })
         },
         T2ST: {
           phase: T2_PHS.INIT,
           asgn: createSec({ data: { corrDT: [], wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], filter: [] } }),
-          symb: createSec({ refs: { baseKey: GLB.Conf.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.Conf.symbDefShp, clr: GLB.Conf.symbDefClr }] } }),
-          calb: createSec({ refs: { modeMap: [...GLB.Conf.optElms], calElms: [...GLB.Conf.valElms], correction: "new", useLOD: false, useCal: false } }),
-          prev: createSec({ refs: { itemMap: [], val: GLB.Conf.valElms[0], saveIndexName: "" }, data: { correctionLogic: {}, prevDT: null, statsDT: null } }),
-          gph: { style: GLB.Conf.defaultGraphStyle, gap: GLB.Conf.defaultGraphGap },
+          symb: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] } }),
+          calb: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], correction: "new", useLOD: false, useCal: false } }),
+          prev: createSec({ refs: { itemMap: [], val: GLB.valElms[0], saveIndexName: "" }, data: { correctionLogic: {}, prevDT: null, statsDT: null } }),
+          gph: { style: GLB.defaultGraphStyle, gap: GLB.defaultGraphGap },
           repo: createSec({ refs: { values: [], corrections: [] } })
         }
       };

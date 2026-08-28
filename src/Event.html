@@ -37,12 +37,8 @@
             const forceReload = () => {
               StorageAPI.save("OBP_AUTO_RESTORE", "true");
               if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                  .withFailureHandler(() => google.script.host.close()) // 通信切断時はサイドバーを閉じる
-                  .showSidebar();
-              } else {
-                window.location.reload();
-              }
+                google.script.run.withFailureHandler(() => google.script.host.close()).showSidebar();
+              } else { window.location.reload(); }
             };
             DOM.el("idleOkBtn").onclick = forceReload;
             DOM.el("idleCancelBtn").onclick = forceReload;
@@ -99,12 +95,12 @@
         Evt.T1.checkRawRefs();
       },
       checkRawRefs: () => {
-        const flags = Mtd.Util.validateSelect(GLB.Conf.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
+        const flags = Mtd.Util.validateSelect(GLB.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
         State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") }); 
       },
       checkExtrRefs: () => {
-        const isErr = !(State.get("T1ST.extr.refs.DB")?.trim());
-        State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", "エラー: DB未入力"] : ["hidden", ""] }); 
+        const isErr = !(State.get(`T1ST.extr.refs.${GLB.idx.key1}`)?.trim());
+        State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""] }); 
       }
     };
     // --- Tab2イベント群 ---
@@ -114,10 +110,10 @@
       checkAxis: async tgtSelect => {
         const newVal = tgtSelect.value, oldVal = State.get("T2ST.symb.refs.baseKey");
         if (newVal === oldVal) return;
-        if (!await NewDOM.confirm("確認", "リセットしますか？")) return (tgtSelect.value = oldVal); // 元に戻す
+        if (!await NewDOM.confirm("確認", "リセットしますか？")) return (tgtSelect.value = oldVal);
         State.set({ "T2ST.symb.refs.baseKey": newVal }); State.reset("T2ST.symb.refs.rls");
       },
-      addSymb: () => State.set("T2ST.symb.refs.rls", [...(State.get("T2ST.symb.refs.rls") || []), { key: `rule_${Date.now()}`, target: "", shp: GLB.Conf.symbDefShp, clr: GLB.Conf.symbDefClr }]),
+      addSymb: () => State.set("T2ST.symb.refs.rls", [...(State.get("T2ST.symb.refs.rls") || []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]),
       removeSymb: tgtBtn => {
         const key = tgtBtn.dataset.ruleKey;
         if (key) State.set("T2ST.symb.refs.rls", (State.get("T2ST.symb.refs.rls") || []).filter(r => r.key !== key));
@@ -126,7 +122,7 @@
         const idx = tgtBtn.dataset.symbolIdx, type = tgtBtn.dataset.symbolType;
         if (idx == null || !type) return;
         const rls = [...(State.get("T2ST.symb.refs.rls") || [])];
-        if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("T2ST.symb.refs.rls", rls); } // ルール更新
+        if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("T2ST.symb.refs.rls", rls); }
       },
       tglPrevMode: this.#bindMulti("T2ST.calb.refs.modeMap"),
       tglAllPrevMode: this.#bindAll("T2ST.calb.refs.modeMap"),
@@ -168,7 +164,7 @@
       if (bindPath) State.set(bindPath, tgt.type === "checkbox" ? tgt.checked : tgt.value);
       if (changePath) {
         const [ns, method] = changePath.split('.');
-        this[ns]?.[method]?.(tgt); // 変更委譲
+        this[ns]?.[method]?.(tgt);
       }
     }
     // --- タブ切替 ---
@@ -201,7 +197,6 @@
       }
       return true;
     }
-
     // --- セッション開始 (接続完了後) ---
     static async startSession(ssId) {
       const isConnected = await Ctrl.CoreCtrl.connectApp(ssId);
@@ -215,45 +210,31 @@
       UI.Phs.renewT1Phs(State.get("T1ST.phase")); 
       UI.Phs.renewT2Phs(State.get("T2ST.phase"));
     }
-
     // --- 初期化 ---
     static async init() {
       UI.Init.build();
       State.subscribe("T1ST.pref.refs.mode", Evt.T1.checkT1Pref);
-      State.subscribe("T1ST.extr.refs.DB", Evt.T1.checkExtrRefs);
+      State.subscribe(`T1ST.extr.refs.${GLB.idx.key1}`, Evt.T1.checkExtrRefs);
       document.addEventListener("click", this.#handleClick.bind(this)); 
       document.addEventListener("change", this.#handleChange.bind(this));
       IdlTm.init();
       const urlParams = new URLSearchParams(window.location.search);
       const activeMode = window.__APP_MODE__ || urlParams.get('mode') || 'tab1';
-      this.switchAPP(activeMode); // 該当のUIだけをアクティブ化
-
+      this.switchAPP(activeMode);
       const initSsId = window.__INITIAL_SSID__ || "";
       if (initSsId || isExcelEnv) {
         this.startSession(initSsId || "EXCEL_LOCAL_RUN");
       }
     }
   }
-
-  // --- 起動イベントバインド（確実なフォールバック付き） ---
-  let isInitFired = false;
-  const fireInit = () => {
-    if (!isInitFired) {
-      isInitFired = true;
-      Evt.init();
-    }
-  };
-
+  // --- 起動イベントバインド ---
   if (isExcelEnv) {
-    Office.onReady(() => fireInit());
-    // Web版Excelの通信エラーで onReady がハングした場合の強制起動
-    setTimeout(fireInit, 2000); 
+    Office.onReady(() => Evt.init());
   } else {
-    // DOMContentLoadedが既に発火済みの場合のフェイルセーフ
     if (document.readyState === 'loading') {
-      window.addEventListener("DOMContentLoaded", fireInit);
+      window.addEventListener("DOMContentLoaded", () => Evt.init());
     } else {
-      fireInit();
+      Evt.init();
     }
   }
 </script>

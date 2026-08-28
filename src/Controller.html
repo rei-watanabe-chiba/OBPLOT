@@ -3,7 +3,6 @@
   class CoreCtrl {
     // --- 最新ID取得 ---
     static get #ssId() { return State.get("GLB.ssId"); }
-    
     // --- 非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
@@ -14,7 +13,6 @@
       } catch (err) { State.set(statusPath, ["error", err.message]); }
       finally { if (finallyFn) await finallyFn(); State.set("GLB.isLocked", false); }
     }
-
     // --- アプリ接続フロー ---
     static async connectApp(ssId) {
       State.set("GLB.isLocked", true);
@@ -23,12 +21,12 @@
       try {
         State.set(statPath, ["loading", "環境構築中..."]);
         const conf = { 
-          pxrfHdr: Mtd.Util.buildPxrfHeader(), 
-          flHdr: GLB.Conf.appHeads.filelist, 
-          corrHdr: ['IndexName', ...GLB.Conf.valElms.flatMap(e => [`${e}_slp`, `${e}_int`])],
-          wdxrfHdr: ['database', 'id', 'Group', 'Source', ...GLB.Conf.valElms] 
+          pxrfHdr: Mtd.Util.buildHeader('pxrf'), 
+          flHdr: Mtd.Util.buildHeader('filelist'), 
+          corrHdr: Mtd.Util.buildHeader('corr'),
+          wdxrfHdr: Mtd.Util.buildHeader('wdxrf') 
         };
-        // シートスキーマ
+        // ヘッダースキーマ
         const schema = mode === 'tab1'
           ? [
               { name: 'ファイルリスト', hdr: conf.flHdr, clr: true },
@@ -41,8 +39,8 @@
               { name: 'WDXRF', hdr: conf.wdxrfHdr, lock: true, validRule: 'wdxrf' },
               { name: 'Correction', hdr: conf.corrHdr, lock: true, validRule: 'corr' }
             ];
-        // 環境分岐処理に移譲
-        let res = await API.setupEnvironment(ssId, schema, GLB.Conf.valElms, false);  
+        // 環境構築関数へ移譲
+        let res = await API.setupEnvironment(ssId, schema, GLB.valElms, false);  
         if (res.reqConfirm) {
           State.set(statPath, ["message", "確認待ち"]);
           if (!await NewDOM.confirm("確認", `「${res.missing.join('、')}」が不足しています。\n新たに作成しますか？`)) {
@@ -50,11 +48,11 @@
             State.set(statPath, ["hidden", ""]);
             return false;
           }
-          State.set(statPath, ["loading", "シート生成中..."]); // OKなら再開
-          res = await API.setupEnvironment(ssId, schema, GLB.Conf.valElms, true);
+          State.set(statPath, ["loading", "シート生成中..."]);
+          res = await API.setupEnvironment(ssId, schema, GLB.valElms, true);
         }
         State.set("GLB.ssId", ssId);
-        State.set(statPath, ["hidden", ""]); // 完了後は非表示に戻す
+        State.set(statPath, ["hidden", ""]);
         return true;
       } catch (e) {
         State.set(statPath, ["hidden", ""]);
@@ -71,17 +69,17 @@
     static async loadRaw() {
       if (!(await NewDOM.confirm("確認", State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？", "rawBar"))) return;
       await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => {
-        const { data, message } = await API.fetchDT(this.#ssId, GLB.Conf.rawShts.file, 5);
+        const { data, message } = await API.fetchDT(this.#ssId, GLB.rawShts.file, 5);
         State.reset(['T1ST.extr']); 
-        State.set({ "T1ST.raw.data": data, "T1ST.raw.refs": Object.fromEntries(GLB.Conf.fileFields.map(f => [f.key, ""])), "T1ST.raw.flags": [true, true, true, false, false], "T1ST.raw.cachedStatus": ["success", message], "T1ST.phase": T1_PHS.LOAD });
+        State.set({ "T1ST.raw.data": data, "T1ST.raw.refs": Object.fromEntries(GLB.fileFields.map(f => [f.key, ""])), "T1ST.raw.flags": [true, true, true, false, false], "T1ST.raw.cachedStatus": ["success", message], "T1ST.phase": T1_PHS.LOAD });
         Evt.T1.checkRawRefs(); return message; 
       });
     }
     // --- tab1 共通検証と反映 ---
     static async stateDI(rawDT, act = "make") {
-      const outData = Mtd.T1.FVald.valdList(rawDT, GLB.Conf.appHeads.filelist, GLB.Conf.validModes, State.get("T1ST.pref.refs.mode"));
+      const outData = Mtd.T1.FVald.valdList(rawDT, Mtd.Util.buildHeader('filelist'), GLB.validModes, State.get("T1ST.pref.refs.mode"));
       const isErr = outData.slice(1).some(r => r.at(-1) !== ""); 
-      await API.writeData(this.#ssId, GLB.Conf.appShts.filelist, outData, "rule");
+      await API.writeData(this.#ssId, GLB.appShts.filelist, outData, "rule");
       const statArr = act === "extract"
         ? (isErr ? ["alert", "抽出中断: リストの再検証が必要です"] : State.get("T1ST.raw.cachedStatus"))
         : [isErr ? "alert" : "success", `${act === "validate" ? "検証" : "リスト生成"}完了: err${isErr ? "あり" : "なし"}`];
@@ -99,23 +97,23 @@
       Evt.T1.checkRawRefs();
       const { raw } = State.proxy.T1ST;
       if (raw.flags.some(Boolean) || !(await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawBar"))) return;
-      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => (await T1Ctrl.stateDI(Mtd.Util.remapArry(raw.data, GLB.Conf.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), GLB.Conf.rawHeaders.file), "make")).statArr);
+      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => (await T1Ctrl.stateDI(Mtd.Util.remapArry(raw.data, GLB.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), Mtd.Util.buildHeader('rawFile')), "make")).statArr);
     }
     // --- tab1 リスト検証 ---
     static async valdList() {
       if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？", "rawBar")) return;
-      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => (await T1Ctrl.stateDI((await API.fetchDT(this.#ssId, GLB.Conf.appShts.filelist, 5, 5)).data, "validate")).statArr);
+      await CoreCtrl.withAsyncLock("T1ST.raw.status", async () => (await T1Ctrl.stateDI((await API.fetchDT(this.#ssId, GLB.appShts.filelist, 5, 5)).data, "validate")).statArr);
     }
     // --- tab1 データ抽出 ---
     static async runExtr() {
       if (!await NewDOM.confirm("確認", "「抽出データ」を上書きしますか？", "extrBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
-        const { isErr, outData: validFileDT } = await T1Ctrl.stateDI((await API.fetchDT(this.#ssId, GLB.Conf.appShts.filelist, 5, 5)).data, "extract");
-        if (isErr) return; // 検証NG時は中断
-        const resDT = await API.fetchDT(this.#ssId, GLB.Conf.rawShts.results);
+        const { isErr, outData: validFileDT } = await T1Ctrl.stateDI((await API.fetchDT(this.#ssId, GLB.appShts.filelist, 5, 5)).data, "extract");
+        if (isErr) return;
+        const resDT = await API.fetchDT(this.#ssId, GLB.rawShts.results);
         const outData = Mtd.T1.Extr.runExtr(validFileDT, resDT.data, State.get("T1ST.extr.refs"));
         if (!outData || outData.length <= 1) throw new Error("対象データなし");
-        await API.writeData(this.#ssId, GLB.Conf.appShts.extract, outData);
+        await API.writeData(this.#ssId, GLB.appShts.extract, outData);
         State.set("T1ST.phase", T1_PHS.EXTRACT); return `抽出: ${outData.length - 1} 件`;
       });
     }
@@ -123,11 +121,11 @@
     static async pushExtr() {
       if (!await NewDOM.confirm("確認", "PXRFシートに格納しますか？", "extrBar")) return;
       await CoreCtrl.withAsyncLock("T1ST.extr.status", async () => {
-        const extrRes = await API.fetchDT(this.#ssId, GLB.Conf.appShts.extract);
-        const pxrfRes = await API.fetchDT(this.#ssId, GLB.Conf.rawShts.pxrf).catch(() => ({ data: [Mtd.Util.buildPxrfHeader()] }));
+        const extrRes = await API.fetchDT(this.#ssId, GLB.appShts.extract);
+        const pxrfRes = await API.fetchDT(this.#ssId, GLB.rawShts.pxrf).catch(() => ({ data: [Mtd.Util.buildHeader('pxrf')] }));
         const { isDup, data: mrgData } = Mtd.T1.PVald.checkPxrf(pxrfRes.data, extrRes.data);
         if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？", "extrBar")) return;
-        await API.writeData(this.#ssId, GLB.Conf.rawShts.pxrf, isDup ? mrgData : extrRes.data.slice(1), isDup ? "clear" : ["append"]);
+        await API.writeData(this.#ssId, GLB.rawShts.pxrf, isDup ? mrgData : extrRes.data.slice(1), isDup ? "clear" : ["append"]);
         State.set("T1ST.phase", T1_PHS.OUTPUT); return `PXRF格納: ${extrRes.data.length - 1} 件`;
       });
     }
@@ -139,12 +137,12 @@
     static async loadDB() {
       await CoreCtrl.withAsyncLock("T2ST.asgn.status", async () => {
         State.set("T2ST.asgn.status", ["loading", "処理中..."]);
-        const [pRes, wRes, cRes] = await Promise.all([API.fetchDT(this.#ssId, GLB.Conf.rawShts.pxrf), API.fetchDT(this.#ssId, GLB.Conf.rawShts.wdxrf), API.fetchDT(this.#ssId, GLB.Conf.appShts.correction).catch(() => ({ data: [] }))]);
+        const [pRes, wRes, cRes] = await Promise.all([API.fetchDT(this.#ssId, GLB.rawShts.pxrf), API.fetchDT(this.#ssId, GLB.rawShts.wdxrf), API.fetchDT(this.#ssId, GLB.appShts.correction).catch(() => ({ data: [] }))]);
         if (!pRes.data || pRes.data.length <= 1) throw new Error("PXRF不足");
         if (!wRes.data || wRes.data.length <= 1) throw new Error("WDXRF不足");
         State.reset(['T2ST.asgn', 'T2ST.symb', 'T2ST.calb', 'T2ST.prev', 'T2ST.repo']);
         const { wrapPXRF, wrapWDXRF, dbs } = Mtd.T2.mgmtDT.loadDB(pRes.data, wRes.data);
-        State.set({ "T2ST.asgn.data.wrapPXRF": wrapPXRF, "T2ST.asgn.data.wrapWDXRF": wrapWDXRF, "T2ST.asgn.data.corrDT": cRes.data, "T2ST.asgn.refs.available": dbs, "T2ST.asgn.refs.filter": dbs, "T2ST.phase": T2_PHS.LOADED, "T2ST.calb.refs.modeMap": [...GLB.Conf.optElms], "T2ST.calb.refs.calElms": [...GLB.Conf.valElms] });
+        State.set({ "T2ST.asgn.data.wrapPXRF": wrapPXRF, "T2ST.asgn.data.wrapWDXRF": wrapWDXRF, "T2ST.asgn.data.corrDT": cRes.data, "T2ST.asgn.refs.available": dbs, "T2ST.asgn.refs.filter": dbs, "T2ST.phase": T2_PHS.LOADED, "T2ST.calb.refs.modeMap": [...GLB.optElms], "T2ST.calb.refs.calElms": [...GLB.valElms] });
         return `読込完了: database ${dbs.length}件`;
       });
     }
@@ -152,7 +150,7 @@
     static async fltrDB() {
       await CoreCtrl.withAsyncLock("T2ST.asgn.status", async () => {
         const { asgn } = State.proxy.T2ST;
-        if (!asgn.refs.filter?.length) throw new Error("DB未選択"); // 未選択判定
+        if (!asgn.refs.filter?.length) throw new Error("DB未選択");
         State.reset(['T2ST.symb', 'T2ST.calb', 'T2ST.prev', 'T2ST.repo']);
         const { pxrfDT, wdxrfDT } = Mtd.T2.mgmtDT.fltrDB(asgn.data.wrapPXRF, asgn.data.wrapWDXRF, asgn.refs.filter);
         State.set({ "T2ST.asgn.data.pxrfDT": pxrfDT, "T2ST.asgn.data.wdxrfDT": wdxrfDT, "T2ST.phase": T2_PHS.FILTERED }); return "データ更新";
@@ -186,10 +184,10 @@
         if (isDup && !await NewDOM.confirm("確認", "上書きしますか？", "prevBar")) return;
         const conf = { ...prev.refs, ...calb.refs, corrDT: asgn.data.corrDT };
         const newRow = Mtd.T2.mgmPrev.genCorr(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf, idxName);
-        let updData = asgn.data.corrDT?.length ? [...asgn.data.corrDT] : [['IndexName', ...GLB.Conf.valElms.flatMap(elm => [`${elm}_slp`, `${elm}_int`])]];
+        let updData = asgn.data.corrDT?.length ? [...asgn.data.corrDT] : [Mtd.Util.buildHeader('corr')];
         if (isDup) updData[updData.findIndex(r => r[0] === idxName)] = newRow;
         else updData.push(newRow);
-        await API.writeData(this.#ssId, GLB.Conf.appShts.correction, isDup ? updData : (asgn.data.corrDT?.length ? [newRow] : updData), (isDup || !asgn.data.corrDT?.length) ? "clear" : ["append"]);
+        await API.writeData(this.#ssId, GLB.appShts.correction, isDup ? updData : (asgn.data.corrDT?.length ? [newRow] : updData), (isDup || !asgn.data.corrDT?.length) ? "clear" : ["append"]);
         State.set({ "T2ST.asgn.data.corrDT": updData, "T2ST.prev.refs.saveIndexName": "" }); return `補正値を${isDup ? '上書き' : '保存'}しました`;
       });
     }
@@ -198,12 +196,10 @@
       await CoreCtrl.withAsyncLock("T2ST.repo.status", async () => {
         State.set("T2ST.repo.status", ["loading", "テンプレート取得中..."]);
         const template = await API.getReportTemplate();
-        // ★修正点：HTMLパーサーの誤認（スクリプト強制分断）を防ぐため終了タグを分割エスケープ
-        const dummyHtml = template.replace('</body>', `<script>console.log("Dummy SPA Active");<` + `/script></body>`);
-        const blob = new Blob([dummyHtml], { type: 'text/html' });
+        const blob = new Blob([template], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         if (typeof Office !== 'undefined') {
-          const a = document.createElement('a'); a.href = url; a.download = "OBPLOT_Report_Dummy.html";
+          const a = document.createElement('a'); a.href = url; a.download = "OBPLOT_Report.html";
           document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
           return "レポートをダウンロードしました";
         } else {

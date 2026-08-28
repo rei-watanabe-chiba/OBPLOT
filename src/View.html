@@ -5,22 +5,22 @@
     // --- Tab1初期化 ---
     static buildTab1() {
       const pref = DOM.el("prefSec"), raw = DOM.el("rawSec"), extr = DOM.el("extrSec");
-      NewDOM.buildFormFields([{ type: "select", opts: GLB.Conf.confMods, bind: "T1ST.pref.refs.mode", hasEmpty: false }], pref?.querySelector('[data-ui="mode-box"]'));
-      NewDOM.buildFormFields(GLB.Conf.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })), extr?.querySelector('[data-ui="box"]'));
+      NewDOM.buildFormFields([{ type: "select", opts: GLB.confMods, bind: "T1ST.pref.refs.mode", hasEmpty: false }], pref?.querySelector('[data-ui="mode-box"]'));
+      NewDOM.buildFormFields(GLB.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })), extr?.querySelector('[data-ui="box"]'));
     }
     // --- Tab2初期化 ---
     static buildTab2() {
       const symb = DOM.el("symbSec"), prev = DOM.el("prevSec"), calb = DOM.el("calbSec");
-      NewDOM.buildFormFields([{ type: "select", opts: GLB.Conf.symbAxes, change: "T2.checkAxis", hasEmpty: false }], symb?.querySelector('[data-ui="axis-box"]'));
+      NewDOM.buildFormFields([{ type: "select", opts: GLB.symbAxes, change: "T2.checkAxis", hasEmpty: false }], symb?.querySelector('[data-ui="axis-box"]'));
       NewDOM.buildFormFields([{ type: "select", bind: "T2ST.calb.refs.correction", hasEmpty: false, opts: [{ label: "新規検量線", val: "new" }] }], calb?.querySelector('[data-ui="corr-box"]'));
-      NewDOM.buildFormFields([{ type: "select", bind: "T2ST.prev.refs.val", hasEmpty: false, opts: [...GLB.Conf.valElms, ...GLB.Conf.valLgc].map(v => ({ label: v, val: v })) }], prev?.querySelector('[data-ui="val-box"]'));
-      if (GLB.Conf.valLgc.length) State.set("T2ST.prev.refs.val", GLB.Conf.valLgc[0]);
+      NewDOM.buildFormFields([{ type: "select", bind: "T2ST.prev.refs.val", hasEmpty: false, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }], prev?.querySelector('[data-ui="val-box"]'));
+      if (GLB.valLgc.length) State.set("T2ST.prev.refs.val", GLB.valLgc[0]);
       NewDOM.buildToggle({ label: "LOD置換", bind: "T2ST.calb.refs.useLOD" }, calb?.querySelector('[data-ui="lod-box"]'));
       NewDOM.buildToggle({ label: "検量線適用", bind: "T2ST.calb.refs.useCal" }, calb?.querySelector('[data-ui="cal-tgl-box"]'));
       const prevModeElm = calb?.querySelector('[data-ui="mode-box"]');
-      if (prevModeElm) prevModeElm.opts = GLB.Conf.optElms;
+      if (prevModeElm) prevModeElm.opts = GLB.optElms;
       const prevCalElm = calb?.querySelector('[data-ui="cal-elm-box"]');
-      if (prevCalElm) prevCalElm.opts = GLB.Conf.valElms;
+      if (prevCalElm) prevCalElm.opts = GLB.valElms;
     }
     static build() { this.buildTab1(); this.buildTab2(); }
   }
@@ -63,9 +63,7 @@
         'btn-make': p => ({ isDis: p < T2_PHS.MAPPED }),
         'save-box': p => ({ isShow: p >= T2_PHS.MAPPED && State.get("T2ST.calb.refs.correction") === "new" })
       },
-      calb: {
-        sec: p => ({ isOpen: p === T2_PHS.MAPPED ? true : undefined, isActive: p >= T2_PHS.MAPPED })
-      },
+      calb: { sec: p => ({ isOpen: p === T2_PHS.MAPPED ? true : undefined, isActive: p >= T2_PHS.MAPPED }) },
       repo: {
         sec: p => ({ isOpen: p >= T2_PHS.PREVIEWED, isDis: p < T2_PHS.PREVIEWED }),
         'btn-repo': p => ({ isDis: p < T2_PHS.PREVIEWED })
@@ -79,7 +77,7 @@
         Object.entries(roles).forEach(([role, rlFn]) => {
           const target = role === 'sec' ? secElm : secElm.querySelector(`[data-ui="${role}"]`);
           if (!target) return;
-          const { isShow, isDis, isOpen, isActive, text, className } = rlFn(phs); // isActiveを追加
+          const { isShow, isDis, isOpen, isActive, text, className } = rlFn(phs);
           isShow !== undefined && DOM.tgl(target, isShow);
           isDis !== undefined && DOM.setDis(target, isDis);
           isOpen !== undefined && DOM.open(target, isOpen);
@@ -98,7 +96,6 @@
   // --- UIStateUpdater ---
   class UIStateUpdater {
     constructor() {
-      // stete-UI同期
       document.querySelectorAll('[data-bind-opts]').forEach(elm => State.subscribe(elm.dataset.bindOpts, v => elm.opts = v));
       document.querySelectorAll('[data-bind-refs]').forEach(elm => State.subscribe(elm.dataset.bindRefs, v => elm.refs = v));
       document.querySelectorAll('[data-bind-status]').forEach(elm => State.subscribe(elm.dataset.bindStatus, v => NewDOM.status(elm, v)));
@@ -107,7 +104,6 @@
         NewDOM.inputs(DOM.el(secId)?.querySelector(`[data-ui="${role}"]`), flags); 
         if (State.get("T1ST.phase") === tgtPhs) UI.Phs.renewT1Phs(tgtPhs); 
       };
-      // ダウングレード対応
       State.subscribe("T1ST.raw.flags", bindErr("rawSec", "box", T1_PHS.LOAD));
       State.subscribe("T1ST.extr.flags", bindErr("extrSec", "box", T1_PHS.VALID));
       Object.entries({
@@ -117,7 +113,7 @@
         "T1ST.phase": v => UI.Phs.renewT1Phs(v),
         "T1ST.raw.data": data => {
           const bx = DOM.el("rawSec")?.querySelector('[data-ui="box"]');
-          if (data?.[0]) NewDOM.buildFormFields(GLB.Conf.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "T1.renewRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })), bx, true);
+          if (data?.[0]) NewDOM.buildFormFields(GLB.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "T1.renewRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })), bx, true);
           else if (bx) bx.replaceChildren();
         },
         // ▼ T2: Tab2全般 --------------------------
@@ -166,7 +162,7 @@
       const vals = [...new Set(baseDT.map(d => d[baseKey]).filter(Boolean))];
       symbElm.src = {
         rls: State.get("T2ST.symb.refs.rls"),
-        optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.Conf.symbShapes, clr: GLB.Conf.symbColors },
+        optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors },
         actsConf: { add: "T2.addSymb", remove: "T2.removeSymb", update: "T2.renewSymb"}
       };
     }
@@ -174,7 +170,7 @@
     #renderItems() {
       const baseDT = State.get("T2ST.asgn.data.pxrfDT"), elm = DOM.el("prevSec")?.querySelector('[data-ui="item-box"]');
       if (!baseDT?.length) { if(elm) elm.opts = []; return; }
-      const items = [...new Set(baseDT.map(d => d.item ?? d.Item).filter(Boolean))];
+      const items = [...new Set(baseDT.map(d => d[GLB.idx.p1]).filter(Boolean))];
       if(elm) elm.opts = items;
       State.set("T2ST.prev.refs.itemMap", items);
     }
