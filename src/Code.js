@@ -1,4 +1,5 @@
 //--- src/Code.gs ---
+// Node.jsのビルドツールに対応してCode.jsとしてgitにアップされます
 // --- DTO定義 ---
 class ApiResponse {
   static success(payload) { return { success: true, payload: JSON.parse(JSON.stringify(payload)) }; }
