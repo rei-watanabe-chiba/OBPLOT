@@ -24,15 +24,16 @@ SPAアーキテクチャ維持と環境差異の動的吸収。
   - typeof判定等で環境を検知し、DIとAdapterで差分吸収。
   - 通信（I/O）と永続化（Storage）のインターフェースを動的切替。
 
-## 5. 起動実行フローとファイルホスティング
-アプローチA（自動ビルド）でセキュリティリスクを排除。
-  - GAS：サーバーサイドでinclude関数を用い動的に結合。
-  - Excel：GitHub Actionsで各HTMLを事前結合し1枚の静的HTMLを生成。
-  - Excel：ユーザーはPages上の結合済みHTML（App.html等）を安全にロード。
+## 5. 起動実行フローとファイルホスティング（確定版）
+アプローチA（自動ビルドと環境別インジェクション）による堅牢な稼働を実現。
+  - GAS環境：サーバーサイドでinclude関数を用い動的に結合し、純粋な `Sidebar.html` として稼働。
+  - Excel環境：GitHub Actionsにより自動ビルドされた単一の静的HTML（`App.html`）を利用。
+  - ホスティング：ユーザーはPages上の結合済みHTMLを安全にロード。
   - キャッシュ対策：Web版Excelの強力なアドインキャッシュを回避するため、manifestのSourceLocation URLに `&v=2` などのバージョンクエリを付与して強制更新させる。
 
-> 【アプローチA（GitHub Actionsによる自動ビルド）の詳細】  
-> リポジトリ上のソースコードは綺麗な分割状態（src/配下）を維持する。開発者がコードをPushすると、GitHub Actionsが自動的に `src/` 配下のファイルを1枚のHTMLに結合（ビルド）し、GitHub Pagesへデプロイする。  
+> 【GitHub Actionsによる自動ビルドの詳細】  
+> リポジトリ上のソースコードは綺麗な分割状態（src/配下）を維持する。
+> 開発者がコードをPushすると、GitHub Actions（`build.yml`）および `infra/build.js` により、ビルド時にExcel必須の公式 `office.js` を自動インジェクションした単一の静的HTML（`App.html`）が生成される。
 > これにより、CSP（セキュリティポリシー）違反やDOM Based XSSのリスクを完全に回避し、エンドユーザーには常に安全で高速な単一ファイルを提供する。
 
 
