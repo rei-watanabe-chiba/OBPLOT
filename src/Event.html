@@ -249,6 +249,11 @@
     // Web版Excelの通信エラーで onReady がハングした場合の強制起動
     setTimeout(fireInit, 2000); 
   } else {
-    window.addEventListener("DOMContentLoaded", fireInit);
+    // DOMContentLoadedが既に発火済みの場合のフェイルセーフ
+    if (document.readyState === 'loading') {
+      window.addEventListener("DOMContentLoaded", fireInit);
+    } else {
+      fireInit();
+    }
   }
 </script>
