@@ -7,8 +7,9 @@
   <DisplayName DefaultValue="OBPLOT 1.0"/>
   <Description DefaultValue="PXRF Data Analyzer"/>
   
-  <IconUrl DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_64.png"/>
+  <!-- 【修正】基本アイコンと高解像度アイコンをimageフォルダへ指定 -->
+  <IconUrl DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon64.png"/>
   <SupportUrl DefaultValue="https://github.com/rei-watanabe-chiba/OBPLOT"/>
 
   <AppDomains>
@@ -36,7 +37,6 @@
                   <bt:Image size="32" resid="Icon32"/>
                   <bt:Image size="80" resid="Icon80"/>
                 </Icon>
-                <!-- ボタン1: データ抽出ツール -->
                 <Control xsi:type="Button" id="BtnTab1">
                   <Label resid="Btn1Label"/>
                   <Supertip><Title resid="Btn1Title"/><Description resid="Btn1Desc"/></Supertip>
@@ -46,7 +46,6 @@
                     <SourceLocation resid="UrlTab1"/>
                   </Action>
                 </Control>
-                <!-- ボタン2: グラフ作成ツール -->
                 <Control xsi:type="Button" id="BtnTab2">
                   <Label resid="Btn2Label"/>
                   <Supertip><Title resid="Btn2Title"/><Description resid="Btn2Desc"/></Supertip>
@@ -65,12 +64,12 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon16" DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_16.png"/>
-        <bt:Image id="Icon32" DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_32.png"/>
-        <bt:Image id="Icon80" DefaultValue="https://appsforoffice.microsoft.com/lib/1/prod/images/fabric_80.png"/>
+        <!-- 【修正】リボン用アイコン群をimageフォルダへ指定 -->
+        <bt:Image id="Icon16" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon16.png"/>
+        <bt:Image id="Icon32" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon32.png"/>
+        <bt:Image id="Icon80" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon80.png"/>
       </bt:Images>
       <bt:Urls>
-        <!-- クエリパラメータでモードを分離 -->
         <bt:Url id="UrlTab1" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab1"/>
         <bt:Url id="UrlTab2" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab2"/>
       </bt:Urls>
