@@ -88,7 +88,7 @@
           const errStat = ["error", "設定変更検知: リストの再生成・検証が必要です"];
           State.set({ "T1ST.raw.status": errStat, "T1ST.raw.cachedStatus": errStat, "T1ST.extr.status": ["hidden", ""] });
         }
-        State.set({ "T1ST.pref.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
+        State.set({ "T1ST.pref.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出対応" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
       },
       renewRawRefs: tgt => {
         State.set(`T1ST.raw.refs.${tgt.dataset.field}`, tgt.value);
