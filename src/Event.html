@@ -229,13 +229,26 @@
       this.switchAPP(activeMode); // 該当のUIだけをアクティブ化
 
       const initSsId = window.__INITIAL_SSID__ || "";
-      // ★修正点：Excel環境（__INITIAL_SSID__が空）でも初期セットアップを起動させる
       if (initSsId || isExcelEnv) {
         this.startSession(initSsId || "EXCEL_LOCAL_RUN");
       }
     }
   }
-  // --- 起動イベントバインド ---
-  if (isExcelEnv) Office.onReady(() => Evt.init());
-  else window.addEventListener("DOMContentLoaded", () => Evt.init());
+
+  // --- 起動イベントバインド（確実なフォールバック付き） ---
+  let isInitFired = false;
+  const fireInit = () => {
+    if (!isInitFired) {
+      isInitFired = true;
+      Evt.init();
+    }
+  };
+
+  if (isExcelEnv) {
+    Office.onReady(() => fireInit());
+    // Web版Excelの通信エラーで onReady がハングした場合の強制起動
+    setTimeout(fireInit, 2000); 
+  } else {
+    window.addEventListener("DOMContentLoaded", fireInit);
+  }
 </script>

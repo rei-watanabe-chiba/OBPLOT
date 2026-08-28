@@ -3,15 +3,28 @@
   // --- Excel用ストレージ ---
   class OfficeStorageAdapter {
     static save(key, data) {
-      Office.context.document.settings.set(key, data);
-      Office.context.document.settings.saveAsync();
+      try {
+        if (Office?.context?.document?.settings) {
+          Office.context.document.settings.set(key, data);
+          Office.context.document.settings.saveAsync();
+        }
+      } catch (e) {}
     }
     static load(key) {
-      return Office.context.document.settings.get(key);
+      try {
+        if (Office?.context?.document?.settings) {
+          return Office.context.document.settings.get(key) || null;
+        }
+        return null;
+      } catch (e) { return null; }
     }
     static clear(key) {
-      Office.context.document.settings.remove(key);
-      Office.context.document.settings.saveAsync();
+      try {
+        if (Office?.context?.document?.settings) {
+          Office.context.document.settings.remove(key);
+          Office.context.document.settings.saveAsync();
+        }
+      } catch (e) {}
     }
   }
 

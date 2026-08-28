@@ -57,10 +57,27 @@
         const dlg = DOM.el("universalConfirm");
         DOM.updateText("uDialogTitle", title);
         DOM.updateText("uDialogMessage", msg);
-        dlg.showModal(); 
-        DOM.el("uDialogConfirmBtn").onclick = () => { dlg.close(); resolve(true); };
+        
+        const closeDlg = () => {
+          try { dlg.close(); } catch (e) { dlg.removeAttribute('open'); dlg.style.display = 'none'; }
+        };
+
+        // サンドボックス制限（allow-modals欠落）時のフォールバック処理
+        try {
+          dlg.showModal(); 
+        } catch (e) {
+          dlg.setAttribute('open', '');
+          dlg.style.display = 'block';
+          dlg.style.position = 'fixed';
+          dlg.style.top = '50%';
+          dlg.style.left = '50%';
+          dlg.style.transform = 'translate(-50%, -50%)';
+          dlg.style.zIndex = '9999';
+        }
+
+        DOM.el("uDialogConfirmBtn").onclick = () => { closeDlg(); resolve(true); };
         DOM.el("uDialogCancelBtn").onclick = () => {
-          dlg.close();
+          closeDlg();
           if (elm) this.status(elm, svStat); // 状態復元
           resolve(false);
         };
