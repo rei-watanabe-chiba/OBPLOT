@@ -3,9 +3,12 @@
 <html>
   <head>
     <base target="_top">
+    <!-- Office Add-in API (Excel環境判定と動作に必須) -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/16/office.js"></script>
+    
+    <!-- 各種ライブラリ -->
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-    <script>google.charts.load('current', {'packages':['corechart']});</script>
     <?!= include("CSS"); ?>
   </head>
 
