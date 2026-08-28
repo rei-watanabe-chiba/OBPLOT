@@ -74,57 +74,58 @@
     }
 
     // --- 環境セットアップ ---
-    static async setupEnvironment(orderedShts, valElms, pxrfHdr, filelistHdr) {
-    return this.#run(async (ctx) => {
-      const shts = ctx.workbook.worksheets;
-      shts.load("items/name");
-      await ctx.sync();
-      const existingMap = new Map(shts.items.map(s => [s.name, s]));
-      // 1. 生成・リセットと検証
-      for (const name of orderedShts) {
-        let sht = existingMap.get(name);
-        if (!sht) {
-          sht = shts.add(name);
-          if (name === 'PXRF' || name === '抽出データ') sht.getRangeByIndexes(0, 0, 1, pxrfHdr.length).values = [pxrfHdr];
-          if (name === 'ファイルリスト') sht.getRangeByIndexes(0, 0, 1, filelistHdr.length).values = [filelistHdr];
-          existingMap.set(name, sht);
-        } else {
-          if (name === '抽出データ' || name === 'ファイルリスト') {
-            sht.getUsedRangeOrNullObject().clear();
-            if (name === 'ファイルリスト') sht.getRangeByIndexes(0, 0, 1, filelistHdr.length).values = [filelistHdr];
-          }
-          if (name === 'PXRF' || name === 'WDXRF') {
-            const uRng = sht.getUsedRangeOrNullObject();
-            uRng.load("columnCount");
+    static async setupEnvironment(ordShts, valElms, pxrfHdr, flHdr, isForce) {
+      return this.#run(async (ctx) => {
+        const shts = ctx.workbook.worksheets;
+        shts.load("items/name");
+        await ctx.sync();
+        const rls = {
+          'PXRF': { hdr: pxrfHdr, lock: true, vald: h => JSON.stringify(h) === JSON.stringify(pxrfHdr) ? null : "・PXRFヘッダー不正" },
+          'WDXRF': { lock: true, vald: h => { const ms = valElms.filter(e => !h.includes(e)); return ms.length ? `・WDXRF元素不足: ${ms.join(', ')}` : null; } },
+          '抽出データ': { hdr: pxrfHdr, clr: true },
+          'ファイルリスト': { hdr: flHdr, clr: true }
+        };
+        const drv = { // Excel操作Driver
+          getMap: () => new Map(shts.items.map(s => [s.name, s])),
+          add: n => shts.add(n),
+          clr: s => s.getUsedRangeOrNullObject().clear(),
+          setHdr: (s, h) => { s.getRangeByIndexes(0, 0, 1, h.length).values = [h]; },
+          getHdr: async s => {
+            const rng = s.getUsedRangeOrNullObject();
+            rng.load("columnCount");
             await ctx.sync();
-            if (!uRng.isNullObject && uRng.columnCount > 0) {
-              const hdrRng = sht.getRangeByIndexes(0, 0, 1, uRng.columnCount);
-              hdrRng.load("values");
-              await ctx.sync();
-              const hdr = hdrRng.values[0];
-              if (name === 'PXRF' && JSON.stringify(hdr) !== JSON.stringify(pxrfHdr)) {
-                throw new Error(`【検証エラー】\nPXRFシートのヘッダーが規定と異なります。\nGitHub仕様をご確認ください。`);
-              }
-              if (name === 'WDXRF') {
-                const missing = valElms.filter(e => !hdr.includes(e));
-                if (missing.length > 0) throw new Error(`【検証エラー】\nWDXRFシートのヘッダーに必須元素 (${missing.join(',')}) が不足しています。`);
-              }
-            }
+            if (rng.isNullObject || rng.columnCount === 0) return [];
+            const hRng = s.getRangeByIndexes(0, 0, 1, rng.columnCount);
+            hRng.load("values");
+            await ctx.sync();
+            return hRng.values[0];
+          },
+          setPos: (s, i) => { s.position = i; },
+          lock: s => {
+            const r1 = s.getRange("1:1");
+            r1.dataValidation.rule = { custom: { formula: "=FALSE" } };
+            r1.dataValidation.errorAlert = { message: "システム保護: 編集禁止", showAlert: true, style: "Stop", title: "保護" };
+          }
+        };
+        const exMap = drv.getMap(), msShts = ordShts.filter(n => !exMap.has(n));
+        if (msShts.length > 0 && !isForce) return { reqConfirm: true, missing: msShts }; // 不足時確認要求
+        const errs = [];
+        for (const n of ordShts) {
+          const r = rls[n] || {};
+          let sht = exMap.get(n);
+          if (!sht) {
+            sht = drv.add(n);
+            if (r.hdr) drv.setHdr(sht, r.hdr);
+            exMap.set(n, sht);
+          } else {
+            if (r.clr) { drv.clr(sht); if (r.hdr) drv.setHdr(sht, r.hdr); }
+            if (r.vald) { const err = r.vald(await drv.getHdr(sht)); if (err) errs.push(err); }
           }
         }
-      }
-      // 2. 並び順の強制
-      for (let i = 0; i < orderedShts.length; i++) existingMap.get(orderedShts[i]).position = i;
-      // 3. ヘッダーロック (入力規則)
-      for (const name of ['PXRF', 'WDXRF']) {
-        const sht = existingMap.get(name);
-        const row1 = sht.getRange("1:1");
-        row1.dataValidation.rule = { custom: { formula: "=FALSE" } };
-        row1.dataValidation.errorAlert = { message: "システム保護: ヘッダー行の編集は禁止されています。", showAlert: true, style: "Stop", title: "編集禁止" };
-      }
-      await ctx.sync();
-      return true;
-    });
-  }
-}
-</script>
+        if (errs.length > 0) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`); // 統合エラー送出
+        ordShts.forEach((n, i) => drv.setPos(exMap.get(n), i));
+        ordShts.forEach(n => { if (rls[n]?.lock) drv.lock(exMap.get(n)); });
+        await ctx.sync();
+        return { reqConfirm: false };
+      });
+    }

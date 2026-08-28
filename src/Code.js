@@ -67,46 +67,42 @@ function writeData(ssId, shtName, data, opts = "clear") {
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
 
 // --- 環境セットアップ ---
-function setupEnvironment(ssId, orderedShts, valElms, pxrfHdr, filelistHdr) {
+function setupEnvironment(ssId, ordShts, valElms, pxrfHdr, flHdr, isForce) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
-    const existingMap = new Map(ss.getSheets().map(s => [s.getName(), s]));
-    // 1. 生成・リセットと検証
-    orderedShts.forEach(name => {
-      let sht = existingMap.get(name);
+    const rls = {
+      'PXRF': { hdr: pxrfHdr, lock: true, vald: h => JSON.stringify(h) === JSON.stringify(pxrfHdr) ? null : "・PXRFヘッダー不正" },
+      'WDXRF': { lock: true, vald: h => { const ms = valElms.filter(e => !h.includes(e)); return ms.length ? `・WDXRF元素不足: ${ms.join(', ')}` : null; } },
+      '抽出データ': { hdr: pxrfHdr, clr: true },
+      'ファイルリスト': { hdr: flHdr, clr: true }
+    };
+    const drv = { // GAS操作Driver
+      getMap: () => new Map(ss.getSheets().map(s => [s.getName(), s])),
+      add: n => ss.insertSheet(n),
+      clr: s => s.clear(),
+      setHdr: (s, h) => s.getRange(1, 1, 1, h.length).setValues([h]),
+      getHdr: s => s.getRange(1, 1, 1, s.getLastColumn() || 1).getValues()[0],
+      setPos: (s, i) => { if (s.getIndex() !== i + 1) { ss.setActiveSheet(s); ss.moveActiveSheet(i + 1); } },
+      lock: s => s.getRange('1:1').setDataValidation(SpreadsheetApp.newDataValidation().requireFormulaSatisfied('=FALSE').setAllowInvalid(false).setHelpText('システム保護: 編集禁止').build())
+    };
+    const exMap = drv.getMap(), msShts = ordShts.filter(n => !exMap.has(n));
+    if (msShts.length > 0 && !isForce) return ApiResponse.success({ reqConfirm: true, missing: msShts }); // 不足時確認要求
+    const errs = ordShts.reduce((acc, n) => {
+      const r = rls[n] || {};
+      let sht = exMap.get(n);
       if (!sht) {
-        sht = ss.insertSheet(name);
-        if (name === 'PXRF' || name === '抽出データ') sht.getRange(1, 1, 1, pxrfHdr.length).setValues([pxrfHdr]);
-        if (name === 'ファイルリスト') sht.getRange(1, 1, 1, filelistHdr.length).setValues([filelistHdr]);
-        existingMap.set(name, sht);
+        sht = drv.add(n);
+        if (r.hdr) drv.setHdr(sht, r.hdr);
+        exMap.set(n, sht);
       } else {
-        if (name === '抽出データ' || name === 'ファイルリスト') {
-          sht.clear();
-          if (name === 'ファイルリスト') sht.getRange(1, 1, 1, filelistHdr.length).setValues([filelistHdr]);
-        }
-        if (name === 'PXRF' || name === 'WDXRF') {
-          const hdr = sht.getRange(1, 1, 1, sht.getLastColumn() || 1).getValues()[0];
-          if (name === 'PXRF' && JSON.stringify(hdr) !== JSON.stringify(pxrfHdr)) {
-            throw new Error(`【検証エラー】\nPXRFシートのヘッダーが規定と異なります。\nGitHub仕様をご確認ください。`);
-          }
-          if (name === 'WDXRF') {
-            const missing = valElms.filter(e => !hdr.includes(e)); // 緩い規制（列順不動、必須元素の有無のみ確認）
-            if (missing.length > 0) throw new Error(`【検証エラー】\nWDXRFシートのヘッダーに必須元素 (${missing.join(',')}) が不足しています。`);
-          }
-        }
+        if (r.clr) { drv.clr(sht); if (r.hdr) drv.setHdr(sht, r.hdr); }
+        if (r.vald) { const err = r.vald(drv.getHdr(sht)); if (err) acc.push(err); }
       }
-    });
-    // 2. 並び順の強制
-    orderedShts.forEach((name, idx) => {
-      const sht = existingMap.get(name);
-      if (sht.getIndex() !== idx + 1) { ss.setActiveSheet(sht); ss.moveActiveSheet(idx + 1); }
-    });
-    // 3. ヘッダーロック (入力規則)
-    ['PXRF', 'WDXRF'].forEach(name => {
-      const sht = existingMap.get(name);
-      const rule = SpreadsheetApp.newDataValidation().requireFormulaSatisfied('=FALSE').setAllowInvalid(false).setHelpText('システム保護: ヘッダー行の編集は禁止されています。').build();
-      sht.getRange('1:1').setDataValidation(rule);
-    });
-    return true;
+      return acc;
+    }, []);
+    if (errs.length > 0) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`); // 統合エラー送出
+    ordShts.forEach((n, i) => drv.setPos(exMap.get(n), i));
+    ordShts.forEach(n => { if (rls[n]?.lock) drv.lock(exMap.get(n)); });
+    return ApiResponse.success({ reqConfirm: false });
   });
 }

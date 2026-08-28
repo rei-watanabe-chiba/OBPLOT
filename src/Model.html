@@ -139,7 +139,7 @@
     static fetchDT(ssId, sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", ssId, sht, qCol, lCol); }
     static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
-    static setupEnvironment(ssId, orderedShts, valElms, pxrfHdr, filelistHdr) { return this.#serverCall("setupEnvironment", ssId, orderedShts, valElms, pxrfHdr, filelistHdr); }
+    static setupEnvironment(ssId, ordShts, valElms, pxrfHdr, flHdr, isForce) { return this.#serverCall("setupEnvironment", ssId, ordShts, valElms, pxrfHdr, flHdr, isForce); }
   }
   // --- ローカルストレージ ---
   class LocalStorageAdapter {
