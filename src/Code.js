@@ -8,7 +8,6 @@ class ApiResponse {
 const withErr = fn => {
   try { return fn(); } catch (e) { return ApiResponse.error("SYSTEM_ERR", e.message); }
 };
-
 // --- メニュー追加 (GAS用) ---
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("OBPLOT1.0")
@@ -24,13 +23,10 @@ function openSidebar(mode, title) {
   tpl.appMode = mode;
   SpreadsheetApp.getUi().showSidebar(tpl.evaluate().setTitle(`OBPLOT1.0: ${title}`).setWidth(300));
 }
-
 // --- HTMLバインド ---
 function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
-
 // --- シート操作共通 ---
 const getSht = (ssId, name) => SpreadsheetApp.openById(ssId).getSheetByName(name);
-
 // --- データ取得 ---
 function fetchDT(ssId, shtName, qCol = null, lCol = null) {
   return withErr(() => {
@@ -43,7 +39,6 @@ function fetchDT(ssId, shtName, qCol = null, lCol = null) {
     return ApiResponse.success({ data, message: `取得: ${data.length} 行` });
   });
 }
-
 // --- データ出力 ---
 function writeData(ssId, shtName, data, opts = "clear") {
   return withErr(() => {
@@ -63,10 +58,8 @@ function writeData(ssId, shtName, data, opts = "clear") {
     return ApiResponse.success("書き出し完了");
   });
 }
-
 // --- レポートテンプレート取得 ---
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
-
 // --- 環境セットアップ汎用エンジン ---
 function setupEnvironment(ssId, schema, valElms, isForce) {
   return withErr(() => {
@@ -81,7 +74,7 @@ function setupEnvironment(ssId, schema, valElms, isForce) {
     const vls = {
       pxrf: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・PXRFヘッダー不正" : null,
       corr: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・Correctionヘッダー不正" : null,
-      wdxrf: h => { const ms = valElms.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須元素不足: ${ms.join(', ')}` : null; }
+      wdxrf: (h, req) => { const ms = req.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須項目不足: ${ms.join(', ')}` : null; }
     };
     // 生成/クリア・検証・ソート
     const errs = schema.map(({ name, hdr, clr, validRule, lock }, i) => {

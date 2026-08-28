@@ -152,10 +152,11 @@
           const pObjs = this.#toObjArray(pxrfDT);
           const wObjs = this.#toObjArray(wdxrfDT);
           const { key1: k1, key2: k2, wd1: w1, wd2: w2 } = GLB.idx;
-          const wMap = new Map(wObjs.map(o => [`${o[k1]}_${o[k2]}`, o]));
+          // 型不一致防止の文字キー
+          const wMap = new Map(wObjs.map(o => [`${String(o[k1])}_${String(o[k2])}`, o]));
           const dbs = new Set();
           pObjs.forEach(pObj => {
-            const wObj = wMap.get(`${pObj[k1]}_${pObj[k2]}`);
+            const wObj = wMap.get(`${String(pObj[k1])}_${String(pObj[k2])}`);
             pObj[w1] = wObj?.[w1] ?? "Unknown"; 
             pObj[w2] = wObj?.[w2] ?? "Unknown";
             if (pObj[k1]) dbs.add(pObj[k1]);
@@ -165,9 +166,9 @@
         // --- フィルタ ---
         static fltrDB(wrapPXRF, wrapWDXRF, selDBs) {
           const tgtSet = new Set(selDBs);
-          const { key1: k1, key2: k2, p1: p1, wd1: w1, wd2: w2 } = GLB.idx;
+          const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
           const pxrfDT = wrapPXRF.filter(obj => tgtSet.has(obj[k1])).map(r => ({
-            [k1]: r[k1], [k2]: r[k2], [p1]: r[p1], [w1]: r[w1], [w2]: r[w2],
+            '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: r[p1], [p2]: r[p2], [w1]: r[w1], [w2]: r[w2],
             ...Object.fromEntries(GLB.valElms.flatMap(elm => [[`ob_${elm}`, r[`ob_${elm}`]], [`md_${elm}`, r[`md_${elm}`]], [`ob_${elm}_Err`, r[`ob_${elm}_Err`]], [`md_${elm}_Err`, r[`md_${elm}_Err`]]]))
           }));
           const wdxrfDT = wrapWDXRF.filter(obj => tgtSet.has(obj[k1])).map(r => ({
@@ -182,16 +183,18 @@
         // --- データ生成パイプライン統合 ---
         static buildPrev(pxrfDT, wdxrfDT, conf) {
           if (!pxrfDT?.length || !wdxrfDT?.length) return [];
-          const { key1: k1, key2: k2, p1: p1, wd1: w1, wd2: w2 } = GLB.idx;
-          const wMap = new Map(wdxrfDT.map(w => [`${w[k1]}_${w[k2]}`, w]));
+          const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
+          // 型不一致防止の文字キー
+          const wMap = new Map(wdxrfDT.map(w => [`${String(w[k1])}_${String(w[k2])}`, w]));
           const minMap = conf.useLOD ? this.#getMinMap(pxrfDT, conf) : {};
           const cfs = this.#resCoeffs(pxrfDT, wMap, conf, minMap);
           return pxrfDT.reduce((acc, r) => {
             const itemVal = r[p1];
             if (conf.itemMap?.length && !conf.itemMap.includes(itemVal)) return acc;
-            const w = wMap.get(`${r[k1]}_${r[k2]}`);
+            const w = wMap.get(`${String(r[k1])}_${String(r[k2])}`);
             if (!w) return acc;
-            const pDT = { [k1]: r[k1], [k2]: r[k2], [p1]: itemVal, [w1]: r[w1], [w2]: r[w2] };
+            // 必須プロパティ全保持
+            const pDT = { '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: itemVal, [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
             GLB.valElms.forEach(elm => {
               const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
               const rawV = r[`${pfx}_${elm}`];
@@ -201,7 +204,8 @@
               pDT[elm] = val; pDT[`${elm}_Err`] = r[`${pfx}_${elm}_Err`] ?? null;
             });
             const xVal = Mtd.T2.Calc.evaluate(conf.val, w), yVal = Mtd.T2.Calc.evaluate(conf.val, pDT);
-            if (xVal != null && yVal != null) acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
+            // 無効値も行除外せず通過
+            acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
             return acc;
           }, []);
         }
@@ -221,7 +225,7 @@
             return Object.fromEntries(conf.calElms.map(elm => {
               const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
               const vList = pxrfDT.reduce((acc, p) => {
-                const w = wMap.get(`${p[k1]}_${p[k2]}`);
+                const w = wMap.get(`${String(p[k1])}_${String(p[k2])}`);
                 if (!w || w[elm] == null) return acc;
                 const raw = p[`${pfx}_${elm}`];
                 const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
@@ -252,7 +256,7 @@
       },
       // --- 検量線データ生成 ---
       Calc: class {
-        // --- Math関数群の静的キャッシュ ---
+        // --- Math関数群静的キャッシュ ---
         static #MATH_FNS = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
         // --- カスタム数式評価 ---
         static evaluate(fml, rData) {
@@ -268,7 +272,14 @@
         static calcCalib(wdxrfVals, pxrfVals) {
           if (!wdxrfVals?.length || wdxrfVals.length < 2 || wdxrfVals.length !== pxrfVals?.length) return null;
           try {
-            const d = wdxrfVals.map((x, i) => [x, pxrfVals[i]]);
+            const d = [];
+            // 有効数値ペア動的抽出
+            for (let i = 0; i < wdxrfVals.length; i++) {
+              if (wdxrfVals[i] != null && pxrfVals[i] != null && !isNaN(wdxrfVals[i]) && !isNaN(pxrfVals[i])) {
+                d.push([wdxrfVals[i], pxrfVals[i]]);
+              }
+            }
+            if (d.length < 2) return null;
             const { m: slope, b: intercept } = ss.linearRegression(d);
             return (isNaN(slope) || isNaN(intercept) || slope === 0) ? null : { slp: slope, int: intercept };
           } catch (e) { return null; }
@@ -276,16 +287,26 @@
         // --- 回帰・相関計算 ---
         static calcReg(xArr, yArr, errArr) {
           if (!xArr?.length || xArr.length !== yArr?.length) return null;
-          const n = xArr.length, d = xArr.map((x, i) => [x, yArr[i]]);
+          const d = [], valX = [], valY = [], valErr = [];
+          // 有効数値ペア動的抽出
+          for (let i = 0; i < xArr.length; i++) {
+            if (xArr[i] != null && yArr[i] != null && !isNaN(xArr[i]) && !isNaN(yArr[i])) {
+              d.push([xArr[i], yArr[i]]);
+              valX.push(xArr[i]); valY.push(yArr[i]);
+              if (errArr && errArr[i] != null) valErr.push(errArr[i]);
+            }
+          }
+          const n = valX.length;
+          if (n < 2) return null; // 有効データ不足時null
           const { m: slope, b: intercept } = ss.linearRegression(d);
-          const r = ss.sampleCorrelation(xArr, yArr), r2 = r * r;
+          const r = ss.sampleCorrelation(valX, valY), r2 = r * r;
           let ssRes = 0, maxRes = 0;
-          xArr.forEach((x, i) => { const res = Math.abs(yArr[i] - (slope * x + intercept)); ssRes += res * res; maxRes = Math.max(maxRes, res); });
+          valX.forEach((x, i) => { const res = Math.abs(valY[i] - (slope * x + intercept)); ssRes += res * res; maxRes = Math.max(maxRes, res); });
           const resStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
           let err3Sigma = 0;
-          if (errArr?.length > 2) {
-            const meanErr = errArr.reduce((a, b) => a + b, 0) / errArr.length;
-            err3Sigma = Math.sqrt(errArr.reduce((a, b) => a + (b - meanErr) ** 2, 0) / (errArr.length - 1)) * 3;
+          if (valErr.length > 2) {
+            const meanErr = valErr.reduce((a, b) => a + b, 0) / valErr.length;
+            err3Sigma = Math.sqrt(valErr.reduce((a, b) => a + (b - meanErr) ** 2, 0) / (valErr.length - 1)) * 3;
           }
           return { count: n, slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
         }

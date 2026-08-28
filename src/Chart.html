@@ -7,9 +7,9 @@
     static get(varStr) {
       if (!varStr?.startsWith('var(')) return varStr;
       const mch = varStr.match(/var\((--[^,\s)]+)/);
-      if (!mch) return varStr; // 変数以外は返却
+      if (!mch) return varStr; // 計算値保持
       const key = mch[1];
-      if (!this.#cache.has(key)) this.#cache.set(key, getComputedStyle(document.body).getPropertyValue(key).trim() || varStr); // 計算値保持
+      if (!this.#cache.has(key)) this.#cache.set(key, getComputedStyle(document.body).getPropertyValue(key).trim() || varStr);
       return this.#cache.get(key);
     }
   }
@@ -20,7 +20,7 @@
       super();
       this.#box = document.createElement('div');
       this.#box.style.cssText = 'width: 100%; position: relative;';
-      // **超重要**高さ変動による無限ループ防止
+      // **超重要**高さ変動無限ループ防止
       this.#observer = new ResizeObserver(() => {
         const curW = this.clientWidth;
         if (curW > 0 && curW !== this.#lastW && this.#src) {
@@ -33,7 +33,7 @@
     // --- 接続コールバック ---
     connectedCallback() {
       this.style.display = 'grid';
-      // **超重要**幅拡張を防止（minmax制約）
+      // **超重要**幅拡張防止
       this.style.gridTemplateColumns = 'minmax(0, 1fr)';
       this.style.width = '100%';
       this.appendChild(this.#box);
@@ -60,7 +60,7 @@
       const { prevDT, statsDT, symb, gph } = this.#src || {};
       if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
       const containerWidth = this.clientWidth;
-      if (containerWidth === 0) return;
+      if (containerWidth === 0) return; // 非表示時はスキップ
       this.#lastW = containerWidth;
       const rS = gph?.style || GLB.defaultGraphStyle;
       const STYLE = {
@@ -72,7 +72,6 @@
         lineC: { grid: CSSToken.get(rS.lineC.grid), axis: CSSToken.get(rS.lineC.axis), reg: CSSToken.get(rS.lineC.reg)},
         bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
-      // 描画設定の注入と計算
       const GAP = { ...(gph?.gap || GLB.defaultGraphGap) };
       const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
       const gridTop = GAP.padT + overY, gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
@@ -81,17 +80,20 @@
       this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
       this.#box.style.backgroundColor = STYLE.bgOuter;
       if (!this.#chart) this.#chart = echarts.init(this.#box);
-      const { niceMin, niceMax, niceTicks } = Mtd.Util.calcScale(prevDT.map(d => d.x), prevDT.map(d => d.y));
+      // 有効座標抽出・スケール計算
+      const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
+      const { niceMin, niceMax, niceTicks } = Mtd.Util.calcScale(validPoints.map(d => d.x), validPoints.map(d => d.y));
       const itv = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
       const fmtTick = v => { const tck = niceTicks.find(t => Math.abs(t.v - v) < 1e-8); return tck ? tck.f : v; }; // 刻みフォーマット
-      const graphText = Mtd.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n');
+      const graphText = statsDT ? Mtd.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
-      const plotDT = prevDT.map(d => {
+      // 全メタデータ引継ぎ適用
+      const plotDT = validPoints.map(d => {
         const rl = rls.find(r => r.target !== "" && r.target === d[baseKey]) || defRl; // ルール適用
         const isEmpty = rl.shp === 'emptyCircle', shp = isEmpty ? 'circle' : (rl.shp || 'circle');
         const bClr = CSSToken.get(rl.clr);
         return {
-          value: [d.x, d.y], [GLB.idx.key2]: d[GLB.idx.key2], [GLB.idx.wd1]: d[GLB.idx.wd1],
+          value: [d.x, d.y], '計測ID': d['計測ID'], [GLB.idx.key1]: d[GLB.idx.key1], [GLB.idx.key2]: d[GLB.idx.key2], [GLB.idx.p1]: d[GLB.idx.p1], [GLB.idx.p2]: d[GLB.idx.p2], [GLB.idx.wd1]: d[GLB.idx.wd1], [GLB.idx.wd2]: d[GLB.idx.wd2],
           symbol: shp, symbolSize: shp.startsWith('path://') ? STYLE.symbol.pathSize : STYLE.symbol.baseSize,
           itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW }
         };
@@ -109,7 +111,7 @@
         animation: false,
         textStyle: { fontFamily: STYLE.font },
         grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSize, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: STYLE.lineW.axis },
-        tooltip: { formatter: p => p.componentSubType === 'line' ? '' : `${GLB.idx.key2}: ${p.data[GLB.idx.key2] || '-'}<br/>${GLB.idx.wd1}: ${p.data[GLB.idx.wd1] || '-'}`, backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
+        tooltip: { formatter: p => p.componentSubType === 'line' ? '' : GLB.tooltipKeys.map(k => `${k}: ${p.data[k] || '-'}`).join('<br/>'), backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
         xAxis: {
           type: 'value', name: 'WDXRF', nameLocation: 'middle',
           nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },

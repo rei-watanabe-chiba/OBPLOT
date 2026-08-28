@@ -57,24 +57,16 @@
         const dlg = DOM.el("universalConfirm");
         DOM.updateText("uDialogTitle", title);
         DOM.updateText("uDialogMessage", msg);
-        
         const closeDlg = () => {
-          try { dlg.close(); } catch (e) { dlg.removeAttribute('open'); dlg.style.display = 'none'; }
+          try { dlg.close(); } catch (e) { dlg.removeAttribute('open'); dlg.classList.remove('dialog-fallback'); }
         };
-
-        // サンドボックス制限（allow-modals欠落）時のフォールバック処理
+        // サンドボックス制限回避
         try {
           dlg.showModal(); 
         } catch (e) {
           dlg.setAttribute('open', '');
-          dlg.style.display = 'block';
-          dlg.style.position = 'fixed';
-          dlg.style.top = '50%';
-          dlg.style.left = '50%';
-          dlg.style.transform = 'translate(-50%, -50%)';
-          dlg.style.zIndex = '9999';
+          dlg.classList.add('dialog-fallback');
         }
-
         DOM.el("uDialogConfirmBtn").onclick = () => { closeDlg(); resolve(true); };
         DOM.el("uDialogCancelBtn").onclick = () => {
           closeDlg();
@@ -90,12 +82,14 @@
       if (isClear) cntr.replaceChildren();
       cntr.insertAdjacentHTML('beforeend', Tpl.Toggle.row(conf.label, conf.bind, conf.change, conf.isCheck));
     }
-    // --- 統計表構築 ---
+    // --- 統計表構築と計算エラー時の表示 ---
     static buildStats(statsDT, ref) {
       const cntr = DOM.el(ref);
       if (!cntr) return;
-      if (!statsDT) return cntr.replaceChildren();
-      cntr.innerHTML = Tpl.Stats.cntr(Mtd.Util.buildStats(statsDT).map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
+      if (!statsDT) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
+      const rows = Mtd.Util.buildStats(statsDT);
+      if (!rows.length) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
+      cntr.innerHTML = Tpl.Stats.cntr(rows.map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
     }
     // --- エラー状態更新 ---
     static inputs(ref, errFlags) {
@@ -110,7 +104,8 @@
         if (!sum || !cnt) return;
         const uid = this.id || `pop_${Math.random().toString(36).substr(2, 9)}`, anchorName = `--anchor-${uid}`;
         sum.setAttribute('popovertarget', uid); sum.style.anchorName = anchorName;
-        cnt.id = uid; cnt.setAttribute('popover', 'auto'); cnt.style.positionAnchor = anchorName; // Popover紐付け
+        // Popover紐付け
+        cnt.id = uid; cnt.setAttribute('popover', 'auto'); cnt.style.positionAnchor = anchorName;
       }, 0);
     }
   }
@@ -133,7 +128,8 @@
       const cbs = this.querySelectorAll('.dataset-cb');
       cbs.forEach(cb => cb.checked = Array.isArray(vals) && vals.includes(cb.value));
       const allCb = this.querySelector('.select-all-cb');
-      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked); // 全選択判定
+      // 全選択判定
+      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
     }
   }
   // --- ObSymbolTable ---

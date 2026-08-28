@@ -6,7 +6,7 @@
   // ▼ key: PXRF-WDXRF紐づけのキー, p: 計測情報, wd: 産地情報（ヘッダに連動）
   const GLBidx = { key1: "database", key2: "ID", p1: "item", p2: "date", wd1: "Group", wd2: "Source" };
   const GLB = {
-    idx: GLBidx
+    idx: GLBidx,
     // ▼ valElms に元素を追加可能, valLgc に指数追加可能
     // 可視化元素指定 ---------------
     valElms: ["Al", "Si", "P", "K", "Ca", "Ti", "Mn", "Fe", "Rb", "Sr", "Y", "Zr", "Nb", "Ba"],
@@ -20,7 +20,7 @@
     // シンボルカラー定義（valはCSS準拠) ---------------
     symbColors: [{ val: 'var(--grey600)', label: 'Gray' }, { val: 'var(--text-main)', label: 'Black' }, { val: 'var(--main-blue)', label: 'Blue' }, { val: 'var(--main-green)', label: 'Green' }, { val: 'var(--main-red)', label: 'Red' }, { val: '#fbbc04', label: 'Yellow' }],
     // シンボルデフォルト値
-    symbBaseKey: idx.key1, symbDefShp: "emptyCircle", symbDefClr: "var(--grey600)",
+    symbBaseKey: GLBidx.key1, symbDefShp: "emptyCircle", symbDefClr: "var(--grey600)",
     // グラフデフォルト設定 ---------------
     defaultGraphStyle: {
       font: "'Roboto', 'Noto Sans JP', sans-serif",
@@ -33,6 +33,9 @@
     },
     // グラフ余白
     defaultGraphGap: { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 },
+    // ツールチップ表示項目（GLBidxベースで'計測ID','item','date'も対応） ---------------
+    tooltipKeys: [GLBidx.key1, GLBidx.key2, GLBidx.wd1],
+
     // 以降は処理・UI用定数のため編集不可
     validModes: ["mudrock", "obsidian"],
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
@@ -41,14 +44,14 @@
     appShts: { filelist: "ファイルリスト", extract: "抽出データ", correction: "Correction" },
     initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
     extrFields: [
-      { key: idx.key1, label: `${idx.key1} *必須`, placeholder: "データセット名", bind: `T1ST.extr.refs.${idx.key1}` },
-      { key: idx.p1, label: idx.p1, placeholder: "計測情報", bind: `T1ST.extr.refs.${idx.p1}` },
-      { key: idx.p2, label: idx.p2, placeholder: "計測日", bind: `T1ST.extr.refs.${idx.p2}` }
+      { key: GLBidx.key1, label: `${GLBidx.key1} *必須`, placeholder: "データセット名", bind: `T1ST.extr.refs.${GLBidx.key1}` },
+      { key: GLBidx.p1, label: GLBidx.p1, placeholder: "計測情報", bind: `T1ST.extr.refs.${GLBidx.p1}` },
+      { key: GLBidx.p2, label: GLBidx.p2, placeholder: "計測日", bind: `T1ST.extr.refs.${GLBidx.p2}` }
     ],
-    symbAxes: [{ val: idx.key1, label: idx.key1 }, { val: idx.p1, label: idx.p1 }, { val: idx.wd1, label: idx.wd1 }, { val: idx.wd2, label: idx.wd2 }],
+    symbAxes: [{ val: GLBidx.key1, label: GLBidx.key1 }, { val: GLBidx.p1, label: GLBidx.p1 }, { val: GLBidx.wd1, label: GLBidx.wd1 }, { val: GLBidx.wd2, label: GLBidx.wd2 }],
     fileFields: [
       { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
-      { key: idx.key2, label: `${idx.key2} *必須`, required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
+      { key: GLBidx.key2, label: `${GLBidx.key2} *必須`, required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
     ],
     confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }]
   };
