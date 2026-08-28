@@ -63,7 +63,7 @@
         const { key1, key2, p1, p2, wd1, wd2 } = GLB.idx;
         const obK = this.sortKeysByVal(GLB.obsidianIndex), mdK = this.sortKeysByVal(GLB.mudrockIndex);
         switch(type) {
-          case 'pxrf': return ['計測ID', key2, key1, p1, p2, ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
+          case 'pxrf': return ['計測ID', key1, key2, p1, p2, ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
           case 'wdxrf': return [key1, key2, wd1, wd2, ...GLB.valElms];
           case 'corr': return ['IndexName', ...GLB.valElms.flatMap(e => [`${e}_slp`, `${e}_int`])];
           case 'filelist': return ['file', 'mode', key2, 'sub_id', 'info', '計測ID'];
@@ -123,7 +123,7 @@
           };
           return [Mtd.Util.buildHeader('pxrf'), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
             const ob = extract(files.obsidian, obKeys, GLB.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.mudrockIndex);
-            return [scanId, id, extrRefs[GLB.idx.key1], extrRefs[GLB.idx.p1], extrRefs[GLB.idx.p2], ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
+            return [scanId, extrRefs[GLB.idx.key1], id, extrRefs[GLB.idx.p1], extrRefs[GLB.idx.p2], ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
           })];
         }
       },
@@ -262,7 +262,7 @@
         static evaluate(fml, rData) {
           if (!fml) return null;
           try {
-            const keys = Object.keys(rData), vals = Object.values(rData);
+            const keys = Object.keys(rData), vals = Object.values(rData).map(v => (v == null || v === "") ? NaN : v);
             const fn = new Function(...keys, `${this.#MATH_FNS} return ${fml};`);
             const res = fn(...vals);
             return isNaN(res) || !isFinite(res) ? null : res;
