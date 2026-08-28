@@ -11,12 +11,12 @@ const withErr = fn => {
 // --- メニュー追加 (GAS用) ---
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("OBPLOT1.0")
-    .addItem("データ抽出ツール", "showSidebarT1")
-    .addItem("グラフ作成ツール", "showSidebarT2")
+    .addItem("tracer5i抽出", "showSidebarT1")
+    .addItem("検量線・判別図", "showSidebarT2")
     .addToUi();
 }
-function showSidebarT1() { openSidebar("tab1", "データ抽出ツール"); }
-function showSidebarT2() { openSidebar("tab2", "グラフ作成ツール"); }
+function showSidebarT1() { openSidebar("tab1", "tracer5i抽出"); }
+function showSidebarT2() { openSidebar("tab2", "検量線・判別図"); }
 function openSidebar(mode, title) {
   const tpl = HtmlService.createTemplateFromFile("Sidebar");
   tpl.initialSsId = SpreadsheetApp.getActiveSpreadsheet().getId();
@@ -66,43 +66,44 @@ function writeData(ssId, shtName, data, opts = "clear") {
 // --- レポートテンプレート取得 ---
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
 
-// --- 環境セットアップ ---
-function setupEnvironment(ssId, ordShts, valElms, pxrfHdr, flHdr, isForce) {
+// --- 環境セットアップ汎用エンジン ---
+function setupEnvironment(ssId, schema, valElms, isForce) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
-    const rls = {
-      'PXRF': { hdr: pxrfHdr, lock: true, vald: h => JSON.stringify(h) === JSON.stringify(pxrfHdr) ? null : "・PXRFヘッダー不正" },
-      'WDXRF': { lock: true, vald: h => { const ms = valElms.filter(e => !h.includes(e)); return ms.length ? `・WDXRF元素不足: ${ms.join(', ')}` : null; } },
-      '抽出データ': { hdr: pxrfHdr, clr: true },
-      'ファイルリスト': { hdr: flHdr, clr: true }
+    const exMap = new Map(ss.getSheets().map(s => [s.getName(), s]));
+    // 不足検知
+    const missing = schema.map(s => s.name).filter(n => !exMap.has(n));
+    if (missing.length && !isForce) return ApiResponse.success({ reqConfirm: true, missing });
+    // シートルール
+    const setH = (s, h) => h && s.getRange(1, 1, 1, h.length).setValues([h]);
+    const getH = s => s.getRange(1, 1, 1, s.getLastColumn() || 1).getValues()[0] || [];
+    const vls = {
+      pxrf: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・PXRFヘッダー不正" : null,
+      corr: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・Correctionヘッダー不正" : null,
+      wdxrf: h => { const ms = valElms.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須元素不足: ${ms.join(', ')}` : null; }
     };
-    const drv = { // GAS操作Driver
-      getMap: () => new Map(ss.getSheets().map(s => [s.getName(), s])),
-      add: n => ss.insertSheet(n),
-      clr: s => s.clear(),
-      setHdr: (s, h) => s.getRange(1, 1, 1, h.length).setValues([h]),
-      getHdr: s => s.getRange(1, 1, 1, s.getLastColumn() || 1).getValues()[0],
-      setPos: (s, i) => { if (s.getIndex() !== i + 1) { ss.setActiveSheet(s); ss.moveActiveSheet(i + 1); } },
-      lock: s => s.getRange('1:1').setDataValidation(SpreadsheetApp.newDataValidation().requireFormulaSatisfied('=FALSE').setAllowInvalid(false).setHelpText('システム保護: 編集禁止').build())
-    };
-    const exMap = drv.getMap(), msShts = ordShts.filter(n => !exMap.has(n));
-    if (msShts.length > 0 && !isForce) return ApiResponse.success({ reqConfirm: true, missing: msShts }); // 不足時確認要求
-    const errs = ordShts.reduce((acc, n) => {
-      const r = rls[n] || {};
-      let sht = exMap.get(n);
+    // 生成/クリア・検証・ソート
+    const errs = schema.map(({ name, hdr, clr, validRule, lock }, i) => {
+      let sht = exMap.get(name), curH = hdr;
       if (!sht) {
-        sht = drv.add(n);
-        if (r.hdr) drv.setHdr(sht, r.hdr);
-        exMap.set(n, sht);
+        sht = ss.insertSheet(name);
+        setH(sht, hdr);
       } else {
-        if (r.clr) { drv.clr(sht); if (r.hdr) drv.setHdr(sht, r.hdr); }
-        if (r.vald) { const err = r.vald(drv.getHdr(sht)); if (err) acc.push(err); }
+        clr && (sht.clear(), setH(sht, hdr));
+        if (validRule) {
+          curH = getH(sht);
+          const err = vls[validRule]?.(curH, hdr);
+          if (err) return err;
+        }
       }
-      return acc;
-    }, []);
-    if (errs.length > 0) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`); // 統合エラー送出
-    ordShts.forEach((n, i) => drv.setPos(exMap.get(n), i));
-    ordShts.forEach(n => { if (rls[n]?.lock) drv.lock(exMap.get(n)); });
+      sht.getIndex() !== i + 1 && (ss.setActiveSheet(sht), ss.moveActiveSheet(i + 1));
+      if (lock && curH?.length) {
+        const rls = curH.map(v => SpreadsheetApp.newDataValidation().requireValueInList([String(v)], false).setAllowInvalid(false).setHelpText('システム保護: 編集禁止').build());
+        sht.getRange(1, 1, 1, curH.length).setDataValidations([rls]);
+      }
+      return null;
+    }).filter(Boolean);
+    if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
     return ApiResponse.success({ reqConfirm: false });
   });
 }

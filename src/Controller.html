@@ -18,21 +18,47 @@
     // --- アプリ接続フロー ---
     static async connectApp(ssId) {
       State.set("GLB.isLocked", true);
+      const mode = State.get("GLB.activeTab");
+      const statPath = mode === 'tab1' ? "T1ST.pref.status" : "T2ST.asgn.status";
       try {
-        const ordShts = ['ファイルリスト', 'File', 'Results', '抽出データ', 'PXRF', 'WDXRF'];
-        const pxrfHdr = Mtd.Util.buildPxrfHeader(), flHdr = GLB.Conf.appHeads.filelist;
-        let res = await API.setupEnvironment(ssId, ordShts, GLB.Conf.valElms, pxrfHdr, flHdr, false); // 不足検知
+        State.set(statPath, ["loading", "環境構築中..."]);
+        const conf = { 
+          pxrfHdr: Mtd.Util.buildPxrfHeader(), 
+          flHdr: GLB.Conf.appHeads.filelist, 
+          corrHdr: ['IndexName', ...GLB.Conf.valElms.flatMap(e => [`${e}_slp`, `${e}_int`])],
+          wdxrfHdr: ['database', 'id', 'Group', 'Source', ...GLB.Conf.valElms] 
+        };
+        // シートスキーマ
+        const schema = mode === 'tab1'
+          ? [
+              { name: 'ファイルリスト', hdr: conf.flHdr, clr: true },
+              { name: 'File' }, { name: 'Results' },
+              { name: '抽出データ', hdr: conf.pxrfHdr, clr: true },
+              { name: 'PXRF', hdr: conf.pxrfHdr, lock: true, validRule: 'pxrf' }
+            ]
+          : [
+              { name: 'PXRF', hdr: conf.pxrfHdr, lock: true, validRule: 'pxrf' },
+              { name: 'WDXRF', hdr: conf.wdxrfHdr, lock: true, validRule: 'wdxrf' },
+              { name: 'Correction', hdr: conf.corrHdr, lock: true, validRule: 'corr' }
+            ];
+        // 環境分岐処理に移譲
+        let res = await API.setupEnvironment(ssId, schema, GLB.Conf.valElms, false);  
         if (res.reqConfirm) {
+          State.set(statPath, ["message", "確認待ち"]);
           if (!await NewDOM.confirm("確認", `「${res.missing.join('、')}」が不足しています。\n新たに作成しますか？`)) {
             State.set("GLB.isLocked", false);
-            return false; // キャンセル時中断
+            State.set(statPath, ["hidden", ""]);
+            return false;
           }
-          res = await API.setupEnvironment(ssId, ordShts, GLB.Conf.valElms, pxrfHdr, flHdr, true); // 強制作成実行
+          State.set(statPath, ["loading", "シート生成中..."]); // OKなら再開
+          res = await API.setupEnvironment(ssId, schema, GLB.Conf.valElms, true);
         }
         State.set("GLB.ssId", ssId);
+        State.set(statPath, ["hidden", ""]); // 完了後は非表示に戻す
         return true;
       } catch (e) {
-        await NewDOM.confirm("接続エラー", e.message.includes("【検証エラー】") ? e.message : `アクセスできませんでした、または予期せぬエラーです。\n\n${e.message}`); // 統合エラー表示
+        State.set(statPath, ["hidden", ""]);
+        await NewDOM.confirm("接続エラー", e.message.includes("【検証エラー】") ? e.message : `アクセスできませんでした、または予期せぬエラーです。\n\n${e.message}`);
         State.set("GLB.isLocked", false);
         return false;
       }
