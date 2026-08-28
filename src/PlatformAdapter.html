@@ -82,61 +82,56 @@
       if (!res.ok) throw new Error("テンプレート取得失敗");
       return await res.text();
     }
-    // --- 環境セットアップ汎用エンジン ---
-    static async setupEnvironment(ssId, schema, valElms, isForce) {
+    // --- ブック状態取得 ---
+    static async getWbState(ssId) {
       return this.#run(async (ctx) => {
         const shts = ctx.workbook.worksheets;
         shts.load("items/name");
         await ctx.sync();
-        const exMap = new Map(shts.items.map(s => [s.name, s]));
-        // 不足検知
-        const missing = schema.map(s => s.name).filter(n => !exMap.has(n));
-        if (missing.length && !isForce) return { reqConfirm: true, missing };
-        // シートルール
-        const setH = (s, h) => h && (s.getRangeByIndexes(0, 0, 1, h.length).values = [h]);
-        const getH = async s => {
+        const res = [];
+        for (const s of shts.items) {
           const rng = s.getUsedRangeOrNullObject();
           rng.load("columnCount");
           await ctx.sync();
-          if (rng.isNullObject || !rng.columnCount) return [];
-          const hRng = s.getRangeByIndexes(0, 0, 1, rng.columnCount);
-          hRng.load("values");
+          let hdr = [];
+          if (!rng.isNullObject && rng.columnCount > 0) {
+            const hRng = s.getRangeByIndexes(0, 0, 1, rng.columnCount);
+            hRng.load("values");
+            await ctx.sync();
+            hdr = hRng.values[0];
+          }
+          res.push({ name: s.name, hdr });
+        }
+        return res;
+      });
+    }
+    // --- シート動的構築 ---
+    static async buildSheets(ssId, buildPlan) {
+      return this.#run(async (ctx) => {
+        const shts = ctx.workbook.worksheets;
+        for (const { name, hdr, lock, idx } of buildPlan) {
+          let s = shts.getItemOrNullObject(name);
           await ctx.sync();
-          return hRng.values[0];
-        };
-        // WDXRF順序不同許容・包含確認
-        const vls = {
-          pxrf: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・PXRFヘッダー不正" : null,
-          corr: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・Correctionヘッダー不正" : null,
-          wdxrf: (h, req) => { const ms = req.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須項目不足: ${ms.join(', ')}` : null; }
-        };
-        // 生成/クリア・検証・ソート
-        const errs = [];
-        for (const [i, { name, hdr, clr, validRule, lock }] of schema.entries()) {
-          let sht = exMap.get(name), curH = hdr;
-          if (!sht) {
-            sht = shts.add(name);
-            setH(sht, hdr);
+          if (s.isNullObject) {
+            s = shts.add(name);
           } else {
-            clr && (sht.getUsedRangeOrNullObject().clear(), setH(sht, hdr));
-            if (validRule) {
-              curH = await getH(sht);
-              const err = vls[validRule]?.(curH, hdr);
-              err && errs.push(err);
+            s.getUsedRangeOrNullObject().clear();
+          }
+          if (hdr && hdr.length) {
+            const hRng = s.getRangeByIndexes(0, 0, 1, hdr.length);
+            hRng.values = [hdr];
+            if (lock) {
+              hdr.forEach((v, i) => {
+                const r = s.getRangeByIndexes(0, i, 1, 1);
+                r.dataValidation.rule = { list: { inCellDropDown: false, source: String(v) } };
+                r.dataValidation.errorAlert = { message: "システム保護: 編集禁止", showAlert: true, style: "Stop", title: "保護" };
+              });
             }
           }
-          sht.position = i;
-          if (lock && curH?.length) {
-            curH.forEach((v, idx) => {
-              const r = sht.getRangeByIndexes(0, idx, 1, 1);
-              r.dataValidation.rule = { list: { inCellDropDown: false, source: String(v) } };
-              r.dataValidation.errorAlert = { message: "システム保護: 編集禁止", showAlert: true, style: "Stop", title: "保護" };
-            });
-          }
+          if (idx !== undefined) s.position = idx;
         }
-        if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
         await ctx.sync();
-        return { reqConfirm: false };
+        return "構築完了";
       });
     }
   }

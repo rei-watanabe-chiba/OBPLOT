@@ -19,7 +19,7 @@
       const mode = State.get("GLB.activeTab");
       const statPath = mode === 'tab1' ? "T1ST.pref.status" : "T2ST.asgn.status";
       try {
-        State.set(statPath, ["loading", "環境構築中..."]);
+        State.set(statPath, ["loading", "環境確認中..."]);
         const conf = { 
           pxrfHdr: Mtd.Util.buildHeader('pxrf'), 
           flHdr: Mtd.Util.buildHeader('filelist'), 
@@ -39,17 +39,23 @@
               { name: 'WDXRF', hdr: conf.wdxrfHdr, lock: true, validRule: 'wdxrf' },
               { name: 'Correction', hdr: conf.corrHdr, lock: true, validRule: 'corr' }
             ];
-        // 環境構築関数へ移譲
-        let res = await API.setupEnvironment(ssId, schema, GLB.valElms, false);  
-        if (res.reqConfirm) {
+
+        // シート検証
+        const curShts = await API.getWbState(ssId);
+        const { missing, errs } = Mtd.Util.validateEnv(curShts, schema);
+        if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
+        // 2. 不足シート構築
+        if (missing.length) {
           State.set(statPath, ["message", "確認待ち"]);
-          if (!await NewDOM.confirm("確認", `「${res.missing.join('、')}」が不足しています。\n新たに作成しますか？`)) {
+          if (!await NewDOM.confirm("確認", `「${missing.map(m => m.name).join('、')}」が不足しています。\n新たに作成しますか？`)) {
             State.set("GLB.isLocked", false);
             State.set(statPath, ["hidden", ""]);
             return false;
           }
           State.set(statPath, ["loading", "シート生成中..."]);
-          res = await API.setupEnvironment(ssId, schema, GLB.valElms, true);
+          // 不足・初期化指定を処理
+          const buildPlan = schema.map((s, idx) => ({ ...s, idx })).filter(s => missing.some(m => m.name === s.name) || s.clr);
+          await API.buildSheets(ssId, buildPlan);
         }
         State.set("GLB.ssId", ssId);
         State.set(statPath, ["hidden", ""]);
