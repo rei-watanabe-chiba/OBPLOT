@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// infraディレクトリから見た相対パス
 const srcDir = path.join(__dirname, '../src');
 const distDir = path.join(__dirname, '../dist');
 if (!fs.existsSync(distDir)) fs.mkdirSync(distDir);
@@ -13,13 +12,16 @@ sidebarHtml = sidebarHtml.replace(/<\?!= include\(['"]([^'"]+)['"]\); \?>/g, (ma
   const exts = ['.html', '.js'];
   for (const ext of exts) {
     const filePath = path.join(srcDir, fileName.endsWith(ext) ? fileName : fileName + ext);
-    if (fs.existsSync(filePath)) return fs.readFileSync(filePath, 'utf-8');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return filePath.endsWith('.js') ? `<script>\n${content}\n</script>` : content; // .jsならラップ
+    }
   }
   console.warn(`File not found: ${fileName}`);
   return '';
 });
 
-// Excel用にReportテンプレートを定数として埋め込み
+// 別タブレポート定数
 const reportHtml = fs.readFileSync(path.join(srcDir, 'Report.html'), 'utf-8');
 const escapedReport = reportHtml.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
 const injectScript = `<script>window.__REPORT_TEMPLATE__ = \`${escapedReport}\`;<\/script>`;
