@@ -14,6 +14,7 @@ sidebarHtml = sidebarHtml.replace(/<\?!= include\(['"]([^'"]+)['"]\); \?>/g, (ma
     const filePath = path.join(srcDir, fileName.endsWith(ext) ? fileName : fileName + ext);
     if (fs.existsSync(filePath)) {
       const content = fs.readFileSync(filePath, 'utf-8');
+      console.log(`[INCLUDE SUCCESS] ${fileName} -> 結合完了 (${content.length}文字)`); // ★追加
       return filePath.endsWith('.js') ? `<script>\n${content}\n</script>` : content;
     }
   }
