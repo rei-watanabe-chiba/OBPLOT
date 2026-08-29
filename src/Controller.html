@@ -16,53 +16,32 @@
     // --- アプリ接続フロー ---
     static async connectApp(ssId) {
       State.set("GLB.isLocked", true);
-      const mode = State.get("GLB.activeTab");
-      const statPath = mode === 'tab1' ? "T1ST.pref.status" : "T2ST.asgn.status";
+      const statPath = State.get("GLB.activeTab") === 'tab1' ? "T1ST.pref.status" : "T2ST.asgn.status";
       try {
         State.set(statPath, ["loading", "環境確認中..."]);
-        const conf = { 
-          pxrfHdr: Mtd.Util.buildHeader('pxrf'), 
-          flHdr: Mtd.Util.buildHeader('filelist'), 
-          corrHdr: Mtd.Util.buildHeader('corr'),
-          wdxrfHdr: Mtd.Util.buildHeader('wdxrf') 
-        };
-        // ヘッダースキーマ
-        const schema = mode === 'tab1'
-          ? [
-              { name: 'ファイルリスト', hdr: conf.flHdr, clr: true },
-              { name: 'File' }, { name: 'Results' },
-              { name: '抽出データ', hdr: conf.pxrfHdr, clr: true },
-              { name: 'PXRF', hdr: conf.pxrfHdr, lock: true, validRule: 'pxrf' }
-            ]
-          : [
-              { name: 'PXRF', hdr: conf.pxrfHdr, lock: true, validRule: 'pxrf' },
-              { name: 'WDXRF', hdr: conf.wdxrfHdr, lock: true, validRule: 'wdxrf' },
-              { name: 'Correction', hdr: conf.corrHdr, lock: true, validRule: 'corr' }
-            ];
-
-        // シート検証
         const curShts = await API.getWbState(ssId);
-        const { missing, errs } = Mtd.Util.validateEnv(curShts, schema);
+        //　検証発火
+        const { errs, buildPlan, missingNames } = Mtd.Util.valdEnv(curShts, State.get("GLB.activeTab"));
         if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
-        // 2. 不足シート構築
-        if (missing.length) {
-          State.set(statPath, ["message", "確認待ち"]);
-          if (!await NewDOM.confirm("確認", `「${missing.map(m => m.name).join('、')}」が不足しています。\n新たに作成しますか？`)) {
-            State.set("GLB.isLocked", false);
-            State.set(statPath, ["hidden", ""]);
-            return false;
+        //　不足追加発火
+        if (buildPlan.length) {
+          if (missingNames.length) {
+            State.set(statPath, ["message", "確認待ち"]);
+            if (!await NewDOM.confirm("確認", `「${missingNames.join('、')}」が不足しています。\n新たに作成しますか？`)) {
+              State.set("GLB.isLocked", false);
+              State.set(statPath, ["hidden", ""]);
+              return false;
+            }
           }
-          State.set(statPath, ["loading", "シート生成中..."]);
-          // 不足・初期化指定を処理
-          const buildPlan = schema.map((s, idx) => ({ ...s, idx })).filter(s => missing.some(m => m.name === s.name) || s.clr);
-          await API.buildSheets(ssId, buildPlan);
+          State.set(statPath, ["loading", "シート構成を更新中..."]);
+          await API.buildShts(ssId, buildPlan);
         }
         State.set("GLB.ssId", ssId);
         State.set(statPath, ["hidden", ""]);
         return true;
       } catch (e) {
         State.set(statPath, ["hidden", ""]);
-        await NewDOM.confirm("接続エラー", e.message.includes("【検証エラー】") ? e.message : `アクセスできませんでした、または予期せぬエラーです。\n\n${e.message}`);
+        await NewDOM.confirm("接続エラー", e.message.includes("【検証エラー】") ? e.message : `予期せぬエラーです。\n\n${e.message}`);
         State.set("GLB.isLocked", false);
         return false;
       }

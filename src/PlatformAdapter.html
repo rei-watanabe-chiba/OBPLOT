@@ -88,51 +88,53 @@
         const shts = ctx.workbook.worksheets;
         shts.load("items/name");
         await ctx.sync();
-        const res = [];
-        for (const s of shts.items) {
+        const rngInfo = shts.items.map(s => {
           const rng = s.getUsedRangeOrNullObject();
           rng.load("columnCount");
-          await ctx.sync();
-          let hdr = [];
-          if (!rng.isNullObject && rng.columnCount > 0) {
-            const hRng = s.getRangeByIndexes(0, 0, 1, rng.columnCount);
-            hRng.load("values");
-            await ctx.sync();
-            hdr = hRng.values[0];
-          }
-          res.push({ name: s.name, hdr });
-        }
-        return res;
+          return rng;
+        });
+        await ctx.sync();
+        const hdrs = shts.items.map((s, i) => {
+          const c = rngInfo[i].columnCount;
+          if (rngInfo[i].isNullObject || c === 0) return null;
+          const hRng = s.getRangeByIndexes(0, 0, 1, c);
+          hRng.load("values");
+          return hRng;
+        });
+        await ctx.sync();
+        return shts.items.map((s, i) => ({
+          name: s.name,
+          hdr: hdrs[i] ? hdrs[i].values[0] : []
+        }));
       });
     }
-    // --- シート動的構築 ---
-    static async buildSheets(ssId, buildPlan) {
+    // --- シート動的構築とソート ---
+    static async buildShts(ssId, buildPlan) {
       return this.#run(async (ctx) => {
         const shts = ctx.workbook.worksheets;
-        for (const { name, hdr, lock, idx } of buildPlan) {
-          let s = shts.getItemOrNullObject(name);
-          await ctx.sync();
-          if (s.isNullObject) {
-            s = shts.add(name);
-          } else {
+        shts.load("items/name");
+        await ctx.sync();
+        const exMap = new Map(shts.items.map(s => [s.name, s]));
+        buildPlan.forEach(({ name, hdr, lock, clr, idx }) => {
+          let s = exMap.get(name) || shts.add(name);
+          if (clr) {
             s.getUsedRangeOrNullObject().clear();
-          }
-          if (hdr && hdr.length) {
-            const hRng = s.getRangeByIndexes(0, 0, 1, hdr.length);
-            hRng.values = [hdr];
-            if (lock) {
-              hdr.forEach((v, i) => {
-                const r = s.getRangeByIndexes(0, i, 1, 1);
-                r.dataValidation.rule = { list: { inCellDropDown: false, source: String(v) } };
-                r.dataValidation.errorAlert = { message: "システム保護: 編集禁止", showAlert: true, style: "Stop", title: "保護" };
-              });
+            if (hdr?.length) {
+              const hRng = s.getRangeByIndexes(0, 0, 1, hdr.length);
+              hRng.values = [hdr];
+              if (lock) {
+                hdr.forEach((v, i) => {
+                  const r = s.getRangeByIndexes(0, i, 1, 1);
+                  r.dataValidation.rule = { list: { inCellDropDown: false, source: String(v) } };
+                  r.dataValidation.errorAlert = { message: "システム保護: 編集禁止", showAlert: true, style: "Stop", title: "保護" };
+                });
+              }
             }
           }
           if (idx !== undefined) s.position = idx;
-        }
+        });
         await ctx.sync();
-        return "構築完了";
+        return "構成更新完了";
       });
     }
-  }
 </script>

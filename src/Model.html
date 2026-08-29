@@ -80,7 +80,7 @@
     static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
     static getWbState(ssId) { return this.#serverCall("getWbState", ssId); }
-    static buildSheets(ssId, buildPlan) { return this.#serverCall("buildSheets", ssId, buildPlan); }
+    static buildShts(ssId, buildPlan) { return this.#serverCall("buildShts", ssId, buildPlan); }
   }
   // --- ローカルストレージ ---
   class LocalStorageAdapter {

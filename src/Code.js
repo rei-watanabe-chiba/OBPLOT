@@ -62,31 +62,26 @@ function writeData(ssId, shtName, data, opts = "clear") {
 function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
 // --- ブック状態取得 ---
 function getWbState(ssId) {
-  return withErr(() => {
-    const ss = SpreadsheetApp.openById(ssId);
-    const sheets = ss.getSheets().map(s => {
-      const lc = s.getLastColumn();
-      return { name: s.getName(), hdr: lc ? s.getRange(1, 1, 1, lc).getValues()[0] : [] };
-    });
-    return ApiResponse.success(sheets);
-  });
+  return withErr(() => ApiResponse.success(SpreadsheetApp.openById(ssId).getSheets().map(s => ({
+    name: s.getName(), hdr: s.getLastColumn() ? s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0] : []
+  }))));
 }
-// --- シート動的構築 ---
-function buildSheets(ssId, buildPlan) {
+// --- シート動的構築とソート ---
+function buildShts(ssId, buildPlan) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
-    buildPlan.forEach(({ name, hdr, lock, idx }) => {
-      let s = ss.getSheetByName(name) || ss.insertSheet(name);
+    const setHdr = (s, hdr, lock) => {
       s.clear();
-      if (hdr && hdr.length) {
-        s.getRange(1, 1, 1, hdr.length).setValues([hdr]);
-        if (lock) {
-          const rls = hdr.map(v => SpreadsheetApp.newDataValidation().requireValueInList([String(v)], false).setAllowInvalid(false).setHelpText('システム保護: 編集禁止').build());
-          s.getRange(1, 1, 1, hdr.length).setDataValidations([rls]);
-        }
-      }
-      if (idx !== undefined) { ss.setActiveSheet(s); ss.moveActiveSheet(idx + 1); }
+      if (!hdr?.length) return;
+      s.getRange(1, 1, 1, hdr.length).setValues([hdr]);
+      if (lock) s.getRange(1, 1, 1, hdr.length).setDataValidations([hdr.map(v => SpreadsheetApp.newDataValidation().requireValueInList([String(v)], false).setAllowInvalid(false).setHelpText('システム保護: 編集禁止').build())]);
+    };
+    buildPlan.forEach(({ name, hdr, lock, clr, idx }) => {
+      let s = ss.getSheetByName(name);
+      if (!s) { s = ss.insertSheet(name); clr = true; } 
+      if (clr) setHdr(s, hdr, lock);
+      if (idx !== undefined && s.getIndex() !== idx + 1) { ss.setActiveSheet(s); ss.moveActiveSheet(idx + 1); }
     });
-    return ApiResponse.success("構築完了");
+    return ApiResponse.success("構成更新完了");
   });
 }

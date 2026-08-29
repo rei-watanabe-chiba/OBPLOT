@@ -71,20 +71,25 @@
           default: return [];
         }
       }
-      // --- シート環境検証ロジック ---
-      static validateEnv(curShts, schema) {
+      // --- シート環境検証 ---
+      static valdEnv(curShts, schemaType) {
+        const schema = GLB.schema[schemaType].map(s => ({ ...s, hdr: s.hdrType ? this.buildHeader(s.hdrType) : [] }));
         const exMap = new Map(curShts.map(s => [s.name, s.hdr]));
-        const missing = schema.filter(s => !exMap.has(s.name));
         const vls = {
           pxrf: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・PXRFヘッダー不正" : null,
           corr: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・Correctionヘッダー不正" : null,
           wdxrf: (h, req) => { const ms = req.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須項目不足: ${ms.join(', ')}` : null; }
         };
-        const errs = schema.map(s => {
-          if (!exMap.has(s.name) || !s.validRule) return null;
-          return vls[s.validRule]?.(exMap.get(s.name), s.hdr);
-        }).filter(Boolean);
-        return { missing, errs };
+        const errs = schema.map(s => exMap.has(s.name) && s.validRule ? vls[s.validRule]?.(exMap.get(s.name), s.hdr) : null).filter(Boolean);
+        // 不足とソート判別
+        const isMissing = schema.some(s => !exMap.has(s.name));
+        const needsSort = isMissing || schema.some((s, i) => curShts[i]?.name !== s.name);
+        // 操作シートロジック
+        const buildPlan = (isMissing || needsSort) ? schema.map((s, idx) => ({
+          name: s.name, hdr: s.hdr, lock: s.lock, clr: s.clr || !exMap.has(s.name), idx
+        })) : [];
+        const missingNames = schema.filter(s => !exMap.has(s.name)).map(s => s.name);
+        return { errs, buildPlan, missingNames };
       }
     },
     T1: {

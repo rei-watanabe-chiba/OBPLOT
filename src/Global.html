@@ -3,7 +3,7 @@
   // --- 設定定数定義 ---
   // --- **GLB内は認知度向上のためにプロパティ名・コメントアウトの文字数制限撤廃** ---
   // --- **リファクタリング時も既存コメントアウトを絶対保持すること** ---
-  // ▼ key: PXRF-WDXRF紐づけのキー, p: 計測情報, wd: 産地情報（ヘッダに連動）
+  // ▼ 出力値：key: PXRF-WDXRF紐づけのキー, p: 計測情報, wd: 産地情報（ヘッダに連動）
   const GLBidx = { key1: "database", key2: "ID", p1: "item", p2: "date", wd1: "Group", wd2: "Source" };
   const GLB = {
     idx: GLBidx,
@@ -36,7 +36,7 @@
     // ツールチップ表示項目（GLBidxベースで'計測ID','item','date'も対応） ---------------
     tooltipKeys: [GLBidx.key1, GLBidx.key2, GLBidx.wd1],
 
-    // 以降は処理・UI用定数のため編集不可
+    // 以降は処理フロー・UI用定数のため編集不可（出力値はUIに連動）
     validModes: ["mudrock", "obsidian"],
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
     mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
@@ -53,6 +53,21 @@
       { key: "file", label: "file *必須", required: true }, { key: "mode", label: "mode *必須", required: true },
       { key: GLBidx.key2, label: `${GLBidx.key2} *必須`, required: true }, { key: "sub_id", label: "sub_id", required: false }, { key: "info", label: "info", required: false }
     ],
-    confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }]
+    confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }],
+    schema: {
+      tab1: [
+        { name: 'ファイルリスト', hdrType: 'filelist', clr: true },
+        { name: 'File' }, { name: 'Results' },
+        { name: '抽出データ', hdrType: 'pxrf', clr: true },
+        { name: 'PXRF', hdrType: 'pxrf', lock: true, validRule: 'pxrf' }
+      ],
+      tab2: [
+        { name: 'PXRF', hdrType: 'pxrf', lock: true, validRule: 'pxrf' },
+        { name: 'WDXRF', hdrType: 'wdxrf', lock: true, validRule: 'wdxrf' },
+        { name: 'Correction', hdrType: 'corr', lock: true, validRule: 'corr' }
+      ]
+    }
+  };
+</script>
   };
 </script>
