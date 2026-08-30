@@ -7,9 +7,13 @@
   - `AppState` による厳格なObserver (Pub/Sub) モデル。状態はセクションごとに階層化。軽量な refs と phase のバックアップと再起動時検証。
   - **[Why]**: DOMを状態の正とせず、Stateの変更のみがUIを駆動する（単方向データフロー）ことで、予測不可能な副作用を排除する。
   - **[How]**: 状態取得時の冗長性を排除するため、`const { prev } = State.proxy.Tab2ST;` のように Proxy 経由の分割代入を利用する。各セクションの初期状態はファクトリ関数によって生成し、階層スキーマを厳格に保証する。
-- **プレゼンテーション (Declarative UI & Auto DI)**: 
+- **プレゼンテーション (Declarative UI & Auto DI & Schema-Driven)**: 
   - **[Why]**: UI構造とビジネスロジック、およびイベント発火の責務を完全に分離し、HTML側のスケルトン化（ID属性の廃止）を極めるため。DOM操作による状態のバイパス（Hack）を根絶し、手動バインディングによる保守性のボトルネックを解消する。
   - **[How]**: `<ob-popover>` 等の Web Components で振る舞いを隠蔽。HTML要素に対して、イベント発火の目印となる `data-action` と、UI状態制御の目印となる `data-ui` を明確に分けて付与する。起動時にこれらの属性を走査し、セクション起点の相対参照と自動購読（Auto Subscribe）によるDIを完全自動化する。
+  - **[How(Report)]**: 独立した出力画面（Report層）においては、`UI_SCHEMA`（設定配列）と `UIAutomator` を導入。UIの生成・値の監視・Stateの同期をスキーマ駆動で全自動化し、泥臭いDOM操作を完全に排除した。
+- **グラフレンダリングと精密レイアウト制御**:
+  - **[Why]**: EChartsの動的描画において、ユーザー設定の余白（絶対値）とウィンドウサイズ（相対値）の衝突による「ラベルの見切れ」や「二重パディング」を防ぎ、WYSIWYG（見たまま印刷）を保証するため。
+  - **[How]**: `Chart.html` が文字サイズに基づき自律的に「安全マージン」を計算し、ユーザー設定余白が不足する場合のみ自動補填する。親コンテナ（Report層）は `Chart.html` と全く同じ計算式をシミュレートし、CSS Grid (`place-items: center`) と連携してミリ単位の中央配置を実現する。
 - **配布・連携モデル (GASライブラリ化 ＆ テンプレート配布)**:
   - **[Why]**: エンドユーザーのUXを最大限簡易化し、開発者はライブラリ側の更新のみで全環境へ最新ロジックを一括配信するため。
   - **[How]**: 本体をGASライブラリとして非公開デプロイし、配布用テンプレートシートには最低限のラッパー関数（onOpen, showSidebar およびAPI中継）のみを配置。
@@ -32,9 +36,10 @@
 ## 3. コア・コントラクト（絶対的制約とコーディング規約）
 機能追加やリファクタリング時は、以下の思想と制約を**必ず**遵守すること。
 
-1. **ビジネスロジックの純粋化 (Method層)**:
-   - **[Why]**: テスト容易性と保守性の担保。
+1. **ビジネスロジックの純粋化 (Method層への一元化)**:
+   - **[Why]**: テスト容易性と保守性の担保。処理の重複（DRY原則違反）を防ぐため。
    - **[Rule]**: DOM APIやGAS通信 (`API.fetchData`等) を一切混入させない純粋関数として実装する。
+   - **[Rule]**: Controller層（サイドバー）やReport層（印刷プレビュー）で行うデータ生成・回帰計算ロジックは、必ず `Method.html` (`Mtd`) 内の共通関数（`generateChartData` 等）に集約し、各層からはそれを呼び出すのみとする。
    - **[Rule]**: 列インデックス等のマジックナンバーは排除し、ヘッダー配列からの動的走査（`indexOf`等）によるバインドを徹底する。
 2. **ステートレス化とイミュータブル処理**:
    - **[Why]**: 外部変数のミュータブルな書き換え（副作用）によるバグを防ぐため。
@@ -55,6 +60,7 @@
 ## 4. アーキテクチャ・パイプライン（データフロー）
 - **[コマンド (非同期実行等)]**: `User Action (data-action) -> Evt Router -> Controller <-> API/Method -> State.set -> View Engine (data-ui) -> Web Components`
 - **[リアクティブ (入力選択等)]**: `User Input -> Evt Router -> State.set -> View Engine (data-ui) -> Web Components`
+- **[Report層 (スキーマ駆動)]**: `User Action/Input (data-action/data-bind) -> UIAutomator -> State.set -> Method -> Chart.html`
 
 ## 5. フェーズ・ステートマシン（状態遷移定義）
 - **Tab 1 (データ抽出)**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
@@ -73,9 +79,10 @@
 - `Controller.html`: [Controller] 非同期フロー制御 (`CoreCtrl`, `T1Ctrl`, `T2Ctrl`)
 - `Event.html`: [Event] イベント委譲ルーター (`Evt`), アイドル検知 (`IdlTm`), バックアップ管理 (`MakeBU`)
 - `Chart.html`: [Component] グラフ描画 (`<ob-cal-plot>`)
-- `Report.html`: [Template] レポート出力用静的HTML
+- `Report.html`: [Template] レポート出力用静的HTML（骨格）
+- `ReportCSS.html`: [Style] レポート出力専用のスタイル定義
+- `ReportLogic.html`: [Controller/View] スキーマ駆動型UI自動生成・状態管理・印刷フロー制御
 
 ## 7. 開発状況と次ステップ
-- **現在の状況**: 未定
-
-
+- **現在の状況**: `Report.html` の責務分割（HTML, CSS, JS）および、スキーマ駆動型UI (`UIAutomator`) によるモダン化・スリム化が完了。`Chart.html` とのパディング二重計算を解消し、データ生成ロジックの `Method.html` への一元化（DRY原則の徹底）を達成。UI/UXの微調整および印刷レイアウトの完璧な中央配置を実装。
+- **次ステップ**: 全体を通した動作テスト、エッジケース（異常データ入力時等）のハンドリング強化、および最終的なコードのクリーンアップ。
