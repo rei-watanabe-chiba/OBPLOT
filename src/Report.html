@@ -38,9 +38,16 @@
       .color-picker { height: var(--control-height); width: 100%; border: 1px solid var(--grey400); border-radius: 4px; padding: 0; cursor: pointer; }
       
       @media print {
-        body, .dash-main { background-color: #fff; padding: 0; height: auto; overflow: visible; display: block; }
-        .dash-sidebar { display: none; }
-        .a4-container { box-shadow: none; aspect-ratio: auto; width: 210mm; height: 296mm; page-break-after: avoid; }
+        @page { size: A4 portrait; margin: 0; }
+        body, html { margin: 0; padding: 0; background-color: #fff; height: 100%; }
+        .dash-layout { display: block; }
+        .dash-sidebar { display: none !important; }
+        .dash-main { padding: 0 !important; display: flex; justify-content: center; overflow: visible; height: 100%; background: none; }
+        .a4-container {
+          box-shadow: none; aspect-ratio: auto;
+          width: 210mm !important; height: 297mm !important;
+          max-height: none !important; margin: 0;
+        }
         .grid-panel { border-color: transparent; background-color: transparent; }
       }
     </style>
@@ -68,7 +75,7 @@
             <button id="btnResetGrid" data-type="primary" class="outline">1×1にリセット</button>
           </div>
           <div class="field-row" style="margin-top: 16px;">
-            <button id="btnPrint" data-type="primary">PDF用に印刷</button>
+            <button id="btnPrint" data-type="primary">プレビュー・PDF出力</button>
           </div>
         </details>
 
@@ -227,7 +234,6 @@
         static clear() { localStorage.removeItem(this.K); }
       }
 
-      // 単一情報源の原則に則り、GLBの既存設定から動的にUI初期値を生成
       const getInitialRawGph = () => {
         const st = GLB.defaultGraphStyle;
         const gp = GLB.defaultGraphGap;
@@ -261,6 +267,28 @@
         };
 
         static async init() {
+          // 印刷用タブとして展開された場合の特別処理
+          if (window.__IS_PRINT_TAB__) {
+             this.state = window.__PRINT_STATE__;
+             document.getElementById('dashSidebar').style.display = 'none';
+             document.body.style.backgroundColor = '#d1d5db'; // プレビュー用の暗め背景
+             
+             // 印刷実行フロー用のフローティングボタンを生成
+             const btn = document.createElement('button');
+             btn.textContent = '印刷ダイアログを開く';
+             btn.style.cssText = 'position: fixed; top: 20px; left: 20px; z-index: 9999; padding: 12px 24px; font-size: 16px; font-weight: bold; background-color: var(--theme-color); color: #fff; border: none; border-radius: 4px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);';
+             btn.onclick = () => {
+               btn.style.display = 'none'; // 印刷時にボタンが写り込まないように隠す
+               window.print();
+               setTimeout(() => btn.style.display = 'block', 1000); // 印刷ダイアログ終了後に復帰
+             };
+             document.body.appendChild(btn);
+             
+             this.render();
+             return;
+          }
+
+          // 通常のダッシュボード初期化
           const bu = DashBU.load();
           if (bu) {
             if (await NewDOM.confirm("復元", "前回のダッシュボード状態（グラフやレイアウトの設定）を復元しますか？")) {
@@ -293,6 +321,7 @@
         }
 
         static saveState() {
+          if (window.__IS_PRINT_TAB__) return;
           DashBU.save(this.state.refs);
           this.render();
         }
@@ -317,7 +346,7 @@
             },
             gap: {
               name: Number(raw.g_name), tick: Number(raw.g_tick),
-              padT: Number(raw.p_t) + s_tick, padB: Number(raw.p_b), padL: Number(raw.p_l), padR: Number(raw.p_r) + s_tick
+              padT: Number(raw.p_t), padB: Number(raw.p_b), padL: Number(raw.p_l), padR: Number(raw.p_r)
             }
           };
         }
@@ -380,7 +409,20 @@
           document.getElementById('btnAddRow').onclick = () => { if(this.state.refs.gridRows < 3) { this.state.refs.gridRows++; this.syncPanels(); this.saveState(); } };
           document.getElementById('btnAddCol').onclick = () => { if(this.state.refs.gridCols < 3) { this.state.refs.gridCols++; this.syncPanels(); this.saveState(); } };
           document.getElementById('btnResetGrid').onclick = () => { this.state.refs.gridRows = 1; this.state.refs.gridCols = 1; this.syncPanels(); this.saveState(); };
-          document.getElementById('btnPrint').onclick = () => window.print();
+          
+          // 印刷プレビュー用Blob生成処理
+          document.getElementById('btnPrint').onclick = () => {
+            const stateJson = JSON.stringify(this.state);
+            let htmlString = document.documentElement.outerHTML;
+            const printScript = `<script>
+              window.__IS_PRINT_TAB__ = true;
+              window.__PRINT_STATE__ = ${stateJson};
+            <\/script>`;
+            htmlString = htmlString.replace('<head>', '<head>' + printScript);
+            const blob = new Blob(['<!DOCTYPE html>' + htmlString], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+          };
 
           document.getElementById('boxGlobalCalElms').addEventListener('change', e => {
              const cntr = e.target.closest('ob-multi-select');
@@ -479,11 +521,9 @@
           const maxW = (gw - (r.gridCols - 1) * gap) / r.gridCols;
           const maxH = (gh - (r.gridRows - 1) * gap) / r.gridRows;
 
-          const s = gph.style.fontS;
-          const g = gph.gap;
-          const cW = s.tick * 0.6;
-          const padX = g.padL + cW + s.name + g.name + s.tick + g.tick + g.padR;
-          const padY = g.padT + (2 * cW) + g.padB + s.name + g.name + s.tick + g.tick;
+          // ユーザー指定のカスタムレイアウトアルゴリズム(Canvasベースのプロット内計算)に追従させるため絶対パディングとして使用
+          const padX = gph.gap.padL + gph.gap.padR;
+          const padY = gph.gap.padT + gph.gap.padB;
 
           const xPlot = maxW - padX;
           const yPlot = maxH - padY;
@@ -520,6 +560,8 @@
             const chart = document.createElement('ob-cal-plot');
             chart.style.width = '100%';
             chart.style.height = '100%';
+            // 印刷プレビューの場合はSVGモード、それ以外はCanvasモード
+            chart.setAttribute('data-renderer', window.__IS_PRINT_TAB__ ? 'svg' : 'canvas');
             
             div.appendChild(chart);
             div.onclick = () => { r.activePanelId = p.id; this.saveState(); };
@@ -536,7 +578,7 @@
           });
 
           const ap = this.activePanel;
-          if (ap) {
+          if (ap && !window.__IS_PRINT_TAB__) {
             document.getElementById('panelConfigSec').style.display = 'block';
             
             const setVal = (bindKey, val) => { const el = document.querySelector(`[data-bind="${bindKey}"]`); if(el) el.value = val || ""; };
@@ -544,7 +586,7 @@
 
             document.getElementById('secCalibration').style.display = ap.graphType === 'calibration' ? 'block' : 'none';
             document.getElementById('secDiscrimination').style.display = ap.graphType === 'discrimination' ? 'block' : 'none';
-          } else {
+          } else if (!window.__IS_PRINT_TAB__) {
             document.getElementById('panelConfigSec').style.display = 'none';
           }
         }

@@ -1,26 +1,23 @@
 <!-- src/Chart.html -->
 <script>
-  // --- テーマキャッシュ ---
   class CSSToken {
     static #cache = new Map();
-    // --- カラー変数変換 ---
     static get(varStr) {
       if (!varStr?.startsWith('var(')) return varStr;
       const mch = varStr.match(/var\((--[^,\s)]+)/);
-      if (!mch) return varStr; // 計算値保持
+      if (!mch) return varStr;
       const key = mch[1];
       if (!this.#cache.has(key)) this.#cache.set(key, getComputedStyle(document.body).getPropertyValue(key).trim() || varStr);
       return this.#cache.get(key);
     }
   }
-  // --- プロット描画クラス ---
+
   class ObCalPlot extends HTMLElement {
     #box; #chart = null; #observer; #src = null; #lastW = 0;
     constructor() {
       super();
       this.#box = document.createElement('div');
       this.#box.style.cssText = 'width: 100%; position: relative;';
-      // **超重要**高さ変動無限ループ防止
       this.#observer = new ResizeObserver(() => {
         const curW = this.clientWidth;
         if (curW > 0 && curW !== this.#lastW && this.#src) {
@@ -30,66 +27,74 @@
         }
       });
     }
-    // --- 接続コールバック ---
+
     connectedCallback() {
       this.style.display = 'grid';
-      // **超重要**幅拡張防止
       this.style.gridTemplateColumns = 'minmax(0, 1fr)';
       this.style.width = '100%';
       this.appendChild(this.#box);
       this.#observer.observe(this.#box);
     }
-    // --- 切断コールバック ---
+
     disconnectedCallback() {
       this.#observer.disconnect();
-      if (this.#chart) { this.#chart.dispose(); this.#chart = null; } // メモリ解放
+      if (this.#chart) { this.#chart.dispose(); this.#chart = null; }
     }
-    // --- データ注入と描画 ---
+
     set src(data) {
       this.#src = data;
       this.#render();
     }
-    // --- 描画消去 ---
+
     clear() {
       this.#src = null;
       if (this.#chart) this.#chart.clear();
-      this.#box.style.height = '0px'; // 領域リセット
+      this.#box.style.height = '0px';
     }
-    // --- 散布図描画本体 ---
+
     #render() {
       const { prevDT, statsDT, symb, gph } = this.#src || {};
       if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
       const containerWidth = this.clientWidth;
-      if (containerWidth === 0) return; // 非表示時はスキップ
+      if (containerWidth === 0) return;
       this.#lastW = containerWidth;
+      
       const rS = gph?.style || GLB.defaultGraphStyle;
       const STYLE = {
-        font: rS.font,
-        fontS: { ...rS.fontS },
+        font: rS.font, fontS: { ...rS.fontS },
         fontC: { base: CSSToken.get(rS.fontC.base), stats: CSSToken.get(rS.fontC.stats), tip: CSSToken.get(rS.fontC.tip) },
-        symbol: { ...rS.symbol },
-        lineW: { ...rS.lineW },
+        symbol: { ...rS.symbol }, lineW: { ...rS.lineW },
         lineC: { grid: CSSToken.get(rS.lineC.grid), axis: CSSToken.get(rS.lineC.axis), reg: CSSToken.get(rS.lineC.reg)},
         bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
+      
       const GAP = { ...(gph?.gap || GLB.defaultGraphGap) };
       const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
       const gridTop = GAP.padT + overY, gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick, gridRight = GAP.padR;
       const plotSize = containerWidth - gridLeft - gridRight, containerHeight = plotSize + gridTop + gridBottom;
+      
       this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
       this.#box.style.backgroundColor = STYLE.bgOuter;
-      if (!this.#chart) this.#chart = echarts.init(this.#box);
-      // 有効座標抽出・スケール計算
+      
+      if (!this.#chart) {
+        // 親から指定されたレンダラーを取得（デフォルトはcanvas）
+        const renderer = this.getAttribute('data-renderer') || 'canvas';
+        this.#chart = echarts.init(this.#box, null, { renderer });
+        this.#chart.on('finished', () => {
+          this.dispatchEvent(new CustomEvent('render-finished'));
+        });
+      }
+
       const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
       const { niceMin, niceMax, niceTicks } = Mtd.Util.calcScale(validPoints.map(d => d.x), validPoints.map(d => d.y));
       const itv = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
-      const fmtTick = v => { const tck = niceTicks.find(t => Math.abs(t.v - v) < 1e-8); return tck ? tck.f : v; }; // 刻みフォーマット
+      const fmtTick = v => { const tck = niceTicks.find(t => Math.abs(t.v - v) < 1e-8); return tck ? tck.f : v; };
       const graphText = statsDT ? Mtd.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
-      // 全メタデータ引継ぎ適用
+      
       const plotDT = validPoints.map(d => {
-        const rl = rls.find(r => r.target !== "" && r.target === d[baseKey]) || defRl; // ルール適用
+        const rl = rls.find(r => r.target !== "" && r.target === d[baseKey]) || defRl;
         const rawShp = rl.shp || 'circle';
         const isEmpty = rawShp === 'emptyCircle' && !d._forceClr;
         const shp = rawShp === 'emptyCircle' ? 'circle' : rawShp; 
@@ -100,15 +105,17 @@
           itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW }
         };
       });
+
       const series = [{ type: 'scatter', data: plotDT, animation: false }];
       if (statsDT?.slope != null && statsDT?.intercept != null) {
         const { slope, intercept } = statsDT;
         series.push({
-          type: 'line', data: [[niceMin, slope * niceMin + intercept], [niceMax, slope * niceMax + intercept]], // 回帰直線
+          type: 'line', data: [[niceMin, slope * niceMin + intercept], [niceMax, slope * niceMax + intercept]],
           symbol: 'none', lineStyle: { color: STYLE.lineC.reg, width: STYLE.lineW.regW, type: STYLE.lineW.regD, opacity: 0.5 },
           animation: false, silent: true
         });
       }
+
       const opt = {
         animation: false,
         textStyle: { fontFamily: STYLE.font },
