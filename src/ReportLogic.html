@@ -1,0 +1,353 @@
+<!-- src/ReportLogic.html -->
+<script>
+  class DashBU {
+    static K = "OBP_DASH_BU";
+    static save(refs) { localStorage.setItem(this.K, JSON.stringify(refs)); }
+    static load() { try { return JSON.parse(localStorage.getItem(this.K)); } catch(e){ return null; } }
+    static clear() { localStorage.removeItem(this.K); }
+  }
+
+  const getInitialRawGph = () => {
+    const st = GLB.defaultGraphStyle;
+    const fts = (st.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
+    return {
+      fontEng: GLB.fontEngList.find(f => f.includes(fts[0])) || GLB.fontEngList[0],
+      fontJp: GLB.fontJpList.find(f => f.includes(fts[1])) || GLB.fontJpList[0],
+      s_name: 8.5, s_tick: 7.5, s_tip: 8.5, c_base: 40, c_stats: 40, 
+      sym_size: 4.5, sym_bw: 0.8, lw_axis: 0.6, c_axis: 60, lw_grid: 0.2, c_grid: 90,
+      lw_reg: 0.5, lc_reg: "#546e7a", g_name: 4, g_tick: 4, p_t: 0, p_b: 0, p_l: 0, p_r: 0
+    };
+  };
+
+  const UI_SCHEMA = {
+    selects: [
+      { id: "boxGlobalCorr", bind: "correction", hasEmpty: false, optsFn: d => [{ label: "新規検量線", val: "new" }, ...(d.corrDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))] },
+      { id: "boxSymbAxis", bind: "symb.baseKey", hasEmpty: false, opts: GLB.symbAxes },
+      { id: "boxFontEng", bind: "rawGph.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({label:v, val:v})) },
+      { id: "boxFontJp", bind: "rawGph.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({label:v, val:v})) },
+      { id: "boxGraphType", bind: "activePanel.graphType", hasEmpty: false, opts: [{label: "検量線 (Calibration)", val: "calibration"}, {label: "判別図 (Discrimination)", val: "discrimination"}] },
+      { id: "boxCalibVal", bind: "activePanel.calibVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) },
+      { id: "boxDiscrX", bind: "activePanel.discrXVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) },
+      { id: "boxDiscrY", bind: "activePanel.discrYVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }
+    ],
+    toggles: [
+      { id: "boxGlobalCalTgl", bind: "useCal", label: "検量線を適用" }
+    ],
+    multiSelects: [
+      { id: "boxGlobalCalElms", bind: "calElms", opts: GLB.valElms }
+    ],
+    actions: {
+      addRow: app => { if (app.state.refs.gridRows < 3) { app.state.refs.gridRows++; app.syncPanels(); app.saveState(); } },
+      addCol: app => { if (app.state.refs.gridCols < 3) { app.state.refs.gridCols++; app.syncPanels(); app.saveState(); } },
+      resetGrid: app => { app.state.refs.gridRows = 1; app.state.refs.gridCols = 1; app.syncPanels(); app.saveState(); },
+      printPDF: app => {
+        const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${JSON.stringify(app.state)};<\/script>`);
+        window.open(URL.createObjectURL(new Blob(['<!DOCTYPE html>' + htmlStr], { type: 'text/html' })), '_blank');
+      },
+      resetSymb: app => { app.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; app.renderSymbTable(); app.saveState(); },
+      applyPanel: app => app.saveState(), 
+      addSymb: app => { app.state.refs.symb.rls.push({ key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }); app.renderSymbTable(); app.saveState(); },
+      removeSymb: (app, btn) => { app.state.refs.symb.rls = app.state.refs.symb.rls.filter(rw => rw.key !== btn.dataset.ruleKey); app.renderSymbTable(); app.saveState(); },
+      renewSymb: (app, btn) => {
+        const { symbolIdx: i, symbolType: t } = btn.dataset;
+        if (i != null && t && app.state.refs.symb.rls[i]) { app.state.refs.symb.rls[i][t] = btn.value; app.renderSymbTable(); app.saveState(); }
+      }
+    }
+  };
+
+  class UIAutomator {
+    constructor(app) { this.app = app; }
+    
+    getVal(path) {
+      if (path.startsWith('activePanel.')) return this.app.activePanel?.[path.split('.')[1]] ?? "";
+      return path.split('.').reduce((o, i) => o?.[i], this.app.state.refs);
+    }
+    setVal(path, val) {
+      if (path.startsWith('activePanel.')) {
+        if (this.app.activePanel) this.app.activePanel[path.split('.')[1]] = val;
+      } else {
+        const keys = path.split('.'), last = keys.pop();
+        keys.reduce((o, i) => o[i], this.app.state.refs)[last] = val;
+      }
+    }
+
+    build() {
+      UI_SCHEMA.selects.forEach(s => {
+        NewDOM.buildFormFields([{ type: "select", opts: s.optsFn ? s.optsFn(this.app.state.data) : s.opts, bind: s.bind, hasEmpty: s.hasEmpty }], s.id, true);
+        const el = document.querySelector(`[data-bind="${s.bind}"]`);
+        if (el) el.value = this.getVal(s.bind);
+      });
+      UI_SCHEMA.toggles.forEach(t => {
+        NewDOM.buildToggle({ label: t.label, bind: t.bind }, t.id, true);
+        const el = document.querySelector(`[data-bind="${t.bind}"]`);
+        if (el) el.checked = this.getVal(t.bind);
+      });
+      UI_SCHEMA.multiSelects.forEach(m => {
+        const el = document.getElementById(m.id);
+        if (el) { el.opts = m.opts; el.refs = this.getVal(m.bind); }
+      });
+      document.querySelectorAll('[data-bind]:not(select):not([type="checkbox"])').forEach(el => {
+        const val = this.getVal(el.dataset.bind);
+        if (val !== undefined) el.value = val;
+      });
+      document.querySelectorAll('[data-gph]').forEach(el => {
+        const val = this.getVal('rawGph.' + el.dataset.gph);
+        if (val !== undefined) {
+          el.value = val;
+          const lbl = document.getElementById(`lbl_${el.dataset.gph}`);
+          if (lbl) lbl.textContent = `${val}%`;
+        }
+      });
+    }
+
+    bindEvents() {
+      const sb = document.getElementById('dashSidebar');
+      let oldSymbAxis = this.getVal('symb.baseKey');
+
+      sb.addEventListener('click', e => {
+        const btn = e.target.closest('button');
+        if (btn && UI_SCHEMA.actions[btn.dataset.action]) UI_SCHEMA.actions[btn.dataset.action](this.app, btn);
+      });
+
+      sb.addEventListener('input', e => {
+        const { gph, bind } = e.target.dataset;
+        if (gph) {
+          this.setVal('rawGph.' + gph, e.target.type === 'number' ? Number(e.target.value) : e.target.value);
+          const lbl = document.getElementById(`lbl_${gph}`);
+          if (lbl) lbl.textContent = `${e.target.value}%`;
+          this.app.queueSave();
+        } else if (bind === 'panelGap') {
+          this.setVal(bind, Number(e.target.value));
+          this.app.queueSave();
+        }
+      });
+
+      sb.addEventListener('change', async e => {
+        const { bind } = e.target.dataset;
+        if (bind) {
+          if (bind === 'symb.baseKey') {
+             if (await NewDOM.confirm("確認", "リセットしますか？")) {
+               this.setVal(bind, e.target.value);
+               this.app.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
+               oldSymbAxis = e.target.value; this.app.renderSymbTable();
+             } else { e.target.value = oldSymbAxis; }
+             return this.app.saveState();
+          }
+
+          this.setVal(bind, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+          if (bind === 'activePanel.graphType') {
+            document.getElementById('secCalibration').style.display = e.target.value === 'calibration' ? 'block' : 'none';
+            document.getElementById('secDiscrimination').style.display = e.target.value === 'discrimination' ? 'block' : 'none';
+          }
+          this.app.saveState();
+        } else if (e.target.closest('ob-multi-select')) {
+          const cntr = e.target.closest('ob-multi-select');
+          const schemaDef = UI_SCHEMA.multiSelects.find(m => m.id === cntr.id);
+          if (schemaDef) {
+            const cbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
+            if (e.target.classList.contains('select-all-cb')) cbs.forEach(cb => cb.checked = e.target.checked);
+            else if (allCb) allCb.checked = cbs.length > 0 && cbs.every(cb => cb.checked);
+            const vals = cbs.filter(cb => cb.checked).map(cb => cb.value);
+            this.setVal(schemaDef.bind, vals); cntr.refs = vals; this.app.saveState();
+          }
+        }
+      });
+    }
+  }
+
+  class ReportApp {
+    static state = {
+      data: window.__INJECTED_DATA__ || { pxrfDT: [], wdxrfDT: [], corrDT: [] },
+      refs: {
+        correction: "new", useCal: false, calElms: [...GLB.valElms], 
+        gridRows: 1, gridCols: 1, panelGap: 12,
+        margins: { top: 15, bottom: 15, left: 15, right: 15 },
+        activePanelId: "p_0",
+        symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
+        rawGph: getInitialRawGph(),
+        panels: [{ id: "p_0", graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "" }]
+      }
+    };
+
+    static async init() {
+      if (window.__IS_PRINT_TAB__) {
+         this.state = window.__PRINT_STATE__;
+         document.body.classList.add('is-print'); 
+         const loading = document.createElement('div');
+         loading.className = 'print-loading'; loading.textContent = '印刷用PDFを生成中...';
+         document.body.appendChild(loading);
+         this.render(); return;
+      }
+
+      const bu = DashBU.load();
+      if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
+        if(!bu.symb) bu.symb = this.state.refs.symb;
+        if(!bu.rawGph) bu.rawGph = this.state.refs.rawGph;
+        if(bu.panelGap === undefined || bu.panelGap === 16) bu.panelGap = 12;
+        if(!bu.calElms || bu.calElms.length === 0) bu.calElms = [...GLB.valElms]; 
+        this.state.refs = bu;
+      } else { DashBU.clear(); }
+
+      if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
+      
+      this.automator = new UIAutomator(this);
+      this.automator.build();
+      this.automator.bindEvents();
+      this.render();
+      
+      window.addEventListener('resize', () => {
+         clearTimeout(this.resizeTimer);
+         this.resizeTimer = setTimeout(() => {
+             this.fitA4Scale();
+             const gph = this.buildGph();
+             this.calcPanelSize(gph);
+             const grid = document.getElementById('dashGrid');
+             const plots = grid.querySelectorAll('ob-cal-plot');
+             this.state.refs.panels.forEach((p, i) => { if (plots[i]) this.drawChart(p, plots[i], gph); });
+         }, 100);
+      });
+    }
+
+    static saveState() { if (window.__IS_PRINT_TAB__) return; DashBU.save(this.state.refs); this.render(); }
+    static queueSave() { clearTimeout(this.gphTimer); this.gphTimer = setTimeout(() => this.saveState(), 100); }
+    static get activePanel() { return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId); }
+
+    static syncPanels() {
+      const total = this.state.refs.gridRows * this.state.refs.gridCols;
+      while(this.state.refs.panels.length < total) this.state.refs.panels.push({ id: `p_${this.state.refs.panels.length}`, graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "" });
+      if(this.state.refs.panels.length > total) this.state.refs.panels = this.state.refs.panels.slice(0, total);
+      if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0].id;
+    }
+
+    static fitA4Scale() {
+      if (window.__IS_PRINT_TAB__) return;
+      const main = document.querySelector('.dash-main'), a4 = document.getElementById('a4Container');
+      a4.style.transform = 'none';
+      const scale = Math.min((main.clientWidth - 48) / a4.offsetWidth, (main.clientHeight - 48) / a4.offsetHeight, 1);
+      a4.style.transform = `scale(${scale})`;
+      a4.style.marginBottom = `-${a4.offsetHeight * (1 - scale)}px`;
+    }
+
+    // ★修正: 二重パディングを解消。Chart.htmlに渡すgapは純粋な余白のみにする
+    static buildGph() {
+      const raw = this.state.refs.rawGph;
+      const pt2px = pt => Number(pt) * 1.33;
+      const [s_tip, sym_base, lw_reg, s_tick, s_name, g_name, g_tick, sym_bw, lw_axis, lw_grid, p_t, p_b, p_l, p_r] = 
+        [raw.s_tip, raw.sym_size, raw.lw_reg, raw.s_tick, raw.s_name, raw.g_name, raw.g_tick, raw.sym_bw, raw.lw_axis, raw.lw_grid, raw.p_t, raw.p_b, raw.p_l, raw.p_r].map(pt2px);
+      
+      return {
+        style: {
+          font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`,
+          fontS: { tick: s_tick, name: s_name, stats: s_tip * 0.9, tip: s_tip },
+          fontC: { base: `hsl(0, 0%, ${raw.c_base}%)`, stats: `hsl(0, 0%, ${raw.c_stats}%)`, tip: 'var(--text-main)' },
+          symbol: { baseSize: sym_base, pathSize: sym_base * 1.2, borderW: sym_bw },
+          lineW: { axis: lw_axis, grid: lw_grid, regW: lw_reg, regD: Number(raw.lw_reg) <= 0.4 ? [3,3] : [5,5] },
+          lineC: { axis: `hsl(0, 0%, ${raw.c_axis}%)`, grid: `hsl(0, 0%, ${raw.c_grid}%)`, reg: raw.lc_reg },
+          bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
+        },
+        gap: { name: g_name, tick: g_tick, padT: p_t, padB: p_b, padL: p_l, padR: p_r }
+      };
+    }
+
+    static renderSymbTable() {
+      const d = this.state.data, r = this.state.refs, symbElm = document.getElementById('tblSymb');
+      if (!symbElm || !d.pxrfDT?.length) return;
+      const vals = [...new Set(d.pxrfDT.map(pt => pt[r.symb.baseKey]).filter(Boolean))];
+      symbElm.src = { rls: r.symb.rls, optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "addSymb", remove: "removeSymb", update: "renewSymb"} };
+    }
+
+    // ★修正: パネルサイズ計算側で Chart.html と全く同じ計算式をシミュレートし、グラフを完璧に中央配置する
+    static calcPanelSize(gph) {
+      const grid = document.getElementById('dashGrid'), r = this.state.refs;
+      grid.style.removeProperty('--panel-w'); grid.style.removeProperty('--panel-h');
+      const gw = grid.clientWidth, gh = grid.clientHeight;
+      if (gw === 0 || gh === 0) return;
+      const gapPx = (r.panelGap !== undefined ? Number(r.panelGap) : 12) * 1.33;
+      const maxW = (gw - (r.gridCols - 1) * gapPx) / r.gridCols, maxH = (gh - (r.gridRows - 1) * gapPx) / r.gridRows;
+      
+      const style = gph.style;
+      const gap = gph.gap;
+      
+      // Chart.html 内のロジックと完全一致させる
+      const charWidth = style.fontS.tick * 0.6;
+      const overY = (4 * charWidth) / 2;
+      const overX = (2 * charWidth) / 2;
+      
+      const gridTop = gap.padT + overY;
+      const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      const gridLeft = gap.padL + overX + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      const gridRight = gap.padR;
+
+      const totalPadX = gridLeft + gridRight;
+      const totalPadY = gridTop + gridBottom;
+      
+      const plotLen = Math.max(10, Math.min(maxW - totalPadX, maxH - totalPadY));
+      
+      grid.style.setProperty('--panel-w', `${plotLen + totalPadX}px`);
+      grid.style.setProperty('--panel-h', `${plotLen + totalPadY}px`);
+    }
+
+    static render() {
+      const r = this.state.refs, cont = document.getElementById('a4Container');
+      cont.style.setProperty('--col-count', r.gridCols); cont.style.setProperty('--row-count', r.gridRows);
+      cont.style.setProperty('--panel-gap', `${(r.panelGap !== undefined ? Number(r.panelGap) : 12) * 1.33}px`);
+      ['top','right','bottom','left'].forEach(p => cont.style.setProperty(`--margin-${p}`, `${r.margins[p]}mm`));
+
+      const gph = this.buildGph(), grid = document.getElementById('dashGrid');
+      grid.innerHTML = ''; const chartsToDraw = [];
+      
+      r.panels.forEach(p => {
+        const div = document.createElement('div');
+        div.className = `grid-panel ${p.id === r.activePanelId ? 'active' : ''}`;
+        if (!window.__IS_PRINT_TAB__) { const s = document.createElement('span'); s.className = 'panel-id'; div.appendChild(s); }
+        const chart = document.createElement('ob-cal-plot');
+        chart.style.cssText = 'width: 100%; height: 100%;';
+        chart.setAttribute('data-renderer', window.__IS_PRINT_TAB__ ? 'svg' : 'canvas');
+        div.appendChild(chart); div.onclick = () => { r.activePanelId = p.id; this.saveState(); };
+        grid.appendChild(div); chartsToDraw.push({ p, chart });
+      });
+
+      requestAnimationFrame(() => {
+         this.fitA4Scale(); this.calcPanelSize(gph);
+         requestAnimationFrame(() => {
+            if (window.__IS_PRINT_TAB__) {
+               let finishedCount = 0, printFired = false;
+               const executePrint = () => { if (printFired) return; printFired = true; setTimeout(() => { window.print(); window.close(); }, 500); };
+               chartsToDraw.forEach(item => { item.chart.addEventListener('render-finished', () => { finishedCount++; if (finishedCount === chartsToDraw.length) executePrint(); }, { once: true }); });
+               setTimeout(executePrint, 5000);
+            }
+            chartsToDraw.forEach(item => this.drawChart(item.p, item.chart, gph));
+         });
+      });
+
+      const ap = this.activePanel;
+      if (ap && !window.__IS_PRINT_TAB__) {
+        document.getElementById('panelConfigSec').style.display = 'block';
+        this.automator.build(); // activePanel変更時のUI追従
+        const setVal = (b, v) => { const el = document.querySelector(`[data-bind="${b}"]`); if(el) el.value = v || ""; };
+        setVal("graphType", ap.graphType); setVal("calibVal", ap.calibVal); setVal("discrXVal", ap.discrXVal); setVal("discrYVal", ap.discrYVal);
+        document.getElementById('secCalibration').style.display = ap.graphType === 'calibration' ? 'block' : 'none';
+        document.getElementById('secDiscrimination').style.display = ap.graphType === 'discrimination' ? 'block' : 'none';
+      } else if (!window.__IS_PRINT_TAB__) { document.getElementById('panelConfigSec').style.display = 'none'; }
+    }
+
+    static drawChart(panel, chart, gph) {
+      const r = this.state.refs, d = this.state.data;
+      if (!d.pxrfDT?.length) return;
+      const baseConf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: false, modeMap: GLB.optElms };
+      let prevDT = [], statsDT = null;
+
+      if (panel.graphType === 'calibration' && panel.calibVal) {
+         prevDT = Mtd.T2.mgmPrev.buildPrev(d.pxrfDT, d.wdxrfDT, { ...baseConf, val: panel.calibVal });
+         statsDT = Mtd.T2.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), prevDT.map(pt => pt.err));
+      } else if (panel.graphType === 'discrimination' && panel.discrXVal && panel.discrYVal) {
+         const calibBase = Mtd.T2.mgmPrev.buildPrev(d.pxrfDT, d.wdxrfDT, { ...baseConf, val: GLB.valElms[0] });
+         const mapPts = (wDT, pDT) => [...wDT.map(w => ({ ...w, x: Mtd.T2.Calc.evaluate(panel.discrXVal, w), y: Mtd.T2.Calc.evaluate(panel.discrYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pDT.map(p => ({ ...p, x: Mtd.T2.Calc.evaluate(panel.discrXVal, p), y: Mtd.T2.Calc.evaluate(panel.discrYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
+         prevDT = mapPts(d.wdxrfDT, calibBase);
+      }
+      chart.src = { prevDT, statsDT, symb: r.symb, gph: gph };
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", () => ReportApp.init());
+</script>
