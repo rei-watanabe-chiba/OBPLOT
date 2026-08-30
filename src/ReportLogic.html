@@ -1,5 +1,6 @@
 <!-- src/ReportLogic.html -->
 <script>
+  // --- LocalStorage管理 ---
   class DashBU {
     static K = "OBP_DASH_BU";
     static save(refs) { localStorage.setItem(this.K, JSON.stringify(refs)); }
@@ -7,6 +8,7 @@
     static clear() { localStorage.removeItem(this.K); }
   }
 
+  // --- 初期値定義 ---
   const getInitialRawGph = () => {
     const st = GLB.defaultGraphStyle;
     const fts = (st.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
@@ -19,6 +21,9 @@
     };
   };
 
+  // ==========================================
+  // モダン化: スキーマ駆動の設定配列
+  // ==========================================
   const UI_SCHEMA = {
     selects: [
       { id: "boxGlobalCorr", bind: "correction", hasEmpty: false, optsFn: d => [{ label: "新規検量線", val: "new" }, ...(d.corrDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))] },
@@ -36,6 +41,7 @@
     multiSelects: [
       { id: "boxGlobalCalElms", bind: "calElms", opts: GLB.valElms }
     ],
+    // --- 宣言的アクションルーティング ---
     actions: {
       addRow: app => { if (app.state.refs.gridRows < 3) { app.state.refs.gridRows++; app.syncPanels(); app.saveState(); } },
       addCol: app => { if (app.state.refs.gridCols < 3) { app.state.refs.gridCols++; app.syncPanels(); app.saveState(); } },
@@ -55,13 +61,19 @@
     }
   };
 
+  // ==========================================
+  // モダン化: 自動バインディング・コアエンジン
+  // ==========================================
   class UIAutomator {
     constructor(app) { this.app = app; }
     
+    // --- 値の取得 ---
     getVal(path) {
       if (path.startsWith('activePanel.')) return this.app.activePanel?.[path.split('.')[1]] ?? "";
       return path.split('.').reduce((o, i) => o?.[i], this.app.state.refs);
     }
+    
+    // --- 値の設定 ---
     setVal(path, val) {
       if (path.startsWith('activePanel.')) {
         if (this.app.activePanel) this.app.activePanel[path.split('.')[1]] = val;
@@ -71,6 +83,7 @@
       }
     }
 
+    // --- UIの一括構築 ---
     build() {
       UI_SCHEMA.selects.forEach(s => {
         NewDOM.buildFormFields([{ type: "select", opts: s.optsFn ? s.optsFn(this.app.state.data) : s.opts, bind: s.bind, hasEmpty: s.hasEmpty }], s.id, true);
@@ -100,6 +113,7 @@
       });
     }
 
+    // --- イベントの一括バインディング ---
     bindEvents() {
       const sb = document.getElementById('dashSidebar');
       let oldSymbAxis = this.getVal('symb.baseKey');
@@ -155,6 +169,9 @@
     }
   }
 
+  // ==========================================
+  // ReportApp (コントローラー層)
+  // ==========================================
   class ReportApp {
     static state = {
       data: window.__INJECTED_DATA__ || { pxrfDT: [], wdxrfDT: [], corrDT: [] },
@@ -169,6 +186,7 @@
       }
     };
 
+    // --- アプリケーション初期化 ---
     static async init() {
       if (window.__IS_PRINT_TAB__) {
          this.state = window.__PRINT_STATE__;
@@ -193,6 +211,10 @@
       this.automator = new UIAutomator(this);
       this.automator.build();
       this.automator.bindEvents();
+      
+      // ★ 修正: 初期化時にシンボルテーブルを明示的に描画
+      this.renderSymbTable();
+      
       this.render();
       
       window.addEventListener('resize', () => {
@@ -208,10 +230,12 @@
       });
     }
 
+    // --- 状態の保存 ---
     static saveState() { if (window.__IS_PRINT_TAB__) return; DashBU.save(this.state.refs); this.render(); }
     static queueSave() { clearTimeout(this.gphTimer); this.gphTimer = setTimeout(() => this.saveState(), 100); }
     static get activePanel() { return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId); }
 
+    // --- パネル同期 ---
     static syncPanels() {
       const total = this.state.refs.gridRows * this.state.refs.gridCols;
       while(this.state.refs.panels.length < total) this.state.refs.panels.push({ id: `p_${this.state.refs.panels.length}`, graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "" });
@@ -219,6 +243,7 @@
       if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0].id;
     }
 
+    // --- A4スケール調整 ---
     static fitA4Scale() {
       if (window.__IS_PRINT_TAB__) return;
       const main = document.querySelector('.dash-main'), a4 = document.getElementById('a4Container');
@@ -228,13 +253,20 @@
       a4.style.marginBottom = `-${a4.offsetHeight * (1 - scale)}px`;
     }
 
-    // ★修正: 二重パディングを解消。Chart.htmlに渡すgapは純粋な余白のみにする
+    // --- グラフ設定(Gph)の構築 ---
     static buildGph() {
       const raw = this.state.refs.rawGph;
       const pt2px = pt => Number(pt) * 1.33;
       const [s_tip, sym_base, lw_reg, s_tick, s_name, g_name, g_tick, sym_bw, lw_axis, lw_grid, p_t, p_b, p_l, p_r] = 
         [raw.s_tip, raw.sym_size, raw.lw_reg, raw.s_tick, raw.s_name, raw.g_name, raw.g_tick, raw.sym_bw, raw.lw_axis, raw.lw_grid, raw.p_t, raw.p_b, raw.p_l, raw.p_r].map(pt2px);
       
+      let finalPadT = p_t;
+      let finalPadR = p_r;
+
+      if (p_r < s_tick) {
+        finalPadR = p_r + s_tick;
+      }
+
       return {
         style: {
           font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`,
@@ -245,10 +277,11 @@
           lineC: { axis: `hsl(0, 0%, ${raw.c_axis}%)`, grid: `hsl(0, 0%, ${raw.c_grid}%)`, reg: raw.lc_reg },
           bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
         },
-        gap: { name: g_name, tick: g_tick, padT: p_t, padB: p_b, padL: p_l, padR: p_r }
+        gap: { name: g_name, tick: g_tick, padT: finalPadT, padB: p_b, padL: p_l, padR: finalPadR }
       };
     }
 
+    // --- シンボルテーブルの描画 ---
     static renderSymbTable() {
       const d = this.state.data, r = this.state.refs, symbElm = document.getElementById('tblSymb');
       if (!symbElm || !d.pxrfDT?.length) return;
@@ -256,7 +289,7 @@
       symbElm.src = { rls: r.symb.rls, optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "addSymb", remove: "removeSymb", update: "renewSymb"} };
     }
 
-    // ★修正: パネルサイズ計算側で Chart.html と全く同じ計算式をシミュレートし、グラフを完璧に中央配置する
+    // --- パネルサイズの計算 ---
     static calcPanelSize(gph) {
       const grid = document.getElementById('dashGrid'), r = this.state.refs;
       grid.style.removeProperty('--panel-w'); grid.style.removeProperty('--panel-h');
@@ -268,15 +301,17 @@
       const style = gph.style;
       const gap = gph.gap;
       
-      // Chart.html 内のロジックと完全一致させる
       const charWidth = style.fontS.tick * 0.6;
       const overY = (4 * charWidth) / 2;
       const overX = (2 * charWidth) / 2;
       
-      const gridTop = gap.padT + overY;
+      const safePadT = gap.padT < style.fontS.tick ? gap.padT + style.fontS.tick : gap.padT;
+      const safePadR = gap.padR < style.fontS.tick ? gap.padR + style.fontS.tick : gap.padR;
+
+      const gridTop = safePadT + overY;
       const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
       const gridLeft = gap.padL + overX + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridRight = gap.padR;
+      const gridRight = safePadR + overX;
 
       const totalPadX = gridLeft + gridRight;
       const totalPadY = gridTop + gridBottom;
@@ -287,6 +322,7 @@
       grid.style.setProperty('--panel-h', `${plotLen + totalPadY}px`);
     }
 
+    // --- 描画実行 ---
     static render() {
       const r = this.state.refs, cont = document.getElementById('a4Container');
       cont.style.setProperty('--col-count', r.gridCols); cont.style.setProperty('--row-count', r.gridRows);
@@ -323,7 +359,7 @@
       const ap = this.activePanel;
       if (ap && !window.__IS_PRINT_TAB__) {
         document.getElementById('panelConfigSec').style.display = 'block';
-        this.automator.build(); // activePanel変更時のUI追従
+        this.automator.build(); 
         const setVal = (b, v) => { const el = document.querySelector(`[data-bind="${b}"]`); if(el) el.value = v || ""; };
         setVal("graphType", ap.graphType); setVal("calibVal", ap.calibVal); setVal("discrXVal", ap.discrXVal); setVal("discrYVal", ap.discrYVal);
         document.getElementById('secCalibration').style.display = ap.graphType === 'calibration' ? 'block' : 'none';
@@ -331,20 +367,12 @@
       } else if (!window.__IS_PRINT_TAB__) { document.getElementById('panelConfigSec').style.display = 'none'; }
     }
 
+    // --- 個別チャート描画 ---
     static drawChart(panel, chart, gph) {
       const r = this.state.refs, d = this.state.data;
       if (!d.pxrfDT?.length) return;
-      const baseConf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: false, modeMap: GLB.optElms };
-      let prevDT = [], statsDT = null;
-
-      if (panel.graphType === 'calibration' && panel.calibVal) {
-         prevDT = Mtd.T2.mgmPrev.buildPrev(d.pxrfDT, d.wdxrfDT, { ...baseConf, val: panel.calibVal });
-         statsDT = Mtd.T2.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), prevDT.map(pt => pt.err));
-      } else if (panel.graphType === 'discrimination' && panel.discrXVal && panel.discrYVal) {
-         const calibBase = Mtd.T2.mgmPrev.buildPrev(d.pxrfDT, d.wdxrfDT, { ...baseConf, val: GLB.valElms[0] });
-         const mapPts = (wDT, pDT) => [...wDT.map(w => ({ ...w, x: Mtd.T2.Calc.evaluate(panel.discrXVal, w), y: Mtd.T2.Calc.evaluate(panel.discrYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pDT.map(p => ({ ...p, x: Mtd.T2.Calc.evaluate(panel.discrXVal, p), y: Mtd.T2.Calc.evaluate(panel.discrYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
-         prevDT = mapPts(d.wdxrfDT, calibBase);
-      }
+      const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: false, modeMap: GLB.optElms, graphType: panel.graphType, calibVal: panel.calibVal, discrXVal: panel.discrXVal, discrYVal: panel.discrYVal };
+      const { prevDT, statsDT } = Mtd.T2.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
       chart.src = { prevDT, statsDT, symb: r.symb, gph: gph };
     }
   }

@@ -14,7 +14,6 @@
     box-sizing: border-box; flex-shrink: 0;
   }
   
-  /* 修正: グリッドコンテナ全体およびセル内部での上下左右中央揃えを適用 */
   .dash-grid {
     display: grid; gap: var(--panel-gap, 16px); width: 100%; height: 100%;
     grid-template-columns: repeat(var(--col-count, 1), var(--panel-w, 100%));
@@ -61,6 +60,12 @@
   .dash-sidebar label { margin: 4px 2px !important; font-size: 11px; }
   .dash-sidebar details.sub-sec { padding: 12px 12px 4px 12px !important; }
   .dash-sidebar hr { margin: 12px 0 !important; }
-  .dash-sidebar .form-control, .dash-sidebar button { height: 28px !important; font-size: 12px !important; }
+  
+  /* ★ 修正: :not(.icon-btn) を指定し、シンボルテーブルの丸ボタンが縦長に歪むのを防止 */
+  .dash-sidebar .form-control, 
+  .dash-sidebar button:not(.icon-btn) { 
+    height: 28px !important; 
+    font-size: 12px !important; 
+  }
   .dash-sidebar ob-multi-select .popover-summary { height: 28px !important; }
 </style>

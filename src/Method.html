@@ -81,10 +81,8 @@
           wdxrf: (h, req) => { const ms = req.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須項目不足: ${ms.join(', ')}` : null; }
         };
         const errs = schema.map(s => exMap.has(s.name) && s.validRule ? vls[s.validRule]?.(exMap.get(s.name), s.hdr) : null).filter(Boolean);
-        // 不足とソート判別
         const isMissing = schema.some(s => !exMap.has(s.name));
         const needsSort = isMissing || schema.some((s, i) => curShts[i]?.name !== s.name);
-        // 操作シートロジック
         const buildPlan = (isMissing || needsSort) ? schema.map((s, idx) => ({
           name: s.name, hdr: s.hdr, lock: s.lock, clr: s.clr || !exMap.has(s.name), idx
         })) : [];
@@ -98,7 +96,7 @@
         static valdList(shtDT, outHdr, validMods, exacMode) {
           if (!shtDT?.length) return [];
           const [hdr, ...body] = shtDT;
-          const getIdx = k => hdr.findIndex(h => h === k); // 走査型バインド
+          const getIdx = k => hdr.findIndex(h => h === k); 
           const colFile = getIdx('file'), colMode = getIdx('mode'), colId = getIdx(GLB.idx.key2), colSub = getIdx('sub_id');
           const getScanID = r => r[colSub] ? `${r[colId]}_${r[colSub]}` : `${r[colId]}`;
           const statsDT = body.reduce((acc, r) => {
@@ -172,7 +170,6 @@
           const pObjs = this.#toObjArray(pxrfDT);
           const wObjs = this.#toObjArray(wdxrfDT);
           const { key1: k1, key2: k2, wd1: w1, wd2: w2 } = GLB.idx;
-          // 型不一致防止の文字キー
           const wMap = new Map(wObjs.map(o => [`${String(o[k1])}_${String(o[k2])}`, o]));
           const dbs = new Set();
           pObjs.forEach(pObj => {
@@ -201,10 +198,22 @@
       // --- プレビューデータ生成 ---
       mgmPrev: class {
         // --- データ生成パイプライン統合 ---
+        static generateChartData(pxrfDT, wdxrfDT, conf) {
+          let prevDT = [], statsDT = null;
+          if (conf.graphType === 'calibration' && conf.calibVal) {
+             prevDT = this.buildPrev(pxrfDT, wdxrfDT, { ...conf, val: conf.calibVal });
+             statsDT = Mtd.T2.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), Mtd.Util.getValidNums(prevDT.map(pt => pt.err)));
+          } else if (conf.graphType === 'discrimination' && conf.discrXVal && conf.discrYVal) {
+             const calibBase = this.buildPrev(pxrfDT, wdxrfDT, { ...conf, val: GLB.valElms[0] });
+             const mapPts = (wDT, pDT) => [...wDT.map(w => ({ ...w, x: Mtd.T2.Calc.evaluate(conf.discrXVal, w), y: Mtd.T2.Calc.evaluate(conf.discrYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pDT.map(p => ({ ...p, x: Mtd.T2.Calc.evaluate(conf.discrXVal, p), y: Mtd.T2.Calc.evaluate(conf.discrYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
+             prevDT = mapPts(wdxrfDT, calibBase);
+          }
+          return { prevDT, statsDT };
+        }
+
         static buildPrev(pxrfDT, wdxrfDT, conf) {
           if (!pxrfDT?.length || !wdxrfDT?.length) return [];
           const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
-          // 型不一致防止の文字キー
           const wMap = new Map(wdxrfDT.map(w => [`${String(w[k1])}_${String(w[k2])}`, w]));
           const minMap = conf.useLOD ? this.#getMinMap(pxrfDT, conf) : {};
           const cfs = this.#resCoeffs(pxrfDT, wMap, conf, minMap);
@@ -213,7 +222,6 @@
             if (conf.itemMap?.length && !conf.itemMap.includes(itemVal)) return acc;
             const w = wMap.get(`${String(r[k1])}_${String(r[k2])}`);
             if (!w) return acc;
-            // 必須プロパティ全保持
             const pDT = { '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: itemVal, [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
             GLB.valElms.forEach(elm => {
               const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
@@ -224,7 +232,6 @@
               pDT[elm] = val; pDT[`${elm}_Err`] = r[`${pfx}_${elm}_Err`] ?? null;
             });
             const xVal = Mtd.T2.Calc.evaluate(conf.val, w), yVal = Mtd.T2.Calc.evaluate(conf.val, pDT);
-            // 無効値も行除外せず通過
             acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
             return acc;
           }, []);
@@ -280,7 +287,6 @@
         static evaluate(fml, rData) {
           if (!fml) return null;
           try {
-            // math.jsによるセキュアな評価
             const res = math.evaluate(fml, rData);
             return isNaN(res) || !isFinite(res) ? null : res;
           } catch (e) { return null; }
@@ -290,7 +296,6 @@
           if (!wdxrfVals?.length || wdxrfVals.length < 2 || wdxrfVals.length !== pxrfVals?.length) return null;
           try {
             const d = [];
-            // 有効数値ペア動的抽出
             for (let i = 0; i < wdxrfVals.length; i++) {
               if (wdxrfVals[i] != null && pxrfVals[i] != null && !isNaN(wdxrfVals[i]) && !isNaN(pxrfVals[i])) {
                 d.push([wdxrfVals[i], pxrfVals[i]]);
@@ -305,7 +310,6 @@
         static calcReg(xArr, yArr, errArr) {
           if (!xArr?.length || xArr.length !== yArr?.length) return null;
           const d = [], valX = [], valY = [], valErr = [];
-          // 有効数値ペア動的抽出
           for (let i = 0; i < xArr.length; i++) {
             if (xArr[i] != null && yArr[i] != null && !isNaN(xArr[i]) && !isNaN(yArr[i])) {
               d.push([xArr[i], yArr[i]]);
@@ -314,7 +318,7 @@
             }
           }
           const n = valX.length;
-          if (n < 2) return null; // 有効データ不足時null
+          if (n < 2) return null; 
           const { m: slope, b: intercept } = ss.linearRegression(d);
           const r = ss.sampleCorrelation(valX, valY), r2 = r * r;
           let ssRes = 0, maxRes = 0;
