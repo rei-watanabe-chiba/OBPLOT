@@ -192,7 +192,9 @@
         
         // <script> 破壊防止の厳格なエスケープを適用してJSON化
         const safeJson = JSON.stringify(injectData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-        template = template.replace('/*{{INJECT_REPORT_DATA}}*/', safeJson);
+        
+        // 修正: 'INJECT_TARGET' を safeJson に完全に置き換える
+        template = template.replace("'INJECT_TARGET'", () => safeJson);
         
         const blob = new Blob([template], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
