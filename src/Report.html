@@ -1,49 +1,266 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8"> <!-- 追加: 文字化け防止 -->
+    <meta charset="UTF-8">
     <base target="_top">
-    <!-- 各種ライブラリ (Sidebarと共通) -->
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
     <?!= include("CSS"); ?>
-  </head>
-  <body>
-    <div id="report-app" style="padding: 20px;">
-      <p>ダッシュボード初期化中...</p>
-    </div>
     
-    <!-- データ注入用スクリプト -->
-    <script>
-      window.__INJECTED_DATA__ = 'INJECT_TARGET';
-    </script>
+    <style>
+      /* --- レポート専用レイアウト --- */
+      body {
+        margin: 0; padding: 0; background-color: var(--grey50);
+        display: flex; height: 100vh; overflow: hidden;
+      }
+      .dash-layout { display: flex; width: 100%; height: 100%; }
+      .dash-sidebar {
+        width: 320px; background-color: #fff; border-right: 1px solid var(--grey200);
+        display: flex; flex-direction: column; height: 100%; overflow-y: auto; padding: 16px;
+      }
+      .dash-main {
+        flex: 1; display: flex; justify-content: center; align-items: flex-start;
+        overflow-y: auto; padding: 24px;
+      }
+      /* A4コンテナ */
+      .a4-container {
+        background-color: #fff;
+        aspect-ratio: 210 / 297;
+        height: 100%; /* 高さをベースに比率維持 */
+        max-height: calc(100vw * 297 / 210); 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        padding: var(--margin-top, 15mm) var(--margin-right, 15mm) var(--margin-bottom, 15mm) var(--margin-left, 15mm);
+        box-sizing: border-box;
+      }
+      /* CSS Grid */
+      .dash-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--col-count, 1), 1fr);
+        grid-template-rows: repeat(var(--row-count, 1), 1fr);
+        width: 100%; height: 100%; gap: 16px;
+      }
+      .grid-panel {
+        border: 1px dashed var(--grey200);
+        position: relative; cursor: pointer;
+        transition: border-color 0.2s;
+        background-color: var(--grey50);
+      }
+      .grid-panel.active { border: 2px solid var(--theme-color); background-color: #fff;}
+      .grid-panel .panel-id { position: absolute; top: 4px; left: 4px; font-size: 11px; font-weight: bold; color: var(--grey400); }
+      
+      /* 印刷時最適化 */
+      @media print {
+        body, .dash-main { background-color: #fff; padding: 0; height: auto; overflow: visible; }
+        .dash-sidebar { display: none; }
+        .a4-container {
+          box-shadow: none; aspect-ratio: auto;
+          width: 210mm; height: 296mm;
+          page-break-after: avoid;
+        }
+        .grid-panel { border-color: transparent; background-color: transparent;}
+      }
+    </style>
+  </head>
+  <body data-theme="tab2">
+    <!-- データ注入 -->
+    <script>window.__INJECTED_DATA__ = 'INJECT_TARGET';</script>
 
-    <!-- コアロジックの静的結合 -->
     <?!= include('Global'); ?>
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>
+    <?!= include('Component'); ?>
+    <?!= include('Chart'); ?>
     
-    <!-- 動作確認用スクリプト -->
+    <div class="dash-layout">
+      <!-- 左サイドバー -->
+      <aside class="dash-sidebar" id="dashSidebar">
+        <details class="sub-sec" open>
+          <summary>レイアウト構成</summary>
+          <div class="field-row">
+            <button id="btnAddRow" data-type="primary" class="outline">＋ 行を追加</button>
+            <button id="btnAddCol" data-type="primary" class="outline">＋ 列を追加</button>
+          </div>
+          <div class="field-row">
+            <button id="btnResetGrid" data-type="primary" class="outline">1×1にリセット</button>
+          </div>
+          <div class="field-row" style="margin-top: 16px;">
+            <button id="btnPrint" data-type="primary">PDF用に印刷</button>
+          </div>
+        </details>
+        
+        <hr>
+        
+        <!-- パネル個別設定 (アクティブ連動) -->
+        <div id="panelConfigSec" style="display: none;">
+          <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--theme-color);">選択中のパネル: <span id="lblActivePanel"></span></h4>
+          <label>グラフタイプ</label>
+          <div id="boxGraphType"></div>
+          
+          <!-- 検量線用UI -->
+          <div id="secCalibration" style="display: none; margin-top: 16px;">
+            <label>対象指標 (X軸:WDXRF / Y軸:PXRF)</label>
+            <div id="boxCalibVal"></div>
+          </div>
+
+          <!-- 判別図用UI -->
+          <div id="secDiscrimination" style="display: none; margin-top: 16px;">
+            <label>X軸 指標</label>
+            <div id="boxDiscrX"></div>
+            <label>Y軸 指標</label>
+            <div id="boxDiscrY"></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右メイン描画領域 -->
+      <main class="dash-main">
+        <div class="a4-container" id="a4Container">
+          <div class="dash-grid" id="dashGrid"></div>
+        </div>
+      </main>
+    </div>
+
+    <!-- UI制御ロジック -->
     <script>
-      window.addEventListener("DOMContentLoaded", () => {
-        const app = document.getElementById("report-app");
-        if (window.__INJECTED_DATA__) {
-          try {
-            const testMath = math.evaluate("Mn * 100 / Fe", { Mn: 10, Fe: 20 });
-            app.innerHTML = `
-              <h3>[フェーズ1 検証完了]</h3>
-              <p>注入データ (pxrfDT): ${window.__INJECTED_DATA__.pxrfDT?.length || 0} 件</p>
-              <p>注入データ (corrDT): ${window.__INJECTED_DATA__.corrDT?.length || 0} 件</p>
-              <p>math.js 評価テスト (10 * 100 / 20): ${testMath}</p>
-            `;
-          } catch(e) {
-            app.innerHTML = `<h3 style="color:red">[エラー] math.jsの実行に失敗: ${e.message}</h3>`;
+      // 永続化クラス
+      class DashBU {
+        static K = "OBP_DASH_BU";
+        static save(refs) { localStorage.setItem(this.K, JSON.stringify(refs)); }
+        static load() { try { return JSON.parse(localStorage.getItem(this.K)); } catch(e){ return null; } }
+      }
+
+      class ReportApp {
+        static state = {
+          data: window.__INJECTED_DATA__ || { pxrfDT: [], wdxrfDT: [], corrDT: [] },
+          refs: {
+            gridRows: 1, gridCols: 1,
+            margins: { top: 15, bottom: 15, left: 15, right: 15 },
+            activePanelId: "p_0",
+            panels: [{ id: "p_0", graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "" }]
           }
-        } else {
-          app.innerHTML = `<h3 style="color:red">[エラー] データの注入に失敗しました</h3>`;
+        };
+
+        static init() {
+          const bu = DashBU.load();
+          if (bu) this.state.refs = bu; // リロード時に復元
+          
+          if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) {
+            this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
+          }
+          
+          this.buildUI();
+          this.bindEvents();
+          this.render();
         }
-      });
+
+        static saveState() {
+          DashBU.save(this.state.refs);
+          this.render();
+        }
+
+        static get activePanel() {
+          return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId);
+        }
+
+        // 初期UI構築 (NewDOM使用)
+        static buildUI() {
+          const typeOpts = [{label: "検量線 (Calibration)", val: "calibration"}, {label: "判別図 (Discrimination)", val: "discrimination"}];
+          NewDOM.buildFormFields([{ type: "select", opts: typeOpts, bind: "graphType", hasEmpty: false }], "boxGraphType");
+          
+          const valOpts = [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v }));
+          NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "calibVal", hasEmpty: true }], "boxCalibVal");
+          NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "discrXVal", hasEmpty: true }], "boxDiscrX");
+          NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "discrYVal", hasEmpty: true }], "boxDiscrY");
+        }
+
+        // イベント監視
+        static bindEvents() {
+          document.getElementById('btnAddRow').onclick = () => {
+            if(this.state.refs.gridRows < 3) { this.state.refs.gridRows++; this.syncPanels(); this.saveState(); }
+          };
+          document.getElementById('btnAddCol').onclick = () => {
+            if(this.state.refs.gridCols < 3) { this.state.refs.gridCols++; this.syncPanels(); this.saveState(); }
+          };
+          document.getElementById('btnResetGrid').onclick = () => {
+            this.state.refs.gridRows = 1; this.state.refs.gridCols = 1;
+            this.syncPanels(); this.saveState();
+          };
+          document.getElementById('btnPrint').onclick = () => window.print();
+
+          // サイドバー設定変更をアクティブパネルへ反映
+          document.getElementById('dashSidebar').addEventListener('change', (e) => {
+            const bindKey = e.target.dataset.bind;
+            if(bindKey && this.activePanel) {
+              this.activePanel[bindKey] = e.target.value;
+              this.saveState();
+            }
+          });
+        }
+
+        // 行列数に合わせてパネル配列を調整
+        static syncPanels() {
+          const total = this.state.refs.gridRows * this.state.refs.gridCols;
+          while(this.state.refs.panels.length < total) {
+            this.state.refs.panels.push({ id: `p_${this.state.refs.panels.length}`, graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "" });
+          }
+          if(this.state.refs.panels.length > total) {
+            this.state.refs.panels = this.state.refs.panels.slice(0, total);
+          }
+          if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) {
+            this.state.refs.activePanelId = this.state.refs.panels[0].id;
+          }
+        }
+
+        // レンダリングループ
+        static render() {
+          const r = this.state.refs;
+          
+          // CSS Grid と余白の適用
+          const cont = document.getElementById('a4Container');
+          cont.style.setProperty('--col-count', r.gridCols);
+          cont.style.setProperty('--row-count', r.gridRows);
+          cont.style.setProperty('--margin-top', `${r.margins.top}mm`);
+          cont.style.setProperty('--margin-right', `${r.margins.right}mm`);
+          cont.style.setProperty('--margin-bottom', `${r.margins.bottom}mm`);
+          cont.style.setProperty('--margin-left', `${r.margins.left}mm`);
+
+          // グリッドパネルのDOM生成 (枠のみ)
+          const grid = document.getElementById('dashGrid');
+          grid.innerHTML = '';
+          r.panels.forEach(p => {
+            const div = document.createElement('div');
+            div.className = `grid-panel ${p.id === r.activePanelId ? 'active' : ''}`;
+            div.innerHTML = `<span class="panel-id">${p.id}</span>`;
+            div.onclick = () => { r.activePanelId = p.id; this.saveState(); };
+            grid.appendChild(div);
+          });
+
+          // サイドバーUIへの値反映
+          const ap = this.activePanel;
+          if (ap) {
+            document.getElementById('panelConfigSec').style.display = 'block';
+            document.getElementById('lblActivePanel').textContent = ap.id;
+            
+            const setVal = (bindKey, val) => {
+              const el = document.querySelector(`[data-bind="${bindKey}"]`);
+              if(el) el.value = val || "";
+            };
+            setVal("graphType", ap.graphType);
+            setVal("calibVal", ap.calibVal);
+            setVal("discrXVal", ap.discrXVal);
+            setVal("discrYVal", ap.discrYVal);
+
+            // グラフタイプに応じたUI切替
+            document.getElementById('secCalibration').style.display = ap.graphType === 'calibration' ? 'block' : 'none';
+            document.getElementById('secDiscrimination').style.display = ap.graphType === 'discrimination' ? 'block' : 'none';
+          } else {
+            document.getElementById('panelConfigSec').style.display = 'none';
+          }
+        }
+      }
+
+      window.addEventListener("DOMContentLoaded", () => ReportApp.init());
     </script>
   </body>
 </html>
