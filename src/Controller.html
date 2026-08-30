@@ -180,7 +180,20 @@
     static async openRepo() {
       await CoreCtrl.withAsyncLock("T2ST.repo.status", async () => {
         State.set("T2ST.repo.status", ["loading", "テンプレート取得中..."]);
-        const template = await API.getReportTemplate();
+        let template = await API.getReportTemplate();
+        
+        // データの抽出と注入用オブジェクトの構築
+        const { asgn } = State.proxy.T2ST;
+        const injectData = {
+          pxrfDT: asgn.data.pxrfDT || [],
+          wdxrfDT: asgn.data.wdxrfDT || [],
+          corrDT: asgn.data.corrDT || []
+        };
+        
+        // <script> 破壊防止の厳格なエスケープを適用してJSON化
+        const safeJson = JSON.stringify(injectData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+        template = template.replace('/*{{INJECT_REPORT_DATA}}*/', safeJson);
+        
         const blob = new Blob([template], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         if (typeof Office !== 'undefined') {

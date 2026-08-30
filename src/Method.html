@@ -276,15 +276,12 @@
       },
       // --- 検量線データ生成 ---
       Calc: class {
-        // --- Math関数群静的キャッシュ ---
-        static #MATH_FNS = Object.getOwnPropertyNames(Math).filter(k => typeof Math[k] === 'function').map(k => `const ${k} = Math.${k};`).join('');
         // --- カスタム数式評価 ---
         static evaluate(fml, rData) {
           if (!fml) return null;
           try {
-            const keys = Object.keys(rData), vals = Object.values(rData).map(v => (v == null || v === "") ? NaN : v);
-            const fn = new Function(...keys, `${this.#MATH_FNS} return ${fml};`);
-            const res = fn(...vals);
+            // math.jsによるセキュアな評価
+            const res = math.evaluate(fml, rData);
             return isNaN(res) || !isFinite(res) ? null : res;
           } catch (e) { return null; }
         }

@@ -1,37 +1,48 @@
-<!-- 【新規確認】Report.html がプロジェクト内に存在し、大文字小文字も含めて正しく記述されているか確認してください -->
 <!DOCTYPE html>
 <html>
   <head>
     <base target="_top">
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-    <script type="text/javascript">
-      google.charts.load('current', {'packages':['corechart']});
-      google.charts.setOnLoadCallback(drawChart);
-
-      function drawChart() {
-        const data = google.visualization.arrayToDataTable([
-          ['Age', 'Weight'],
-          [ 8, 12],
-          [ 4, 5.5],
-          [ 11, 14],
-          [ 4, 5],
-          [ 3, 3.5],
-          [ 6.5, 7]
-        ]);
-
-        const options = {
-          title: 'Age vs. Weight comparison',
-          hAxis: {title: 'Age', minValue: 0, maxValue: 15},
-          vAxis: {title: 'Weight', minValue: 0, maxValue: 15},
-          legend: 'none'
-        };
-
-        const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-        chart.draw(data, options);
-      }
-    </script>
+    <!-- 各種ライブラリ (Sidebarと共通) -->
+    <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+    <?!= include("CSS"); ?>
   </head>
   <body>
-    <div id="chart_div" style="width: 900px; height: 500px;"></div>
+    <div id="report-app" style="padding: 20px;">
+      <p>ダッシュボード初期化中...</p>
+    </div>
+    
+    <!-- データ注入用スクリプト -->
+    <script>
+      window.__INJECTED_DATA__ = /*{{INJECT_REPORT_DATA}}*/null;
+    </script>
+
+    <!-- コアロジックの静的結合 -->
+    <?!= include('Global'); ?>
+    <?!= include('Model'); ?>
+    <?!= include('Method'); ?>
+    
+    <!-- 動作確認用スクリプト (フェーズ2でUIバインディングに置換します) -->
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const app = document.getElementById("report-app");
+        if (window.__INJECTED_DATA__) {
+          try {
+            const testMath = math.evaluate("Mn * 100 / Fe", { Mn: 10, Fe: 20 });
+            app.innerHTML = `
+              <h3>[フェーズ1 検証完了]</h3>
+              <p>注入データ (pxrfDT): ${window.__INJECTED_DATA__.pxrfDT?.length || 0} 件</p>
+              <p>注入データ (corrDT): ${window.__INJECTED_DATA__.corrDT?.length || 0} 件</p>
+              <p>math.js 評価テスト (10 * 100 / 20): ${testMath}</p>
+            `;
+          } catch(e) {
+            app.innerHTML = `<h3 style="color:red">[エラー] math.jsの実行に失敗: ${e.message}</h3>`;
+          }
+        } else {
+          app.innerHTML = `<h3 style="color:red">[エラー] データの注入に失敗しました</h3>`;
+        }
+      });
+    </script>
   </body>
 </html>
