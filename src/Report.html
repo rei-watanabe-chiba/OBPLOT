@@ -15,27 +15,40 @@
       .dash-main { flex: 1; display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 24px; box-sizing: border-box; height: 100%; }
       
       .a4-container {
-        background-color: #fff; aspect-ratio: 210 / 297; height: 100%; max-height: calc(100vw * 297 / 210); 
+        background-color: #fff; 
+        width: 210mm; height: 297mm; 
+        transform-origin: top center;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         padding: var(--margin-top, 15mm) var(--margin-right, 15mm) var(--margin-bottom, 15mm) var(--margin-left, 15mm);
         box-sizing: border-box; flex-shrink: 0;
       }
       
       .dash-grid {
-        display: grid; gap: 16px; width: 100%; height: 100%;
+        display: grid; gap: var(--panel-gap, 16px); width: 100%; height: 100%;
         grid-template-columns: repeat(var(--col-count, 1), var(--panel-w, 100%));
         grid-template-rows: repeat(var(--row-count, 1), var(--panel-h, 100%));
         align-content: start; justify-content: center;
       }
       
       .grid-panel {
-        border: 1px dashed var(--grey200); position: relative; cursor: pointer; transition: border-color 0.2s; background-color: var(--grey50);
-        width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+        border: 1px dashed var(--grey200); position: relative; cursor: pointer; transition: border-color 0.2s; background-color: transparent;
+        width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;
       }
-      .grid-panel.active { border: 2px solid var(--theme-color); background-color: #fff; }
+      .grid-panel.active { border: 2px solid var(--theme-color); background-color: transparent; }
       .grid-panel .panel-id { position: absolute; top: 4px; left: 4px; font-size: 11px; font-weight: bold; color: var(--grey400); z-index: 10; }
       
       .color-picker { height: var(--control-height); width: 100%; border: 1px solid var(--grey400); border-radius: 4px; padding: 0; cursor: pointer; }
+      
+      body.is-print { display: block; overflow: visible; background-color: #fff; }
+      body.is-print .dash-layout { display: block; }
+      body.is-print .dash-sidebar { display: none; }
+      body.is-print .dash-main { padding: 0; display: block; height: auto; overflow: visible; }
+      body.is-print .a4-container {
+        width: 210mm; height: 297mm; transform: none !important; margin: 0 !important;
+        max-height: none; box-shadow: none;
+      }
+      body.is-print .grid-panel { border-color: transparent; background-color: transparent; }
+      body.is-print .panel-id { display: none; }
       
       @media print {
         @page { size: A4 portrait; margin: 0; }
@@ -44,11 +57,18 @@
         .dash-sidebar { display: none !important; }
         .dash-main { padding: 0 !important; display: flex; justify-content: center; overflow: visible; height: 100%; background: none; }
         .a4-container {
-          box-shadow: none; aspect-ratio: auto;
+          box-shadow: none; transform: none !important; margin: 0 !important;
           width: 210mm !important; height: 297mm !important;
-          max-height: none !important; margin: 0;
+          max-height: none !important;
         }
         .grid-panel { border-color: transparent; background-color: transparent; }
+        .print-loading { display: none !important; }
+      }
+
+      .print-loading {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.7); color: #fff; padding: 16px 32px;
+        border-radius: 8px; font-size: 18px; font-weight: bold; z-index: 9999;
       }
     </style>
   </head>
@@ -74,8 +94,12 @@
           <div class="field-row">
             <button id="btnResetGrid" data-type="primary" class="outline">1×1にリセット</button>
           </div>
+          <label>パネル間余白 [pt]</label>
+          <div class="field-row">
+            <input type="number" data-bind="panelGap" min="0" max="50" step="0.5" class="form-control">
+          </div>
           <div class="field-row" style="margin-top: 16px;">
-            <button id="btnPrint" data-type="primary">プレビュー・PDF出力</button>
+            <button id="btnPrint" data-type="primary">PDF出力（裏で印刷）</button>
           </div>
         </details>
 
@@ -117,10 +141,10 @@
             <div id="boxFontJp"></div>
           </div>
           
-          <label>ラベルサイズ (軸名 / 目盛)</label>
+          <label>ラベルサイズ (軸名 / 目盛) [pt]</label>
           <div class="field-row">
-            <input type="number" data-gph="s_name" min="5" max="12" class="form-control">
-            <input type="number" data-gph="s_tick" min="5" max="12" class="form-control">
+            <input type="number" data-gph="s_name" min="3" max="30" step="0.5" class="form-control">
+            <input type="number" data-gph="s_tick" min="3" max="30" step="0.5" class="form-control">
           </div>
           
           <label>基本文字色 (明度%)</label>
@@ -129,9 +153,9 @@
             <span id="lbl_c_base" style="width:40px; text-align:right;"></span>
           </div>
 
-          <label>注釈テキストサイズ</label>
+          <label>注釈テキストサイズ [pt]</label>
           <div class="field-row">
-            <input type="number" data-gph="s_tip" min="5" max="12" class="form-control">
+            <input type="number" data-gph="s_tip" min="3" max="30" step="0.5" class="form-control">
           </div>
           
           <label>統計テキスト文字色 (明度%)</label>
@@ -140,44 +164,44 @@
             <span id="lbl_c_stats" style="width:40px; text-align:right;"></span>
           </div>
 
-          <label>シンボル (サイズ / 枠線幅)</label>
+          <label>シンボル (サイズ / 枠線幅) [pt]</label>
           <div class="field-row">
-            <input type="number" data-gph="sym_size" min="3" max="8" class="form-control">
-            <input type="number" data-gph="sym_bw" min="1" max="3" class="form-control">
+            <input type="number" data-gph="sym_size" min="1" max="20" step="0.5" class="form-control">
+            <input type="number" data-gph="sym_bw" min="0" max="5" step="0.1" class="form-control">
           </div>
 
-          <label>軸線 (太さ / 明度%)</label>
+          <label>軸線 (太さ[pt] / 明度%)</label>
           <div class="field-row">
-            <input type="number" data-gph="lw_axis" min="0.1" max="1.0" step="0.1" class="form-control">
+            <input type="number" data-gph="lw_axis" min="0.1" max="3.0" step="0.1" class="form-control">
             <input type="range" data-gph="c_axis" min="0" max="100">
             <span id="lbl_c_axis" style="width:40px; text-align:right;"></span>
           </div>
 
-          <label>グリッド線 (太さ / 明度%)</label>
+          <label>グリッド線 (太さ[pt] / 明度%)</label>
           <div class="field-row">
-            <input type="number" data-gph="lw_grid" min="0.1" max="1.0" step="0.1" class="form-control">
+            <input type="number" data-gph="lw_grid" min="0.1" max="3.0" step="0.1" class="form-control">
             <input type="range" data-gph="c_grid" min="0" max="100">
             <span id="lbl_c_grid" style="width:40px; text-align:right;"></span>
           </div>
 
-          <label>回帰線 (太さ / 色)</label>
+          <label>回帰線 (太さ[pt] / 色)</label>
           <div class="field-row">
-            <input type="number" data-gph="lw_reg" min="0.1" max="1.0" step="0.1" class="form-control">
+            <input type="number" data-gph="lw_reg" min="0.1" max="3.0" step="0.1" class="form-control">
             <input type="color" data-gph="lc_reg" class="color-picker">
           </div>
 
-          <label>ラベル余白 (軸名 / 目盛)</label>
+          <label>ラベル余白 (軸名 / 目盛) [pt]</label>
           <div class="field-row">
-            <input type="number" data-gph="g_name" min="1" max="10" class="form-control">
-            <input type="number" data-gph="g_tick" min="1" max="10" class="form-control">
+            <input type="number" data-gph="g_name" min="0" max="30" step="0.5" class="form-control">
+            <input type="number" data-gph="g_tick" min="0" max="30" step="0.5" class="form-control">
           </div>
 
-          <label>外枠余白 (上/下/左/右)</label>
+          <label>外枠余白 (上/下/左/右) [pt]</label>
           <div class="field-row" style="flex-wrap: wrap;">
-            <input type="number" data-gph="p_t" min="1" max="10" class="form-control" title="上">
-            <input type="number" data-gph="p_b" min="1" max="10" class="form-control" title="下">
-            <input type="number" data-gph="p_l" min="1" max="10" class="form-control" title="左">
-            <input type="number" data-gph="p_r" min="1" max="10" class="form-control" title="右">
+            <input type="number" data-gph="p_t" min="0" max="50" step="0.5" class="form-control" title="上">
+            <input type="number" data-gph="p_b" min="0" max="50" step="0.5" class="form-control" title="下">
+            <input type="number" data-gph="p_l" min="0" max="50" step="0.5" class="form-control" title="左">
+            <input type="number" data-gph="p_r" min="0" max="50" step="0.5" class="form-control" title="右">
           </div>
         </details>
         
@@ -234,21 +258,21 @@
         static clear() { localStorage.removeItem(this.K); }
       }
 
+      // UI上の初期値をptベースで定義 (1pt = 1.33px に基づく綺麗な概算値)
       const getInitialRawGph = () => {
         const st = GLB.defaultGraphStyle;
-        const gp = GLB.defaultGraphGap;
         const fts = (st.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
         return {
           fontEng: GLB.fontEngList.find(f => f.includes(fts[0])) || GLB.fontEngList[0],
           fontJp: GLB.fontJpList.find(f => f.includes(fts[1])) || GLB.fontJpList[0],
-          s_name: st.fontS.name, s_tick: st.fontS.tick, s_tip: st.fontS.tip,
+          s_name: 8.5, s_tick: 7.5, s_tip: 8.5,
           c_base: 40, c_stats: 40, 
-          sym_size: st.symbol.baseSize, sym_bw: st.symbol.borderW,
-          lw_axis: st.lineW.axis, c_axis: 60,
-          lw_grid: st.lineW.grid, c_grid: 90,
-          lw_reg: st.lineW.regW, lc_reg: "#546e7a",
-          g_name: gp.name, g_tick: gp.tick,
-          p_t: gp.padT, p_b: gp.padB, p_l: gp.padL, p_r: gp.padR
+          sym_size: 4.5, sym_bw: 0.8,
+          lw_axis: 0.6, c_axis: 60,
+          lw_grid: 0.2, c_grid: 90,
+          lw_reg: 0.5, lc_reg: "#546e7a",
+          g_name: 4, g_tick: 4,
+          p_t: 7.5, p_b: 6, p_l: 4, p_r: 11
         };
       };
 
@@ -258,6 +282,7 @@
           refs: {
             correction: "new", useCal: false, calElms: [],
             gridRows: 1, gridCols: 1,
+            panelGap: 12, // 12pt (約16px)
             margins: { top: 15, bottom: 15, left: 15, right: 15 },
             activePanelId: "p_0",
             symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
@@ -267,33 +292,26 @@
         };
 
         static async init() {
-          // 印刷用タブとして展開された場合の特別処理
           if (window.__IS_PRINT_TAB__) {
              this.state = window.__PRINT_STATE__;
-             document.getElementById('dashSidebar').style.display = 'none';
-             document.body.style.backgroundColor = '#d1d5db'; // プレビュー用の暗め背景
+             document.body.classList.add('is-print'); 
              
-             // 印刷実行フロー用のフローティングボタンを生成
-             const btn = document.createElement('button');
-             btn.textContent = '印刷ダイアログを開く';
-             btn.style.cssText = 'position: fixed; top: 20px; left: 20px; z-index: 9999; padding: 12px 24px; font-size: 16px; font-weight: bold; background-color: var(--theme-color); color: #fff; border: none; border-radius: 4px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);';
-             btn.onclick = () => {
-               btn.style.display = 'none'; // 印刷時にボタンが写り込まないように隠す
-               window.print();
-               setTimeout(() => btn.style.display = 'block', 1000); // 印刷ダイアログ終了後に復帰
-             };
-             document.body.appendChild(btn);
+             const loading = document.createElement('div');
+             loading.className = 'print-loading';
+             loading.textContent = '印刷用PDFを生成中...';
+             document.body.appendChild(loading);
              
              this.render();
              return;
           }
 
-          // 通常のダッシュボード初期化
           const bu = DashBU.load();
           if (bu) {
             if (await NewDOM.confirm("復元", "前回のダッシュボード状態（グラフやレイアウトの設定）を復元しますか？")) {
               if(!bu.symb) bu.symb = this.state.refs.symb;
               if(!bu.rawGph) bu.rawGph = this.state.refs.rawGph;
+              // 旧バージョンのpx指定(16px等)が入っていた場合は12ptに優しくフォールバック
+              if(bu.panelGap === undefined || bu.panelGap === 16) bu.panelGap = 12;
               this.state.refs = bu;
             } else {
               DashBU.clear();
@@ -309,6 +327,7 @@
           window.addEventListener('resize', () => {
              clearTimeout(this.resizeTimer);
              this.resizeTimer = setTimeout(() => {
+                 this.fitA4Scale();
                  const gph = this.buildGph();
                  this.calcPanelSize(gph);
                  const grid = document.getElementById('dashGrid');
@@ -328,25 +347,66 @@
 
         static get activePanel() { return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId); }
 
+        static fitA4Scale() {
+          if (window.__IS_PRINT_TAB__) return;
+          const main = document.querySelector('.dash-main');
+          const a4 = document.getElementById('a4Container');
+          
+          a4.style.transform = 'none';
+          const a4W = a4.offsetWidth;
+          const a4H = a4.offsetHeight;
+          
+          const availableW = main.clientWidth - 48; 
+          const availableH = main.clientHeight - 48; 
+          
+          const scale = Math.min(availableW / a4W, availableH / a4H, 1);
+          
+          a4.style.transform = `scale(${scale})`;
+          a4.style.marginBottom = `-${a4H * (1 - scale)}px`;
+        }
+
+        // ★ ptをpxに変換してEChartsへ渡す
         static buildGph() {
           const raw = this.state.refs.rawGph;
-          const s_tip = Number(raw.s_tip);
-          const sym_base = Number(raw.sym_size);
-          const lw_reg = Number(raw.lw_reg);
-          const s_tick = Number(raw.s_tick);
+          const pt2px = (pt) => Number(pt) * 1.33;
+
+          const s_tip = pt2px(raw.s_tip);
+          const sym_base = pt2px(raw.sym_size);
+          const lw_reg = pt2px(raw.lw_reg);
+          const s_tick = pt2px(raw.s_tick);
+          const s_name = pt2px(raw.s_name);
+          const g_name = pt2px(raw.g_name);
+          const g_tick = pt2px(raw.g_tick);
+          const sym_bw = pt2px(raw.sym_bw);
+          const lw_axis = pt2px(raw.lw_axis);
+          const lw_grid = pt2px(raw.lw_grid);
+          const p_t = pt2px(raw.p_t);
+          const p_b = pt2px(raw.p_b);
+          const p_l = pt2px(raw.p_l);
+          const p_r = pt2px(raw.p_r);
+
+          // EChartsのラベル文字幅・高さを概算(最大5桁想定)して絶対パディングを算出
+          const tickW = s_tick * 0.6 * 5; 
+          const tickH = s_tick;
+          
+          const padL = p_l + s_name + g_name + tickW + g_tick;
+          const padR = p_r + (s_tick * 0.6 * 2);
+          const padT = p_t + (s_tick * 0.6 * 2);
+          const padB = p_b + s_name + g_name + tickH + g_tick;
+
           return {
             style: {
               font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`,
-              fontS: { tick: s_tick, name: Number(raw.s_name), stats: s_tip * 0.9, tip: s_tip },
+              fontS: { tick: s_tick, name: s_name, stats: s_tip * 0.9, tip: s_tip },
               fontC: { base: `hsl(0, 0%, ${raw.c_base}%)`, stats: `hsl(0, 0%, ${raw.c_stats}%)`, tip: 'var(--text-main)' },
-              symbol: { baseSize: sym_base, pathSize: sym_base * 1.2, borderW: Number(raw.sym_bw) },
-              lineW: { axis: Number(raw.lw_axis), grid: Number(raw.lw_grid), regW: lw_reg, regD: lw_reg <= 0.4 ? [3,3] : [5,5] },
+              symbol: { baseSize: sym_base, pathSize: sym_base * 1.2, borderW: sym_bw },
+              lineW: { axis: lw_axis, grid: lw_grid, regW: lw_reg, regD: Number(raw.lw_reg) <= 0.4 ? [3,3] : [5,5] },
               lineC: { axis: `hsl(0, 0%, ${raw.c_axis}%)`, grid: `hsl(0, 0%, ${raw.c_grid}%)`, reg: raw.lc_reg },
               bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
             },
             gap: {
-              name: Number(raw.g_name), tick: Number(raw.g_tick),
-              padT: Number(raw.p_t), padB: Number(raw.p_b), padL: Number(raw.p_l), padR: Number(raw.p_r)
+              name: g_name, tick: g_tick,
+              padT: padT, padB: padB, padL: padL, padR: padR
             }
           };
         }
@@ -389,6 +449,9 @@
           NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "calibVal", hasEmpty: true }], "boxCalibVal");
           NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "discrXVal", hasEmpty: true }], "boxDiscrX");
           NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "discrYVal", hasEmpty: true }], "boxDiscrY");
+
+          const gapEl = document.querySelector('[data-bind="panelGap"]');
+          if(gapEl) gapEl.value = r.panelGap !== undefined ? r.panelGap : 12;
         }
 
         static renderSymbTable() {
@@ -410,7 +473,12 @@
           document.getElementById('btnAddCol').onclick = () => { if(this.state.refs.gridCols < 3) { this.state.refs.gridCols++; this.syncPanels(); this.saveState(); } };
           document.getElementById('btnResetGrid').onclick = () => { this.state.refs.gridRows = 1; this.state.refs.gridCols = 1; this.syncPanels(); this.saveState(); };
           
-          // 印刷プレビュー用Blob生成処理
+          document.querySelector('[data-bind="panelGap"]').addEventListener('input', (e) => {
+             this.state.refs.panelGap = Number(e.target.value);
+             clearTimeout(this.gapTimer);
+             this.gapTimer = setTimeout(() => this.saveState(), 100);
+          });
+
           document.getElementById('btnPrint').onclick = () => {
             const stateJson = JSON.stringify(this.state);
             let htmlString = document.documentElement.outerHTML;
@@ -471,7 +539,7 @@
              if(!btn) return;
              const act = btn.dataset.action;
              if(act === 'addSymb') {
-                this.state.refs.symb.rls.push({ key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr });
+                 this.state.refs.symb.rls.push({ key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr });
              } else if(act === 'removeSymb') {
                 const k = btn.dataset.ruleKey;
                 if(k) this.state.refs.symb.rls = this.state.refs.symb.rls.filter(rw => rw.key !== k);
@@ -506,6 +574,7 @@
           if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0].id;
         }
 
+        // ★ ptからpxへの換算を反映した絶対パディング計算
         static calcPanelSize(gph) {
           const grid = document.getElementById('dashGrid');
           const r = this.state.refs;
@@ -517,11 +586,11 @@
           const gh = grid.clientHeight;
           if (gw === 0 || gh === 0) return;
 
-          const gap = 16;
-          const maxW = (gw - (r.gridCols - 1) * gap) / r.gridCols;
-          const maxH = (gh - (r.gridRows - 1) * gap) / r.gridRows;
+          const gapPt = r.panelGap !== undefined ? Number(r.panelGap) : 12;
+          const gapPx = gapPt * 1.33;
+          const maxW = (gw - (r.gridCols - 1) * gapPx) / r.gridCols;
+          const maxH = (gh - (r.gridRows - 1) * gapPx) / r.gridRows;
 
-          // ユーザー指定のカスタムレイアウトアルゴリズム(Canvasベースのプロット内計算)に追従させるため絶対パディングとして使用
           const padX = gph.gap.padL + gph.gap.padR;
           const padY = gph.gap.padT + gph.gap.padB;
 
@@ -542,6 +611,10 @@
           
           cont.style.setProperty('--col-count', r.gridCols);
           cont.style.setProperty('--row-count', r.gridRows);
+          
+          const gapPt = r.panelGap !== undefined ? Number(r.panelGap) : 12;
+          cont.style.setProperty('--panel-gap', `${gapPt * 1.33}px`);
+          
           cont.style.setProperty('--margin-top', `${r.margins.top}mm`);
           cont.style.setProperty('--margin-right', `${r.margins.right}mm`);
           cont.style.setProperty('--margin-bottom', `${r.margins.bottom}mm`);
@@ -556,11 +629,15 @@
           r.panels.forEach(p => {
             const div = document.createElement('div');
             div.className = `grid-panel ${p.id === r.activePanelId ? 'active' : ''}`;
+            if (!window.__IS_PRINT_TAB__) {
+               const idSpan = document.createElement('span');
+               idSpan.className = 'panel-id';
+               div.appendChild(idSpan);
+            }
             
             const chart = document.createElement('ob-cal-plot');
             chart.style.width = '100%';
             chart.style.height = '100%';
-            // 印刷プレビューの場合はSVGモード、それ以外はCanvasモード
             chart.setAttribute('data-renderer', window.__IS_PRINT_TAB__ ? 'svg' : 'canvas');
             
             div.appendChild(chart);
@@ -571,8 +648,34 @@
           });
 
           requestAnimationFrame(() => {
+             this.fitA4Scale();
              this.calcPanelSize(gph);
              requestAnimationFrame(() => {
+                let finishedCount = 0;
+                const totalCharts = chartsToDraw.length;
+                let printFired = false;
+
+                const executePrint = () => {
+                   if (printFired) return;
+                   printFired = true;
+                   setTimeout(() => {
+                      window.print();
+                      window.close();
+                   }, 500);
+                };
+
+                if (window.__IS_PRINT_TAB__) {
+                   chartsToDraw.forEach(item => {
+                      item.chart.addEventListener('render-finished', () => {
+                         finishedCount++;
+                         if (finishedCount === totalCharts) {
+                            executePrint();
+                         }
+                      }, { once: true });
+                   });
+                   setTimeout(executePrint, 5000);
+                }
+
                 chartsToDraw.forEach(item => this.drawChart(item.p, item.chart, gph));
              });
           });
