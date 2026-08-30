@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8"> <!-- 追加: 文字化け防止 -->
     <base target="_top">
     <!-- 各種ライブラリ (Sidebarと共通) -->
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
@@ -23,7 +24,7 @@
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>
     
-    <!-- 動作確認用スクリプト (フェーズ2でUIバインディングに置換します) -->
+    <!-- 動作確認用スクリプト -->
     <script>
       window.addEventListener("DOMContentLoaded", () => {
         const app = document.getElementById("report-app");

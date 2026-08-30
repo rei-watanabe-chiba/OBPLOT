@@ -59,7 +59,9 @@ function writeData(ssId, shtName, data, opts = "clear") {
   });
 }
 // --- レポートテンプレート取得 ---
-function getReportTemplate() { return withErr(() => ApiResponse.success(include("Report"))); }
+function getReportTemplate() { 
+  return withErr(() => ApiResponse.success(HtmlService.createTemplateFromFile("Report").evaluate().getContent())); 
+}
 // --- ブック状態取得 ---
 function getWbState(ssId) {
   return withErr(() => ApiResponse.success(SpreadsheetApp.openById(ssId).getSheets().map(s => ({
