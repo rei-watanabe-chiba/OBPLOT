@@ -9,61 +9,43 @@
     <?!= include("CSS"); ?>
     
     <style>
-      /* --- レポート専用レイアウト --- */
-      body {
-        margin: 0; padding: 0; background-color: var(--grey50);
-        display: flex; height: 100vh; overflow: hidden;
-      }
+      body { margin: 0; padding: 0; background-color: var(--grey50); display: flex; height: 100vh; overflow: hidden; }
       .dash-layout { display: flex; width: 100%; height: 100%; }
-      .dash-sidebar {
-        width: 320px; background-color: #fff; border-right: 1px solid var(--grey200);
-        display: flex; flex-direction: column; height: 100%; overflow-y: auto; padding: 16px;
-      }
-      .dash-main {
-        flex: 1; display: flex; justify-content: center; align-items: flex-start;
-        overflow-y: auto; padding: 24px;
-      }
-      /* A4コンテナ */
+      .dash-sidebar { width: 320px; background-color: #fff; border-right: 1px solid var(--grey200); display: flex; flex-direction: column; height: 100%; overflow-y: auto; padding: 16px; flex-shrink: 0; }
+      .dash-main { flex: 1; display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 24px; box-sizing: border-box; height: 100%; }
+      
       .a4-container {
-        background-color: #fff;
-        aspect-ratio: 210 / 297;
-        height: 100%; /* 高さをベースに比率維持 */
-        max-height: calc(100vw * 297 / 210); 
+        background-color: #fff; aspect-ratio: 210 / 297; height: 100%; max-height: calc(100vw * 297 / 210); 
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         padding: var(--margin-top, 15mm) var(--margin-right, 15mm) var(--margin-bottom, 15mm) var(--margin-left, 15mm);
-        box-sizing: border-box;
+        box-sizing: border-box; flex-shrink: 0;
       }
-      /* CSS Grid */
-      .dash-grid {
-        display: grid;
-        grid-template-columns: repeat(var(--col-count, 1), 1fr);
-        grid-template-rows: repeat(var(--row-count, 1), 1fr);
-        width: 100%; height: 100%; gap: 16px;
-      }
-      .grid-panel {
-        border: 1px dashed var(--grey200);
-        position: relative; cursor: pointer;
-        transition: border-color 0.2s;
-        background-color: var(--grey50);
-      }
-      .grid-panel.active { border: 2px solid var(--theme-color); background-color: #fff;}
-      .grid-panel .panel-id { position: absolute; top: 4px; left: 4px; font-size: 11px; font-weight: bold; color: var(--grey400); }
       
-      /* 印刷時最適化 */
+      .dash-grid {
+        display: grid; gap: 16px; width: 100%; height: 100%;
+        grid-template-columns: repeat(var(--col-count, 1), var(--panel-w, 100%));
+        grid-template-rows: repeat(var(--row-count, 1), var(--panel-h, 100%));
+        align-content: start; justify-content: center;
+      }
+      
+      .grid-panel {
+        border: 1px dashed var(--grey200); position: relative; cursor: pointer; transition: border-color 0.2s; background-color: var(--grey50);
+        width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+      }
+      .grid-panel.active { border: 2px solid var(--theme-color); background-color: #fff; }
+      .grid-panel .panel-id { position: absolute; top: 4px; left: 4px; font-size: 11px; font-weight: bold; color: var(--grey400); z-index: 10; }
+      
+      .color-picker { height: var(--control-height); width: 100%; border: 1px solid var(--grey400); border-radius: 4px; padding: 0; cursor: pointer; }
+      
       @media print {
-        body, .dash-main { background-color: #fff; padding: 0; height: auto; overflow: visible; }
+        body, .dash-main { background-color: #fff; padding: 0; height: auto; overflow: visible; display: block; }
         .dash-sidebar { display: none; }
-        .a4-container {
-          box-shadow: none; aspect-ratio: auto;
-          width: 210mm; height: 296mm;
-          page-break-after: avoid;
-        }
-        .grid-panel { border-color: transparent; background-color: transparent;}
+        .a4-container { box-shadow: none; aspect-ratio: auto; width: 210mm; height: 296mm; page-break-after: avoid; }
+        .grid-panel { border-color: transparent; background-color: transparent; }
       }
     </style>
   </head>
   <body data-theme="tab2">
-    <!-- データ注入 -->
     <script>window.__INJECTED_DATA__ = 'INJECT_TARGET';</script>
 
     <?!= include('Global'); ?>
@@ -75,6 +57,7 @@
     <div class="dash-layout">
       <!-- 左サイドバー -->
       <aside class="dash-sidebar" id="dashSidebar">
+        <!-- レイアウト構成 -->
         <details class="sub-sec" open>
           <summary>レイアウト構成</summary>
           <div class="field-row">
@@ -88,27 +71,132 @@
             <button id="btnPrint" data-type="primary">PDF用に印刷</button>
           </div>
         </details>
+
+        <!-- 全体補正設定 -->
+        <details class="sub-sec" open style="margin-top: 16px;">
+          <summary>全体補正設定</summary>
+          <div class="field-row">
+            <div class="field-col">
+              <label>適用補正値セット</label>
+              <div id="boxGlobalCorr"></div>
+            </div>
+            <div class="field-col" style="display:flex; align-items:flex-end; padding-bottom:4px;">
+              <div id="boxGlobalCalTgl"></div>
+            </div>
+          </div>
+          <label>補正対象元素</label>
+          <ob-multi-select id="boxGlobalCalElms" data-change-item="dummyItem" data-change-all="dummyAll"></ob-multi-select>
+        </details>
+
+        <!-- シンボル設定 -->
+        <details class="sub-sec" id="symbConfigSec" style="margin-top: 16px;">
+          <summary>シンボル設定</summary>
+          <div class="field-row">
+            <div id="boxSymbAxis" style="flex:1;"></div>
+            <button id="btnResetSymb" data-type="primary" class="outline" style="flex:none; width:80px;">リセット</button>
+          </div>
+          <div class="scroll-y" style="max-height: 250px; border: 1px solid var(--grey200); border-radius: 4px; padding: 4px 8px; margin-top: 8px;">
+            <ob-symbol-table id="tblSymb"></ob-symbol-table>
+          </div>
+        </details>
+
+        <!-- グラフスタイル設定 -->
+        <details class="sub-sec" id="gphConfigSec" style="margin-top: 16px;">
+          <summary>グラフスタイル設定</summary>
+          
+          <label>フォント (英字 / 日本語)</label>
+          <div class="field-row">
+            <div id="boxFontEng"></div>
+            <div id="boxFontJp"></div>
+          </div>
+          
+          <label>ラベルサイズ (軸名 / 目盛)</label>
+          <div class="field-row">
+            <input type="number" data-gph="s_name" min="5" max="12" class="form-control">
+            <input type="number" data-gph="s_tick" min="5" max="12" class="form-control">
+          </div>
+          
+          <label>基本文字色 (明度%)</label>
+          <div class="field-row">
+            <input type="range" data-gph="c_base" min="0" max="100">
+            <span id="lbl_c_base" style="width:40px; text-align:right;"></span>
+          </div>
+
+          <label>注釈テキストサイズ</label>
+          <div class="field-row">
+            <input type="number" data-gph="s_tip" min="5" max="12" class="form-control">
+          </div>
+          
+          <label>統計テキスト文字色 (明度%)</label>
+          <div class="field-row">
+            <input type="range" data-gph="c_stats" min="0" max="100">
+            <span id="lbl_c_stats" style="width:40px; text-align:right;"></span>
+          </div>
+
+          <label>シンボル (サイズ / 枠線幅)</label>
+          <div class="field-row">
+            <input type="number" data-gph="sym_size" min="3" max="8" class="form-control">
+            <input type="number" data-gph="sym_bw" min="1" max="3" class="form-control">
+          </div>
+
+          <label>軸線 (太さ / 明度%)</label>
+          <div class="field-row">
+            <input type="number" data-gph="lw_axis" min="0.1" max="1.0" step="0.1" class="form-control">
+            <input type="range" data-gph="c_axis" min="0" max="100">
+            <span id="lbl_c_axis" style="width:40px; text-align:right;"></span>
+          </div>
+
+          <label>グリッド線 (太さ / 明度%)</label>
+          <div class="field-row">
+            <input type="number" data-gph="lw_grid" min="0.1" max="1.0" step="0.1" class="form-control">
+            <input type="range" data-gph="c_grid" min="0" max="100">
+            <span id="lbl_c_grid" style="width:40px; text-align:right;"></span>
+          </div>
+
+          <label>回帰線 (太さ / 色)</label>
+          <div class="field-row">
+            <input type="number" data-gph="lw_reg" min="0.1" max="1.0" step="0.1" class="form-control">
+            <input type="color" data-gph="lc_reg" class="color-picker">
+          </div>
+
+          <label>ラベル余白 (軸名 / 目盛)</label>
+          <div class="field-row">
+            <input type="number" data-gph="g_name" min="1" max="10" class="form-control">
+            <input type="number" data-gph="g_tick" min="1" max="10" class="form-control">
+          </div>
+
+          <label>外枠余白 (上/下/左/右)</label>
+          <div class="field-row" style="flex-wrap: wrap;">
+            <input type="number" data-gph="p_t" min="1" max="10" class="form-control" title="上">
+            <input type="number" data-gph="p_b" min="1" max="10" class="form-control" title="下">
+            <input type="number" data-gph="p_l" min="1" max="10" class="form-control" title="左">
+            <input type="number" data-gph="p_r" min="1" max="10" class="form-control" title="右">
+          </div>
+        </details>
         
         <hr>
         
-        <!-- パネル個別設定 (アクティブ連動) -->
+        <!-- パネル個別設定 -->
         <div id="panelConfigSec" style="display: none;">
-          <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--theme-color);">選択中のパネル: <span id="lblActivePanel"></span></h4>
+          <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--theme-color);">選択中のパネル設定</h4>
+          
           <label>グラフタイプ</label>
           <div id="boxGraphType"></div>
           
-          <!-- 検量線用UI -->
           <div id="secCalibration" style="display: none; margin-top: 16px;">
             <label>対象指標 (X軸:WDXRF / Y軸:PXRF)</label>
             <div id="boxCalibVal"></div>
           </div>
 
-          <!-- 判別図用UI -->
           <div id="secDiscrimination" style="display: none; margin-top: 16px;">
             <label>X軸 指標</label>
             <div id="boxDiscrX"></div>
             <label>Y軸 指標</label>
             <div id="boxDiscrY"></div>
+          </div>
+          
+          <div class="field-row" style="margin-top: 16px;">
+            <button id="btnApplyPanel" data-type="primary">グラフを確定 (描画)</button>
           </div>
         </div>
       </aside>
@@ -121,37 +209,87 @@
       </main>
     </div>
 
-    <!-- UI制御ロジック -->
+    <!-- 状態復元用ダイアログ -->
+    <dialog id="universalConfirm">
+      <h3 id="uDialogTitle">確認</h3>
+      <p id="uDialogMessage"></p>
+      <div class="field-row">
+        <button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button>
+        <button id="uDialogConfirmBtn" data-type="primary">OK</button>
+      </div>
+    </dialog>
+
     <script>
-      // 永続化クラス
       class DashBU {
         static K = "OBP_DASH_BU";
         static save(refs) { localStorage.setItem(this.K, JSON.stringify(refs)); }
         static load() { try { return JSON.parse(localStorage.getItem(this.K)); } catch(e){ return null; } }
+        static clear() { localStorage.removeItem(this.K); }
       }
+
+      // 単一情報源の原則に則り、GLBの既存設定から動的にUI初期値を生成
+      const getInitialRawGph = () => {
+        const st = GLB.defaultGraphStyle;
+        const gp = GLB.defaultGraphGap;
+        const fts = (st.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
+        return {
+          fontEng: GLB.fontEngList.find(f => f.includes(fts[0])) || GLB.fontEngList[0],
+          fontJp: GLB.fontJpList.find(f => f.includes(fts[1])) || GLB.fontJpList[0],
+          s_name: st.fontS.name, s_tick: st.fontS.tick, s_tip: st.fontS.tip,
+          c_base: 40, c_stats: 40, 
+          sym_size: st.symbol.baseSize, sym_bw: st.symbol.borderW,
+          lw_axis: st.lineW.axis, c_axis: 60,
+          lw_grid: st.lineW.grid, c_grid: 90,
+          lw_reg: st.lineW.regW, lc_reg: "#546e7a",
+          g_name: gp.name, g_tick: gp.tick,
+          p_t: gp.padT, p_b: gp.padB, p_l: gp.padL, p_r: gp.padR
+        };
+      };
 
       class ReportApp {
         static state = {
           data: window.__INJECTED_DATA__ || { pxrfDT: [], wdxrfDT: [], corrDT: [] },
           refs: {
+            correction: "new", useCal: false, calElms: [],
             gridRows: 1, gridCols: 1,
             margins: { top: 15, bottom: 15, left: 15, right: 15 },
             activePanelId: "p_0",
+            symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
+            rawGph: getInitialRawGph(),
             panels: [{ id: "p_0", graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "" }]
           }
         };
 
-        static init() {
+        static async init() {
           const bu = DashBU.load();
-          if (bu) this.state.refs = bu; // リロード時に復元
-          
+          if (bu) {
+            if (await NewDOM.confirm("復元", "前回のダッシュボード状態（グラフやレイアウトの設定）を復元しますか？")) {
+              if(!bu.symb) bu.symb = this.state.refs.symb;
+              if(!bu.rawGph) bu.rawGph = this.state.refs.rawGph;
+              this.state.refs = bu;
+            } else {
+              DashBU.clear();
+            }
+          }
           if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) {
             this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
           }
-          
           this.buildUI();
           this.bindEvents();
           this.render();
+          
+          window.addEventListener('resize', () => {
+             clearTimeout(this.resizeTimer);
+             this.resizeTimer = setTimeout(() => {
+                 const gph = this.buildGph();
+                 this.calcPanelSize(gph);
+                 const grid = document.getElementById('dashGrid');
+                 const plots = grid.querySelectorAll('ob-cal-plot');
+                 this.state.refs.panels.forEach((p, i) => {
+                    if (plots[i]) this.drawChart(p, plots[i], gph);
+                 });
+             }, 100);
+          });
         }
 
         static saveState() {
@@ -159,65 +297,209 @@
           this.render();
         }
 
-        static get activePanel() {
-          return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId);
+        static get activePanel() { return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId); }
+
+        static buildGph() {
+          const raw = this.state.refs.rawGph;
+          const s_tip = Number(raw.s_tip);
+          const sym_base = Number(raw.sym_size);
+          const lw_reg = Number(raw.lw_reg);
+          const s_tick = Number(raw.s_tick);
+          return {
+            style: {
+              font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`,
+              fontS: { tick: s_tick, name: Number(raw.s_name), stats: s_tip * 0.9, tip: s_tip },
+              fontC: { base: `hsl(0, 0%, ${raw.c_base}%)`, stats: `hsl(0, 0%, ${raw.c_stats}%)`, tip: 'var(--text-main)' },
+              symbol: { baseSize: sym_base, pathSize: sym_base * 1.2, borderW: Number(raw.sym_bw) },
+              lineW: { axis: Number(raw.lw_axis), grid: Number(raw.lw_grid), regW: lw_reg, regD: lw_reg <= 0.4 ? [3,3] : [5,5] },
+              lineC: { axis: `hsl(0, 0%, ${raw.c_axis}%)`, grid: `hsl(0, 0%, ${raw.c_grid}%)`, reg: raw.lc_reg },
+              bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
+            },
+            gap: {
+              name: Number(raw.g_name), tick: Number(raw.g_tick),
+              padT: Number(raw.p_t) + s_tick, padB: Number(raw.p_b), padL: Number(raw.p_l), padR: Number(raw.p_r) + s_tick
+            }
+          };
         }
 
-        // 初期UI構築 (NewDOM使用)
         static buildUI() {
+          const d = this.state.data;
+          const r = this.state.refs;
+          
+          const cOpts = [{ label: "新規検量線", val: "new" }, ...(d.corrDT || []).slice(1).filter(rw => rw[0]).map(rw => ({ label: rw[0], val: rw[0] }))];
+          NewDOM.buildFormFields([{ type: "select", opts: cOpts, bind: "globalCorr", hasEmpty: false }], "boxGlobalCorr");
+          document.querySelector('[data-bind="globalCorr"]').value = r.correction;
+          
+          NewDOM.buildToggle({ label: "検量線を適用", bind: "globalUseCal" }, "boxGlobalCalTgl");
+          document.querySelector('[data-bind="globalUseCal"]').checked = r.useCal;
+          
+          const ms = document.getElementById('boxGlobalCalElms');
+          if (ms) { ms.opts = GLB.valElms; ms.refs = r.calElms; }
+
+          NewDOM.buildFormFields([{ type: "select", opts: GLB.symbAxes, bind: "symbAxis", hasEmpty: false }], "boxSymbAxis");
+          document.querySelector('[data-bind="symbAxis"]').value = r.symb.baseKey;
+          this.renderSymbTable();
+
+          NewDOM.buildFormFields([{ type: "select", opts: GLB.fontEngList.map(v=>({label:v, val:v})), bind: "fontEng", hasEmpty: false }], "boxFontEng");
+          NewDOM.buildFormFields([{ type: "select", opts: GLB.fontJpList.map(v=>({label:v, val:v})), bind: "fontJp", hasEmpty: false }], "boxFontJp");
+          document.querySelector('[data-bind="fontEng"]').value = r.rawGph.fontEng;
+          document.querySelector('[data-bind="fontJp"]').value = r.rawGph.fontJp;
+
+          document.querySelectorAll('[data-gph]').forEach(el => {
+             const key = el.dataset.gph;
+             if(r.rawGph[key] !== undefined) {
+               el.value = r.rawGph[key];
+               const lbl = document.getElementById(`lbl_${key}`);
+               if(lbl) lbl.textContent = `${el.value}%`;
+             }
+          });
+
           const typeOpts = [{label: "検量線 (Calibration)", val: "calibration"}, {label: "判別図 (Discrimination)", val: "discrimination"}];
           NewDOM.buildFormFields([{ type: "select", opts: typeOpts, bind: "graphType", hasEmpty: false }], "boxGraphType");
-          
           const valOpts = [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v }));
           NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "calibVal", hasEmpty: true }], "boxCalibVal");
           NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "discrXVal", hasEmpty: true }], "boxDiscrX");
           NewDOM.buildFormFields([{ type: "select", opts: valOpts, bind: "discrYVal", hasEmpty: true }], "boxDiscrY");
         }
 
-        // イベント監視
+        static renderSymbTable() {
+          const d = this.state.data;
+          const r = this.state.refs;
+          const symbElm = document.getElementById('tblSymb');
+          if (!symbElm || !d.pxrfDT || !d.pxrfDT.length) return;
+          
+          const vals = [...new Set(d.pxrfDT.map(pt => pt[r.symb.baseKey]).filter(Boolean))];
+          symbElm.src = {
+            rls: r.symb.rls,
+            optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors },
+            actsConf: { add: "addSymb", remove: "removeSymb", update: "renewSymb"}
+          };
+        }
+
         static bindEvents() {
-          document.getElementById('btnAddRow').onclick = () => {
-            if(this.state.refs.gridRows < 3) { this.state.refs.gridRows++; this.syncPanels(); this.saveState(); }
-          };
-          document.getElementById('btnAddCol').onclick = () => {
-            if(this.state.refs.gridCols < 3) { this.state.refs.gridCols++; this.syncPanels(); this.saveState(); }
-          };
-          document.getElementById('btnResetGrid').onclick = () => {
-            this.state.refs.gridRows = 1; this.state.refs.gridCols = 1;
-            this.syncPanels(); this.saveState();
-          };
+          document.getElementById('btnAddRow').onclick = () => { if(this.state.refs.gridRows < 3) { this.state.refs.gridRows++; this.syncPanels(); this.saveState(); } };
+          document.getElementById('btnAddCol').onclick = () => { if(this.state.refs.gridCols < 3) { this.state.refs.gridCols++; this.syncPanels(); this.saveState(); } };
+          document.getElementById('btnResetGrid').onclick = () => { this.state.refs.gridRows = 1; this.state.refs.gridCols = 1; this.syncPanels(); this.saveState(); };
           document.getElementById('btnPrint').onclick = () => window.print();
 
-          // サイドバー設定変更をアクティブパネルへ反映
-          document.getElementById('dashSidebar').addEventListener('change', (e) => {
-            const bindKey = e.target.dataset.bind;
-            if(bindKey && this.activePanel) {
-              this.activePanel[bindKey] = e.target.value;
-              this.saveState();
+          document.getElementById('boxGlobalCalElms').addEventListener('change', e => {
+             const cntr = e.target.closest('ob-multi-select');
+             if(!cntr) return;
+             const cbs = [...cntr.querySelectorAll('.dataset-cb')];
+             const allCb = cntr.querySelector('.select-all-cb');
+             if (e.target.classList.contains('select-all-cb')) cbs.forEach(cb => cb.checked = e.target.checked);
+             else if (allCb) allCb.checked = cbs.length > 0 && cbs.every(cb => cb.checked);
+             this.state.refs.calElms = cbs.filter(cb => cb.checked).map(cb => cb.value);
+             cntr.refs = this.state.refs.calElms; 
+             this.saveState();
+          });
+          document.getElementById('boxGlobalCorr').addEventListener('change', e => { this.state.refs.correction = e.target.value; this.saveState(); });
+          document.getElementById('boxGlobalCalTgl').addEventListener('change', e => { if(e.target.dataset.bind === 'globalUseCal') { this.state.refs.useCal = e.target.checked; this.saveState(); } });
+
+          document.getElementById('gphConfigSec').addEventListener('input', (e) => {
+            const key = e.target.dataset.gph;
+            if (key) {
+              this.state.refs.rawGph[key] = e.target.value;
+              const lbl = document.getElementById(`lbl_${key}`);
+              if(lbl) lbl.textContent = `${e.target.value}%`;
+              clearTimeout(this.gphTimer);
+              this.gphTimer = setTimeout(() => this.saveState(), 100);
             }
           });
+          document.getElementById('gphConfigSec').addEventListener('change', (e) => {
+             const bindKey = e.target.dataset.bind;
+             if(bindKey && bindKey.startsWith("font")) { this.state.refs.rawGph[bindKey] = e.target.value; this.saveState(); }
+          });
+
+          document.querySelector('[data-bind="symbAxis"]').addEventListener('change', async (e) => {
+            if (await NewDOM.confirm("確認", "リセットしますか？")) {
+               this.state.refs.symb.baseKey = e.target.value;
+               this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
+               this.renderSymbTable();
+               this.saveState();
+            } else { e.target.value = this.state.refs.symb.baseKey; }
+          });
+          document.getElementById('btnResetSymb').onclick = () => {
+             this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
+             this.renderSymbTable();
+             this.saveState();
+          };
+          document.getElementById('tblSymb').addEventListener('click', (e) => {
+             const btn = e.target.closest('[data-action]');
+             if(!btn) return;
+             const act = btn.dataset.action;
+             if(act === 'addSymb') {
+                this.state.refs.symb.rls.push({ key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr });
+             } else if(act === 'removeSymb') {
+                const k = btn.dataset.ruleKey;
+                if(k) this.state.refs.symb.rls = this.state.refs.symb.rls.filter(rw => rw.key !== k);
+             } else if(act === 'renewSymb') {
+                const idx = btn.dataset.symbolIdx, type = btn.dataset.symbolType;
+                if (idx != null && type && this.state.refs.symb.rls[idx]) this.state.refs.symb.rls[idx][type] = btn.value;
+             }
+             this.renderSymbTable();
+             this.saveState();
+          });
+
+          document.querySelector('[data-bind="graphType"]').addEventListener('change', (e) => {
+            const type = e.target.value;
+            document.getElementById('secCalibration').style.display = type === 'calibration' ? 'block' : 'none';
+            document.getElementById('secDiscrimination').style.display = type === 'discrimination' ? 'block' : 'none';
+          });
+          document.getElementById('btnApplyPanel').onclick = () => {
+            if(!this.activePanel) return;
+            const getVal = (bindKey) => document.querySelector(`[data-bind="${bindKey}"]`)?.value || "";
+            this.activePanel.graphType = getVal("graphType");
+            this.activePanel.calibVal = getVal("calibVal");
+            this.activePanel.discrXVal = getVal("discrXVal");
+            this.activePanel.discrYVal = getVal("discrYVal");
+            this.saveState();
+          };
         }
 
-        // 行列数に合わせてパネル配列を調整
         static syncPanels() {
           const total = this.state.refs.gridRows * this.state.refs.gridCols;
-          while(this.state.refs.panels.length < total) {
-            this.state.refs.panels.push({ id: `p_${this.state.refs.panels.length}`, graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "" });
-          }
-          if(this.state.refs.panels.length > total) {
-            this.state.refs.panels = this.state.refs.panels.slice(0, total);
-          }
-          if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) {
-            this.state.refs.activePanelId = this.state.refs.panels[0].id;
-          }
+          while(this.state.refs.panels.length < total) this.state.refs.panels.push({ id: `p_${this.state.refs.panels.length}`, graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "" });
+          if(this.state.refs.panels.length > total) this.state.refs.panels = this.state.refs.panels.slice(0, total);
+          if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0].id;
         }
 
-        // レンダリングループ
-        static render() {
+        static calcPanelSize(gph) {
+          const grid = document.getElementById('dashGrid');
           const r = this.state.refs;
           
-          // CSS Grid と余白の適用
+          grid.style.removeProperty('--panel-w');
+          grid.style.removeProperty('--panel-h');
+          
+          const gw = grid.clientWidth;
+          const gh = grid.clientHeight;
+          if (gw === 0 || gh === 0) return;
+
+          const gap = 16;
+          const maxW = (gw - (r.gridCols - 1) * gap) / r.gridCols;
+          const maxH = (gh - (r.gridRows - 1) * gap) / r.gridRows;
+
+          const s = gph.style.fontS;
+          const g = gph.gap;
+          const cW = s.tick * 0.6;
+          const padX = g.padL + cW + s.name + g.name + s.tick + g.tick + g.padR;
+          const padY = g.padT + (2 * cW) + g.padB + s.name + g.name + s.tick + g.tick;
+
+          const xPlot = maxW - padX;
+          const yPlot = maxH - padY;
+          const plotLen = Math.max(10, Math.min(xPlot, yPlot));
+
+          const panelW = plotLen + padX;
+          const panelH = plotLen + padY;
+
+          grid.style.setProperty('--panel-w', `${panelW}px`);
+          grid.style.setProperty('--panel-h', `${panelH}px`);
+        }
+
+        static render() {
+          const r = this.state.refs;
           const cont = document.getElementById('a4Container');
+          
           cont.style.setProperty('--col-count', r.gridCols);
           cont.style.setProperty('--row-count', r.gridRows);
           cont.style.setProperty('--margin-top', `${r.margins.top}mm`);
@@ -225,38 +507,84 @@
           cont.style.setProperty('--margin-bottom', `${r.margins.bottom}mm`);
           cont.style.setProperty('--margin-left', `${r.margins.left}mm`);
 
-          // グリッドパネルのDOM生成 (枠のみ)
+          const gph = this.buildGph();
+
           const grid = document.getElementById('dashGrid');
           grid.innerHTML = '';
+          const chartsToDraw = [];
+          
           r.panels.forEach(p => {
             const div = document.createElement('div');
             div.className = `grid-panel ${p.id === r.activePanelId ? 'active' : ''}`;
-            div.innerHTML = `<span class="panel-id">${p.id}</span>`;
+            
+            const chart = document.createElement('ob-cal-plot');
+            chart.style.width = '100%';
+            chart.style.height = '100%';
+            
+            div.appendChild(chart);
             div.onclick = () => { r.activePanelId = p.id; this.saveState(); };
             grid.appendChild(div);
+
+            chartsToDraw.push({ p, chart });
           });
 
-          // サイドバーUIへの値反映
+          requestAnimationFrame(() => {
+             this.calcPanelSize(gph);
+             requestAnimationFrame(() => {
+                chartsToDraw.forEach(item => this.drawChart(item.p, item.chart, gph));
+             });
+          });
+
           const ap = this.activePanel;
           if (ap) {
             document.getElementById('panelConfigSec').style.display = 'block';
-            document.getElementById('lblActivePanel').textContent = ap.id;
             
-            const setVal = (bindKey, val) => {
-              const el = document.querySelector(`[data-bind="${bindKey}"]`);
-              if(el) el.value = val || "";
-            };
-            setVal("graphType", ap.graphType);
-            setVal("calibVal", ap.calibVal);
-            setVal("discrXVal", ap.discrXVal);
-            setVal("discrYVal", ap.discrYVal);
+            const setVal = (bindKey, val) => { const el = document.querySelector(`[data-bind="${bindKey}"]`); if(el) el.value = val || ""; };
+            setVal("graphType", ap.graphType); setVal("calibVal", ap.calibVal); setVal("discrXVal", ap.discrXVal); setVal("discrYVal", ap.discrYVal);
 
-            // グラフタイプに応じたUI切替
             document.getElementById('secCalibration').style.display = ap.graphType === 'calibration' ? 'block' : 'none';
             document.getElementById('secDiscrimination').style.display = ap.graphType === 'discrimination' ? 'block' : 'none';
           } else {
             document.getElementById('panelConfigSec').style.display = 'none';
           }
+        }
+
+        static drawChart(panel, chart, gph) {
+          const r = this.state.refs;
+          const d = this.state.data;
+          if (!d.pxrfDT || d.pxrfDT.length === 0) return;
+
+          const baseConf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: false, modeMap: GLB.optElms };
+          let prevDT = [], statsDT = null;
+
+          if (panel.graphType === 'calibration' && panel.calibVal) {
+             prevDT = Mtd.T2.mgmPrev.buildPrev(d.pxrfDT, d.wdxrfDT, { ...baseConf, val: panel.calibVal });
+             statsDT = Mtd.T2.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), prevDT.map(pt => pt.err));
+          } 
+          else if (panel.graphType === 'discrimination' && panel.discrXVal && panel.discrYVal) {
+             const calibBase = Mtd.T2.mgmPrev.buildPrev(d.pxrfDT, d.wdxrfDT, { ...baseConf, val: GLB.valElms[0] });
+             
+             const wdxrfPoints = d.wdxrfDT.map(w => ({
+                '計測ID': w['計測ID'] || w[GLB.idx.key2],
+                [GLB.idx.key1]: w[GLB.idx.key1], [GLB.idx.key2]: w[GLB.idx.key2], [GLB.idx.wd1]: w[GLB.idx.wd1], [GLB.idx.wd2]: w[GLB.idx.wd2],
+                x: Mtd.T2.Calc.evaluate(panel.discrXVal, w), y: Mtd.T2.Calc.evaluate(panel.discrYVal, w),
+                _forceClr: GLB.wdxrfDefClr || '#78909C'
+             })).filter(pt => pt.x != null && pt.y != null);
+
+             const pxrfPoints = calibBase.map(p => ({
+                '計測ID': p['計測ID'],
+                [GLB.idx.key1]: p[GLB.idx.key1], [GLB.idx.key2]: p[GLB.idx.key2], [GLB.idx.wd1]: p[GLB.idx.wd1], [GLB.idx.wd2]: p[GLB.idx.wd2],
+                x: Mtd.T2.Calc.evaluate(panel.discrXVal, p), y: Mtd.T2.Calc.evaluate(panel.discrYVal, p)
+             })).filter(pt => pt.x != null && pt.y != null);
+
+             prevDT = [...wdxrfPoints, ...pxrfPoints];
+          }
+
+          chart.src = { 
+            prevDT, statsDT, 
+            symb: r.symb, 
+            gph: gph
+          };
         }
       }
 
