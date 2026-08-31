@@ -7,5 +7,5 @@ OBPLOTは、環境構築なしで以下のアプリケーション上で動作�
 [![Office Add-in](https://img.shields.io/badge/Office%20Add--in-Excel-green)](#)
 
 ## まずは試してみる
-Googleアカウントをお持ちの方
-Qiita ![test](https://docs.google.com/spreadsheets/d/1wtlRgAOUvbHxtXiijriX32LSACboRNg-N1VddcZEPSU/edit?usp=sharing) で検索する。
+Googleアカウントをお持ちの方は以下のGASをコピーすればすぐ使えます。
+https://docs.google.com/spreadsheets/d/1-m5RoEsmTdCKQKBxqTslLtdgGkfXWN0eQST8Kpb0b4A/edit?usp=sharing
