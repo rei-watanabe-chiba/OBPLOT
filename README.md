@@ -1,6 +1,5 @@
 > [!NOTE]
-> https://github.com/rei-watanabe-chiba/OBPLOT は、  
-> 黒曜石の蛍光X線分析データを操作するWEBアプリケーション **OBPLOT** 公開リポジトリです。
+> このページは、黒曜石の蛍光X線分析データを操作するWEBアプリケーション **OBPLOT** 公開リポジトリです。
 
 # OBPLOT
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-deployed-success)](#) 
