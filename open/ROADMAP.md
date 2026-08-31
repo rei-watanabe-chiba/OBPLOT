@@ -1,6 +1,6 @@
 # ROADMAP.md: OBPLOT1.0 Schema-Driven Refactoring
 
-## 1. SAVEPOINT.md からの主要な変更点（第6のアプローチ）
+## 1. SAVEPOINT.md からの主要な変更点
 
 ### 1.1 アーキテクチャと状態管理の進化
 * **変更前:** UI状態制御は `data-action` や `data-ui` 属性に基づくイベントルーターと相対DOM参照エンジンによって行われていた（Report層のみ `UIAutomator` を採用）[cite: 1]。
