@@ -385,23 +385,28 @@
         static generateChartData(pxrfDT, wdxrfDT, conf) {
           let pDT = pxrfDT, wDT = wdxrfDT;
           const { key1, p1, wd1 } = GLB.idx;
+          
           if (conf.filters) {
             const { db, item, group } = conf.filters;
+            
+            // dbが null ではなく「配列」として存在する場合のみフィルターを実行
             if (Array.isArray(db)) {
-              const fArr = db.map(String);
-              pDT = pDT.filter(r => fArr.includes(String(r[key1])));
-              wDT = wDT.filter(r => fArr.includes(String(r[key1])));
+              pDT = pDT.filter(r => db.includes(String(r[key1])));
+              wDT = wDT.filter(r => db.includes(String(r[key1])));
             }
+            
+            // itemのフィルター
             if (Array.isArray(item)) {
-              const fArr = item.map(String);
-              pDT = pDT.filter(r => fArr.includes(String(r[p1])));
+              pDT = pDT.filter(r => item.includes(String(r[p1])));
             }
+            
+            // groupのフィルター
             if (Array.isArray(group)) {
-              const fArr = group.map(String);
-              pDT = pDT.filter(r => fArr.includes(String(r[wd1])));
-              wDT = wDT.filter(r => fArr.includes(String(r[wd1])));
+              pDT = pDT.filter(r => group.includes(String(r[wd1])));
+              wDT = wDT.filter(r => group.includes(String(r[wd1])));
             }
           }
+          
           let prevDT = [], statsDT = null;
           if (conf.graphType === 'calibration' && conf.calibVal) {
              prevDT = this.buildPrev(pDT, wDT, { ...conf, val: conf.calibVal });

@@ -235,30 +235,44 @@
       let bu = null;
       if (buStr) try { bu = JSON.parse(buStr); } catch(e) {}
       
+      // 値がない場合は空配列ではなく null を返すように変更
       const pxrf = this.state.data.pxrfDT || [];
-      const exVals = (key) => [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
+      const exVals = (key) => {
+        const vals = [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
+        return vals.length > 0 ? vals : null; // ← ここがポイント
+      };
+      
       const optsDB = exVals(GLB.idx.key1);
       const optsItem = exVals(GLB.idx.p1);
       const optsGroup = exVals(GLB.idx.wd1);
+
+      // 復元時のヘルパー（配列として存在していれば文字列化、そうでなければ初期値）
+      const initFltr = (buVal, opts) => Array.isArray(buVal) ? buVal.map(String) : opts;
+
       if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
         bu.rawGph = { ...getInitRawGph(), ...(bu.rawGph || {}) };
         if(!bu.symb) bu.symb = this.state.refs.symb;
         if(bu.panelGap === undefined || bu.panelGap === 16 || bu.panelGap === 12) bu.panelGap = 4;
         if(!bu.calElms || bu.calElms.length === 0) bu.calElms = [...GLB.valElms]; 
-        if(!bu.filters || Array.isArray(bu.filters)) bu.filters = { db: [...optsDB], item: [...optsItem], group: [...optsGroup] };
-        bu.filters.db = (bu.filters.db || []).map(String);
-        bu.filters.item = (bu.filters.item || []).map(String);
-        bu.filters.group = (bu.filters.group || []).map(String);
+        
+        if(!bu.filters || Array.isArray(bu.filters)) {
+          bu.filters = { db: optsDB, item: optsItem, group: optsGroup };
+        } else {
+          bu.filters.db = initFltr(bu.filters.db, optsDB);
+          bu.filters.item = initFltr(bu.filters.item, optsItem);
+          bu.filters.group = initFltr(bu.filters.group, optsGroup);
+        }
+        
         if(bu.useLOD === undefined) bu.useLOD = false;
         bu.panels = (bu.panels || []).map(p => ({ ...getDefPnl(), ...p }));
         this.state.refs = bu;
       } else { 
         StorageAPI.clear(DASH_BU_KEY);
-        this.state.refs.filters.db = [...optsDB];
-        this.state.refs.filters.item = [...optsItem];
-        this.state.refs.filters.group = [...optsGroup];
+        // 初期状態は optsDB など（配列 または null）をそのまま代入
+        this.state.refs.filters = { db: optsDB, item: optsItem, group: optsGroup };
       }
 
+      // optsにnullが渡ってもUIコンポーネント側で「データなし」表示に自動処理されます
       const mSchema = UI_SCHEMA.multiSelects;
       mSchema.find(m => m.id === "boxFilterDB").opts = optsDB;
       mSchema.find(m => m.id === "boxFilterItem").opts = optsItem;
