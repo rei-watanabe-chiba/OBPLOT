@@ -10,7 +10,7 @@ OBPLOTは、環境構築なしで以下のアプリケーション上で動作�
 Googleアカウントをお持ちの方は以下のGASをコピーすればすぐ使えます。<br>
 
 
-![Twitter URL][badge-url]][twitter]
+![[Twitter URL][badge-url]][twitter]
 
 [badge-url]: https://img.shields.io/twitter/url?label=%40not75743&style=social&url=https%3A%2F%2Ftwitter.com%2Fnot75743
 [twitter]: https://twitter.com/not75743
