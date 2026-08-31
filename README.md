@@ -8,7 +8,7 @@
 
 OBPLOTは、環境構築なしで標準アプリケーション上で動作するSPA(Single Page Application)ツールです。
 以下のソフト環境に対応しています。
-
+[![Google Sheets ](https://img.shields.io/badge/Google%20Sheets-GAS-green)](#) 
 
 
 Googleアカウントをお持ちの方
