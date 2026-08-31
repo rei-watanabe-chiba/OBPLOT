@@ -9,10 +9,6 @@ OBPLOTは、環境構築なしで以下のアプリケーション上で動作�
 ## まずは試してみる
 Googleアカウントをお持ちの方は以下のGASをコピーすればすぐ使えます。<br>
 
-[![GAS Template][badge-url]][GASTemplate]
-
-[badge-url]: https://img.shields.io/badge/GAS-GoogleSheets-blue
-[twitter]: [https://twitter.com/not75743](https://docs.google.com/spreadsheets/d/1-m5RoEsmTdCKQKBxqTslLtdgGkfXWN0eQST8Kpb0b4A/edit?usp=sharing)
 
 [![Twitter URL][badge-url]][twitter]
 
