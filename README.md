@@ -7,7 +7,7 @@
 [![Office Add-in](https://img.shields.io/badge/Office%20Add--in-Excel-green)](#)
 
 OBPLOTは、環境構築なしで標準アプリケーション上で動作するSPA(Single Page Application)ツールです。<br>
-対応環境 : [![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-GoogleSheets-blue)](#) 
+対応環境 : [![ GAS](https://img.shields.io/badge/GAS-GoogleSheets-blue)](#) 
 
 
 Googleアカウントをお持ちの方
