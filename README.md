@@ -6,7 +6,8 @@
 [![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-V8-blue)](#) 
 [![Office Add-in](https://img.shields.io/badge/Office%20Add--in-Excel-green)](#)
 
-OBPLOTは、環境構築なしでGoogleスプレッドシート / Excelで動作するSPA(Single Page Application)ツールです。
+OBPLOTは、環境構築なしで標準アプリケーション上で動作するSPA(Single Page Application)ツールです。
+以下のソフト環境に対応しています。
 
 
 
