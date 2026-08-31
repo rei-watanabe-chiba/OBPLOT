@@ -1,6 +1,6 @@
 <!-- src/Component.html -->
 <script>
-  // --- DOM ---
+  // --- DOM操作 ---
   class DOM {
     static el = ref => typeof ref === "string" ? document.getElementById(ref) : ref;
     static updateText = (ref, text) => { if (text !== undefined && this.el(ref)) this.el(ref).innerText = text; };
@@ -9,7 +9,7 @@
     static setDis = (ref, isDis) => { if (this.el(ref)) this.el(ref).disabled = isDis; };
     static setAttr = (ref, attr, val) => val ? this.el(ref)?.setAttribute(attr, val) : this.el(ref)?.removeAttribute(attr);
   }
-  // --- NewDOM ---
+  // --- DOM構築 ---
   class NewDOM {
     // --- フォーム一括構築 ---
     static buildFormFields(confArr, ref, isClear = false) {
@@ -76,7 +76,7 @@
       if (!dlg.open) dlg.showModal();
       DOM.el("idleToastOkBtn").onclick = () => {
         dlg.close();
-        if (onOk) onOk(); // 閉じた後に処理実行
+        if (onOk) onOk(); // 閉じた後に実行
       };
     }
     // --- トグル構築 ---
@@ -86,7 +86,7 @@
       if (isClear) cntr.replaceChildren();
       cntr.insertAdjacentHTML('beforeend', Tpl.Toggle.row(conf.label, conf.bind, conf.change, conf.isCheck));
     }
-    // --- 統計表構築と計算エラー時の表示 ---
+    // --- 統計表構築とエラー ---
     static buildStats(statsDT, ref) {
       const cntr = DOM.el(ref);
       if (!cntr) return;
@@ -102,13 +102,13 @@
   }
   // --- ObPopover ---
   class ObPopover extends HTMLElement {
+    // --- Popover紐付け ---
     connectedCallback() {
       setTimeout(() => {
         const sum = this.querySelector('.popover-summary'), cnt = this.querySelector('.popover-content');
         if (!sum || !cnt) return;
         const uid = this.id || `pop_${Math.random().toString(36).substr(2, 9)}`, anchorName = `--anchor-${uid}`;
         sum.setAttribute('popovertarget', uid); sum.style.anchorName = anchorName;
-        // Popover紐付け
         cnt.id = uid; cnt.setAttribute('popover', 'auto'); cnt.style.positionAnchor = anchorName;
       }, 0);
     }
@@ -116,32 +116,37 @@
   // --- ObMultiSelect ---
   class ObMultiSelect extends HTMLElement {
     #dataChangeItem; #dataChangeAll;
+    // --- 接続コールバック ---
     connectedCallback() {
       this.#dataChangeItem = this.dataset.changeItem; this.#dataChangeAll = this.dataset.changeAll;
       this.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "cb-container");
     }
+    // --- 選択肢設定 ---
     set opts(arr) {
       const cntr = this.querySelector('.popover-content');
       if (!cntr) return;
       if (!arr?.length) return (cntr.innerHTML = '<div class="txt-btninfo">データなし</div>');
       cntr.innerHTML = (this.#dataChangeAll ? Tpl.MultiSelect.selectAll(this.#dataChangeAll) : '') + arr.map(item => Tpl.MultiSelect.item(item, this.#dataChangeItem)).join('');
     }
+    // --- 参照設定 ---
     set refs(vals) {
       const sum = this.querySelector('.popover-summary');
       if (sum) sum.innerHTML = vals?.length ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>` : '<span style="color:var(--grey400)">未選択</span>';
       const cbs = this.querySelectorAll('.dataset-cb');
       cbs.forEach(cb => cb.checked = Array.isArray(vals) && vals.includes(cb.value));
       const allCb = this.querySelector('.select-all-cb');
-      // 全選択判定
-      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
+      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked); // 全選択判定
     }
   }
   // --- ObSymbolTable ---
   class ObSymbolTable extends HTMLElement {
     #src = null;
     static #COLS = [{ key: 'target', className: 'symb-col-target', hasClr: false }, { key: 'shp', className: 'symb-col-shape', hasClr: false }, { key: 'clr', className: 'symb-col-color', hasClr: true }];
+    // --- ソース設定 ---
     set src(val) { this.#src = val; this.#render(); }
+    // --- クリア処理 ---
     clear() { this.#src = null; this.replaceChildren(); }
+    // --- セレクトHTML構築 ---
     #buildSelectHtml(opts, curVal, type, idx, hasClr, actsConf) {
       let curLbl = "未選択", curClr = "";
       const itemsHtml = opts.map(opt => {
@@ -150,6 +155,7 @@
       }).join('');
       return Tpl.Common.popover(Tpl.Symbol.sum(curLbl, curClr, hasClr, curVal), itemsHtml, "single-summary", "");
     }
+    // --- 描画処理 ---
     #render() {
       const { rls, optsConf, actsConf } = this.#src || {};
       if (!rls?.length || !optsConf) return this.clear();
@@ -162,54 +168,30 @@
       }).join('');
     }
   }
-  // --- ObFilterTable ---
-  class ObFilterTable extends HTMLElement {
-    #src = null;
-    static #COLS = [{ key: 'axis', className: 'symb-col-target' }, { key: 'val', className: 'symb-col-target' }];
-    set src(val) { this.#src = val; this.#render(); }
-    clear() { this.#src = null; this.replaceChildren(); }
-    #buildSelectHtml(opts, curVal, type, idx, actsConf) {
-      let curLbl = "未選択";
-      const itemsHtml = (opts || []).map(opt => {
-        if (opt.val === curVal) curLbl = opt.label;
-        return Tpl.Filter.item(opt, type, idx, actsConf.update);
-      }).join('');
-      return Tpl.Common.popover(curLbl, itemsHtml, "single-summary", "");
-    }
-    #render() {
-      const { rls, optsConf, actsConf } = this.#src || {};
-      if (!rls || !optsConf) return this.clear();
-      this.innerHTML = [...rls, { isAddRow: true }].map((rl, idx) => {
-        if (rl.isAddRow) return Tpl.Symbol.addRow(actsConf.add, ObFilterTable.#COLS);
-        const btnHtml = Tpl.Symbol.btn(actsConf.remove, rl.key, "-", false);
-        const valOpts = (rl.axis && optsConf.val[rl.axis]) ? [{val: "", label: "未選択"}, ...optsConf.val[rl.axis]] : [{val: "", label: "未選択"}];
-        const colsHtml = ObFilterTable.#COLS.map(col => {
-          const opts = col.key === 'axis' ? optsConf.axis : valOpts;
-          return Tpl.Symbol.col(col.className, this.#buildSelectHtml(opts, rl[col.key], col.key, idx, actsConf));
-        }).join('');
-        return Tpl.Symbol.row(btnHtml, colsHtml);
-      }).join('');
-    }
-  }
   // --- Tpl ---
   const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
   class Tpl {
+    // --- 共通テンプレート ---
     static Common = class {
       static popover(sumHtml, cntHtml, sumCls = "", cntCls = "") { return html`<ob-popover><button type="button" class="popover-summary ${sumCls}">${sumHtml}</button><div class="popover-content scroll-y ${cntCls}">${cntHtml}</div></ob-popover>`; }
       static colorBox(clr) { return clr ? html`<span class="color-box" style="background: ${clr}"></span>` : ""; }
       static badge(val) { return html`<span class="badge">${val}</span>`; }
     };
+    // --- トグルテンプレート ---
     static Toggle = class {
       static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
     };
+    // --- 統計テンプレート ---
     static Stats = class {
       static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
       static cntr(rowsHtml) { return html`<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`; }
     };
+    // --- マルチセレクト ---
     static MultiSelect = class {
       static item(val, dataChange) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }
       static selectAll(dataChange) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked><span>すべて選択</span></label>`; }
     };
+    // --- シンボルテンプレート ---
     static Symbol = class {
       static sum(label, clr, hasClr, hasVal) { return html`${(hasClr && hasVal) ? Tpl.Common.colorBox(clr) : ""}${label}`; }
       static item(opt, type, idx, hasClr, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-symbol-idx="${idx}" data-symbol-type="${type}" value="${opt.val}" popovertargetaction="hide">${hasClr ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
@@ -218,12 +200,8 @@
       static row(btnHtml, colsHtml) { return html`<div class="symb-table-row"><div class="symb-col-btn">${btnHtml}</div>${colsHtml}</div>`; }
       static addRow(actionAdd, colsArr) { return this.row(this.btn(actionAdd, "", "+", false), colsArr.map(c => this.col(c.className, "")).join('')); }
     };
-    static Filter = class {
-      static item(opt, type, idx, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-filter-idx="${idx}" data-filter-type="${type}" value="${opt.val}" popovertargetaction="hide">${opt.label}</button>`; }
-    };
   }
   customElements.define('ob-popover', ObPopover);
   customElements.define('ob-multi-select', ObMultiSelect);
   customElements.define('ob-symbol-table', ObSymbolTable);
-  customElements.define('ob-filter-table', ObFilterTable);
 </script>

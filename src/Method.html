@@ -1,7 +1,14 @@
 <!-- src/Method.html -->
 <script>
   const Mtd = {
+    // --- ユーティリティ ---
     Util: class {
+      // --- オブジェクト配列化 ---
+      static toObjArray(data) {
+        if (!data?.length) return [];
+        const [hdr, ...body] = data;
+        return body.map(r => hdr.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: r[i] }), {}));
+      }
       // --- 再配列処理 ---
       static remapArry(data, idxArr, newHdr = null) {
         if (!data?.length) return [];
@@ -63,7 +70,8 @@
         const { key1, key2, p1, p2, wd1, wd2 } = GLB.idx;
         const obK = this.sortKeysByVal(GLB.obsidianIndex), mdK = this.sortKeysByVal(GLB.mudrockIndex);
         switch(type) {
-          case 'pxrf': return ['計測ID', key1, key2, p1, p2, ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
+          case 'tracer5i': return ['計測ID', key1, key2, p1, p2, ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
+          case 'pxrf': return ['計測ID', key1, key2, p1, p2, wd1, wd2, ...GLB.valElms, ...GLB.valElms.map(e => `${e}_Err`)];
           case 'wdxrf': return [key1, key2, wd1, wd2, ...GLB.valElms];
           case 'corr': return ['IndexName', ...GLB.valElms.flatMap(e => [`${e}_slp`, `${e}_int`])];
           case 'filelist': return ['file', 'mode', key2, 'sub_id', 'info', '計測ID'];
@@ -76,6 +84,7 @@
         const schema = GLB.schema[schemaType].map(s => ({ ...s, hdr: s.hdrType ? this.buildHeader(s.hdrType) : [] }));
         const exMap = new Map(curShts.map(s => [s.name, s.hdr]));
         const vls = {
+          tracer5i: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・tracer5iヘッダー不正" : null,
           pxrf: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・PXRFヘッダー不正" : null,
           corr: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・Correctionヘッダー不正" : null,
           wdxrf: (h, req) => { const ms = req.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須項目不足: ${ms.join(', ')}` : null; }
@@ -90,6 +99,7 @@
         return { errs, buildPlan, missingNames };
       }
     },
+    // --- Tab1抽出処理 ---
     T1: {
       // --- リスト検証 ---
       FVald: class {
@@ -139,7 +149,7 @@
               return acc;
             }, { vals: [], errs: [] });
           };
-          return [Mtd.Util.buildHeader('pxrf'), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+          return [Mtd.Util.buildHeader('tracer5i'), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
             const ob = extract(files.obsidian, obKeys, GLB.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.mudrockIndex);
             return [scanId, extrRefs[GLB.idx.key1], id, extrRefs[GLB.idx.p1], extrRefs[GLB.idx.p2], ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
           })];
@@ -157,18 +167,14 @@
         }
       }
     },
+    // --- Tab2データ処理 ---
     T2: {
       // --- データ統合 ---
       mgmtDT: class {
-        // --- オブジェクト配列化 ---
-        static #toObjArray(data) {
-          const [hdr, ...body] = data;
-          return body.map(r => hdr.reduce((obj, h, i) => ({ ...obj, [String(h).trim()]: r[i] }), {}));
-        }
         // --- 読込 ---
         static loadDB(pxrfDT, wdxrfDT) {
-          const pObjs = this.#toObjArray(pxrfDT);
-          const wObjs = this.#toObjArray(wdxrfDT);
+          const pObjs = Mtd.Util.toObjArray(pxrfDT);
+          const wObjs = Mtd.Util.toObjArray(wdxrfDT);
           const { key1: k1, key2: k2, wd1: w1, wd2: w2 } = GLB.idx;
           const wMap = new Map(wObjs.map(o => [`${String(o[k1])}_${String(o[k2])}`, o]));
           const dbs = new Set();
@@ -200,13 +206,6 @@
         // --- データ生成パイプライン統合 ---
         static generateChartData(pxrfDT, wdxrfDT, conf) {
           let pDT = pxrfDT, wDT = wdxrfDT;
-          if (conf.filters?.length) {
-             const acts = conf.filters.filter(f => f.axis && f.val !== "");
-             if (acts.length > 0) {
-               pDT = pxrfDT.filter(r => !acts.some(f => String(r[f.axis]) === String(f.val)));
-               wDT = wdxrfDT.filter(r => !acts.some(f => String(r[f.axis]) === String(f.val)));
-             }
-          }
           let prevDT = [], statsDT = null;
           if (conf.graphType === 'calibration' && conf.calibVal) {
              prevDT = this.buildPrev(pDT, wDT, { ...conf, val: conf.calibVal });
@@ -218,12 +217,12 @@
           }
           return { prevDT, statsDT };
         }
-
+        // --- プレビュー構築 ---
         static buildPrev(pxrfDT, wdxrfDT, conf) {
           if (!pxrfDT?.length || !wdxrfDT?.length) return [];
           const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
           const wMap = new Map(wdxrfDT.map(w => [`${String(w[k1])}_${String(w[k2])}`, w]));
-          const minMap = conf.useLOD ? this.#getMinMap(pxrfDT, conf) : {};
+          const minMap = conf.useLOD ? this.getMinMap(pxrfDT, conf) : {};
           const cfs = this.#resCoeffs(pxrfDT, wMap, conf, minMap);
           return pxrfDT.reduce((acc, r) => {
             const itemVal = r[p1];
@@ -245,7 +244,7 @@
           }, []);
         }
         // --- LOD最小値取得 ---
-        static #getMinMap(pxrfDT, conf) {
+        static getMinMap(pxrfDT, conf) {
           return Object.fromEntries(GLB.valElms.map(elm => {
             const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
             const nums = Mtd.Util.getValidNums(pxrfDT.map(r => r[`${pfx}_${elm}`]), true);
@@ -277,21 +276,51 @@
             return sIdx !== -1 && iIdx !== -1 && r[sIdx] !== "" ? [elm, { slp: Number(r[sIdx]), int: Number(r[iIdx]) }] : [elm, null];
           }).filter(([, v]) => v));
         }
-        // --- 検量線適用データ整形 ---
-        static genCorr(pxrfDT, wdxrfDT, conf, idxName) {
-          const newRow = [idxName];
-          GLB.valElms.forEach(elm => {
-            if (!conf.calElms?.includes(elm)) { newRow.push("", ""); return; }
-            const prevDT = this.buildPrev(pxrfDT, wdxrfDT, { ...conf, val: elm, useCal: false });
-            const cfs = prevDT.length ? Mtd.T2.Calc.calcCalib(prevDT.map(d => d.x), prevDT.map(d => d.y)) : null;
-            newRow.push(cfs?.slp ?? "", cfs?.int ?? "");
+      },
+      // --- 標準化・出力 ---
+      mgmStdz: class {
+        // --- 新PXRF出力用データ生成 ---
+        static genNewPxrf(pxrfDT, modeMap) {
+          const hdr = Mtd.Util.buildHeader('pxrf');
+          const data = pxrfDT.map(r => {
+            const row = [r['計測ID'], r[GLB.idx.key1], r[GLB.idx.key2], r[GLB.idx.p1], r[GLB.idx.p2], r[GLB.idx.wd1], r[GLB.idx.wd2]];
+            GLB.valElms.forEach(elm => {
+              const pfx = (GLB.optElms.includes(elm) && modeMap?.includes(elm)) ? 'ob' : 'md';
+              row.push(r[`${pfx}_${elm}`] ?? "");
+            });
+            GLB.valElms.forEach(elm => {
+              const pfx = (GLB.optElms.includes(elm) && modeMap?.includes(elm)) ? 'ob' : 'md';
+              row.push(r[`${pfx}_${elm}_Err`] ?? "");
+            });
+            return row;
           });
-          return newRow;
+          return [hdr, ...data];
+        }
+        // --- 全元素一括回帰計算 ---
+        static calcAllCalib(pxrfDT, wdxrfDT, conf, idxName) {
+          const minMap = conf.useLOD ? Mtd.T2.mgmPrev.getMinMap(pxrfDT, conf) : {};
+          const wMap = new Map(wdxrfDT.map(w => [`${String(w[GLB.idx.key1])}_${String(w[GLB.idx.key2])}`, w]));
+          const res = [idxName];
+          GLB.valElms.forEach(elm => {
+            const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+            const wArr = [], pArr = [];
+            pxrfDT.forEach(p => {
+              if (conf.itemMap?.length && !conf.itemMap.includes(p[GLB.idx.p1])) return;
+              const w = wMap.get(`${String(p[GLB.idx.key1])}_${String(p[GLB.idx.key2])}`);
+              if (!w || w[elm] == null) return;
+              const raw = p[`${pfx}_${elm}`];
+              const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
+              if (v != null) { wArr.push(Number(w[elm])); pArr.push(v); }
+            });
+            const cfs = Mtd.T2.Calc.calcCalib(wArr, pArr);
+            res.push(cfs?.slp ?? "", cfs?.int ?? "");
+          });
+          return res;
         }
       },
-      // --- 検量線データ生成 ---
+      // --- 検量線計算基礎 ---
       Calc: class {
-        // --- カスタム数式評価 ---
+        // --- 数式評価 ---
         static evaluate(fml, rData) {
           if (!fml) return null;
           try {
@@ -299,22 +328,20 @@
             return isNaN(res) || !isFinite(res) ? null : res;
           } catch (e) { return null; }
         }
-        // --- 検量線係数計算 ---
+        // --- 単一検量線計算 ---
         static calcCalib(wdxrfVals, pxrfVals) {
           if (!wdxrfVals?.length || wdxrfVals.length < 2 || wdxrfVals.length !== pxrfVals?.length) return null;
           try {
             const d = [];
             for (let i = 0; i < wdxrfVals.length; i++) {
-              if (wdxrfVals[i] != null && pxrfVals[i] != null && !isNaN(wdxrfVals[i]) && !isNaN(pxrfVals[i])) {
-                d.push([wdxrfVals[i], pxrfVals[i]]);
-              }
+              if (wdxrfVals[i] != null && pxrfVals[i] != null && !isNaN(wdxrfVals[i]) && !isNaN(pxrfVals[i])) d.push([wdxrfVals[i], pxrfVals[i]]);
             }
             if (d.length < 2) return null;
             const { m: slope, b: intercept } = ss.linearRegression(d);
             return (isNaN(slope) || isNaN(intercept) || slope === 0) ? null : { slp: slope, int: intercept };
           } catch (e) { return null; }
         }
-        // --- 回帰・相関計算 ---
+        // --- 統計値計算 ---
         static calcReg(xArr, yArr, errArr) {
           if (!xArr?.length || xArr.length !== yArr?.length) return null;
           const d = [], valX = [], valY = [], valErr = [];
@@ -338,6 +365,106 @@
             err3Sigma = Math.sqrt(valErr.reduce((a, b) => a + (b - meanErr) ** 2, 0) / (valErr.length - 1)) * 3;
           }
           return { count: n, slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
+        }
+      }
+    },
+    // --- Tab3データ管理 ---
+    T3: {
+      // --- DB読込 ---
+      mgmtDT: class {
+        static loadDB(pxrfDT, wdxrfDT, corrDT) {
+          const pObjs = Mtd.Util.toObjArray(pxrfDT);
+          const wObjs = Mtd.Util.toObjArray(wdxrfDT);
+          return { pxrfDT: pObjs, wdxrfDT: wObjs, corrDT };
+        }
+      },
+      // --- レポートデータ生成 ---
+      mgmPrev: class {
+        // --- データ生成パイプライン統合 ---
+        static generateChartData(pxrfDT, wdxrfDT, conf) {
+          let pDT = pxrfDT, wDT = wdxrfDT;
+          const { key1, p1, wd1 } = GLB.idx;
+          if (conf.filters) {
+            const { db, item, group } = conf.filters;
+            if (Array.isArray(db)) {
+              const fArr = db.map(String);
+              pDT = pDT.filter(r => fArr.includes(String(r[key1])));
+              wDT = wDT.filter(r => fArr.includes(String(r[key1])));
+            }
+            if (Array.isArray(item)) {
+              const fArr = item.map(String);
+              pDT = pDT.filter(r => fArr.includes(String(r[p1])));
+            }
+            if (Array.isArray(group)) {
+              const fArr = group.map(String);
+              pDT = pDT.filter(r => fArr.includes(String(r[wd1])));
+              wDT = wDT.filter(r => fArr.includes(String(r[wd1])));
+            }
+          }
+          let prevDT = [], statsDT = null;
+          if (conf.graphType === 'calibration' && conf.calibVal) {
+             prevDT = this.buildPrev(pDT, wDT, { ...conf, val: conf.calibVal });
+             statsDT = Mtd.T2.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), Mtd.Util.getValidNums(prevDT.map(pt => pt.err)));
+          } else if (conf.graphType === 'discrimination' && conf.discrXVal && conf.discrYVal) {
+             const calibBase = this.buildPrev(pDT, wDT, { ...conf, val: GLB.valElms[0], useCal: false });
+             const mapPts = (wList, pList) => [...wList.map(w => ({ ...w, x: Mtd.T2.Calc.evaluate(conf.discrXVal, w), y: Mtd.T2.Calc.evaluate(conf.discrYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pList.map(p => ({ ...p, x: Mtd.T2.Calc.evaluate(conf.discrXVal, p), y: Mtd.T2.Calc.evaluate(conf.discrYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
+             prevDT = mapPts(wDT, calibBase);
+          }
+          return { prevDT, statsDT };
+        }
+        // --- プレビュー構築 ---
+        static buildPrev(pxrfDT, wdxrfDT, conf) {
+          if (!pxrfDT?.length || !wdxrfDT?.length) return [];
+          const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
+          const wMap = new Map(wdxrfDT.map(w => [`${String(w[k1])}_${String(w[k2])}`, w]));
+          const minMap = conf.useLOD ? this.getMinMap(pxrfDT) : {};
+          const cfs = this.#resCoeffs(pxrfDT, wMap, conf, minMap);
+          return pxrfDT.reduce((acc, r) => {
+            const w = wMap.get(`${String(r[k1])}_${String(r[k2])}`);
+            if (!w) return acc;
+            const pDT = { '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: r[p1], [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
+            GLB.valElms.forEach(elm => {
+              const rawV = r[elm];
+              const isLod = typeof rawV === 'string' && rawV.includes('LOD');
+              let val = (isLod && conf.useLOD) ? (minMap[elm] ?? null) : (rawV != null && rawV !== "" && !isNaN(Number(rawV)) ? Number(rawV) : null);
+              if (cfs?.[elm] && val != null) val = (val - cfs[elm].int) / cfs[elm].slp;
+              pDT[elm] = val; pDT[`${elm}_Err`] = r[`${elm}_Err`] ?? null;
+            });
+            const xVal = Mtd.T2.Calc.evaluate(conf.val, w), yVal = Mtd.T2.Calc.evaluate(conf.val, pDT);
+            acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
+            return acc;
+          }, []);
+        }
+        // --- LOD最小値取得 ---
+        static getMinMap(pxrfDT) {
+          return Object.fromEntries(GLB.valElms.map(elm => {
+            const nums = Mtd.Util.getValidNums(pxrfDT.map(r => r[elm]), true);
+            return [elm, nums.length ? Math.min(...nums) : null];
+          }));
+        }
+        // --- 検量線算出 ---
+        static #resCoeffs(pxrfDT, wMap, conf, minMap) {
+          if (!conf.useCal || !conf.calElms?.length) return null;
+          const { key1: k1, key2: k2 } = GLB.idx;
+          if (conf.correction === "new") {
+            return Object.fromEntries(conf.calElms.map(elm => {
+              const vList = pxrfDT.reduce((acc, p) => {
+                const w = wMap.get(`${String(p[k1])}_${String(p[k2])}`);
+                if (!w || w[elm] == null) return acc;
+                const raw = p[elm];
+                const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
+                if (v != null) { acc.w.push(Number(w[elm])); acc.p.push(v); }
+                return acc;
+              }, { w: [], p: [] });
+              return [elm, Mtd.T2.Calc.calcCalib(vList.w, vList.p)];
+            }).filter(([, v]) => v));
+          }
+          const r = conf.corrDT?.find(rw => rw[0] === conf.correction);
+          if (!r) return null;
+          return Object.fromEntries(conf.calElms.map(elm => {
+            const sIdx = conf.corrDT[0].indexOf(`${elm}_slp`), iIdx = conf.corrDT[0].indexOf(`${elm}_int`);
+            return sIdx !== -1 && iIdx !== -1 && r[sIdx] !== "" ? [elm, { slp: Number(r[sIdx]), int: Number(r[iIdx]) }] : [elm, null];
+          }).filter(([, v]) => v));
         }
       }
     }

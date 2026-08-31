@@ -1,5 +1,4 @@
 //--- src/Code.gs ---
-// Node.jsのビルドツールに対応してCode.jsとしてgitにアップされます
 // --- DTO定義 ---
 class ApiResponse {
   static success(payload) { return { success: true, payload: JSON.parse(JSON.stringify(payload)) }; }
@@ -12,11 +11,13 @@ const withErr = fn => {
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("OBPLOT1.0")
     .addItem("tracer5i抽出", "showSidebarT1")
-    .addItem("検量線・判別図", "showSidebarT2")
+    .addItem("検量線・標準化", "showSidebarT2")
+    .addItem("ダッシュボード", "showSidebarT3")
     .addToUi();
 }
 function showSidebarT1() { openSidebar("tab1", "tracer5i抽出"); }
-function showSidebarT2() { openSidebar("tab2", "検量線・判別図"); }
+function showSidebarT2() { openSidebar("tab2", "検量線・標準化"); }
+function showSidebarT3() { openSidebar("tab3", "ダッシュボード"); }
 function openSidebar(mode, title) {
   const tpl = HtmlService.createTemplateFromFile("Sidebar");
   tpl.initialSsId = SpreadsheetApp.getActiveSpreadsheet().getId();

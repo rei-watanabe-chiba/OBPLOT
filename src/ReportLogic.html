@@ -66,7 +66,10 @@
       { id: "boxGlobalLodTgl", bind: "useLOD", label: RPT_CFG.lbl.useLOD }
     ],
     multiSelects: [
-      { id: "boxGlobalCalElms", bind: "calElms", opts: GLB.valElms }
+      { id: "boxGlobalCalElms", bind: "calElms", opts: GLB.valElms },
+      { id: "boxFilterDB", bind: "filters.db", opts: [] },
+      { id: "boxFilterItem", bind: "filters.item", opts: [] },
+      { id: "boxFilterGroup", bind: "filters.group", opts: [] }
     ]
   };
   // ==========================================
@@ -74,10 +77,12 @@
   // ==========================================
   class UIAutomator {
     constructor(app) { this.app = app; }
+    // --- 値取得 ---
     getVal(path) {
       if (path.startsWith('activePanel.')) return this.app.activePanel?.[path.split('.')[1]] ?? "";
       return path.split('.').reduce((o, i) => o?.[i], this.app.state.refs);
     }
+    // --- 値設定 ---
     setVal(path, val) {
       if (path.startsWith('activePanel.')) {
         if (this.app.activePanel) this.app.activePanel[path.split('.')[1]] = val;
@@ -86,6 +91,7 @@
         keys.reduce((o, i) => o[i], this.app.state.refs)[last] = val;
       }
     }
+    // --- 構築 ---
     build() {
       UI_SCHEMA.selects.forEach(s => {
         NewDOM.buildFormFields([{ type: "select", opts: s.optsFn ? s.optsFn(this.app.state.data) : s.opts, bind: s.bind, hasEmpty: s.hasEmpty }], s.id, true);
@@ -127,6 +133,7 @@
         if (val !== undefined) el.value = val;
       });
     }
+    // --- イベントバインド ---
     bindEvents() {
       const sb = document.getElementById('dashSidebar');
       let oldSymbAxis = this.getVal('symb.baseKey');
@@ -181,10 +188,7 @@
             }
             const sInp = (k, v) => { const el = document.querySelector(`[data-bind="activePanel.${k}"]`); if(el) el.value = v; };
             sInp("title", ap.title); sInp("xLabel", ap.xLabel); sInp("yLabel", ap.yLabel);
-            
-            if (bind === 'activePanel.graphType') {
-               document.getElementById('panelConfigSec').dataset.graphtype = ap.graphType;
-            }
+            if (bind === 'activePanel.graphType') document.getElementById('panelConfigSec').dataset.graphtype = ap.graphType;
           }
           this.app.saveState();
         } else if (e.target.closest('ob-multi-select')) {
@@ -209,7 +213,7 @@
       data: window.__INJECTED_DATA__ || { pxrfDT: [], wdxrfDT: [], corrDT: [] },
       refs: {
         correction: "new", useCal: false, useLOD: false, calElms: [...GLB.valElms], 
-        filters: [], gridRows: 1, gridCols: 1, panelGap: 4,
+        filters: { db: [], item: [], group: [] }, gridRows: 1, gridCols: 1, panelGap: 4,
         margins: { top: 15, bottom: 15, left: 15, right: 15 },
         activePanelId: "p_0",
         symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
@@ -230,22 +234,45 @@
       const buStr = StorageAPI.load(DASH_BU_KEY);
       let bu = null;
       if (buStr) try { bu = JSON.parse(buStr); } catch(e) {}
+      
+      const pxrf = this.state.data.pxrfDT || [];
+      const exVals = (key) => [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
+      const optsDB = exVals(GLB.idx.key1);
+      const optsItem = exVals(GLB.idx.p1);
+      const optsGroup = exVals(GLB.idx.wd1);
+
       if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
         bu.rawGph = { ...getInitRawGph(), ...(bu.rawGph || {}) };
         if(!bu.symb) bu.symb = this.state.refs.symb;
         if(bu.panelGap === undefined || bu.panelGap === 16 || bu.panelGap === 12) bu.panelGap = 4;
         if(!bu.calElms || bu.calElms.length === 0) bu.calElms = [...GLB.valElms]; 
-        if(!bu.filters) bu.filters = [];
+        if(!bu.filters || Array.isArray(bu.filters)) bu.filters = { db: [...optsDB], item: [...optsItem], group: [...optsGroup] };
+        bu.filters.db = (bu.filters.db || []).map(String);
+        bu.filters.item = (bu.filters.item || []).map(String);
+        bu.filters.group = (bu.filters.group || []).map(String);
         if(bu.useLOD === undefined) bu.useLOD = false;
         bu.panels = (bu.panels || []).map(p => ({ ...getDefPnl(), ...p }));
         this.state.refs = bu;
-      } else { StorageAPI.clear(DASH_BU_KEY); }
+      } else { 
+        StorageAPI.clear(DASH_BU_KEY);
+        this.state.refs.filters.db = [...optsDB];
+        this.state.refs.filters.item = [...optsItem];
+        this.state.refs.filters.group = [...optsGroup];
+      }
+
+      const mSchema = UI_SCHEMA.multiSelects;
+      mSchema.find(m => m.id === "boxFilterDB").opts = optsDB;
+      mSchema.find(m => m.id === "boxFilterItem").opts = optsItem;
+      mSchema.find(m => m.id === "boxFilterGroup").opts = optsGroup;
+
+      const setLbl = (id, text) => { const e = document.getElementById(id); if(e) e.textContent = text; };
+      setLbl("lblFilterDB", GLB.idx.key1); setLbl("lblFilterItem", GLB.idx.p1); setLbl("lblFilterGroup", GLB.idx.wd1);
+      
       this.syncPanels();
       this.automator = new UIAutomator(this);
       this.automator.build();
       this.automator.bindEvents();
       this.renderSymbTable();
-      this.renderFilterTable();
       this.render();
       window.addEventListener('resize', () => {
          clearTimeout(this.resizeTimer);
@@ -278,38 +305,16 @@
       const r = this.state.refs, d = this.state.data;
       const preCalc = r.panels.map(p => {
         if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
-        const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, modeMap: GLB.optElms, graphType: p.graphType, calibVal: p.calibVal, discrXVal: p.discrXVal, discrYVal: p.discrYVal };
-        return Mtd.T2.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+        const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, discrXVal: p.discrXVal, discrYVal: p.discrYVal };
+        return Mtd.T3.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
       });
-      const hasValidGraph = preCalc.some(res => res.prevDT?.length > 0);
-      if (!hasValidGraph) {
-        NewDOM.toast("警告", "有効なグラフが一つもありません。\n指標設定やデータを確認してください。");
-        return;
-      }
+      if (!preCalc.some(res => res.prevDT?.length > 0)) return NewDOM.toast("警告", "有効なグラフが一つもありません。\n指標設定やデータを確認してください。");
       const safeState = JSON.stringify(this.state).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const safePreCalc = JSON.stringify(preCalc).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${safeState}; window.__PRECALC_DATA__=${safePreCalc};<\/script>`);
       window.open(URL.createObjectURL(new Blob(['<!DOCTYPE html>' + htmlStr], { type: 'text/html' })), '_blank');
     }
     static resetSymb() { this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; this.renderSymbTable(); this.saveState(); }
-    static addFilter() { 
-      this.state.refs.filters = [...this.state.refs.filters, { key: `flt_${Date.now()}`, axis: GLB.idx.key1, val: "" }]; 
-      this.renderFilterTable(); this.saveState(); 
-    }
-    static removeFilter(btn) { 
-      this.state.refs.filters = this.state.refs.filters.filter(rw => rw.key !== btn.dataset.ruleKey); 
-      this.renderFilterTable(); this.saveState(); 
-    }
-    static renewFilter(btn) {
-      const { filterIdx: i, filterType: t } = btn.dataset;
-      if (i != null && t && this.state.refs.filters[i]) { 
-        const newFlt = JSON.parse(JSON.stringify(this.state.refs.filters));
-        newFlt[i][t] = btn.value; 
-        if (t === 'axis') newFlt[i].val = "";
-        this.state.refs.filters = newFlt;
-        this.renderFilterTable(); this.saveState(); 
-      }
-    }
     static addSymb() { 
       this.state.refs.symb.rls = [...this.state.refs.symb.rls, { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; 
       this.renderSymbTable(); this.saveState(); 
@@ -335,18 +340,10 @@
     static syncPanels() {
       const { gridRows, gridCols } = this.state.refs;
       const activeIds = [];
-      for (let r = 0; r < gridRows; r++) {
-        for (let c = 0; c < gridCols; c++) {
-          activeIds.push(`p_${r * 3 + c}`);
-        }
-      }
-      activeIds.forEach(id => {
-        if (!this.state.refs.panels.find(p => p.id === id)) this.state.refs.panels.push({ id, ...getDefPnl() });
-      });
+      for (let r = 0; r < gridRows; r++) for (let c = 0; c < gridCols; c++) activeIds.push(`p_${r * 3 + c}`);
+      activeIds.forEach(id => { if (!this.state.refs.panels.find(p => p.id === id)) this.state.refs.panels.push({ id, ...getDefPnl() }); });
       this.state.refs.panels = activeIds.map(id => this.state.refs.panels.find(p => p.id === id));
-      if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) {
-        this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
-      }
+      if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
     }
     // --- 調整 ---
     static fitA4Scale() {
@@ -367,13 +364,10 @@
       const [p_t, p_b, p_l, p_r] = [raw.p_t, raw.p_b, raw.p_l, raw.p_r].map(mm2px);
       let finalPadT = p_t;
       let finalPadR = p_r;
-      if (p_r < s_tick) {
-        finalPadR = p_r + s_tick;
-      }
+      if (p_r < s_tick) finalPadR = p_r + s_tick;
       return {
         style: {
-          font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`,
-          fontS: { title: s_title, tick: s_tick, name: s_name, stats: s_stats, tip: s_stats },
+          font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`, fontS: { title: s_title, tick: s_tick, name: s_name, stats: s_stats, tip: s_stats },
           fontC: { base: `hsl(0, 0%, ${100 - raw.c_base}%)`, stats: `hsl(0, 0%, ${100 - raw.c_stats}%)`, tip: 'var(--text-main)' },
           symbol: { baseSize: sym_base, pathSize: sym_base * 1.2, borderW: sym_bw },
           lineW: { axis: lw_axis, grid: lw_grid, regW: lw_reg, regD: Number(raw.lw_reg) <= 0.4 ? [3,3] : [5,5] },
@@ -389,20 +383,6 @@
       if (!symbElm || !d.pxrfDT?.length) return;
       const vals = [...new Set(d.pxrfDT.map(pt => pt[r.symb.baseKey]).filter(Boolean))];
       symbElm.src = { rls: r.symb.rls, optsConf: { target: [{ val: "", label: RPT_CFG.lbl.unsel }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "addSymb", remove: "removeSymb", update: "renewSymb"} };
-    }
-    // --- Flt ---
-    static renderFilterTable() {
-      const d = this.state.data, r = this.state.refs, elm = document.getElementById('tblFilter');
-      if (!elm || !d.pxrfDT?.length) return;
-      const valMap = {};
-      GLB.symbAxes.forEach(ax => {
-        valMap[ax.val] = [...new Set(d.pxrfDT.map(pt => pt[ax.val]).filter(v => v !== "" && v != null))].map(v => ({val: v, label: v}));
-      });
-      elm.src = { 
-        rls: r.filters, 
-        optsConf: { axis: [{val: "", label: RPT_CFG.lbl.unsel}, ...GLB.symbAxes], val: valMap }, 
-        actsConf: { add: "addFilter", remove: "removeFilter", update: "renewFilter"} 
-      };
     }
     // --- Size ---
     static calcPanelSize(gph) {
@@ -487,8 +467,8 @@
       if (window.__IS_PRINT_TAB__ && window.__PRECALC_DATA__?.[idx]) {
         ({ prevDT, statsDT } = window.__PRECALC_DATA__[idx]);
       } else {
-        const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, modeMap: GLB.optElms, graphType: panel.graphType, calibVal: panel.calibVal, discrXVal: panel.discrXVal, discrYVal: panel.discrYVal };
-        ({ prevDT, statsDT } = Mtd.T2.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf));
+        const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, graphType: panel.graphType, calibVal: panel.calibVal, discrXVal: panel.discrXVal, discrYVal: panel.discrYVal };
+        ({ prevDT, statsDT } = Mtd.T3.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf));
       }
       chart.src = { prevDT, statsDT, symb: r.symb, gph: gph, panel: panel };
     }

@@ -3,26 +3,23 @@
 <html>
   <head>
     <base target="_top">    
-    <!-- 各種ライブラリ -->
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
     <?!= include("CSS"); ?>
   </head>
 
-  <!-- sidebar上部タブ -->
   <body data-theme="tab1">
     <nav class="nav-tabs" id="nav">
       <button class="tab-btn active" data-target="tab1">データ抽出</button>
-      <button class="tab-btn" data-target="tab2">グラフ作成</button>
+      <button class="tab-btn" data-target="tab2">検量線・標準化</button>
+      <button class="tab-btn" data-target="tab3">ダッシュボード</button>
     </nav>
 
-    <!-- sidebarメイン -->
     <main class="scroll-y">
       <!-- Tab1 データ抽出-->
       <div id="tab1" class="tab-content active">
         <fieldset id="tab1Fieldset">
-          <!-- pref -->
           <details id="prefSec" data-state="active" open>
             <summary>抽出設定</summary>
             <div data-ui="area">
@@ -31,7 +28,6 @@
             <div id="prefBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.pref.status"></div>
           </details>
           <hr>
-          <!-- raw -->
           <details id="rawSec" data-type="disabled">
             <summary>読込と検証</summary>
             <div class="flex-row">
@@ -48,7 +44,6 @@
           </details>
           <div id="rawBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.raw.status"></div>
           <hr>
-          <!-- extr -->
           <details id="extrSec" data-type="disabled">
             <summary>抽出と格納</summary>
             <div class="flex-row">
@@ -59,17 +54,16 @@
               <div data-ui="box"></div>
             </div>
             <div class="field-row">
-              <button data-ui="btn-push" data-type="primary" class="outline" style="display: none;" disabled>PXRFに格納</button>
+              <button data-ui="btn-push" data-type="primary" class="outline" style="display: none;" disabled>tracer5iに格納</button>
             </div>
           </details>
           <div id="extrBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.extr.status"></div>
         </fieldset>
       </div>
 
-      <!-- Tab2 グラフ作成 -->
+      <!-- Tab2 検量線・標準化 -->
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset">
-          <!-- asgn -->
           <details id="asgnSec" open>
             <summary>データ読込・選択</summary>
             <div data-ui="area" style="display: none;">
@@ -83,7 +77,6 @@
           </details>
           <div id="asgnBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.asgn.status"></div>
           <hr>
-          <!-- symb -->
           <details id="symbSec" data-type="disabled">
             <summary>シンボル設定</summary>
             <div data-ui="area" style="display: none;">
@@ -103,9 +96,8 @@
           </details>
           <div id="symbBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.symb.status"></div>
           <hr>
-          <!-- prev -->
           <details id="prevSec" data-type="disabled">
-            <summary>プレビューと補正</summary>
+            <summary>プレビュー</summary>
             <div data-ui="chart-box"></div>
             <div data-ui="stats-tbl"></div>
             <div data-ui="area">
@@ -121,9 +113,8 @@
                 <button data-ui="btn-make" data-type="primary" disabled>プレビュー更新</button>
               </div>
               <hr style="margin: calc(var(--unit) * 4) 0 calc(var(--unit) * 2);">
-              <!-- calb(subsection) -->
               <details id="calbSec" class="sub-sec" open>
-                <summary>補正設定</summary>
+                <summary>プレビュー補正設定</summary>
                 <div class="field-row">
                   <div class="field-col">
                     <label>補正方法</label>
@@ -138,32 +129,56 @@
                   <div data-ui="lod-box" class="field-col"></div>
                   <div data-ui="cal-tgl-box" class="field-col"></div>
                 </div>
-                <div data-ui="save-box" style="display: none; margin-top: calc(var(--unit) * 3);">
-                  <div class="field-row">
-                    <input type="text" class="form-control" placeholder="インデックス名を入力" data-bind="T2ST.prev.refs.saveIndexName">
-                    <button data-ui="btn-save" data-type="primary">検量線出力</button>
-                  </div>
-                </div>
               </details>
             </div>
           </details>
           <div id="prevBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.prev.status"></div>
           <hr>
-          <!-- repo -->
+          <details id="stdzSec" data-type="disabled">
+            <summary>標準化と出力</summary>
+            <label>対象Item（検量線計算用）</label>
+            <ob-multi-select data-ui="item-box" data-change-item="T2.tglStdzItem" data-change-all="T2.tglAllStdzItem" data-bind-refs="T2ST.stdz.refs.itemMap"></ob-multi-select>
+            <label>Obsidianモード計測値</label>
+            <ob-multi-select data-ui="mode-box" data-change-item="T2.tglStdzMode" data-change-all="T2.tglAllStdzMode" data-bind-refs="T2ST.stdz.refs.modeMap"></ob-multi-select>
+            <div class="field-row">
+              <div data-ui="lod-box" class="field-col"></div>
+            </div>
+            <div class="field-row" style="margin-top: calc(var(--unit) * 3);">
+              <input type="text" class="form-control" placeholder="インデックス名を入力" data-bind="T2ST.stdz.refs.saveIndexName">
+              <button data-ui="btn-save" data-type="primary">検量線出力</button>
+            </div>
+            <div class="field-row">
+              <button data-ui="btn-push" data-type="primary" class="outline">新PXRFシート出力</button>
+            </div>
+          </details>
+          <div id="stdzBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.stdz.status"></div>
+        </fieldset>
+      </div>
+
+      <!-- Tab3 ダッシュボード -->
+      <div id="tab3" class="tab-content">
+        <fieldset id="tab3Fieldset">
+          <details id="instSec" open>
+            <summary>データ読込</summary>
+            <div class="field-row">
+              <button data-ui="btn-load" data-type="primary">データを読込</button>
+            </div>
+          </details>
+          <div id="instBar" class="status-bar" data-status="hidden" data-bind-status="T3ST.inst.status"></div>
+          <hr>
           <details id="repoSec" data-type="disabled">
             <summary>レポート作成</summary>
             <div class="field-row">
-              <button data-ui="btn-repo" data-type="primary">PDF用レポートを作成</button>
+              <button data-ui="btn-repo" data-type="primary">ダッシュボードを展開</button>
             </div>
           </details>
-          <div id="repoBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.repo.status"></div>
+          <div id="repoBar" class="status-bar" data-status="hidden" data-bind-status="T3ST.repo.status"></div>
            <div style="flex-grow: 1; min-height: calc(var(--unit) * 2);"></div>
           <img src="https://pingu.jp/SOP/assets/img/kv/chara_14_1.png" alt="ピング" style="position: sticky; bottom: 0; display: block; margin: 0 auto; width: 200px;">
         </fieldset>
       </div>
     </main>
 
-    <!-- ダイアログ -->
     <dialog id="universalConfirm">
       <h3 id="uDialogTitle">確認</h3>
       <p id="uDialogMessage"></p>
@@ -173,7 +188,6 @@
       </div>
     </dialog>
 
-    <!-- 通知トースト -->
     <dialog id="idleToast">
       <h3 id="idleToastTitle"></h3>
       <p id="idleToastMessage"></p>

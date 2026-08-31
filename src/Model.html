@@ -3,12 +3,13 @@
   // --- フェーズ定義 ---
   const T1_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
   const T2_PHS = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
+  const T3_PHS = { INIT: 1, LOADED: 2 };
   // --- AppState ---
   class AppState {
     #state; #initialState; #listeners; 
     // --- セクション単位のstate生成 ---
     constructor() {
-      const createSec = (overrides = {}) => ({ status: [], data: null, refs: {}, flags: [], ...overrides }); // 共通構造の強制
+      const createSec = (overrides = {}) => ({ status: [], data: null, refs: {}, flags: [], ...overrides });
       const initDef = {
         GLB: { activeTab: "tab1", isLocked: false, ssId: "" },
         T1ST: {
@@ -23,8 +24,13 @@
           symb: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] } }),
           calb: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], correction: "new", useLOD: false, useCal: false } }),
           prev: createSec({ refs: { itemMap: [], val: GLB.valElms[0], saveIndexName: "" }, data: { correctionLogic: {}, prevDT: null, statsDT: null } }),
-          gph: { style: GLB.defaultGraphStyle, gap: GLB.defaultGraphGap },
-          repo: createSec({ refs: { values: [], corrections: [] } })
+          stdz: createSec({ refs: { itemMap: [], modeMap: [...GLB.optElms], useLOD: false, saveIndexName: "" } })
+        },
+        T3ST: {
+          phase: T3_PHS.INIT,
+          inst: createSec({ data: { pxrfDT: null, wdxrfDT: null, corrDT: null } }),
+          repo: createSec({ refs: {} }),
+          gph: { style: GLB.defaultGraphStyle, gap: GLB.defaultGraphGap }
         }
       };
       this.#initialState = JSON.parse(JSON.stringify(initDef));
@@ -40,14 +46,14 @@
     }
     // --- State設定 ---
     set(updates, v) {
-      if (typeof updates === 'object' && !Array.isArray(updates)) return Object.entries(updates).forEach(([k, val]) => this.set(k, val)); // 一括更新対応
+      if (typeof updates === 'object' && !Array.isArray(updates)) return Object.entries(updates).forEach(([k, val]) => this.set(k, val));
       const keys = Array.isArray(updates) ? updates : updates.split('.');
       const last = keys.pop();
       const tgt = keys.reduce((o, k) => o[k] ??= {}, this.#state);
       if (tgt[last] !== v) {
         tgt[last] = v;
-        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(v)); // 個別変更通知
-        this.#listeners['*']?.forEach(cb => cb()); // 全体変更通知
+        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(v));
+        this.#listeners['*']?.forEach(cb => cb());
       }
     }
     // --- 変更購読 ---
@@ -60,14 +66,13 @@
       const updates = {};
       (Array.isArray(paths) ? paths : [paths]).forEach(p => {
         const initVal = p.split('.').reduce((o, k) => o?.[k], this.#initialState);
-        updates[p] = initVal !== undefined ? JSON.parse(JSON.stringify(initVal)) : null; // 初期値の復元
+        updates[p] = initVal !== undefined ? JSON.parse(JSON.stringify(initVal)) : null;
       });
       this.set(updates);
     }
   }
   // --- Gas通信Service ---
   class GasService {
-    // --- GAS通信処理をバインド ---
     static #serverCall(funcName, ...args) {
       return new Promise((resolve, reject) => {
         google.script.run
