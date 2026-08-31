@@ -8,9 +8,12 @@
     static clear() { localStorage.removeItem(this.K); }
   }
   // --- ハードコード定数群 ---
+  const DASH_BU_KEY = "OBP_DASH_BU";
   const RPT_CFG = {
     lbl: { newCorr: "新規検量線", calib: "検量線", discr: "判別図", useCal: "検量線適用", useLOD: "LOD置換", unsel: "未選択" },
     rng: {
+      gridRows: { min: 1, max: 3, step: 1, unit: "" },
+      gridCols: { min: 1, max: 3, step: 1, unit: "" },
       panelGap: { min: 0, max: 50, step: 0.5, unit: "mm" },
       "margins.top": { min: 0, max: 100, step: 1, unit: "mm" },
       "margins.bottom": { min: 0, max: 100, step: 1, unit: "mm" },
@@ -40,8 +43,8 @@
     return {
       fontEng: GLB.fontEngList.find(f => f.includes(fts[0])) || GLB.fontEngList[0],
       fontJp: GLB.fontJpList.find(f => f.includes(fts[1])) || GLB.fontJpList[0],
-      s_title: 12, s_name: 8.5, s_tick: 7.5, s_stats: 8.5, c_base: 40, c_stats: 40, 
-      sym_size: 4.5, sym_bw: 0.8, lw_axis: 0.6, c_axis: 60, lw_grid: 0.2, c_grid: 90,
+      s_title: 12, s_name: 8.5, s_tick: 7.5, s_stats: 8.5, c_base: 60, c_stats: 60, 
+      sym_size: 4.5, sym_bw: 0.8, lw_axis: 0.6, c_axis: 40, lw_grid: 0.2, c_grid: 10,
       lw_reg: 0.5, g_name: 4, g_tick: 4, p_t: 0, p_b: 0, p_l: 0, p_r: 0
     };
   };
@@ -64,69 +67,11 @@
     ],
     multiSelects: [
       { id: "boxGlobalCalElms", bind: "calElms", opts: GLB.valElms }
-    ],
-    // --- Actions ---
-    actions: {
-      switchTab: (app, btn) => {
-        const tId = btn.dataset.tab;
-        document.querySelectorAll('.tab-icon').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.sidebar-tab-pane').forEach(el => el.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(tId).classList.add('active');
-      },
-      switchSub: (app, btn) => {
-        const tId = btn.dataset.target;
-        document.querySelectorAll('.segment-btn').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.sub-pane').forEach(el => el.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(tId).classList.add('active');
-      },
-      addRow: app => { if (app.state.refs.gridRows < 3) { app.state.refs.gridRows++; app.syncPanels(); app.saveState(); } },
-      addCol: app => { if (app.state.refs.gridCols < 3) { app.state.refs.gridCols++; app.syncPanels(); app.saveState(); } },
-      resetGrid: app => { app.state.refs.gridRows = 1; app.state.refs.gridCols = 1; app.syncPanels(); app.saveState(); },
-      printPDF: app => {
-        const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${JSON.stringify(app.state)};<\/script>`);
-        window.open(URL.createObjectURL(new Blob(['<!DOCTYPE html>' + htmlStr], { type: 'text/html' })), '_blank');
-      },
-      resetSymb: app => { app.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; app.renderSymbTable(); app.saveState(); },
-      addFilter: app => { 
-        app.state.refs.filters = [...app.state.refs.filters, { key: `flt_${Date.now()}`, axis: GLB.idx.key1, val: "" }]; 
-        app.renderFilterTable(); app.saveState(); 
-      },
-      removeFilter: (app, btn) => { 
-        app.state.refs.filters = app.state.refs.filters.filter(rw => rw.key !== btn.dataset.ruleKey); 
-        app.renderFilterTable(); app.saveState(); 
-      },
-      renewFilter: (app, btn) => {
-        const { filterIdx: i, filterType: t } = btn.dataset;
-        if (i != null && t && app.state.refs.filters[i]) { 
-          const newFlt = JSON.parse(JSON.stringify(app.state.refs.filters));
-          newFlt[i][t] = btn.value; 
-          if (t === 'axis') newFlt[i].val = "";
-          app.state.refs.filters = newFlt;
-          app.renderFilterTable(); app.saveState(); 
-        }
-      },
-      addSymb: app => { 
-        app.state.refs.symb.rls = [...app.state.refs.symb.rls, { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; 
-        app.renderSymbTable(); app.saveState(); 
-      },
-      removeSymb: (app, btn) => { 
-        app.state.refs.symb.rls = app.state.refs.symb.rls.filter(rw => rw.key !== btn.dataset.ruleKey); 
-        app.renderSymbTable(); app.saveState(); 
-      },
-      renewSymb: (app, btn) => {
-        const { symbolIdx: i, symbolType: t } = btn.dataset;
-        if (i != null && t && app.state.refs.symb.rls[i]) { 
-          const newSym = JSON.parse(JSON.stringify(app.state.refs.symb.rls));
-          newSym[i][t] = btn.value; 
-          app.state.refs.symb.rls = newSym;
-          app.renderSymbTable(); app.saveState(); 
-        }
-      }
-    }
+    ]
   };
-  // --- UIAutomator ---
+  // ==========================================
+  // UIAutomator
+  // ==========================================
   class UIAutomator {
     constructor(app) { this.app = app; }
     getVal(path) {
@@ -187,7 +132,9 @@
       let oldSymbAxis = this.getVal('symb.baseKey');
       sb.addEventListener('click', e => {
         const btn = e.target.closest('button');
-        if (btn && UI_SCHEMA.actions[btn.dataset.action]) UI_SCHEMA.actions[btn.dataset.action](this.app, btn);
+        if (btn && btn.dataset.action && typeof ReportApp[btn.dataset.action] === 'function') {
+          ReportApp[btn.dataset.action](btn);
+        }
       });
       sb.addEventListener('input', e => {
         const { gph, bind } = e.target.dataset;
@@ -218,9 +165,9 @@
              if (await NewDOM.confirm("確認", "リセットしますか？")) {
                this.setVal(bind, e.target.value);
                this.app.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
-               oldSymbAxis = e.target.value; this.app.renderSymbTable();
+               oldSymbAxis = e.target.value; ReportApp.renderSymbTable();
              } else { e.target.value = oldSymbAxis; }
-             return this.app.saveState();
+             return ReportApp.saveState();
           }
           this.setVal(bind, e.target.type === 'checkbox' ? e.target.checked : (e.target.type === 'number' ? Number(e.target.value) : e.target.value));
           if (['activePanel.graphType', 'activePanel.calibVal', 'activePanel.discrXVal', 'activePanel.discrYVal'].includes(bind)) {
@@ -234,10 +181,10 @@
             }
             const sInp = (k, v) => { const el = document.querySelector(`[data-bind="activePanel.${k}"]`); if(el) el.value = v; };
             sInp("title", ap.title); sInp("xLabel", ap.xLabel); sInp("yLabel", ap.yLabel);
-          }
-          if (bind === 'activePanel.graphType') {
-            document.getElementById('secCalibration').style.display = e.target.value === 'calibration' ? 'block' : 'none';
-            document.getElementById('secDiscrimination').style.display = e.target.value === 'discrimination' ? 'block' : 'none';
+            
+            if (bind === 'activePanel.graphType') {
+               document.getElementById('panelConfigSec').dataset.graphtype = ap.graphType;
+            }
           }
           this.app.saveState();
         } else if (e.target.closest('ob-multi-select')) {
@@ -254,14 +201,15 @@
       });
     }
   }
-  // --- ReportApp ---
+  // ==========================================
+  // ReportApp
+  // ==========================================
   class ReportApp {
     static state = {
       data: window.__INJECTED_DATA__ || { pxrfDT: [], wdxrfDT: [], corrDT: [] },
       refs: {
         correction: "new", useCal: false, useLOD: false, calElms: [...GLB.valElms], 
-        filters: [],
-        gridRows: 1, gridCols: 1, panelGap: 4,
+        filters: [], gridRows: 1, gridCols: 1, panelGap: 4,
         margins: { top: 15, bottom: 15, left: 15, right: 15 },
         activePanelId: "p_0",
         symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
@@ -279,7 +227,9 @@
          document.body.appendChild(loading);
          this.render(); return;
       }
-      const bu = DashBU.load();
+      const buStr = StorageAPI.load(DASH_BU_KEY);
+      let bu = null;
+      if (buStr) try { bu = JSON.parse(buStr); } catch(e) {}
       if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
         bu.rawGph = { ...getInitRawGph(), ...(bu.rawGph || {}) };
         if(!bu.symb) bu.symb = this.state.refs.symb;
@@ -289,8 +239,8 @@
         if(bu.useLOD === undefined) bu.useLOD = false;
         bu.panels = (bu.panels || []).map(p => ({ ...getDefPnl(), ...p }));
         this.state.refs = bu;
-      } else { DashBU.clear(); }
-      if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
+      } else { StorageAPI.clear(DASH_BU_KEY); }
+      this.syncPanels();
       this.automator = new UIAutomator(this);
       this.automator.build();
       this.automator.bindEvents();
@@ -305,20 +255,98 @@
              this.calcPanelSize(gph);
              const grid = document.getElementById('dashGrid');
              const plots = grid.querySelectorAll('ob-cal-plot');
-             this.state.refs.panels.forEach((p, i) => { if (plots[i]) this.drawChart(p, plots[i], gph); });
+             this.state.refs.panels.forEach((p, i) => { if (plots[i]) this.drawChart(p, plots[i], gph, i); });
          }, 100);
       });
     }
+    // --- アクションメソッド群 ---
+    static switchTab(btn) {
+      const tId = btn.dataset.tab;
+      document.querySelectorAll('.tab-icon').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.sidebar-tab-pane').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tId).classList.add('active');
+    }
+    static switchSub(btn) {
+      const tId = btn.dataset.target;
+      document.querySelectorAll('.segment-btn').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.sub-pane').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tId).classList.add('active');
+    }
+    static printPDF() {
+      const r = this.state.refs, d = this.state.data;
+      const preCalc = r.panels.map(p => {
+        if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
+        const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, modeMap: GLB.optElms, graphType: p.graphType, calibVal: p.calibVal, discrXVal: p.discrXVal, discrYVal: p.discrYVal };
+        return Mtd.T2.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+      });
+      const hasValidGraph = preCalc.some(res => res.prevDT?.length > 0);
+      if (!hasValidGraph) {
+        NewDOM.toast("警告", "有効なグラフが一つもありません。\n指標設定やデータを確認してください。");
+        return;
+      }
+      const safeState = JSON.stringify(this.state).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      const safePreCalc = JSON.stringify(preCalc).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${safeState}; window.__PRECALC_DATA__=${safePreCalc};<\/script>`);
+      window.open(URL.createObjectURL(new Blob(['<!DOCTYPE html>' + htmlStr], { type: 'text/html' })), '_blank');
+    }
+    static resetSymb() { this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; this.renderSymbTable(); this.saveState(); }
+    static addFilter() { 
+      this.state.refs.filters = [...this.state.refs.filters, { key: `flt_${Date.now()}`, axis: GLB.idx.key1, val: "" }]; 
+      this.renderFilterTable(); this.saveState(); 
+    }
+    static removeFilter(btn) { 
+      this.state.refs.filters = this.state.refs.filters.filter(rw => rw.key !== btn.dataset.ruleKey); 
+      this.renderFilterTable(); this.saveState(); 
+    }
+    static renewFilter(btn) {
+      const { filterIdx: i, filterType: t } = btn.dataset;
+      if (i != null && t && this.state.refs.filters[i]) { 
+        const newFlt = JSON.parse(JSON.stringify(this.state.refs.filters));
+        newFlt[i][t] = btn.value; 
+        if (t === 'axis') newFlt[i].val = "";
+        this.state.refs.filters = newFlt;
+        this.renderFilterTable(); this.saveState(); 
+      }
+    }
+    static addSymb() { 
+      this.state.refs.symb.rls = [...this.state.refs.symb.rls, { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; 
+      this.renderSymbTable(); this.saveState(); 
+    }
+    static removeSymb(btn) { 
+      this.state.refs.symb.rls = this.state.refs.symb.rls.filter(rw => rw.key !== btn.dataset.ruleKey); 
+      this.renderSymbTable(); this.saveState(); 
+    }
+    static renewSymb(btn) {
+      const { symbolIdx: i, symbolType: t } = btn.dataset;
+      if (i != null && t && this.state.refs.symb.rls[i]) { 
+        const newSym = JSON.parse(JSON.stringify(this.state.refs.symb.rls));
+        newSym[i][t] = btn.value; 
+        this.state.refs.symb.rls = newSym;
+        this.renderSymbTable(); this.saveState(); 
+      }
+    }
     // --- 保存 ---
-    static saveState() { if (window.__IS_PRINT_TAB__) return; DashBU.save(this.state.refs); this.render(); }
+    static saveState() { if (window.__IS_PRINT_TAB__) return; this.syncPanels(); StorageAPI.save(DASH_BU_KEY, JSON.stringify(this.state.refs)); this.render(); }
     static queueSave() { clearTimeout(this.gphTimer); this.gphTimer = setTimeout(() => this.saveState(), 100); }
     static get activePanel() { return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId); }
     // --- 同期 ---
     static syncPanels() {
-      const total = this.state.refs.gridRows * this.state.refs.gridCols;
-      while(this.state.refs.panels.length < total) this.state.refs.panels.push({ id: `p_${this.state.refs.panels.length}`, ...getDefPnl() });
-      if(this.state.refs.panels.length > total) this.state.refs.panels = this.state.refs.panels.slice(0, total);
-      if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0].id;
+      const { gridRows, gridCols } = this.state.refs;
+      const activeIds = [];
+      for (let r = 0; r < gridRows; r++) {
+        for (let c = 0; c < gridCols; c++) {
+          activeIds.push(`p_${r * 3 + c}`);
+        }
+      }
+      activeIds.forEach(id => {
+        if (!this.state.refs.panels.find(p => p.id === id)) this.state.refs.panels.push({ id, ...getDefPnl() });
+      });
+      this.state.refs.panels = activeIds.map(id => this.state.refs.panels.find(p => p.id === id));
+      if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) {
+        this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
+      }
     }
     // --- 調整 ---
     static fitA4Scale() {
@@ -346,10 +374,10 @@
         style: {
           font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`,
           fontS: { title: s_title, tick: s_tick, name: s_name, stats: s_stats, tip: s_stats },
-          fontC: { base: `hsl(0, 0%, ${raw.c_base}%)`, stats: `hsl(0, 0%, ${raw.c_stats}%)`, tip: 'var(--text-main)' },
+          fontC: { base: `hsl(0, 0%, ${100 - raw.c_base}%)`, stats: `hsl(0, 0%, ${100 - raw.c_stats}%)`, tip: 'var(--text-main)' },
           symbol: { baseSize: sym_base, pathSize: sym_base * 1.2, borderW: sym_bw },
           lineW: { axis: lw_axis, grid: lw_grid, regW: lw_reg, regD: Number(raw.lw_reg) <= 0.4 ? [3,3] : [5,5] },
-          lineC: { axis: `hsl(0, 0%, ${raw.c_axis}%)`, grid: `hsl(0, 0%, ${raw.c_grid}%)`, reg: `hsl(0, 0%, ${raw.c_base}%)` },
+          lineC: { axis: `hsl(0, 0%, ${100 - raw.c_axis}%)`, grid: `hsl(0, 0%, ${100 - raw.c_grid}%)`, reg: `hsl(0, 0%, ${100 - raw.c_base}%)` },
           bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
         },
         gap: { name: g_name, tick: g_tick, padT: finalPadT, padB: p_b, padL: p_l, padR: finalPadR }
@@ -414,7 +442,7 @@
       grid.innerHTML = ''; const chartsToDraw = [];
       r.panels.forEach(p => {
         const div = document.createElement('div');
-        div.className = `grid-panel ${p.id === r.activePanelId ? 'active' : ''}`;
+        div.className = `grid-panel ${(!window.__IS_PRINT_TAB__ && p.id === r.activePanelId) ? 'active' : ''}`;
         const chart = document.createElement('ob-cal-plot');
         chart.style.cssText = 'width: 100%; height: 100%;';
         chart.setAttribute('data-renderer', window.__IS_PRINT_TAB__ ? 'svg' : 'canvas');
@@ -437,26 +465,31 @@
                chartsToDraw.forEach(item => { item.chart.addEventListener('render-finished', () => { finishedCount++; if (finishedCount === chartsToDraw.length) executePrint(); }, { once: true }); });
                setTimeout(executePrint, 5000);
             }
-            chartsToDraw.forEach(item => this.drawChart(item.p, item.chart, gph));
+            chartsToDraw.forEach((item, idx) => this.drawChart(item.p, item.chart, gph, idx));
          });
       });
       const ap = this.activePanel;
       if (ap && !window.__IS_PRINT_TAB__) {
-        document.getElementById('panelConfigSec').style.display = 'block';
+        const pSec = document.getElementById('panelConfigSec');
+        pSec.style.display = 'block';
+        pSec.dataset.graphtype = ap.graphType;
         this.automator.build(); 
         const setVal = (b, v) => { const el = document.querySelector(`[data-bind="activePanel.${b}"]`); if(el) el.value = v || ""; };
         setVal("graphType", ap.graphType); setVal("calibVal", ap.calibVal); setVal("discrXVal", ap.discrXVal); setVal("discrYVal", ap.discrYVal);
         setVal("title", ap.title); setVal("xLabel", ap.xLabel); setVal("yLabel", ap.yLabel);
-        document.getElementById('secCalibration').style.display = ap.graphType === 'calibration' ? 'block' : 'none';
-        document.getElementById('secDiscrimination').style.display = ap.graphType === 'discrimination' ? 'block' : 'none';
       } else if (!window.__IS_PRINT_TAB__) { document.getElementById('panelConfigSec').style.display = 'none'; }
     }
     // --- Chart ---
-    static drawChart(panel, chart, gph) {
+    static drawChart(panel, chart, gph, idx) {
       const r = this.state.refs, d = this.state.data;
       if (!d.pxrfDT?.length) return;
-      const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, modeMap: GLB.optElms, graphType: panel.graphType, calibVal: panel.calibVal, discrXVal: panel.discrXVal, discrYVal: panel.discrYVal };
-      const { prevDT, statsDT } = Mtd.T2.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+      let prevDT, statsDT;
+      if (window.__IS_PRINT_TAB__ && window.__PRECALC_DATA__?.[idx]) {
+        ({ prevDT, statsDT } = window.__PRECALC_DATA__[idx]);
+      } else {
+        const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, modeMap: GLB.optElms, graphType: panel.graphType, calibVal: panel.calibVal, discrXVal: panel.discrXVal, discrYVal: panel.discrYVal };
+        ({ prevDT, statsDT } = Mtd.T2.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf));
+      }
       chart.src = { prevDT, statsDT, symb: r.symb, gph: gph, panel: panel };
     }
   }

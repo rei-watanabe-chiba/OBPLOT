@@ -28,13 +28,15 @@
             <label class="prop-label panel">タイプ</label>
             <div class="prop-controls" id="boxGraphType"></div>
           </div>
-          <div id="secCalibration" style="display:none;">
+          <!-- ★修正: style="display:none;" を削除（CSS駆動に移行したため） -->
+          <div id="secCalibration">
             <div class="prop-row">
               <label class="prop-label panel">対象指標</label>
               <div class="prop-controls" id="boxCalibVal"></div>
             </div>
           </div>
-          <div id="secDiscrimination" style="display:none;">
+          <!-- ★修正: style="display:none;" を削除（CSS駆動に移行したため） -->
+          <div id="secDiscrimination">
             <div class="prop-row">
               <label class="prop-label panel">X<span class="badge-label">項目</span></label>
               <div class="prop-controls" id="boxDiscrX"></div>
@@ -75,9 +77,11 @@
           <div id="tabLayout" class="sidebar-tab-pane active">
             <h5 class="pane-title" style="margin-bottom:8px;">パネル操作</h5>
             <div class="prop-row" style="margin-bottom:16px;">
-              <button data-action="addRow" data-type="primary" class="outline">＋行</button>
-              <button data-action="addCol" data-type="primary" class="outline">＋列</button>
-              <button data-action="resetGrid" data-type="primary" class="outline">リセット</button>
+              <label class="prop-label">行数 / 列数</label>
+              <div class="prop-controls">
+                <input type="number" data-bind="gridRows" class="form-control" title="行数">
+                <input type="number" data-bind="gridCols" class="form-control" title="列数">
+              </div>
             </div>
             <h5 class="pane-title" style="margin-bottom:8px;">余白設定</h5>
             <div class="prop-row">
