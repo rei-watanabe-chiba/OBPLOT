@@ -8,4 +8,4 @@ OBPLOTは、環境構築なしで以下のアプリケーション上で動作�
 
 ## まずは試してみる
 Googleアカウントをお持ちの方
-[Google]([https://google.com](https://docs.google.com/spreadsheets/d/1wtlRgAOUvbHxtXiijriX32LSACboRNg-N1VddcZEPSU/edit?usp=sharing))
+[表示するテキスト]([https://example.com](https://docs.google.com/spreadsheets/d/1wtlRgAOUvbHxtXiijriX32LSACboRNg-N1VddcZEPSU/edit?usp=sharing))
