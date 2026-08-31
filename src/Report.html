@@ -137,69 +137,81 @@
 
           <!-- タブ3: グラフスタイル -->
           <div id="tabStyle" class="sidebar-tab-pane">
-            <h5 class="pane-title" style="margin-bottom:8px;">フォント</h5>
-            <div class="prop-row">
-              <label class="prop-label">欧文スタイル</label>
-              <div class="prop-controls" id="boxFontEng"></div>
-            <div class="prop-row">
-              <label class="prop-label">和文スタイル</label>
-              <div class="prop-controls" id="boxFontJp"></div>
+            <!-- セグメントトグル -->
+            <div class="segment-ctrl">
+              <button class="segment-btn active" data-action="switchSub" data-target="subFont">フォント</button>
+              <button class="segment-btn" data-action="switchSub" data-target="subArea">グラフエリア</button>
             </div>
-            <div class="prop-row">
-              <label class="prop-label">カラー<span class="badge-label">K</span></label>
-              <div class="prop-controls">
-                <input type="range" data-gph="c_base" min="0" max="100">
-                <span id="lbl_c_base" style="flex:0 0 32px;text-align:right"></span>
+            <!-- フォント設定 -->
+            <div id="subFont" class="sub-pane active">
+              <div class="prop-row">
+                <label class="prop-label">欧文スタイル</label>
+                <div class="prop-controls" id="boxFontEng"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">和文スタイル</label>
+                <div class="prop-controls" id="boxFontJp"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">カラー<span class="badge-label">K</span></label>
+                <div class="prop-controls">
+                  <input type="range" data-gph="c_base" style="flex:1.8;">
+                  <input type="text" data-gph="c_base" class="form-control" style="flex:1.2;text-align:center;">
+                </div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">タイトル</label>
+                <div class="prop-controls"><input type="number" data-gph="s_title" class="form-control"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">軸名</label>
+                <div class="prop-controls"><input type="number" data-gph="s_name" class="form-control"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">目盛</label>
+                <div class="prop-controls"><input type="number" data-gph="s_tick" class="form-control"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">回帰式</label>
+                <div class="prop-controls"><input type="number" data-gph="s_stats" class="form-control"></div>
               </div>
             </div>
-            <div class="prop-row">
-              <label class="prop-label">タイトル</label>
-              <div class="prop-controls"><input type="number" data-gph="s_title" class="form-control"></div>
-            </div>
-            <div class="prop-row">
-              <label class="prop-label">軸名</label>
-              <div class="prop-controls"><input type="number" data-gph="s_name" class="form-control"></div>
-            </div>
-            <div class="prop-row">
-              <label class="prop-label">目盛</label>
-              <div class="prop-controls"><input type="number" data-gph="s_tick" class="form-control"></div>
-            </div>
-            <div class="prop-row">
-              <label class="prop-label">回帰式</label>
-              <div class="prop-controls"><input type="number" data-gph="s_stats"" class="form-control"></div>
-            </div>
-            <h5 class="pane-title" style="margin-bottom:8px;">グラフエリア</h5>
-            <div class="prop-row">
-              <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
-              <div class="prop-controls" input type="number" data-gph="sym_size" class="form-control"></div>
-            </div>
-            <div class="prop-row">
-              <label class="prop-label">シンボル<span class="badge-label">線幅</span></label>
-              <div class="prop-controls" input type="number" data-gph="sym_bw" class="form-control"></div>
-            </div>
-            <div class="prop-row">
-              <label class="prop-label">軸線<span class="badge-label">線幅</span></label>
-              <div class="prop-controls" input type="number" data-gph="lw_axis" class="form-control"></div>
-            </div>
-            <div class="prop-row">
-              <label class="prop-label">軸線<span class="badge-label">K</span></label>
-              <div class="prop-controls" input type="range" data-gph="c_axis" min="0" max="100"></div>
-            </div>
-             <div class="prop-row">
-              <label class="prop-label">グリッド<span class="badge-label">線幅</span></label>
-              <div class="prop-controls" input type="number" data-gph="c_grid" class="form-control"></div>
-            </div>
-            <div class="prop-row">
-              <label class="prop-label">グリッド<span class="badge-label">K</span></label>
-              <div class="prop-controls" input type="range" data-gph="c_axis" min="0" max="100"></div>
-            </div>
-             <div class="prop-row">
-              <label class="prop-label">回帰線<span class="badge-label">線幅</span></label>
-              <div class="prop-controls" input type="number" data-gph="lw_reg" class="form-control"></div>
-            </div>
-            <div class="prop-row">
-              <label class="prop-label">回帰線<span class="badge-label">K</span></label>
-              <div class="prop-controls" input type="range" data-gph="lc_reg" min="0" max="100"></div>
+            <!-- エリア設定 -->
+            <div id="subArea" class="sub-pane">
+              <div class="prop-row">
+                <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
+                <div class="prop-controls"><input type="number" data-gph="sym_size" class="form-control"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">シンボル<span class="badge-label">線幅</span></label>
+                <div class="prop-controls"><input type="number" data-gph="sym_bw" class="form-control"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">軸線<span class="badge-label">線幅</span></label>
+                <div class="prop-controls"><input type="number" data-gph="lw_axis" class="form-control"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">軸線<span class="badge-label">K</span></label>
+                <div class="prop-controls">
+                  <input type="range" data-gph="c_axis" style="flex:1.8;">
+                  <input type="text" data-gph="c_axis" class="form-control" style="flex:1.2;text-align:center;">
+                </div>
+              </div>
+               <div class="prop-row">
+                <label class="prop-label">グリッド<span class="badge-label">線幅</span></label>
+                <div class="prop-controls"><input type="number" data-gph="lw_grid" class="form-control"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">グリッド<span class="badge-label">K</span></label>
+                <div class="prop-controls">
+                  <input type="range" data-gph="c_grid" style="flex:1.8;">
+                  <input type="text" data-gph="c_grid" class="form-control" style="flex:1.2;text-align:center;">
+                </div>
+              </div>
+               <div class="prop-row">
+                <label class="prop-label">回帰線<span class="badge-label">線幅</span></label>
+                <div class="prop-controls"><input type="number" data-gph="lw_reg" class="form-control"></div>
+              </div>
             </div>
           </div>
 

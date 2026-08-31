@@ -90,7 +90,7 @@
     border-radius: 6px;
     padding: 12px;
     margin-bottom: 16px;
-    color:var(--text-main);
+    color: var(--text-main);
     font-weight: 500;
   }
   .pane-title {
@@ -122,6 +122,10 @@
     align-items: center;
     min-width: 0;
     > * { flex: 1; min-width: 0; }
+    input[type="range"] {
+      padding: 0;
+      cursor: pointer;
+    }
   }
   .badge-label {
     background: var(--grey50);
@@ -131,7 +135,25 @@
     font-size: 0.6rem;
     line-height: 1.6;
   }
-  .toggle-label { font-size: 12px; }
+
+  /* --- 動的単位表示ラッパー --- */
+  .input-wrap {
+    display: flex;
+    align-items: center;
+    position: relative;
+    width: 100%;
+  }
+  .input-wrap input {
+    width: 100%;
+    padding-right: 22px;
+  }
+  .input-wrap .input-unit {
+    position: absolute;
+    right: 6px;
+    font-size: 10px;
+    color: var(--grey400);
+    pointer-events: none;
+  }
 
   /* --- タブUI --- */
   .sidebar-tabs {
@@ -155,7 +177,33 @@
   .sidebar-tab-pane { display: none; }
   .sidebar-tab-pane.active { display: block; }
 
-  /* --- 汎用ユーティリティ --- */
+  /* --- セグメントトグル --- */
+  .segment-ctrl {
+    display: flex;
+    background: var(--grey50);
+    border-radius: 6px;
+    padding: 2px;
+    margin-bottom: 12px;
+  }
+  .segment-btn {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    padding: 6px 0;
+    cursor: pointer;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--grey600);
+    font-weight: 500;
+    transition: all 0.2s;
+    &:hover { background: color-mix(in srgb, var(--grey200) 20%, transparent); }
+    &.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: var(--theme-color); font-weight: 600; }
+  }
+  .sub-pane { display: none; }
+  .sub-pane.active { display: block; }
+
+  /* --- 汎用 --- */
   .scroll-box {
     max-height: 250px;
     border: 1px solid var(--grey200);
@@ -163,14 +211,6 @@
     padding: 4px;
     margin-bottom: 12px;
     overflow-y: auto;
-  }
-  .color-picker {
-    height: var(--control-height);
-    width: 100%;
-    border: 1px solid var(--grey400);
-    border-radius: 4px;
-    padding: 0;
-    cursor: pointer;
   }
   .print-loading {
     position: fixed;
@@ -190,8 +230,29 @@
     body, html { margin: 0; padding: 0; background-color: #fff; height: 100%; }
     .dash-layout { display: block; }
     .dash-sidebar, .print-loading { display: none !important; }
-    .dash-main { padding: 0 !important; display: flex; justify-content: center; overflow: visible; height: 100%; background: none; }
-    .a4-container { box-shadow: none; transform: none !important; margin: 0 !important; width: 210mm !important; height: 297mm !important; max-height: none !important; }
-    .grid-panel { border-color: transparent; }
+    .dash-main { 
+      padding: 0 !important; 
+      display: flex; 
+      justify-content: center; 
+      overflow: visible; 
+      height: 100%; 
+      background: none; 
+    }
+    .a4-container { 
+      box-shadow: none !important; 
+      transform: none !important; 
+      margin: 0 !important; 
+      width: 210mm !important; 
+      height: 297mm !important; 
+      max-height: none !important; 
+    }
+    .grid-panel, .grid-panel.active { 
+      border: none !important; 
+    }
+    ob-cal-plot div, 
+    ob-cal-plot svg {
+      width: 100% !important;
+      height: 100% !important;
+    }
   }
 </style>
