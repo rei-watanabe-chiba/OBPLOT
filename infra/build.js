@@ -1,9 +1,13 @@
+// infra/build.js
 const fs = require('fs');
 const path = require('path');
 
 const srcDir = path.join(__dirname, '../src');
 const distDir = path.join(__dirname, '../dist');
-if (!fs.existsSync(distDir)) fs.mkdirSync(distDir);
+const imgDir = path.join(__dirname, '../image');
+const manifestSrc = path.join(__dirname, 'manifest.xml');
+
+if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
 
 // Sidebar.html と Report.html の共通 include 置換関数
 const processInclude = (htmlStr) => {
@@ -20,7 +24,8 @@ const processInclude = (htmlStr) => {
     console.warn(`[WARN] File not found: ${fileName}`);
     return '';
   });
-  return result.replace(/<\?=[\s\S]*?\?>/g, ''); // GAS固有のスクリプトレットを削除
+  // GAS固有のスクリプトレットを空文字に置換し、JS内の変数を意図的に空にする
+  return result.replace(/<\?=[\s\S]*?\?>/g, ''); 
 };
 
 let sidebarHtml = fs.readFileSync(path.join(srcDir, 'Sidebar.html'), 'utf-8');
@@ -46,3 +51,18 @@ sidebarHtml = sidebarHtml.replace('</head>', `${injectScript}</head>`);
 fs.writeFileSync(path.join(distDir, 'App.html'), sidebarHtml);
 fs.writeFileSync(path.join(distDir, 'Report.html'), reportHtml);
 console.log('Build completed! App.html and Report.html generated successfully.');
+
+// --- GitHub Pagesデプロイ用のアセットコピー処理を追加 ---
+if (fs.existsSync(imgDir)) {
+  const distImgDir = path.join(distDir, 'image');
+  if (!fs.existsSync(distImgDir)) fs.mkdirSync(distImgDir, { recursive: true });
+  fs.readdirSync(imgDir).forEach(file => {
+    fs.copyFileSync(path.join(imgDir, file), path.join(distImgDir, file));
+  });
+  console.log('[COPY SUCCESS] image/ copied to dist/image/');
+}
+
+if (fs.existsSync(manifestSrc)) {
+  fs.copyFileSync(manifestSrc, path.join(distDir, 'manifest.xml'));
+  console.log('[COPY SUCCESS] manifest.xml copied to dist/');
+}
