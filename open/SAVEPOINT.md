@@ -39,19 +39,20 @@
 1. **ビジネスロジックの純粋化 (Method層への一元化)**:
    - **[Why]**: テスト容易性と保守性の担保。処理の重複（DRY原則違反）を防ぐため。
    - **[Rule]**: DOM APIやGAS通信 (`API.fetchData`等) を一切混入させない純粋関数として実装する。
-   - **[Rule]**: Controller層（サイドバー）やReport層（印刷プレビュー）で行うデータ生成・回帰計算ロジックは、必ず `Method.html` (`Mtd`) 内の共通関数（`generateChartData` 等）に集約し、各層からはそれを呼び出すのみとする。
+   - **[Rule]**: Controller層（サイドバー）やReport層（ダッシュボード）で行うデータ生成・回帰計算・フィルタリングロジックは、必ず `Method.html` (`Mtd`) 内の共通関数（`generateChartData` 等）に一元化し、各層からはそれを呼び出すのみとする。
    - **[Rule]**: 列インデックス等のマジックナンバーは排除し、ヘッダー配列からの動的走査（`indexOf`等）によるバインドを徹底する。
 2. **ステートレス化とイミュータブル処理**:
    - **[Why]**: 外部変数のミュータブルな書き換え（副作用）によるバグを防ぐため。
    - **[Rule]**: `for...of` 等のループ内での状態更新を避け、`reduce` と `Map` を用いた集計や、高階関数を用いたパイプライン処理に統合する。
-3. **モダン構文によるコード削減 (過剰DRYの回避)**:
+3. **モダン構文と組み込み仕様によるコード削減 (過剰DRYの回避)**:
    - **[Why]**: 可読性を保ちつつ、冗長な代入やガード節を極小化するため。
    - **[Rule]**: オプショナルチェイニング (`?.`) と Null合体演算子 (`??`) で安全なフォールバックを1行で完結させる。
    - **[Rule]**: 動的プロパティ生成は手動代入を避け、`...Object.fromEntries()` を活用し、宣言的に記述する。
+   - **[Rule]**: 配列の有無や状態を評価する際、手動の `if (length === 0)` を避け、分割代入（`[a, b] = [[], []]`）や標準メソッドの振る舞いを活用する。
 4. **命名規則の厳守とStateスキーマの画一化**:
    - **[Why]**: `HTMLElement.dataset` 等のDOM標準プロパティとの衝突によるサイレントバグを完全に回避し、同時にState構造の差異によるバグを防ぎ他層からの推測可能性を高めるため。
    - **[Rule]**: 各セクションのStateは `{ status, data, refs, flags }` の共通階層構造（スキーマ）に強制統一する。
-   - **[Rule]**: 汎用プロパティ（`map`, `set`, `get`, `value`）や衝突リスクのある名称（`dataset`）は禁止し、高度な短縮形（`raw`, `extr`, `prev`, `symb`, `calb`等）でシステム全体を統一する。※ただし、ドメイン固有の重要キー（資料IDとしての `id`, `ID` 等）とstate操作におけるget, setは例外とする。
+   - **[Rule]**: 汎用プロパティ（`map`, `set`, `get`, `value`）や衝突リスクのある名称（`dataset`）は禁止し、高度な短縮形（`raw`, `extr`, `prev`, `symb`, `calb`, `inst`, `repo`等）でシステム全体を統一する。※ただし、ドメイン固有の重要キー（資料IDとしての `id`, `ID` 等）とstate操作におけるget, setは例外とする。
 5. **厳格なコメント・フォーマット規約**:
    - **[Rule]**: 関数ブロックの先頭には必ず `// --- 機能名 ---` を付与。
    - **[Rule]**: 処理内のコメントは、処理の意図（Why）を「15文字以内」で記述。
@@ -65,6 +66,7 @@
 ## 5. フェーズ・ステートマシン（状態遷移定義）
 - **Tab 1 (データ抽出)**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
 - **Tab 2 (グラフ作成)**: `INIT(1) -> LOADED(2) -> FILTERED(3) -> MAPPED(4) -> PREVIEWED(5)`
+- **Tab 3 (ダッシュボード)**: `INIT(1) -> LOADED(2)`
 - **[Why]**: フェーズ遷移に伴うUIの表示/非活性制御を命令的な `if` 分岐で行わず、`UIPhase` の定数マップに基づく宣言的ルールエンジンに集約するため。
 - **[How]**: UIルールの定義をフラットな羅列から「セクション空間」ごとのネスト構造に整理し、親セクションと `data-ui` 属性を組み合わせた相対DOM参照エンジンによって、HTML要素の特定と状態適用を完全自動化する。
 
@@ -73,10 +75,10 @@
 - `Sidebar.html`: [UI] 静的ベース構造 (Auto DI属性とイベントルーター属性の保持)
 - `CSS.html`: [Style] トークン定義, カスケードレイヤー (`reset`, `base`, `components`, `utilities`)
 - `Model.html`: [Model] 状態管理 (`AppState`), 定数 (`GLB.Conf`), APIラッパー (`API`)
-- `Method.html`: [Logic] 純粋関数群 (`Mtd.Util`, `Mtd.T1`, `Mtd.T2`)
+- `Method.html`: [Logic] 純粋関数群 (`Mtd.Util`, `Mtd.T1`, `Mtd.T2`, `Mtd.T3`)
 - `Component.html`: [Component] DOMビルダー (`NewDOM`), Web Components, テンプレート (`Tpl`)
 - `View.html`: [View] UIルールエンジン (`UI.Phs`), DIバインディングエンジン (`UI.StateUpd`)
-- `Controller.html`: [Controller] 非同期フロー制御 (`CoreCtrl`, `T1Ctrl`, `T2Ctrl`)
+- `Controller.html`: [Controller] 非同期フロー制御 (`CoreCtrl`, `T1Ctrl`, `T2Ctrl`, `T3Ctrl`)
 - `Event.html`: [Event] イベント委譲ルーター (`Evt`), アイドル検知 (`IdlTm`), バックアップ管理 (`MakeBU`)
 - `Chart.html`: [Component] グラフ描画 (`<ob-cal-plot>`)
 - `Report.html`: [Template] レポート出力用静的HTML（骨格）
@@ -84,18 +86,4 @@
 - `ReportLogic.html`: [Controller/View] スキーマ駆動型UI自動生成・状態管理・印刷フロー制御
 
 ## 7. 開発状況と次ステップ
-- **現在の状況**: `Report.html` の実装完了
-- **次のステップ**: 汎用アプリの分離
-1. 現在の「PXRF」シートを「tracer5i」に変更する。
-2. tab2 サブセクションcalb層からcreection保存機能を取り出し、prev層の下に新たにstdz（standardize）を追加して移動する
-3. stdzDTでは、 prev層で補正される前のデータを引き継きstdzDTとする。
-5. stdz層には「データ設定」「検量線出力」「PXRF出力」のラベルでパート分けする（サブセクションの設置は不要）
-6. データ設定には、「item選択」「obsidianモード元素」「LOD適用」を再度配置してstdzDTを操作する
-7. 検量線出力では、以前の「new」限定の出力表示を廃止し常時有効化とする。入力されたインデックス名でstdzDTとwdxrfでcreectionを出力する
-8. PXRF出力では、stdzDTをデータ設定で補正された内容（検量線適用,LOD適用はなし）で旧PXRF（新tracer5i）の先頭要素+元素（並び順はwdxrfに共通）で新PXRFに出力する。
-9. tab3 グラフレンダリングを作成する
-10. 起動時環境構築対象は新PXRF, WDXRF, creection
-11. セクションは「データ読込（inst）」「グラフレンダリング（repo）」
-12. inst層はtab2を流用するが、datasetフィルターは無しで、PXRF, WDXRF, creectionをオブジェクト化して、必要に応じて次のグラフレンダリングに最適化する
-13. tab2の repo層を移植する。受け取るデータは現在の処理を参考に、必要があればinstで調整する。
-14. 大規模な改修になるため、不足情報があればユーザーに確認し、まずは改修設計書を作成する。
+- **現在の状況**: `Report.html` を起点とするダッシュボード層の実装完了。
