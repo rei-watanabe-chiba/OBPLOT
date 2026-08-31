@@ -6,8 +6,9 @@
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-deployed-success)](#) 
 [![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-V8-blue)](#) 
 [![Office Add-in](https://img.shields.io/badge/Office%20Add--in-Excel-green)](#)
-## アプリケーション概要
--
+
+OBPLOTは、インストールや環境構築なしでGoogleスプレッドシート/Excel上で動作するSPAツールです。
+Single Page Application
 
 
 
