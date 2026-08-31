@@ -2,10 +2,10 @@
 > このページは、黒曜石の蛍光X線分析データを操作するWEBアプリケーション **OBPLOT** 公開リポジトリです。
 
 # OBPLOT
-OBPLOTは、環境構築なしで以下のアプリケーション上で動作するSingle Page Applicationツールです[^1]。<br>
+OBPLOTは、環境構築なしで以下のアプリケーション上で動作するSingle Page Applicationツールで。<br>
+ただし、ライブラリ取得のためインターネット接続が必要です。
 [![ GAS](https://img.shields.io/badge/GAS-GoogleSheets-blue)](#) 
 [![Office Add-in](https://img.shields.io/badge/Office%20Add--in-Excel-green)](#)
-[^1]: ライブラリ取得のためにインターネット環境が必要です。
 
 
 Googleアカウントをお持ちの方
