@@ -13,3 +13,8 @@ Googleアカウントをお持ちの方は以下のGASをコピーすればす�
 
 [badge-url]: https://img.shields.io/badge/GAS-GoogleSheets-blue
 [twitter]: [https://twitter.com/not75743](https://docs.google.com/spreadsheets/d/1-m5RoEsmTdCKQKBxqTslLtdgGkfXWN0eQST8Kpb0b4A/edit?usp=sharing)
+
+[![Twitter URL][badge-url]][twitter]
+
+[badge-url]: https://img.shields.io/twitter/url?label=%40not75743&style=social&url=https%3A%2F%2Ftwitter.com%2Fnot75743
+[twitter]: https://twitter.com/not75743
