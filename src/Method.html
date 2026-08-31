@@ -199,14 +199,22 @@
       mgmPrev: class {
         // --- データ生成パイプライン統合 ---
         static generateChartData(pxrfDT, wdxrfDT, conf) {
+          let pDT = pxrfDT, wDT = wdxrfDT;
+          if (conf.filters?.length) {
+             const acts = conf.filters.filter(f => f.axis && f.val !== "");
+             if (acts.length > 0) {
+               pDT = pxrfDT.filter(r => !acts.some(f => String(r[f.axis]) === String(f.val)));
+               wDT = wdxrfDT.filter(r => !acts.some(f => String(r[f.axis]) === String(f.val)));
+             }
+          }
           let prevDT = [], statsDT = null;
           if (conf.graphType === 'calibration' && conf.calibVal) {
-             prevDT = this.buildPrev(pxrfDT, wdxrfDT, { ...conf, val: conf.calibVal });
+             prevDT = this.buildPrev(pDT, wDT, { ...conf, val: conf.calibVal });
              statsDT = Mtd.T2.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), Mtd.Util.getValidNums(prevDT.map(pt => pt.err)));
           } else if (conf.graphType === 'discrimination' && conf.discrXVal && conf.discrYVal) {
-             const calibBase = this.buildPrev(pxrfDT, wdxrfDT, { ...conf, val: GLB.valElms[0] });
-             const mapPts = (wDT, pDT) => [...wDT.map(w => ({ ...w, x: Mtd.T2.Calc.evaluate(conf.discrXVal, w), y: Mtd.T2.Calc.evaluate(conf.discrYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pDT.map(p => ({ ...p, x: Mtd.T2.Calc.evaluate(conf.discrXVal, p), y: Mtd.T2.Calc.evaluate(conf.discrYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
-             prevDT = mapPts(wdxrfDT, calibBase);
+             const calibBase = this.buildPrev(pDT, wDT, { ...conf, val: GLB.valElms[0] });
+             const mapPts = (wList, pList) => [...wList.map(w => ({ ...w, x: Mtd.T2.Calc.evaluate(conf.discrXVal, w), y: Mtd.T2.Calc.evaluate(conf.discrYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pList.map(p => ({ ...p, x: Mtd.T2.Calc.evaluate(conf.discrXVal, p), y: Mtd.T2.Calc.evaluate(conf.discrYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
+             prevDT = mapPts(wDT, calibBase);
           }
           return { prevDT, statsDT };
         }

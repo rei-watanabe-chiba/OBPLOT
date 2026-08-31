@@ -43,15 +43,16 @@
       color: var(--text-main);
       background-color: var(--bg-color);
       overflow-x: hidden;
-      /* user-select: none;*/
+      user-select: none;
     }
     body[data-theme="tab2"] {
       --theme-color: var(--main-green);
       --theme-hover: var(--main-green-hover);
     }
     main {
-      padding: calc(var(--unit) * 2) calc(var(--unit) * 3) calc(var(--unit) * 3);
+      padding: calc(var(--unit) * 2) var(--unit) calc(var(--unit) * 3) calc(var(--unit) * 3);
       overflow-x: hidden;
+      scrollbar-gutter: stable;
     }
     hr {
       margin: calc(var(--unit) * 3) 0;
@@ -340,7 +341,8 @@
       border-radius: var(--unit);
       opacity: 1;
       transition: all 0.3s ease;
-      &[data-status="hidden"] {
+      &[data-status="hidden"],
+      details[open] + &[data-status="message"] {
         max-height: 0;
         margin-bottom: 0;
         padding-top: 0;

@@ -1,8 +1,10 @@
+<!-- src/Report.html -->
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8">
     <base target="_top">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
@@ -11,143 +13,208 @@
   </head>
   <body data-theme="tab2">
     <script>window.__INJECTED_DATA__ = 'INJECT_TARGET';</script>
-
     <?!= include('Global'); ?>
     <?!= include('Model'); ?>
     <?!= include('Method'); ?>
     <?!= include('Component'); ?>
     <?!= include('Chart'); ?>
-    
     <div class="dash-layout">
       <!-- 左サイドバー -->
       <aside class="dash-sidebar" id="dashSidebar">
-        <!-- レイアウト構成 -->
-        <details class="sub-sec" open>
-          <summary>レイアウト構成</summary>
-          <div class="field-row">
-            <button data-action="addRow" data-type="primary" class="outline">＋ 行を追加</button>
-            <button data-action="addCol" data-type="primary" class="outline">＋ 列を追加</button>
+        <!-- 固定: 選択中パネル -->
+        <div class="panel-context" id="panelConfigSec" style="display: none;">
+          <h4 class="pane-title">選択中のパネル設定</h4>
+          <div class="prop-row">
+            <label class="prop-label panel">タイプ</label>
+            <div class="prop-controls" id="boxGraphType"></div>
           </div>
-          <div class="field-row">
-            <button data-action="resetGrid" data-type="primary" class="outline">1×1にリセット</button>
-          </div>
-          <label>パネル間余白 [pt]</label>
-          <div class="field-row">
-            <input type="number" data-bind="panelGap" min="0" max="50" step="0.5" class="form-control">
-          </div>
-          <div class="field-row" style="margin-top: 16px;">
-            <button data-action="printPDF" data-type="primary">PDF出力（裏で印刷）</button>
-          </div>
-        </details>
-
-        <!-- 全体補正設定 -->
-        <details class="sub-sec" open style="margin-top: 16px;">
-          <summary>全体補正設定</summary>
-          <div class="field-row">
-            <!-- 修正: ラベルを削除 -->
-            <div class="field-col" id="boxGlobalCorr"></div>
-            <div class="field-col" style="display:flex; align-items:flex-end; padding-bottom:4px;">
-              <div id="boxGlobalCalTgl"></div>
+          <div id="secCalibration" style="display:none;">
+            <div class="prop-row">
+              <label class="prop-label panel">対象指標</label>
+              <div class="prop-controls" id="boxCalibVal"></div>
             </div>
           </div>
-          <label>補正対象元素</label>
-          <ob-multi-select id="boxGlobalCalElms" data-change-item="dummyItem" data-change-all="dummyAll"></ob-multi-select>
-        </details>
+          <div id="secDiscrimination" style="display:none;">
+            <div class="prop-row">
+              <label class="prop-label panel">X<span class="badge-label">項目</span></label>
+              <div class="prop-controls" id="boxDiscrX"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
+              <div class="prop-controls" id="boxDiscrY"></div>
+            </div>
+          </div>
+          <div class="prop-row">
+            <label class="prop-label panel">タイトル</label>
+            <div class="prop-controls">
+              <input type="text" data-bind="activePanel.title" placeholder="パネルタイトルを入力" class="form-control">
+            </div>
+          </div>
+          <div class="prop-row">
+            <label class="prop-label panel">X/Y<span class="badge-label">ラベル</span></label>
+            <div class="prop-controls">
+              <input type="text" data-bind="activePanel.xLabel" class="form-control" placeholder="X軸">
+              <input type="text" data-bind="activePanel.yLabel" class="form-control" placeholder="Y軸">
+            </div>
+          </div>
+        </div>
+        <div class="prop-row" style="margin-top:4px;">
+          <button data-action="printPDF" data-type="primary">PDF出力（印刷用ページ生成）</button>
+        </div>
 
-        <!-- シンボル設定 -->
-        <details class="sub-sec" id="symbConfigSec" style="margin-top: 16px;">
-          <summary>シンボル設定</summary>
-          <div class="field-row">
-            <div id="boxSymbAxis" style="flex:1;"></div>
-            <button data-action="resetSymb" data-type="primary" class="outline" style="flex:none; width:80px;">リセット</button>
-          </div>
-          <div class="scroll-y" style="max-height: 250px; border: 1px solid var(--grey200); border-radius: 4px; padding: 4px 8px; margin-top: 8px;">
-            <ob-symbol-table id="tblSymb"></ob-symbol-table>
-          </div>
-        </details>
+        <!-- タブナビゲーション -->
+        <nav class="sidebar-tabs">
+          <button class="tab-icon active" data-action="switchTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
+          <button class="tab-icon" data-action="switchTab" data-tab="tabData" title="データ設定"><span class="material-symbols-outlined">database</span></button>
+          <button class="tab-icon" data-action="switchTab" data-tab="tabStyle" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
+          <button class="tab-icon" data-action="switchTab" data-tab="tabSymb" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
+        </nav>
 
-        <!-- グラフスタイル設定 -->
-        <details class="sub-sec" id="gphConfigSec" style="margin-top: 16px;">
-          <summary>グラフスタイル設定</summary>
-          <label>フォント (英字 / 日本語)</label>
-          <div class="field-row">
-            <div id="boxFontEng"></div>
-            <div id="boxFontJp"></div>
+        <div class="tab-content-area">
+          <!-- タブ1: レイアウト -->
+          <div id="tabLayout" class="sidebar-tab-pane active">
+            <h5 class="pane-title" style="margin-bottom:8px;">パネル操作</h5>
+            <div class="prop-row" style="margin-bottom:16px;">
+              <button data-action="addRow" data-type="primary" class="outline">＋行</button>
+              <button data-action="addCol" data-type="primary" class="outline">＋列</button>
+              <button data-action="resetGrid" data-type="primary" class="outline">リセット</button>
+            </div>
+            <h5 class="pane-title" style="margin-bottom:8px;">余白設定</h5>
+            <div class="prop-row">
+              <label class="prop-label">パネル間隔</label>
+              <div class="prop-controls"><input type="number" data-bind="panelGap" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">キャンバス 上/下</label>
+              <div class="prop-controls">
+                <input type="number" data-bind="margins.top" class="form-control">
+                <input type="number" data-bind="margins.bottom" class="form-control">
+              </div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">キャンバス 左/右</label>
+              <div class="prop-controls">
+                <input type="number" data-bind="margins.left" class="form-control">
+                <input type="number" data-bind="margins.right" class="form-control">
+              </div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">パネル内 上/下</label>
+              <div class="prop-controls">
+                <input type="number" data-gph="p_t" class="form-control">
+                <input type="number" data-gph="p_b" class="form-control">
+              </div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">パネル内 左/右</label>
+              <div class="prop-controls">
+                <input type="number" data-gph="p_l" class="form-control">
+                <input type="number" data-gph="p_r" class="form-control">
+              </div>
+            </div>
           </div>
-          <label>ラベルサイズ (軸名 / 目盛) [pt]</label>
-          <div class="field-row">
-            <input type="number" data-gph="s_name" min="3" max="30" step="0.5" class="form-control">
-            <input type="number" data-gph="s_tick" min="3" max="30" step="0.5" class="form-control">
+
+          <!-- タブ2: データ設定 -->
+          <div id="tabData" class="sidebar-tab-pane">
+            <h5 class="pane-title" style="margin-bottom:8px;">データフィルター<span class="badge-label">除外</span></h5>
+            <div class="scroll-box">
+              <ob-filter-table id="tblFilter"></ob-filter-table>
+            </div>
+            <h5 class="pane-title" style="margin-bottom:8px;">データ補正</h5>
+            <div class="prop-row">
+              <label class="prop-label panel">検量線</label>
+              <div class="prop-controls" id="boxGlobalCorr"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label panel">対象元素</label>
+              <div class="prop-controls"><ob-multi-select id="boxGlobalCalElms" data-change-item="dummyItem" data-change-all="dummyAll"></ob-multi-select></div>
+            </div>
+            <div class="prop-row" style="margin-top:16px;">
+              <div class="prop-controls" id="boxGlobalCalTgl"></div>
+              <div class="prop-controls" id="boxGlobalLodTgl"></div>
+            </div>
           </div>
-          <label>基本文字色 (明度%)</label>
-          <div class="field-row">
-            <input type="range" data-gph="c_base" min="0" max="100">
-            <span id="lbl_c_base" style="width:40px; text-align:right;"></span>
+
+          <!-- タブ3: グラフスタイル -->
+          <div id="tabStyle" class="sidebar-tab-pane">
+            <h5 class="pane-title" style="margin-bottom:8px;">フォント</h5>
+            <div class="prop-row">
+              <label class="prop-label">欧文スタイル</label>
+              <div class="prop-controls" id="boxFontEng"></div>
+            <div class="prop-row">
+              <label class="prop-label">和文スタイル</label>
+              <div class="prop-controls" id="boxFontJp"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">カラー<span class="badge-label">K</span></label>
+              <div class="prop-controls">
+                <input type="range" data-gph="c_base" min="0" max="100">
+                <span id="lbl_c_base" style="flex:0 0 32px;text-align:right"></span>
+              </div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">タイトル</label>
+              <div class="prop-controls"><input type="number" data-gph="s_title" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">軸名</label>
+              <div class="prop-controls"><input type="number" data-gph="s_name" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">目盛</label>
+              <div class="prop-controls"><input type="number" data-gph="s_tick" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">回帰式</label>
+              <div class="prop-controls"><input type="number" data-gph="s_stats"" class="form-control"></div>
+            </div>
+            <h5 class="pane-title" style="margin-bottom:8px;">グラフエリア</h5>
+            <div class="prop-row">
+              <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
+              <div class="prop-controls" input type="number" data-gph="sym_size" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">シンボル<span class="badge-label">線幅</span></label>
+              <div class="prop-controls" input type="number" data-gph="sym_bw" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">軸線<span class="badge-label">線幅</span></label>
+              <div class="prop-controls" input type="number" data-gph="lw_axis" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">軸線<span class="badge-label">K</span></label>
+              <div class="prop-controls" input type="range" data-gph="c_axis" min="0" max="100"></div>
+            </div>
+             <div class="prop-row">
+              <label class="prop-label">グリッド<span class="badge-label">線幅</span></label>
+              <div class="prop-controls" input type="number" data-gph="c_grid" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">グリッド<span class="badge-label">K</span></label>
+              <div class="prop-controls" input type="range" data-gph="c_axis" min="0" max="100"></div>
+            </div>
+             <div class="prop-row">
+              <label class="prop-label">回帰線<span class="badge-label">線幅</span></label>
+              <div class="prop-controls" input type="number" data-gph="lw_reg" class="form-control"></div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label">回帰線<span class="badge-label">K</span></label>
+              <div class="prop-controls" input type="range" data-gph="lc_reg" min="0" max="100"></div>
+            </div>
           </div>
-          <label>注釈テキストサイズ [pt]</label>
-          <div class="field-row">
-            <input type="number" data-gph="s_tip" min="3" max="30" step="0.5" class="form-control">
-          </div>
-          <label>統計テキスト文字色 (明度%)</label>
-          <div class="field-row">
-            <input type="range" data-gph="c_stats" min="0" max="100">
-            <span id="lbl_c_stats" style="width:40px; text-align:right;"></span>
-          </div>
-          <label>シンボル (サイズ / 枠線幅) [pt]</label>
-          <div class="field-row">
-            <input type="number" data-gph="sym_size" min="1" max="20" step="0.5" class="form-control">
-            <input type="number" data-gph="sym_bw" min="0" max="5" step="0.1" class="form-control">
-          </div>
-          <label>軸線 (太さ[pt] / 明度%)</label>
-          <div class="field-row">
-            <input type="number" data-gph="lw_axis" min="0.1" max="3.0" step="0.1" class="form-control">
-            <input type="range" data-gph="c_axis" min="0" max="100">
-            <span id="lbl_c_axis" style="width:40px; text-align:right;"></span>
-          </div>
-          <label>グリッド線 (太さ[pt] / 明度%)</label>
-          <div class="field-row">
-            <input type="number" data-gph="lw_grid" min="0.1" max="3.0" step="0.1" class="form-control">
-            <input type="range" data-gph="c_grid" min="0" max="100">
-            <span id="lbl_c_grid" style="width:40px; text-align:right;"></span>
-          </div>
-          <label>回帰線 (太さ[pt] / 色)</label>
-          <div class="field-row">
-            <input type="number" data-gph="lw_reg" min="0.1" max="3.0" step="0.1" class="form-control">
-            <input type="color" data-gph="lc_reg" class="color-picker">
-          </div>
-          <label>ラベル余白 (軸名 / 目盛) [pt]</label>
-          <div class="field-row">
-            <input type="number" data-gph="g_name" min="0" max="30" step="0.5" class="form-control">
-            <input type="number" data-gph="g_tick" min="0" max="30" step="0.5" class="form-control">
-          </div>
-          <label>外枠余白 (上/下/左/右) [pt]</label>
-          <div class="field-row" style="flex-wrap: wrap;">
-            <input type="number" data-gph="p_t" min="0" max="50" step="0.5" class="form-control" title="上">
-            <input type="number" data-gph="p_b" min="0" max="50" step="0.5" class="form-control" title="下">
-            <input type="number" data-gph="p_l" min="0" max="50" step="0.5" class="form-control" title="左">
-            <input type="number" data-gph="p_r" min="0" max="50" step="0.5" class="form-control" title="右">
-          </div>
-        </details>
-        
-        <hr>
-        
-        <!-- パネル個別設定 -->
-        <div id="panelConfigSec" style="display: none;">
-          <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--theme-color);">選択中のパネル設定</h4>
-          <label>グラフタイプ</label>
-          <div id="boxGraphType"></div>
-          <div id="secCalibration" style="display: none; margin-top: 16px;">
-            <label>対象指標 (X軸:WDXRF / Y軸:PXRF)</label>
-            <div id="boxCalibVal"></div>
-          </div>
-          <div id="secDiscrimination" style="display: none; margin-top: 16px;">
-            <label>X軸 指標</label>
-            <div id="boxDiscrX"></div>
-            <label>Y軸 指標</label>
-            <div id="boxDiscrY"></div>
-          </div>
-          <div class="field-row" style="margin-top: 16px;">
-            <button data-action="applyPanel" data-type="primary">グラフを確定 (描画)</button>
+
+          <!-- タブ4: シンボル -->
+          <div id="tabSymb" class="sidebar-tab-pane">
+            <div class="prop-row" style="margin-bottom:12px;">
+              <label class="prop-label panel">属性選択</label>
+              <div class="prop-controls">
+                <div id="boxSymbAxis" style="flex:1;"></div>
+                <button data-action="resetSymb" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
+              </div>
+            </div>
+            <div class="scroll-box">
+              <ob-symbol-table id="tblSymb"></ob-symbol-table>
+            </div>
           </div>
         </div>
       </aside>
@@ -160,7 +227,6 @@
       </main>
     </div>
 
-    <!-- 状態復元用ダイアログ -->
     <dialog id="universalConfirm">
       <h3 id="uDialogTitle">確認</h3>
       <p id="uDialogMessage"></p>
@@ -169,7 +235,6 @@
         <button id="uDialogConfirmBtn" data-type="primary">OK</button>
       </div>
     </dialog>
-
     <?!= include("ReportLogic"); ?>
   </body>
 </html>

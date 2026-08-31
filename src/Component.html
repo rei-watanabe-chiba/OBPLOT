@@ -162,6 +162,35 @@
       }).join('');
     }
   }
+  // --- ObFilterTable ---
+  class ObFilterTable extends HTMLElement {
+    #src = null;
+    static #COLS = [{ key: 'axis', className: 'symb-col-target' }, { key: 'val', className: 'symb-col-target' }];
+    set src(val) { this.#src = val; this.#render(); }
+    clear() { this.#src = null; this.replaceChildren(); }
+    #buildSelectHtml(opts, curVal, type, idx, actsConf) {
+      let curLbl = "未選択";
+      const itemsHtml = (opts || []).map(opt => {
+        if (opt.val === curVal) curLbl = opt.label;
+        return Tpl.Filter.item(opt, type, idx, actsConf.update);
+      }).join('');
+      return Tpl.Common.popover(curLbl, itemsHtml, "single-summary", "");
+    }
+    #render() {
+      const { rls, optsConf, actsConf } = this.#src || {};
+      if (!rls || !optsConf) return this.clear();
+      this.innerHTML = [...rls, { isAddRow: true }].map((rl, idx) => {
+        if (rl.isAddRow) return Tpl.Symbol.addRow(actsConf.add, ObFilterTable.#COLS);
+        const btnHtml = Tpl.Symbol.btn(actsConf.remove, rl.key, "-", false);
+        const valOpts = (rl.axis && optsConf.val[rl.axis]) ? [{val: "", label: "未選択"}, ...optsConf.val[rl.axis]] : [{val: "", label: "未選択"}];
+        const colsHtml = ObFilterTable.#COLS.map(col => {
+          const opts = col.key === 'axis' ? optsConf.axis : valOpts;
+          return Tpl.Symbol.col(col.className, this.#buildSelectHtml(opts, rl[col.key], col.key, idx, actsConf));
+        }).join('');
+        return Tpl.Symbol.row(btnHtml, colsHtml);
+      }).join('');
+    }
+  }
   // --- Tpl ---
   const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
   class Tpl {
@@ -189,6 +218,12 @@
       static row(btnHtml, colsHtml) { return html`<div class="symb-table-row"><div class="symb-col-btn">${btnHtml}</div>${colsHtml}</div>`; }
       static addRow(actionAdd, colsArr) { return this.row(this.btn(actionAdd, "", "+", false), colsArr.map(c => this.col(c.className, "")).join('')); }
     };
+    static Filter = class {
+      static item(opt, type, idx, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-filter-idx="${idx}" data-filter-type="${type}" value="${opt.val}" popovertargetaction="hide">${opt.label}</button>`; }
+    };
   }
-  customElements.define('ob-popover', ObPopover); customElements.define('ob-multi-select', ObMultiSelect); customElements.define('ob-symbol-table', ObSymbolTable);
+  customElements.define('ob-popover', ObPopover);
+  customElements.define('ob-multi-select', ObMultiSelect);
+  customElements.define('ob-symbol-table', ObSymbolTable);
+  customElements.define('ob-filter-table', ObFilterTable);
 </script>

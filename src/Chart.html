@@ -11,7 +11,6 @@
       return this.#cache.get(key);
     }
   }
-
   class ObCalPlot extends HTMLElement {
     #box; #chart = null; #observer; #src = null; #lastW = 0;
     constructor() {
@@ -27,7 +26,6 @@
         }
       });
     }
-
     connectedCallback() {
       this.style.display = 'grid';
       this.style.gridTemplateColumns = 'minmax(0, 1fr)';
@@ -35,30 +33,25 @@
       this.appendChild(this.#box);
       this.#observer.observe(this.#box);
     }
-
     disconnectedCallback() {
       this.#observer.disconnect();
       if (this.#chart) { this.#chart.dispose(); this.#chart = null; }
     }
-
     set src(data) {
       this.#src = data;
       this.#render();
     }
-
     clear() {
       this.#src = null;
       if (this.#chart) this.#chart.clear();
       this.#box.style.height = '0px';
     }
-
     #render() {
-      const { prevDT, statsDT, symb, gph } = this.#src || {};
+      const { prevDT, statsDT, symb, gph, panel } = this.#src || {};
       if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
       const containerWidth = this.clientWidth;
       if (containerWidth === 0) return;
       this.#lastW = containerWidth;
-      
       const rS = gph?.style || GLB.defaultGraphStyle;
       const STYLE = {
         font: rS.font, fontS: { ...rS.fontS },
@@ -67,25 +60,20 @@
         lineC: { grid: CSSToken.get(rS.lineC.grid), axis: CSSToken.get(rS.lineC.axis), reg: CSSToken.get(rS.lineC.reg)},
         bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
-      
       const GAP = { ...(gph?.gap || GLB.defaultGraphGap) };
       const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
-      
-      // ★ アプローチ1: ユーザー設定余白が文字サイズ未満の場合、文字サイズ分を安全マージンとして上・右に追加
-      const safePadT = GAP.padT < STYLE.fontS.tick ? GAP.padT + STYLE.fontS.tick : GAP.padT;
+      const titleText = panel?.title || "";
+      const titleSizePx = STYLE.fontS.title || (12 * 1.33);
+      const requiredPadT = Math.max(STYLE.fontS.tick, titleText ? titleSizePx + GAP.tick : 0);
+      const safePadT = GAP.padT < requiredPadT ? GAP.padT + requiredPadT : GAP.padT;
       const safePadR = GAP.padR < STYLE.fontS.tick ? GAP.padR + STYLE.fontS.tick : GAP.padR;
-
-      // ★ 右側にも overX を足して見切れを防止
       const gridTop = safePadT + overY;
       const gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridRight = safePadR + overX;
-      
       const plotSize = containerWidth - gridLeft - gridRight, containerHeight = plotSize + gridTop + gridBottom;
-      
       this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
       this.#box.style.backgroundColor = STYLE.bgOuter;
-      
       if (!this.#chart) {
         const renderer = this.getAttribute('data-renderer') || 'canvas';
         this.#chart = echarts.init(this.#box, null, { renderer });
@@ -93,14 +81,12 @@
           this.dispatchEvent(new CustomEvent('render-finished'));
         });
       }
-
       const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
       const { niceMin, niceMax, niceTicks } = Mtd.Util.calcScale(validPoints.map(d => d.x), validPoints.map(d => d.y));
       const itv = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
       const fmtTick = v => { const tck = niceTicks.find(t => Math.abs(t.v - v) < 1e-8); return tck ? tck.f : v; };
       const graphText = statsDT ? Mtd.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
-      
       const plotDT = validPoints.map(d => {
         const rl = rls.find(r => r.target !== "" && r.target === d[baseKey]) || defRl;
         const rawShp = rl.shp || 'circle';
@@ -113,7 +99,6 @@
           itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW }
         };
       });
-
       const series = [{ type: 'scatter', data: plotDT, animation: false }];
       if (statsDT?.slope != null && statsDT?.intercept != null) {
         const { slope, intercept } = statsDT;
@@ -123,14 +108,24 @@
           animation: false, silent: true
         });
       }
-
+      const graphics = [
+        { type: 'text', left: gridLeft + STYLE.fontS.tick, top: gridTop + STYLE.fontS.tick, style: { text: graphText, fontFamily: STYLE.font, fontSize: STYLE.fontS.stats, fill: STYLE.fontC.stats } }
+      ];
+      if (titleText) {
+        graphics.push({
+          type: 'text',
+          left: gridLeft + GAP.tick,
+          bottom: (containerHeight - gridTop) + GAP.tick,
+          style: { text: titleText, fontFamily: STYLE.font, fontSize: titleSizePx, fill: STYLE.fontC.base }
+        });
+      }
       const opt = {
         animation: false,
         textStyle: { fontFamily: STYLE.font },
         grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSize, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: STYLE.lineW.axis },
         tooltip: { formatter: p => p.componentSubType === 'line' ? '' : GLB.tooltipKeys.map(k => `${k}: ${p.data[k] || '-'}`).join('<br/>'), backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
         xAxis: {
-          type: 'value', name: 'WDXRF', nameLocation: 'middle',
+          type: 'value', name: panel?.xLabel || 'WDXRF', nameLocation: 'middle',
           nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },
           min: niceMin, max: niceMax, interval: itv,
           axisLabel: { margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => fmtTick(v) },
@@ -139,7 +134,7 @@
           axisTick: { show: false, inside: true }
         },
         yAxis: {
-          type: 'value', name: 'PXRF', nameLocation: 'middle',
+          type: 'value', name: panel?.yLabel || 'pXRF', nameLocation: 'middle',
           nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },
           min: niceMin, max: niceMax, interval: itv,
           axisLabel: { rotate: 90, margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => (Math.abs(v - niceMin) < 1e-8) ? '' : fmtTick(v) },
@@ -147,7 +142,7 @@
           axisLine: { show: true, onZero: false, lineStyle: { color: STYLE.lineC.axis, width: STYLE.lineW.axis } },
           axisTick: { show: false, inside: true }
         },
-        graphic: [{ type: 'text', left: gridLeft + STYLE.fontS.tick, top: gridTop + STYLE.fontS.tick, style: { text: graphText, fontFamily: STYLE.font, fontSize: STYLE.fontS.stats, fill: STYLE.fontC.stats } }],
+        graphic: graphics,
         series: series
       };
       this.#chart.setOption(opt);

@@ -166,7 +166,8 @@
         const { prevDT, statsDT } = Mtd.T2.mgmPrev.generateChartData(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf);
         if (!prevDT.length) throw new Error("対象データなし");
         State.reset(['T2ST.repo']);
-        State.set({ "T2ST.prev.data.correctionLogic": statsDT, "T2ST.prev.data.statsDT": statsDT, "T2ST.prev.data.prevDT": prevDT, "T2ST.phase": T2_PHS.PREVIEWED }); return "プレビュー更新";
+        State.set({ "T2ST.prev.data.correctionLogic": statsDT, "T2ST.prev.data.statsDT": statsDT, "T2ST.prev.data.prevDT": prevDT, "T2ST.phase": T2_PHS.PREVIEWED }); 
+        return ["message", "検量線のプレビューと出力"];
       });
     }
     

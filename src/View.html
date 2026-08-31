@@ -59,14 +59,14 @@
         area: p => ({ isShow: p >= T2_PHS.FILTERED })
       },
       prev: {
-        sec: p => ({ isOpen: p >= T2_PHS.MAPPED, isDis: p < T2_PHS.MAPPED }),
+        sec: p => ({ isActive: p >= T2_PHS.MAPPED, isDis: p < T2_PHS.MAPPED }),
         'btn-make': p => ({ isDis: p < T2_PHS.MAPPED }),
         'save-box': p => ({ isShow: p >= T2_PHS.MAPPED && State.get("T2ST.calb.refs.correction") === "new" })
       },
       calb: { sec: p => ({ isOpen: p === T2_PHS.MAPPED ? true : undefined, isActive: p >= T2_PHS.MAPPED }) },
       repo: {
-        sec: p => ({ isOpen: p >= T2_PHS.PREVIEWED, isDis: p < T2_PHS.PREVIEWED }),
-        'btn-repo': p => ({ isDis: p < T2_PHS.PREVIEWED })
+        sec: p => ({ isActive: p >= T2_PHS.MAPPED, isDis: p < T2_PHS.MAPPED }),
+        'btn-repo': p => ({ isDis: p < T2_PHS.MAPPED })
       }
     };
     // --- 宣言的UI適用 ---
@@ -122,7 +122,13 @@
           if (v < T2_PHS.PREVIEWED) { 
             DOM.el(DOM.el("prevSec")?.querySelector('ob-cal-plot'))?.clear(); 
             NewDOM.buildStats(null, DOM.el("prevSec")?.querySelector('[data-ui="stats-tbl"]')); 
-          } 
+          }
+          if (v === T2_PHS.MAPPED) {
+            State.set({
+              "T2ST.prev.status": ["message", "検量線のプレビューと出力"],
+              "T2ST.repo.status": ["message", "グラフ展開用HTMLを作成"]
+            });
+          }
         },
         // ▼ T2: Asgn (データ読込) -----------------
         "T2ST.asgn.data.pxrfDT": () => { this.#renderSymbs(); this.#renderItems(); },

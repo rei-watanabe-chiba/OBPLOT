@@ -28,8 +28,8 @@
             <div data-ui="area">
               <div data-ui="mode-box"></div>
             </div>
+            <div id="prefBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.pref.status"></div>
           </details>
-          <div id="prefBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.pref.status"></div>
           <hr>
           <!-- raw -->
           <details id="rawSec" data-type="disabled">
@@ -157,6 +157,8 @@
             </div>
           </details>
           <div id="repoBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.repo.status"></div>
+           <div style="flex-grow: 1; min-height: calc(var(--unit) * 2);"></div>
+          <img src="https://pingu.jp/SOP/assets/img/kv/chara_14_1.png" alt="ピング" style="position: sticky; bottom: 0; display: block; margin: 0 auto; width: 200px;">
         </fieldset>
       </div>
     </main>
