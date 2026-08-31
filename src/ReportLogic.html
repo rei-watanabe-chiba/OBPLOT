@@ -240,7 +240,6 @@
       const optsDB = exVals(GLB.idx.key1);
       const optsItem = exVals(GLB.idx.p1);
       const optsGroup = exVals(GLB.idx.wd1);
-
       if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
         bu.rawGph = { ...getInitRawGph(), ...(bu.rawGph || {}) };
         if(!bu.symb) bu.symb = this.state.refs.symb;
