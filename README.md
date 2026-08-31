@@ -6,8 +6,8 @@
 [![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-V8-blue)](#) 
 [![Office Add-in](https://img.shields.io/badge/Office%20Add--in-Excel-green)](#)
 
-OBPLOTは、環境構築なしで標準アプリケーション上で動作するSPA(Single Page Application)ツールです。(#) 
-対応環境 : [![Google Sheets ](https://img.shields.io/badge/Google%20Sheets-GAS-green)](#) 
+OBPLOTは、環境構築なしで標準アプリケーション上で動作するSPA(Single Page Application)ツールです。
+対応環境 : [![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script- Google%20Sheets-blue)](#) 
 
 
 Googleアカウントをお持ちの方
