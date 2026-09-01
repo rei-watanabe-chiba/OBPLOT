@@ -1,0 +1,58 @@
+<!-- src/Sidebar_Dash.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">    
+    <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+    <?!= include("CSS"); ?>
+  </head>
+  <body data-theme="tab3">
+    <nav class="nav-tabs" id="nav">
+      <button class="tab-btn active" data-action="CoreAction.switchTab" data-target="tab3">ダッシュボード</button>
+    </nav>
+    <main class="scroll-y">
+      <div id="tab3" class="tab-content active">
+        <fieldset id="tab3Fieldset">
+          <details id="instSec" open>
+            <summary>データ読込</summary>
+            <div class="field-row">
+              <button id="btn-load-t3" data-action="T3Action.loadDB" data-type="primary">データを読込</button>
+            </div>
+          </details>
+          <div id="instBar" class="status-bar" data-status="hidden" data-bind-status="T3ST.inst.status"></div>
+          <hr>
+          <details id="repoSec">
+            <summary>レポート作成</summary>
+            <div class="field-row">
+              <button id="btn-repo" data-action="T3Action.openRepo" data-type="primary">ダッシュボードを展開</button>
+            </div>
+          </details>
+          <div id="repoBar" class="status-bar" data-status="hidden" data-bind-status="T3ST.repo.status"></div>
+          <div style="flex-grow: 1; min-height: calc(var(--unit) * 2);"></div>
+        </fieldset>
+      </div>
+    </main>
+    <dialog id="universalConfirm"><h3 id="uDialogTitle">確認</h3><p id="uDialogMessage"></p><div class="field-row"><button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button><button id="uDialogConfirmBtn" data-type="primary">OK</button></div></dialog>
+    <dialog id="idleToast"><h3 id="idleToastTitle"></h3><p id="idleToastMessage"></p><div class="field-row"><button id="idleToastOkBtn" data-type="primary">OK</button></div></dialog>
+    <script>
+      window.__INITIAL_SSID__ = "<?= typeof initialSsId !== 'undefined' ? initialSsId : '' ?>";
+      window.__APP_MODE__ = "tab3";
+      
+      const T3_SCHEMA = {
+        elements: [
+          { id: "instSec", activePhase: true, openPhase: p => p < T3_PHS.LOADED },
+          { id: "repoSec", activePhase: p => p >= T3_PHS.LOADED }
+        ]
+      };
+    </script>
+    <?!= include('Global'); ?>
+    <?!= include('PlatformAdapter'); ?>
+    <?!= include('Model'); ?>
+    <?!= include('Method'); ?>
+    <?!= include('Component'); ?>
+    <?!= include('CoreUIAutomator'); ?>
+    <?!= include('CoreAction'); ?>
+  </body>
+</html>
