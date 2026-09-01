@@ -9,7 +9,7 @@
   - **[How]**: 状態取得時の冗長性を排除するため、Proxy 経由の分割代入を利用する。各セクションの初期状態は階層スキーマとして厳格に保証する。
 - **プレゼンテーション (Phase-Aware Schema & Patch-based Binding)**: 
   - **[Why]**: DOMの破壊的再構築はWeb Componentsの参照ロストを引き起こし、命令的なDOM操作は保守性のボトルネックとなるため。
-  - **[How]**: 各画面専用の `SCHEMA` オブジェクトにフェーズ制約（`activePhase`, `disablePhase` 等）を宣言。同時に `data-bind-*` 属性を用いて、値、選択肢、コンポーネントソース、動的フォームなどをすべて宣言的にバインディングし、`CoreUIAutomator` を介してリアルタイムかつ差分のみをPatch同期する。
+  - **[How]**: 各画面専用の `SCHEMA` オブジェクトにフェーズ制約（`activePhase`, `disablePhase` 等）を宣言。同時に `data-bind-*` 属性を用いて、値、選択肢、コンポーネントソース、動的フォーム、エラーハイライト、統計データなどをすべて宣言的にバインディングし、`CoreUIAutomator` を介してリアルタイムかつ差分のみをPatch同期する。
 - **汎用コアの完全抽象化 (Dependency Injection)**:
   - **[Why]**: 将来的にコア層（A）を独立したライブラリとして配布するためには、コア内部から特化ツール（B/C）固有の知識（ドメインや名前空間）を完全に排除する必要があるため。
   - **[How]**: `CoreAction` に `configResolver` を実装。ツール（呼び出し元）側が初期化時に「自身の設定」を注入（DI）することで、コア側には一切の分岐処理を持たせないアーキテクチャを実現する。
@@ -28,7 +28,7 @@
    - **[Why]**: テスト容易性と保守性の担保。処理の重複を防ぐ。
    - **[Rule]**: DOM APIやGAS通信 (`API.fetchData`等) を一切混入させず、ドメイン固有処理は `T1T2_Method` / `T3_Method` へ、汎用計算は `CoreMethod` へ完全分離する。
 2. **派生状態（Derived State）の厳守**:
-   - **[Why]**: アクション内で直接DOMを書き換えるレガシー処理は、単方向データフローのアーキテクチャと競合し、UIの不整合を生むため。
+   - **[Why]**: アクション内で直接DOMを書き換える処理は、単方向データフローのアーキテクチャと競合し、UIの不整合を生むため。
    - **[Rule]**: ユーザー操作やAPIから得た生データを元に、UI表示用のデータ（選択肢リストやグラフソース等）を計算し、それを `State` の別パス（派生状態）として保存する。画面の描画はすべてバインディングに委譲する。
 3. **アクション・パイプラインの統合利用**:
    - **[Why]**: 確認ダイアログやステータス制御のロジックが各所に散在すると、コードの肥大化と復元（Undo）漏れのリスクが生じるため。
@@ -42,7 +42,7 @@
 
 ## 4. アーキテクチャ・パイプライン（データフロー）
 - **[アクション基盤]**: `User Action` -> `CoreAction (Global Router & Confirm/Lock Pipeline)` -> `Domain Action` <-> `API / CoreMethod`
-- **[UI同期基盤]**: `State.set` -> `CoreUIAutomator` -> `[Subscribe & Patch Binding (src/opts/fields...)]` -> `Web Components / DOM`
+- **[UI同期基盤]**: `State.set` -> `CoreUIAutomator` -> `[Subscribe & Patch Binding (src/opts/fields/stats/errs...)]` -> `Web Components / DOM`
 
 ## 5. フェーズ・ステートマシン（状態遷移定義）
 - **Tab 1 (データ抽出)**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
@@ -67,5 +67,5 @@
   - `Report.html` / `Report_Schema.html` / `ReportApp.html` / `ReportCSS.html`
 
 ## 7. 開発状況と次ステップ
-- **現在の状況**: Phase 2 完了。汎用コアのDI化および宣言的UI制御の完全移行を達成し、Tab1・Tab2層の安定動作を確認。
-- **次ステップ**: Tab3（ダッシュボード・レポート層）の改修および動作確認。
+- **現在の状況**: Tab1、Tab2、Tab3およびReport（ダッシュボード・レポート層）すべての基本機能およびPDF出力までの動作確認を完了。
+- **次ステップ**: レガシーコード（直接的DOM操作や旧制御フロー等）の完全な洗い出しとパージ（最適化クリーンアップ）、およびビルドパイプライン分割とGASライブラリ化の確立。
