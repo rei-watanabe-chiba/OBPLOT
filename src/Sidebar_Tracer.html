@@ -63,7 +63,7 @@
             <summary>データ読込・選択</summary>
             <div id="asgnSecArea">
               <label>データセット選択</label>
-              <ob-multi-select data-bind="T2ST.asgn.refs.filter" data-bind-opts="T2ST.asgn.refs.available"></ob-multi-select>
+              <ob-multi-select data-change-item="T2Action.tglDB" data-change-all="T2Action.tglAllDB" data-bind="T2ST.asgn.refs.filter" data-bind-opts="T2ST.asgn.refs.available"></ob-multi-select>
             </div>
             <div class="field-row">
               <button id="btn-load-db" data-action="T2Action.loadDB" data-type="primary">データを読込</button>
@@ -103,7 +103,7 @@
                 </div>
               </div>
               <label>対象Item</label>
-              <ob-multi-select id="prevItemBox" data-bind="T2ST.prev.refs.itemMap"></ob-multi-select>
+              <ob-multi-select id="prevItemBox" data-change-item="T2Action.tglPrevItem" data-change-all="T2Action.tglAllPrevItem" data-bind="T2ST.prev.refs.itemMap"></ob-multi-select>
               <div class="field-row">
                 <button id="btn-make-prev" data-action="T2Action.buildPrev" data-type="primary">プレビュー更新</button>
               </div>
@@ -117,9 +117,9 @@
                   </div>
                 </div>
                 <label>Obsidianモード計測値</label>
-                <ob-multi-select id="t2PrevModeBox" data-bind="T2ST.calb.refs.modeMap"></ob-multi-select>
+                <ob-multi-select id="t2PrevModeBox" data-change-item="T2Action.tglPrevMode" data-change-all="T2Action.tglAllPrevMode" data-bind="T2ST.calb.refs.modeMap"></ob-multi-select>
                 <label>検量線適用対象</label>
-                <ob-multi-select id="t2PrevCalElmBox" data-bind="T2ST.calb.refs.calElms"></ob-multi-select>
+                <ob-multi-select id="t2PrevCalElmBox" data-change-item="T2Action.tglCalElm" data-change-all="T2Action.tglAllCalElm" data-bind="T2ST.calb.refs.calElms"></ob-multi-select>
                 <div class="field-row">
                   <div id="t2CalLodBox" class="field-col"></div>
                   <div id="t2CalTglBox" class="field-col"></div>
@@ -132,9 +132,9 @@
           <details id="stdzSec">
             <summary>標準化と出力</summary>
             <label>対象Item（検量線計算用）</label>
-            <ob-multi-select id="stdzItemBox" data-bind="T2ST.stdz.refs.itemMap"></ob-multi-select>
+            <ob-multi-select id="stdzItemBox" data-change-item="T2Action.tglStdzItem" data-change-all="T2Action.tglAllStdzItem" data-bind="T2ST.stdz.refs.itemMap"></ob-multi-select>
             <label>Obsidianモード計測値</label>
-            <ob-multi-select id="t2StdzModeBox" data-bind="T2ST.stdz.refs.modeMap"></ob-multi-select>
+            <ob-multi-select id="t2StdzModeBox" data-change-item="T2Action.tglStdzMode" data-change-all="T2Action.tglAllStdzMode" data-bind="T2ST.stdz.refs.modeMap"></ob-multi-select>
             <div class="field-row">
               <div id="t2StdzLodBox" class="field-col"></div>
             </div>

@@ -65,6 +65,7 @@
       try {
         State.set(statPath, ["loading", "環境確認中..."]);
         const curShts = await API.getWbState(ssId);
+        // ※Phase2: Mtd.Util は CoreMethod.Util へ分離済み
         const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, activeTab);
         if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
         

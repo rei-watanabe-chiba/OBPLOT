@@ -20,7 +20,7 @@
     },
     T2: {
       elements: [
-        { id: "asgnSec", openPhase: p => p < T2_PHS.FILTERED },
+        { id: "asgnSec", activePhase: p => true, openPhase: p => p < T2_PHS.FILTERED },
         { id: "btn-fltr-db", activePhase: p => p >= T2_PHS.LOADED },
         { id: "asgnSecArea", visiblePhase: p => p >= T2_PHS.LOADED },
 

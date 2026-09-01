@@ -1,9 +1,33 @@
 <!-- src/T1T2_Action.html -->
 <script>
-  // --- T1 特化アクション ---
   class T1Action {
     static get ssId() { return State.get("GLB.ssId"); }
     
+    // --- 独自のイベントフック回収 ---
+    static checkT1Pref(tgt) {
+      const mode = tgt.value;
+      if (!mode) return;
+      const phs = State.get("T1ST.phase"), isInit = phs === T1_PHS.INIT, isInvalid = phs >= T1_PHS.INVALID;
+      if (isInvalid) { 
+        const errStat = ["error", "設定変更検知: リストの再生成・検証が必要です"];
+        State.set({ "T1ST.raw.status": errStat, "T1ST.raw.cachedStatus": errStat, "T1ST.extr.status": ["hidden", ""] });
+      }
+      State.set({ "T1ST.pref.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出対応" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
+    }
+    static renewRawRefs(tgt) {
+      State.set(`T1ST.raw.refs.${tgt.dataset.field}`, tgt.value);
+      T1Action.checkRawRefs();
+    }
+    static checkRawRefs() {
+      const flags = CoreMethod.Util.validateSelect(GLB.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
+      State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") });
+    }
+    static checkExtrRefs() {
+      const isErr = !(State.get(`T1ST.extr.refs.${GLB.idx.key1}`)?.trim());
+      State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""] }); 
+    }
+
+    // --- 非同期アクション ---
     static async loadRaw() {
       if (!(await NewDOM.confirm("確認", State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？"))) return;
       await CoreAction.withAsyncLock("T1ST.raw.status", async () => {
@@ -13,7 +37,6 @@
         T1Action.checkRawRefs(); return message; 
       });
     }
-
     static async stateDI(rawDT, act = "make") {
       const outData = Mtd.T1.FVald.valdList(rawDT, CoreMethod.Util.buildHeader('filelist'), GLB.validModes, State.get("T1ST.pref.refs.mode"));
       const isErr = outData.slice(1).some(r => r.at(-1) !== ""); 
@@ -25,19 +48,16 @@
       if (!isErr && act !== "extract") T1Action.checkExtrRefs();
       return { isErr, outData, statArr };
     }
-
     static async makeList() {
       T1Action.checkRawRefs();
       const { raw } = State.proxy.T1ST;
       if (raw.flags.some(Boolean) || !(await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？"))) return;
       await CoreAction.withAsyncLock("T1ST.raw.status", async () => (await T1Action.stateDI(CoreMethod.Util.remapArry(raw.data, GLB.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), CoreMethod.Util.buildHeader('rawFile')), "make")).statArr);
     }
-
     static async valdList() {
       if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？")) return;
       await CoreAction.withAsyncLock("T1ST.raw.status", async () => (await T1Action.stateDI((await API.fetchDT(T1Action.ssId, GLB.appShts.filelist, 5, 5)).data, "validate")).statArr);
     }
-
     static async runExtr() {
       if (!await NewDOM.confirm("確認", "「抽出データ」を上書きしますか？")) return;
       await CoreAction.withAsyncLock("T1ST.extr.status", async () => {
@@ -50,7 +70,6 @@
         State.set("T1ST.phase", T1_PHS.EXTRACT); return `抽出: ${outData.length - 1} 件`;
       });
     }
-
     static async pushExtr() {
       if (!await NewDOM.confirm("確認", "tracer5iシートに格納しますか？")) return;
       await CoreAction.withAsyncLock("T1ST.extr.status", async () => {
@@ -62,22 +81,41 @@
         State.set("T1ST.phase", T1_PHS.OUTPUT); return `格納完了: ${extrRes.data.length - 1} 件`;
       });
     }
-
-    static checkRawRefs() {
-      const flags = CoreMethod.Util.validateSelect(GLB.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
-      State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") });
-    }
-
-    static checkExtrRefs() {
-      const isErr = !(State.get(`T1ST.extr.refs.${GLB.idx.key1}`)?.trim());
-      State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""] }); 
-    }
   }
 
   // --- T2 特化アクション ---
   class T2Action {
     static get ssId() { return State.get("GLB.ssId"); }
 
+    // --- マルチセレクトのイベント回収 ---
+    static tglMulti(tgt, statePath) {
+      const cntr = tgt.closest('ob-multi-select');
+      if (!cntr) return;
+      const itemCbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
+      if (allCb) allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
+      State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
+    }
+    static tglAllMulti(tgt, statePath) {
+      const cntr = tgt.closest('ob-multi-select');
+      if (!cntr) return;
+      const itemCbs = cntr.querySelectorAll('.dataset-cb');
+      itemCbs.forEach(cb => cb.checked = tgt.checked);
+      State.set(statePath, tgt.checked ? [...itemCbs].map(cb => cb.value) : []);
+    }
+    static tglDB(tgt) { this.tglMulti(tgt, "T2ST.asgn.refs.filter"); }
+    static tglAllDB(tgt) { this.tglAllMulti(tgt, "T2ST.asgn.refs.filter"); }
+    static tglPrevMode(tgt) { this.tglMulti(tgt, "T2ST.calb.refs.modeMap"); }
+    static tglAllPrevMode(tgt) { this.tglAllMulti(tgt, "T2ST.calb.refs.modeMap"); }
+    static tglCalElm(tgt) { this.tglMulti(tgt, "T2ST.calb.refs.calElms"); }
+    static tglAllCalElm(tgt) { this.tglAllMulti(tgt, "T2ST.calb.refs.calElms"); }
+    static tglPrevItem(tgt) { this.tglMulti(tgt, "T2ST.prev.refs.itemMap"); }
+    static tglAllPrevItem(tgt) { this.tglAllMulti(tgt, "T2ST.prev.refs.itemMap"); }
+    static tglStdzMode(tgt) { this.tglMulti(tgt, "T2ST.stdz.refs.modeMap"); }
+    static tglAllStdzMode(tgt) { this.tglAllMulti(tgt, "T2ST.stdz.refs.modeMap"); }
+    static tglStdzItem(tgt) { this.tglMulti(tgt, "T2ST.stdz.refs.itemMap"); }
+    static tglAllStdzItem(tgt) { this.tglAllMulti(tgt, "T2ST.stdz.refs.itemMap"); }
+
+    // --- 非同期アクション ---
     static async loadDB() {
       await CoreAction.withAsyncLock("T2ST.asgn.status", async () => {
         State.set("T2ST.asgn.status", ["loading", "処理中..."]);
@@ -90,7 +128,6 @@
         return `読込完了: database ${dbs.length}件`;
       });
     }
-
     static async fltrDB() {
       await CoreAction.withAsyncLock("T2ST.asgn.status", async () => {
         const { asgn } = State.proxy.T2ST;
@@ -100,7 +137,6 @@
         State.set({ "T2ST.asgn.data.pxrfDT": pxrfDT, "T2ST.asgn.data.wdxrfDT": wdxrfDT, "T2ST.phase": T2_PHS.FILTERED }); return "データ更新";
       });
     }
-
     static async setSymb() { await CoreAction.withAsyncLock("T2ST.symb.status", async () => { State.set("T2ST.phase", T2_PHS.MAPPED); return "シンボル確定"; }); }
     static async resetSymb() { State.reset("T2ST.symb.refs.rls"); }
     
@@ -110,7 +146,6 @@
       if (!await NewDOM.confirm("確認", "リセットしますか？")) return (tgtSelect.value = oldVal);
       State.set({ "T2ST.symb.refs.baseKey": newVal }); State.reset("T2ST.symb.refs.rls");
     }
-
     static addSymb() { State.set("T2ST.symb.refs.rls", [...(State.get("T2ST.symb.refs.rls") || []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
     static removeSymb(tgtBtn) {
       const key = tgtBtn.dataset.ruleKey;
@@ -133,7 +168,6 @@
         return ["message", "検量線とデータ補正のプレビュー"];
       });
     }
-
     static async saveCorr() {
       await CoreAction.withAsyncLock("T2ST.stdz.status", async () => {
         const { asgn, stdz } = State.proxy.T2ST;
@@ -149,7 +183,6 @@
         State.set({ "T2ST.asgn.data.corrDT": updData, "T2ST.stdz.refs.saveIndexName": "" }); return `補正値を${isDup ? '上書き' : '保存'}しました`;
       });
     }
-
     static async pushStdz() {
       await CoreAction.withAsyncLock("T2ST.stdz.status", async () => {
         const { asgn, stdz } = State.proxy.T2ST;
@@ -160,7 +193,7 @@
       });
     }
 
-    // --- DOM描画制御 (旧 UIStateUpdaterからの移行) ---
+    // --- DOM描画制御 (副作用のUI処理) ---
     static renderSymbsAndItems() { this.renderSymbs(); this.renderItems(); }
     static renderSymbs() {
       const baseDT = State.get("T2ST.asgn.data.pxrfDT"), baseKey = State.get("T2ST.symb.refs.baseKey"), symbElm = document.getElementById("symbTbl");
@@ -184,25 +217,21 @@
     }
   }
 
-  // --- グローバル登録 ---
+  // --- グローバル登録と初期化 ---
   window.T1Action = T1Action;
   window.T2Action = T2Action;
 
-  // --- T1/T2 初期化プロシージャ ---
   class AppTracerInit {
     static async start() {
       const urlParams = new URLSearchParams(window.location.search);
       const activeMode = window.__APP_MODE__ || urlParams.get('mode') || 'tab1';
       
-      // ルーターの起動
       CoreAction.initGlobalRouter({ CoreAction, T1Action, T2Action });
 
-      // Schema UIの初期化
       const automatorT1 = new CoreUIAutomator(T1T2_SCHEMA.T1, 'T1ST');
       const automatorT2 = new CoreUIAutomator(T1T2_SCHEMA.T2, 'T2ST');
 
-      // T1/T2 固有コンポーネントの初回構築
-      NewDOM.buildFormFields([{ type: "select", opts: GLB.confMods, bind: "T1ST.pref.refs.mode", hasEmpty: false }], "t1ModeBox");
+      NewDOM.buildFormFields([{ type: "select", opts: GLB.confMods, bind: "T1ST.pref.refs.mode", change: "T1Action.checkT1Pref", hasEmpty: false }], "t1ModeBox");
       NewDOM.buildFormFields(GLB.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })), "t1ExtrBox");
       NewDOM.buildFormFields([{ type: "select", opts: GLB.symbAxes, change: "T2Action.checkAxis", hasEmpty: false }], "t2AxisBox");
       NewDOM.buildFormFields([{ type: "select", bind: "T2ST.prev.refs.val", hasEmpty: false, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }], "t2PrevValBox");
@@ -218,20 +247,17 @@
       automatorT1.build();
       automatorT2.build();
 
-      // UI同期の限定購読 (過剰発火防止)
+      // UI同期の限定購読
       State.subscribe("T1ST.phase", () => automatorT1.update());
       State.subscribe("T1ST.raw.flags", () => automatorT1.update());
       State.subscribe("T1ST.extr.flags", () => automatorT1.update());
       State.subscribe("T2ST.phase", () => automatorT2.update());
 
-      // 副作用の購読（旧 UIStateUpdaterからの移行）
-      State.subscribe("T1ST.pref.refs.mode", v => {
-        State.set({ "T1ST.pref.status": ["message", v === "Dual" ? "Obsidian/mudrockセット抽出" : "1ファイル単位抽出"], "T1ST.phase": State.get("T1ST.phase") >= T1_PHS.INVALID ? T1_PHS.INVALID : T1_PHS.READY });
-      });
+      // 特化型副作用の購読
       State.subscribe(`T1ST.extr.refs.${GLB.idx.key1}`, () => T1Action.checkExtrRefs());
       State.subscribe("T1ST.raw.data", data => {
         const bx = document.getElementById("t1RawBox");
-        if (data?.[0]) NewDOM.buildFormFields(GLB.fileFields.map(f => ({ type: "select", label: f.label, bind: `T1ST.raw.refs.${f.key}`, change: "T1Action.checkRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })), bx, true);
+        if (data?.[0]) NewDOM.buildFormFields(GLB.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "T1Action.renewRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })), bx, true);
         else if (bx) bx.replaceChildren();
       });
       State.subscribe("T2ST.asgn.data.pxrfDT", () => T2Action.renderSymbsAndItems());
@@ -278,16 +304,10 @@
           }
         }
       };
-
       CoreAction.switchTab(activeMode, hooks);
     }
   }
 
-  // 自動起動
-  if (typeof Office !== 'undefined') {
-    Office.onReady(() => AppTracerInit.start());
-  } else {
-    if (document.readyState === 'loading') { window.addEventListener("DOMContentLoaded", () => AppTracerInit.start()); } 
-    else { AppTracerInit.start(); }
-  }
+  if (typeof Office !== 'undefined') { Office.onReady(() => AppTracerInit.start()); } 
+  else { if (document.readyState === 'loading') { window.addEventListener("DOMContentLoaded", () => AppTracerInit.start()); } else { AppTracerInit.start(); } }
 </script>

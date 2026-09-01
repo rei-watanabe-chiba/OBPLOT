@@ -1,6 +1,5 @@
 <!-- src/T1T2_Method.html -->
 <script>
-  // Mtdオブジェクトは CoreMethod.html 等で初期化されている前提とし、プロパティを拡張・マージします
   window.Mtd = window.Mtd || {};
   
   Object.assign(window.Mtd, {
@@ -41,7 +40,7 @@
             const entry = map.get(r[5]) || { id: r[2], files: {} };
             entry.files[String(r[1]).toLowerCase()] = r[0]; map.set(r[5], entry); return map;
           }, new Map());
-          const obKeys = Mtd.Util.sortKeysByVal(GLB.obsidianIndex), mdKeys = Mtd.Util.sortKeysByVal(GLB.mudrockIndex);
+          const obKeys = CoreMethod.Util.sortKeysByVal(GLB.obsidianIndex), mdKeys = CoreMethod.Util.sortKeysByVal(GLB.mudrockIndex);
           const fmt = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
           const extract = (file, keys, idxObj) => {
             const r = resMap.get(String(file ?? ""));
@@ -52,7 +51,7 @@
               return acc;
             }, { vals: [], errs: [] });
           };
-          return [Mtd.Util.buildHeader('tracer5i'), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+          return [CoreMethod.Util.buildHeader('tracer5i'), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
             const ob = extract(files.obsidian, obKeys, GLB.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.mudrockIndex);
             return [scanId, extrRefs[GLB.idx.key1], id, extrRefs[GLB.idx.p1], extrRefs[GLB.idx.p2], ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
           })];
@@ -73,8 +72,8 @@
     T2: {
       mgmtDT: class {
         static loadDB(pxrfDT, wdxrfDT) {
-          const pObjs = Mtd.Util.toObjArray(pxrfDT);
-          const wObjs = Mtd.Util.toObjArray(wdxrfDT);
+          const pObjs = CoreMethod.Util.toObjArray(pxrfDT);
+          const wObjs = CoreMethod.Util.toObjArray(wdxrfDT);
           const { key1: k1, key2: k2, wd1: w1, wd2: w2 } = GLB.idx;
           const wMap = new Map(wObjs.map(o => [`${String(o[k1])}_${String(o[k2])}`, o]));
           const dbs = new Set();
@@ -106,10 +105,10 @@
           let prevDT = [], statsDT = null;
           if (conf.graphType === 'calibration' && conf.calibVal) {
              prevDT = this.buildPrev(pDT, wDT, { ...conf, val: conf.calibVal });
-             statsDT = Mtd.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), Mtd.Util.getValidNums(prevDT.map(pt => pt.err)));
+             statsDT = CoreMethod.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), CoreMethod.Util.getValidNums(prevDT.map(pt => pt.err)));
           } else if (conf.graphType === 'discrimination' && conf.discrXVal && conf.discrYVal) {
              const calibBase = this.buildPrev(pDT, wDT, { ...conf, val: GLB.valElms[0] });
-             const mapPts = (wList, pList) => [...wList.map(w => ({ ...w, x: Mtd.Calc.evaluate(conf.discrXVal, w), y: Mtd.Calc.evaluate(conf.discrYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pList.map(p => ({ ...p, x: Mtd.Calc.evaluate(conf.discrXVal, p), y: Mtd.Calc.evaluate(conf.discrYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
+             const mapPts = (wList, pList) => [...wList.map(w => ({ ...w, x: CoreMethod.Calc.evaluate(conf.discrXVal, w), y: CoreMethod.Calc.evaluate(conf.discrYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pList.map(p => ({ ...p, x: CoreMethod.Calc.evaluate(conf.discrXVal, p), y: CoreMethod.Calc.evaluate(conf.discrYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
              prevDT = mapPts(wDT, calibBase);
           }
           return { prevDT, statsDT };
@@ -134,7 +133,7 @@
               if (cfs?.[elm] && val != null) val = (val - cfs[elm].int) / cfs[elm].slp;
               pDT[elm] = val; pDT[`${elm}_Err`] = r[`${pfx}_${elm}_Err`] ?? null;
             });
-            const xVal = Mtd.Calc.evaluate(conf.val, w), yVal = Mtd.Calc.evaluate(conf.val, pDT);
+            const xVal = CoreMethod.Calc.evaluate(conf.val, w), yVal = CoreMethod.Calc.evaluate(conf.val, pDT);
             acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
             return acc;
           }, []);
@@ -142,7 +141,7 @@
         static getMinMap(pxrfDT, conf) {
           return Object.fromEntries(GLB.valElms.map(elm => {
             const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
-            const nums = Mtd.Util.getValidNums(pxrfDT.map(r => r[`${pfx}_${elm}`]), true);
+            const nums = CoreMethod.Util.getValidNums(pxrfDT.map(r => r[`${pfx}_${elm}`]), true);
             return [elm, nums.length ? Math.min(...nums) : null];
           }));
         }
@@ -160,7 +159,7 @@
                 if (v != null) { acc.w.push(Number(w[elm])); acc.p.push(v); }
                 return acc;
               }, { w: [], p: [] });
-              return [elm, Mtd.Calc.calcCalib(vList.w, vList.p)];
+              return [elm, CoreMethod.Calc.calcCalib(vList.w, vList.p)];
             }).filter(([, v]) => v));
           }
           const r = conf.corrDT?.find(rw => rw[0] === conf.correction);
@@ -173,7 +172,7 @@
       },
       mgmStdz: class {
         static genNewPxrf(pxrfDT, modeMap) {
-          const hdr = Mtd.Util.buildHeader('pxrf');
+          const hdr = CoreMethod.Util.buildHeader('pxrf');
           const data = pxrfDT.map(r => {
             const row = [r['計測ID'], r[GLB.idx.key1], r[GLB.idx.key2], r[GLB.idx.p1], r[GLB.idx.p2], r[GLB.idx.wd1], r[GLB.idx.wd2]];
             GLB.valElms.forEach(elm => {
@@ -203,7 +202,7 @@
               const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
               if (v != null) { wArr.push(Number(w[elm])); pArr.push(v); }
             });
-            const cfs = Mtd.Calc.calcCalib(wArr, pArr);
+            const cfs = CoreMethod.Calc.calcCalib(wArr, pArr);
             res.push(cfs?.slp ?? "", cfs?.int ?? "");
           });
           return res;
