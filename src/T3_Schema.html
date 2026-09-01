@@ -2,10 +2,10 @@
 <script>
   const T3_SIDEBAR_SCHEMA = {
     elements: [
-      { id: "instSec", activePhase: p => true, openPhase: p => p < T3_PHS.LOADED },
-      { id: "btn-load-t3", activePhase: p => true },
-      { id: "repoSec", activePhase: p => p >= T3_PHS.LOADED },
-      { id: "btn-repo", activePhase: p => p >= T3_PHS.LOADED }
+      { id: "instSec", activePhase: p => true, disablePhase: p => false, openPhase: p => p < T3_PHS.LOADED },
+      { id: "btn-load-t3", activePhase: p => true, disablePhase: p => false },
+      { id: "repoSec", activePhase: p => p >= T3_PHS.LOADED, disablePhase: p => p < T3_PHS.LOADED },
+      { id: "btn-repo", activePhase: p => p >= T3_PHS.LOADED, disablePhase: p => p < T3_PHS.LOADED }
     ]
   };
 </script>

@@ -19,17 +19,11 @@
     }
     static checkRawRefs() {
       const flags = CoreMethod.Util.validateSelect(GLB.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
-      State.set({ 
-        "T1ST.raw.flags": flags, 
-        "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") 
-      });
+      State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") });
     }
     static checkExtrRefs() {
       const isErr = !(State.get(`T1ST.extr.refs.${GLB.idx.key1}`)?.trim());
-      State.set({ 
-        "T1ST.extr.flags": [isErr, false, false], 
-        "T1ST.extr.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""] 
-      }); 
+      State.set({ "T1ST.extr.flags": [isErr, false, false], "T1ST.extr.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""] }); 
     }
 
     static async loadRaw() {
@@ -83,9 +77,7 @@
         const extrRes = await API.fetchDT(T1Action.ssId, GLB.appShts.extract);
         const trcRes = await API.fetchDT(T1Action.ssId, GLB.rawShts.tracer5i).catch(() => ({ data: [CoreMethod.Util.buildHeader('tracer5i')] }));
         const { isDup, data: mrgData } = Mtd.T1.PVald.checkPxrf(trcRes.data, extrRes.data);
-        if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？")) {
-           return State.get("T1ST.extr.status"); // nested confirm cancellation
-        }
+        if (isDup && !await NewDOM.confirm("確認", "重複IDがあります。上書きしますか？")) return State.get("T1ST.extr.status");
         await API.writeData(T1Action.ssId, GLB.rawShts.tracer5i, isDup ? mrgData : extrRes.data.slice(1), isDup ? "clear" : ["append"]);
         State.set("T1ST.phase", T1_PHS.OUTPUT); 
         return `格納完了: ${extrRes.data.length - 1} 件`;
@@ -165,21 +157,25 @@
     }
 
     static async buildPrev() {
-      await CoreAction.withAsyncLock("T2ST.prev.status", async () => {
-        const { prev, calb, asgn } = State.proxy.T2ST;
+      await CoreAction.confirmAndExecute("T2ST.prev.status", "確認", "プレビューを更新しますか？", async () => {
+        const { prev, calb, asgn, symb } = State.proxy.T2ST;
         const conf = { ...prev.refs, ...calb.refs, corrDT: asgn.data.corrDT, graphType: 'calibration', calibVal: prev.refs.val }; 
         const { prevDT, statsDT } = Mtd.T2.mgmPrev.generateChartData(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf);
         if (!prevDT.length) throw new Error("対象データなし");
-        State.set({ "T2ST.prev.data.correctionLogic": statsDT, "T2ST.prev.data.statsDT": statsDT, "T2ST.prev.data.prevDT": prevDT, "T2ST.phase": T2_PHS.PREVIEWED }); 
+        
+        State.set({ 
+          "T2ST.prev.data.correctionLogic": statsDT, 
+          "T2ST.prev.data.statsDT": statsDT, 
+          "T2ST.prev.data.prevDT": prevDT,
+          "T2ST.prev.data.chartSrc": { prevDT, statsDT, symb: symb.refs },
+          "T2ST.phase": T2_PHS.PREVIEWED 
+        }); 
         return ["message", "検量線とデータ補正のプレビュー"];
       });
     }
     static async saveCorr() {
       const idxName = State.get("T2ST.stdz.refs.saveIndexName")?.trim();
-      if (!idxName) {
-        State.set("T2ST.stdz.status", ["error", "名前が未入力です"]);
-        return;
-      }
+      if (!idxName) { State.set("T2ST.stdz.status", ["error", "名前が未入力です"]); return; }
       await CoreAction.confirmAndExecute("T2ST.stdz.status", "確認", `全対象元素の検量線を出力しますか？\n名前：${idxName}`, async () => {
         const { asgn, stdz } = State.proxy.T2ST;
         const isDup = asgn.data.corrDT?.slice(1).some(r => r[0] === idxName);
@@ -202,26 +198,29 @@
       });
     }
 
-    static renderSymbsAndItems() { this.renderSymbs(); this.renderItems(); }
-    static renderSymbs() {
-      const baseDT = State.get("T2ST.asgn.data.pxrfDT"), baseKey = State.get("T2ST.symb.refs.baseKey"), symbElm = document.getElementById("symbTbl");
-      if (!symbElm) return;
-      if (!baseDT || !baseDT.length) return symbElm.clear();
-      const vals = [...new Set(baseDT.map(d => d[baseKey]).filter(Boolean))];
-      symbElm.src = {
-        rls: State.get("T2ST.symb.refs.rls"),
-        optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors },
-        actsConf: { add: "T2Action.addSymb", remove: "T2Action.removeSymb", update: "T2Action.renewSymb"}
-      };
-    }
-    static renderItems() {
+    // --- DOM直接操作に代わる、UI用派生状態(Derived State)の計算 ---
+    static updateDerivedState() {
       const baseDT = State.get("T2ST.asgn.data.pxrfDT");
-      const pElm = document.getElementById("prevItemBox"), sElm = document.getElementById("stdzItemBox");
-      if (!baseDT?.length) { if(pElm) pElm.opts = []; if(sElm) sElm.opts = []; return; }
-      const items = [...new Set(baseDT.map(d => d[GLB.idx.p1]).filter(Boolean))];
-      if(pElm) pElm.opts = items;
-      if(sElm) sElm.opts = items;
-      State.set({ "T2ST.prev.refs.itemMap": items, "T2ST.stdz.refs.itemMap": items });
+      const baseKey = State.get("T2ST.symb.refs.baseKey");
+      const rls = State.get("T2ST.symb.refs.rls");
+
+      if (baseDT?.length) {
+        const items = [...new Set(baseDT.map(d => d[GLB.idx.p1]).filter(Boolean))];
+        State.set({
+          "T2ST.asgn.refs.availableItems": items,
+          "T2ST.prev.refs.itemMap": State.get("T2ST.prev.refs.itemMap")?.length ? State.get("T2ST.prev.refs.itemMap") : items,
+          "T2ST.stdz.refs.itemMap": State.get("T2ST.stdz.refs.itemMap")?.length ? State.get("T2ST.stdz.refs.itemMap") : items
+        });
+
+        const vals = [...new Set(baseDT.map(d => d[baseKey]).filter(Boolean))];
+        State.set("T2ST.symb.data.src", {
+          rls: rls,
+          optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors },
+          actsConf: { add: "T2Action.addSymb", remove: "T2Action.removeSymb", update: "T2Action.renewSymb"}
+        });
+      } else {
+        State.set({ "T2ST.asgn.refs.availableItems": [], "T2ST.symb.data.src": null });
+      }
     }
   }
 
@@ -244,6 +243,7 @@
       const automatorT1 = new CoreUIAutomator(T1T2_SCHEMA.T1, 'T1ST');
       const automatorT2 = new CoreUIAutomator(T1T2_SCHEMA.T2, 'T2ST');
 
+      // （※これらは初回静的構築用のため残置してもバインディングの邪魔にはなりません。動的更新される箇所はバインディングに移行）
       NewDOM.buildFormFields([{ type: "select", opts: GLB.confMods, bind: "T1ST.pref.refs.mode", change: "T1Action.checkT1Pref", hasEmpty: false }], "t1ModeBox");
       NewDOM.buildFormFields(GLB.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })), "t1ExtrBox");
       NewDOM.buildFormFields([{ type: "select", opts: GLB.symbAxes, change: "T2Action.checkAxis", hasEmpty: false }], "t2AxisBox");
@@ -261,14 +261,6 @@
       automatorT2.build();
 
       State.subscribe("T1ST.phase", () => automatorT1.update());
-      State.subscribe("T1ST.raw.flags", flags => {
-        NewDOM.inputs("t1RawBox", flags);
-        automatorT1.update();
-      });
-      State.subscribe("T1ST.extr.flags", flags => {
-        NewDOM.inputs("t1ExtrBox", flags);
-        automatorT1.update();
-      });
       State.subscribe("T2ST.phase", () => automatorT2.update());
 
       State.subscribe("GLB.isLocked", v => {
@@ -278,29 +270,24 @@
         if (fs2) fs2.disabled = v;
       });
 
+      // --- 派生状態（UI用データ）の自動更新監視 ---
       State.subscribe(`T1ST.extr.refs.${GLB.idx.key1}`, () => T1Action.checkExtrRefs());
+      
+      // 動的フォーム構築の派生更新
       State.subscribe("T1ST.raw.data", data => {
-        const bx = document.getElementById("t1RawBox");
-        if (data?.[0]) NewDOM.buildFormFields(GLB.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "T1Action.renewRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })), bx, true);
-        else if (bx) bx.replaceChildren();
+        if (data?.[0]) State.set("T1ST.raw.data.fields", GLB.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "T1Action.renewRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })));
+        else State.set("T1ST.raw.data.fields", []);
       });
-      State.subscribe("T2ST.asgn.data.pxrfDT", () => T2Action.renderSymbsAndItems());
-      State.subscribe("T2ST.symb.refs.baseKey", () => T2Action.renderSymbs());
-      State.subscribe("T2ST.symb.refs.rls", () => T2Action.renderSymbs());
       State.subscribe("T2ST.asgn.data.corrDT", data => {
         if (!data) return;
-        const bx = document.getElementById("t2CalCorrBox");
         const opts = [{ label: "新規検量線", val: "new" }, ...data.slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
-        NewDOM.buildFormFields([{ type: "select", bind: "T2ST.calb.refs.correction", hasEmpty: false, opts: opts }], bx, true);
+        State.set("T2ST.calb.data.corrFields", [{ type: "select", bind: "T2ST.calb.refs.correction", hasEmpty: false, opts: opts }]);
       });
-      State.subscribe("T2ST.prev.data.statsDT", statsDT => NewDOM.buildStats(statsDT, document.getElementById('prevStatsTbl')));
-      State.subscribe("T2ST.prev.data.prevDT", data => {
-        const bx = document.getElementById('prevChartBox');
-        let chartElm = bx?.querySelector('ob-cal-plot');
-        if (!chartElm && bx) { chartElm = document.createElement('ob-cal-plot'); bx.replaceChildren(chartElm); }
-        if (chartElm) chartElm.src = { prevDT: data, statsDT: State.get("T2ST.prev.data.statsDT"), symb: State.get("T2ST.symb.refs") };
-        if (data?.length && State.get("T2ST.phase") === T2_PHS.MAPPED) DOM.open("calbSec", false);
-      });
+
+      // シンボルとアイテムリストの派生更新
+      State.subscribe("T2ST.asgn.data.pxrfDT", () => T2Action.updateDerivedState());
+      State.subscribe("T2ST.symb.refs.baseKey", () => T2Action.updateDerivedState());
+      State.subscribe("T2ST.symb.refs.rls", () => T2Action.updateDerivedState());
 
       const hooks = {
         onBeforeInit: async (isSwitch, bu) => {

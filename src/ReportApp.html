@@ -1,16 +1,12 @@
 <!-- src/ReportApp.html -->
 <script>
-  // --- LocalStorage ---
   class DashBU {
     static K = "OBP_DASH_BU";
-    static save(refs) { localStorage.setItem(this.K, JSON.stringify(refs)); }
-    static load() { try { return JSON.parse(localStorage.getItem(this.K)); } catch(e){ return null; } }
-    static clear() { localStorage.removeItem(this.K); }
+    static save(refs) { StorageAPI.save(this.K, JSON.stringify(refs)); }
+    static load() { try { return JSON.parse(StorageAPI.load(this.K)); } catch(e){ return null; } }
+    static clear() { StorageAPI.clear(this.K); }
   }
 
-  const DASH_BU_KEY = "OBP_DASH_BU";
-
-  // --- 初期値 ---
   const getInitRawGph = () => {
     const fts = (GLB.defaultGraphStyle.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
     return {
@@ -23,9 +19,6 @@
   };
   const getDefPnl = () => ({ graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" });
 
-  // ==========================================
-  // ReportApp
-  // ==========================================
   class ReportApp {
     static state = {
       data: window.__INJECTED_DATA__ || { pxrfDT: [], wdxrfDT: [], corrDT: [] },
@@ -42,7 +35,6 @@
     
     static oldSymbAxis = GLB.symbBaseKey; 
 
-    // --- 初期化 ---
     static async init() {
       if (window.__IS_PRINT_TAB__) {
          this.state = window.__PRINT_STATE__;
@@ -52,10 +44,8 @@
          document.body.appendChild(loading);
          this.render(); return;
       }
-      const buStr = StorageAPI.load(DASH_BU_KEY);
-      let bu = null;
-      if (buStr) try { bu = JSON.parse(buStr); } catch(e) {}
-      
+
+      const bu = DashBU.load();
       const pxrf = this.state.data.pxrfDT || [];
       const exVals = (key) => {
         const vals = [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
@@ -69,11 +59,11 @@
 
       if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
         bu.rawGph = { ...getInitRawGph(), ...(bu.rawGph || {}) };
-        if(!bu.symb) bu.symb = this.state.refs.symb;
-        if(bu.panelGap === undefined || bu.panelGap === 16 || bu.panelGap === 12) bu.panelGap = 4;
-        if(!bu.calElms || bu.calElms.length === 0) bu.calElms = [...GLB.valElms]; 
+        if (!bu.symb) bu.symb = this.state.refs.symb;
+        if (bu.panelGap === undefined || bu.panelGap === 16 || bu.panelGap === 12) bu.panelGap = 4;
+        if (!bu.calElms || bu.calElms.length === 0) bu.calElms = [...GLB.valElms]; 
         
-        if(!bu.filters || Array.isArray(bu.filters)) {
+        if (!bu.filters || Array.isArray(bu.filters)) {
           bu.filters = { db: optsDB, item: optsItem, group: optsGroup };
         } else {
           bu.filters.db = initFltr(bu.filters.db, optsDB);
@@ -81,71 +71,21 @@
           bu.filters.group = initFltr(bu.filters.group, optsGroup);
         }
         
-        if(bu.useLOD === undefined) bu.useLOD = false;
+        if (bu.useLOD === undefined) bu.useLOD = false;
         bu.panels = (bu.panels || []).map(p => ({ ...getDefPnl(), ...p }));
         this.state.refs = bu;
       } else { 
-        StorageAPI.clear(DASH_BU_KEY);
+        DashBU.clear();
         this.state.refs.filters = { db: optsDB, item: optsItem, group: optsGroup };
       }
       this.oldSymbAxis = this.state.refs.symb.baseKey;
 
-      const mSchema = REPORT_SCHEMA.multiSelects;
-      mSchema.find(m => m.id === "boxFilterDB").opts = optsDB;
-      mSchema.find(m => m.id === "boxFilterItem").opts = optsItem;
-      mSchema.find(m => m.id === "boxFilterGroup").opts = optsGroup;
-      const setLbl = (id, text) => { const e = document.getElementById(id); if(e) e.textContent = text; };
-      setLbl("lblFilterDB", GLB.idx.key1); setLbl("lblFilterItem", GLB.idx.p1); setLbl("lblFilterGroup", GLB.idx.wd1);
-      
+      this.buildFormControls(optsDB, optsItem, optsGroup);
+      this.setupEventListeners();
       this.syncPanels();
-
-      const stateProvider = {
-        get: (path) => {
-          if (path === 'data') return this.state.data;
-          if (path.startsWith('activePanel.')) return this.activePanel?.[path.split('.')[1]] ?? "";
-          return path.split('.').reduce((o, i) => o?.[i], this.state.refs);
-        },
-        set: (path, val) => {
-          if (path.startsWith('activePanel.')) {
-            if (this.activePanel) this.activePanel[path.split('.')[1]] = val;
-            if (['activePanel.graphType', 'activePanel.calibVal', 'activePanel.discrXVal', 'activePanel.discrYVal'].includes(path)) {
-              this.updatePanelLabels();
-            }
-          } else {
-            const keys = path.split('.'), last = keys.pop();
-            keys.reduce((o, i) => o[i], this.state.refs)[last] = val;
-          }
-        },
-        save: (isQueue) => isQueue ? this.queueSave() : this.saveState()
-      };
-
-      const actionRouter = {
-        execute: (btn, action) => {
-          if (typeof ReportApp[action] === 'function') ReportApp[action](btn);
-        },
-        executeHook: async (hook, target) => {
-          if (hook === 'checkSymbAxis') {
-            if (await NewDOM.confirm("確認", "リセットしますか？")) {
-               stateProvider.set('symb.baseKey', target.value);
-               this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
-               this.oldSymbAxis = target.value; 
-               this.renderSymbTable();
-               return true;
-            } else { 
-               target.value = this.oldSymbAxis; 
-               return false; 
-            }
-          }
-          return true;
-        }
-      };
-
-      this.automator = new CoreUIAutomator(REPORT_SCHEMA, stateProvider, RPT_CFG, actionRouter);
-      this.automator.build();
-      this.automator.bindEvents('dashSidebar');
-      
       this.renderSymbTable();
       this.render();
+
       window.addEventListener('resize', () => {
          clearTimeout(this.resizeTimer);
          this.resizeTimer = setTimeout(() => {
@@ -159,6 +99,122 @@
       });
     }
 
+    static buildFormControls(optsDB, optsItem, optsGroup) {
+      REPORT_SCHEMA.selects.forEach(conf => {
+        const opts = conf.optsFn ? conf.optsFn(this.state.data) : conf.opts;
+        NewDOM.buildFormFields([{ type: "select", bind: conf.bind, opts: opts, hasEmpty: conf.hasEmpty }], conf.id, true);
+      });
+
+      REPORT_SCHEMA.toggles.forEach(conf => {
+        NewDOM.buildToggle({ label: conf.label, bind: conf.bind }, conf.id, true);
+      });
+
+      const setM = (id, opts, refs) => {
+        const el = document.getElementById(id);
+        if (el) { el.opts = opts || []; el.refs = refs || []; }
+      };
+      setM("boxFilterDB", optsDB, this.state.refs.filters.db);
+      setM("boxFilterItem", optsItem, this.state.refs.filters.item);
+      setM("boxFilterGroup", optsGroup, this.state.refs.filters.group);
+      setM("boxGlobalCalElms", GLB.valElms, this.state.refs.calElms);
+
+      const setLbl = (id, text) => { const e = document.getElementById(id); if (e) e.textContent = text; };
+      setLbl("lblFilterDB", GLB.idx.key1); setLbl("lblFilterItem", GLB.idx.p1); setLbl("lblFilterGroup", GLB.idx.wd1);
+    }
+
+    static setupEventListeners() {
+      document.addEventListener("click", e => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn || btn.disabled) return;
+        const act = btn.dataset.action;
+        if (typeof ReportApp[act] === 'function') ReportApp[act](btn);
+      });
+
+      document.addEventListener("change", async e => {
+        // 【修正】チェックボックスを最優先で捕捉し、発生元(e.target)のcheckedを反映する
+        if (e.target.classList.contains('dataset-cb') || e.target.classList.contains('select-all-cb')) {
+          const ms = e.target.closest('ob-multi-select');
+          if (!ms) return;
+          
+          const cbs = [...ms.querySelectorAll('.dataset-cb')];
+          const isAllBtn = e.target.classList.contains('select-all-cb');
+          
+          if (isAllBtn) {
+            cbs.forEach(cb => cb.checked = e.target.checked);
+          } else {
+            const allCb = ms.querySelector('.select-all-cb');
+            if (allCb) allCb.checked = cbs.length > 0 && cbs.every(cb => cb.checked);
+          }
+          
+          const selVals = cbs.filter(cb => cb.checked).map(cb => cb.value);
+          
+          if (ms.id === "boxFilterDB") this.state.refs.filters.db = selVals;
+          else if (ms.id === "boxFilterItem") this.state.refs.filters.item = selVals;
+          else if (ms.id === "boxFilterGroup") this.state.refs.filters.group = selVals;
+          else if (ms.id === "boxGlobalCalElms") this.state.refs.calElms = selVals;
+          
+          ms.refs = selVals;
+          this.saveState();
+          return;
+        }
+
+        const tgt = e.target.closest('[data-bind], [data-gph]') || e.target;
+        if (!tgt) return;
+
+        const bPath = tgt.dataset.bind;
+        if (bPath) {
+          const val = tgt.type === "checkbox" ? tgt.checked : (tgt.type === "number" ? Number(tgt.value) : tgt.value);
+          
+          if (bPath === "symb.baseKey") {
+            if (val !== this.oldSymbAxis) {
+              if (await NewDOM.confirm("確認", "属性を変更するとシンボル設定がリセットされます。よろしいですか？")) {
+                this.state.refs.symb.baseKey = val;
+                this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
+                this.oldSymbAxis = val;
+                this.renderSymbTable();
+                this.saveState();
+              } else {
+                tgt.value = this.oldSymbAxis;
+              }
+              return;
+            }
+          }
+
+          if (bPath.startsWith("activePanel.")) {
+            const key = bPath.split(".")[1];
+            if (this.activePanel) this.activePanel[key] = val;
+            if (['graphType', 'calibVal', 'discrXVal', 'discrYVal'].includes(key)) {
+              this.updatePanelLabels();
+            }
+          } else {
+            const keys = bPath.split('.'), last = keys.pop();
+            keys.reduce((o, k) => o[k] ??= {}, this.state.refs)[last] = val;
+          }
+          this.saveState();
+          return;
+        }
+
+        const gKey = tgt.dataset.gph;
+        if (gKey) {
+          const numVal = Number(tgt.value);
+          this.state.refs.rawGph[gKey] = numVal;
+          document.querySelectorAll(`[data-gph="${gKey}"]`).forEach(el => { if (el !== tgt) el.value = tgt.value; });
+          this.queueSave();
+        }
+      });
+
+      document.addEventListener("input", e => {
+        const tgt = e.target;
+        const gKey = tgt.dataset.gph;
+        if (gKey) {
+          const numVal = Number(tgt.value);
+          this.state.refs.rawGph[gKey] = numVal;
+          document.querySelectorAll(`[data-gph="${gKey}"]`).forEach(el => { if (el !== tgt) el.value = tgt.value; });
+          this.queueSave();
+        }
+      });
+    }
+
     static updatePanelLabels() {
       const ap = this.activePanel;
       if (!ap) return;
@@ -169,7 +225,7 @@
         ap.title = (xV || yV) ? `${xV} vs ${yV}` : ""; 
         ap.xLabel = xV; ap.yLabel = yV;
       }
-      const sInp = (k, v) => { const el = document.querySelector(`[data-bind="activePanel.${k}"]`); if(el) el.value = v; };
+      const sInp = (k, v) => { const el = document.querySelector(`[data-bind="activePanel.${k}"]`); if (el) el.value = v; };
       sInp("title", ap.title); sInp("xLabel", ap.xLabel); sInp("yLabel", ap.yLabel);
       document.getElementById('panelConfigSec').dataset.graphtype = ap.graphType;
     }
@@ -179,15 +235,17 @@
       document.querySelectorAll('.tab-icon').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.sidebar-tab-pane').forEach(el => el.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById(tId).classList.add('active');
+      document.getElementById(tId)?.classList.add('active');
     }
+
     static switchSub(btn) {
       const tId = btn.dataset.target;
       document.querySelectorAll('.segment-btn').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.sub-pane').forEach(el => el.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById(tId).classList.add('active');
+      document.getElementById(tId)?.classList.add('active');
     }
+
     static printPDF() {
       const r = this.state.refs, d = this.state.data;
       const preCalc = r.panels.map(p => {
@@ -201,6 +259,7 @@
       const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${safeState}; window.__PRECALC_DATA__=${safePreCalc};<\/script>`);
       window.open(URL.createObjectURL(new Blob(['<!DOCTYPE html>' + htmlStr], { type: 'text/html' })), '_blank');
     }
+
     static resetSymb() { this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; this.renderSymbTable(); this.saveState(); }
     static addSymb() { 
       this.state.refs.symb.rls = [...this.state.refs.symb.rls, { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; 
@@ -219,8 +278,15 @@
         this.renderSymbTable(); this.saveState(); 
       }
     }
-    static saveState() { if (window.__IS_PRINT_TAB__) return; this.syncPanels(); StorageAPI.save(DASH_BU_KEY, JSON.stringify(this.state.refs)); this.render(); }
+
+    static saveState() { 
+      if (window.__IS_PRINT_TAB__) return; 
+      this.syncPanels(); 
+      DashBU.save(this.state.refs); 
+      this.render(); 
+    }
     static queueSave() { clearTimeout(this.gphTimer); this.gphTimer = setTimeout(() => this.saveState(), 100); }
+
     static get activePanel() { return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId); }
     static syncPanels() {
       const { gridRows, gridCols } = this.state.refs;
@@ -230,6 +296,7 @@
       this.state.refs.panels = activeIds.map(id => this.state.refs.panels.find(p => p.id === id));
       if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
     }
+
     static fitA4Scale() {
       if (window.__IS_PRINT_TAB__) return;
       const main = document.querySelector('.dash-main'), a4 = document.getElementById('a4Container');
@@ -238,6 +305,7 @@
       a4.style.transform = `scale(${scale})`;
       a4.style.marginBottom = `-${a4.offsetHeight * (1 - scale)}px`;
     }
+
     static buildGph() {
       const raw = this.state.refs.rawGph;
       const pt2px = pt => Number(pt) * 1.33;
@@ -260,12 +328,14 @@
         gap: { name: g_name, tick: g_tick, padT: finalPadT, padB: p_b, padL: p_l, padR: finalPadR }
       };
     }
+
     static renderSymbTable() {
       const d = this.state.data, r = this.state.refs, symbElm = document.getElementById('tblSymb');
       if (!symbElm || !d.pxrfDT?.length) return;
       const vals = [...new Set(d.pxrfDT.map(pt => pt[r.symb.baseKey]).filter(Boolean))];
       symbElm.src = { rls: r.symb.rls, optsConf: { target: [{ val: "", label: RPT_CFG.lbl.unsel }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "addSymb", remove: "removeSymb", update: "renewSymb"} };
     }
+
     static calcPanelSize(gph) {
       const grid = document.getElementById('dashGrid'), r = this.state.refs;
       grid.style.removeProperty('--panel-w'); grid.style.removeProperty('--panel-h');
@@ -293,13 +363,16 @@
       grid.style.setProperty('--panel-w', `${plotLen + totalPadX}px`);
       grid.style.setProperty('--panel-h', `${plotLen + totalPadY}px`);
     }
+
     static render() {
       const r = this.state.refs, cont = document.getElementById('a4Container');
       cont.style.setProperty('--col-count', r.gridCols); cont.style.setProperty('--row-count', r.gridRows);
       cont.style.setProperty('--panel-gap', `${(r.panelGap !== undefined ? Number(r.panelGap) : 4)}mm`);
       ['top','right','bottom','left'].forEach(p => cont.style.setProperty(`--margin-${p}`, `${r.margins[p]}mm`));
+      
       const gph = this.buildGph(), grid = document.getElementById('dashGrid');
       grid.innerHTML = ''; const chartsToDraw = [];
+      
       r.panels.forEach(p => {
         const div = document.createElement('div');
         div.className = `grid-panel ${(!window.__IS_PRINT_TAB__ && p.id === r.activePanelId) ? 'active' : ''}`;
@@ -309,6 +382,7 @@
         div.appendChild(chart); div.onclick = () => { r.activePanelId = p.id; this.saveState(); };
         grid.appendChild(div); chartsToDraw.push({ p, chart });
       });
+
       requestAnimationFrame(() => {
          this.fitA4Scale(); this.calcPanelSize(gph);
          requestAnimationFrame(() => {
@@ -328,17 +402,41 @@
             chartsToDraw.forEach((item, idx) => this.drawChart(item.p, item.chart, gph, idx));
          });
       });
+
       const ap = this.activePanel;
       if (ap && !window.__IS_PRINT_TAB__) {
         const pSec = document.getElementById('panelConfigSec');
         pSec.style.display = 'block';
         pSec.dataset.graphtype = ap.graphType;
-        this.automator.build(); 
-        const setVal = (b, v) => { const el = document.querySelector(`[data-bind="activePanel.${b}"]`); if(el) el.value = v || ""; };
-        setVal("graphType", ap.graphType); setVal("calibVal", ap.calibVal); setVal("discrXVal", ap.discrXVal); setVal("discrYVal", ap.discrYVal);
-        setVal("title", ap.title); setVal("xLabel", ap.xLabel); setVal("yLabel", ap.yLabel);
-      } else if (!window.__IS_PRINT_TAB__) { document.getElementById('panelConfigSec').style.display = 'none'; }
+        
+        const setVal = (b, v) => { const el = document.querySelector(`[data-bind="${b}"]`); if (el) el.value = v || ""; };
+        setVal("activePanel.graphType", ap.graphType); 
+        setVal("activePanel.calibVal", ap.calibVal); 
+        setVal("activePanel.discrXVal", ap.discrXVal); 
+        setVal("activePanel.discrYVal", ap.discrYVal);
+        setVal("activePanel.title", ap.title); 
+        setVal("activePanel.xLabel", ap.xLabel); 
+        setVal("activePanel.yLabel", ap.yLabel);
+      } else if (!window.__IS_PRINT_TAB__) { 
+        document.getElementById('panelConfigSec').style.display = 'none'; 
+      }
+
+      document.querySelectorAll('[data-bind]').forEach(el => {
+        const p = el.dataset.bind;
+        if (!p.startsWith('activePanel.')) {
+          const v = p.split('.').reduce((o, k) => o?.[k], this.state.refs);
+          if (el.type === 'checkbox') el.checked = !!v;
+          else if (v !== undefined) el.value = v;
+        }
+      });
+
+      document.querySelectorAll('[data-gph]').forEach(el => {
+        const k = el.dataset.gph;
+        const v = this.state.refs.rawGph[k];
+        if (v !== undefined) el.value = v;
+      });
     }
+
     static drawChart(panel, chart, gph, idx) {
       const r = this.state.refs, d = this.state.data;
       if (!d.pxrfDT?.length) return;
@@ -352,5 +450,6 @@
       chart.src = { prevDT, statsDT, symb: r.symb, gph: gph, panel: panel };
     }
   }
+
   window.addEventListener("DOMContentLoaded", () => ReportApp.init());
 </script>

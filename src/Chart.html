@@ -82,10 +82,10 @@
         });
       }
       const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
-      const { niceMin, niceMax, niceTicks } = Mtd.Util.calcScale(validPoints.map(d => d.x), validPoints.map(d => d.y));
+      const { niceMin, niceMax, niceTicks } = CoreMethod.Util.calcScale(validPoints.map(d => d.x), validPoints.map(d => d.y));
       const itv = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
       const fmtTick = v => { const tck = niceTicks.find(t => Math.abs(t.v - v) < 1e-8); return tck ? tck.f : v; };
-      const graphText = statsDT ? Mtd.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
+      const graphText = statsDT ? CoreMethod.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
       const plotDT = validPoints.map(d => {
         const rl = rls.find(r => r.target !== "" && r.target === d[baseKey]) || defRl;

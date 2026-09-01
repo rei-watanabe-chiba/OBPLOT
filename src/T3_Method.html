@@ -20,14 +20,15 @@
         
         if (conf.filters) {
           const { db, item, group } = conf.filters;
-          if (Array.isArray(db)) {
+          // 【修正】空配列の場合はフィルタを適用せず、全件対象とする
+          if (Array.isArray(db) && db.length > 0) {
             pDT = pDT.filter(r => db.includes(String(r[key1])));
             wDT = wDT.filter(r => db.includes(String(r[key1])));
           }
-          if (Array.isArray(item)) {
+          if (Array.isArray(item) && item.length > 0) {
             pDT = pDT.filter(r => item.includes(String(r[p1])));
           }
-          if (Array.isArray(group)) {
+          if (Array.isArray(group) && group.length > 0) {
             pDT = pDT.filter(r => group.includes(String(r[wd1])));
             wDT = wDT.filter(r => group.includes(String(r[wd1])));
           }

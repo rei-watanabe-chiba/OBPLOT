@@ -30,7 +30,8 @@
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
             <div id="rawSecArea">
-              <div id="t1RawBox"></div>
+              <!-- 動的フォーム(fields)とエラーハイライト(errs)のバインディング -->
+              <div id="t1RawBox" data-bind-errs="T1ST.raw.flags" data-bind-fields="T1ST.raw.data.fields"></div>
             </div>
             <div id="rawSecBtnBox" class="field-row">
               <button id="btn-make-list" data-action="T1Action.makeList" data-type="primary">リスト生成</button>
@@ -46,7 +47,8 @@
               <span class="txt-btninfo">読込シート「Results」</span>
             </div>
             <div id="extrSecArea">
-              <div id="t1ExtrBox"></div>
+              <!-- エラーハイライト(errs)のバインディング -->
+              <div id="t1ExtrBox" data-bind-errs="T1ST.extr.flags"></div>
             </div>
             <div class="field-row">
               <button id="btn-push-extr" data-action="T1Action.pushExtr" data-type="primary" class="outline">tracer5iに格納</button>
@@ -82,7 +84,8 @@
               </div>
               <label>シンボル設定</label>
               <div class="scroll-y" style="max-height: calc(var(--unit) * 50); border: 1px solid var(--grey200); border-radius: var(--unit); padding: var(--unit) calc(var(--unit) * 2);">
-                <ob-symbol-table id="symbTbl"></ob-symbol-table>
+                <!-- srcのバインディング -->
+                <ob-symbol-table id="symbTbl" data-bind-src="T2ST.symb.data.src"></ob-symbol-table>
               </div>
             </div>
             <div class="field-row">
@@ -93,8 +96,12 @@
           <hr>
           <details id="prevSec">
             <summary>プレビュー</summary>
-            <div id="prevChartBox"></div>
-            <div id="prevStatsTbl"></div>
+            <div id="prevChartBox" style="width: 100%; height: auto;">
+              <!-- チャートを静的配置し、srcのバインディングで動的更新 -->
+              <ob-cal-plot data-bind-src="T2ST.prev.data.chartSrc"></ob-cal-plot>
+            </div>
+            <!-- statsのバインディング -->
+            <div id="prevStatsTbl" data-bind-stats="T2ST.prev.data.statsDT"></div>
             <div id="prevSecArea">
               <div class="field-row">
                 <div class="field-col">
@@ -103,7 +110,8 @@
                 </div>
               </div>
               <label>対象Item</label>
-              <ob-multi-select id="prevItemBox" data-change-item="T2Action.tglPrevItem" data-change-all="T2Action.tglAllPrevItem" data-bind="T2ST.prev.refs.itemMap"></ob-multi-select>
+              <!-- optsとbindの両方をバインディング -->
+              <ob-multi-select id="prevItemBox" data-change-item="T2Action.tglPrevItem" data-change-all="T2Action.tglAllPrevItem" data-bind="T2ST.prev.refs.itemMap" data-bind-opts="T2ST.asgn.refs.availableItems"></ob-multi-select>
               <div class="field-row">
                 <button id="btn-make-prev" data-action="T2Action.buildPrev" data-type="primary">プレビュー更新</button>
               </div>
@@ -113,7 +121,8 @@
                 <div class="field-row">
                   <div class="field-col">
                     <label>補正方法</label>
-                    <div id="t2CalCorrBox"></div>
+                    <!-- 動的フォーム(fields)のバインディング -->
+                    <div id="t2CalCorrBox" data-bind-fields="T2ST.calb.data.corrFields"></div>
                   </div>
                 </div>
                 <label>Obsidianモード計測値</label>
@@ -132,7 +141,8 @@
           <details id="stdzSec">
             <summary>標準化と出力</summary>
             <label>対象Item（検量線計算用）</label>
-            <ob-multi-select id="stdzItemBox" data-change-item="T2Action.tglStdzItem" data-change-all="T2Action.tglAllStdzItem" data-bind="T2ST.stdz.refs.itemMap"></ob-multi-select>
+            <!-- optsとbindの両方をバインディング -->
+            <ob-multi-select id="stdzItemBox" data-change-item="T2Action.tglStdzItem" data-change-all="T2Action.tglAllStdzItem" data-bind="T2ST.stdz.refs.itemMap" data-bind-opts="T2ST.asgn.refs.availableItems"></ob-multi-select>
             <label>Obsidianモード計測値</label>
             <ob-multi-select id="t2StdzModeBox" data-change-item="T2Action.tglStdzMode" data-change-all="T2Action.tglAllStdzMode" data-bind="T2ST.stdz.refs.modeMap"></ob-multi-select>
             <div class="field-row">

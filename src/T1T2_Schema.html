@@ -37,7 +37,7 @@
         { id: "prevSec", activePhase: p => p >= T2_PHS.MAPPED, disablePhase: p => p < T2_PHS.MAPPED },
         { id: "btn-make-prev", activePhase: p => p >= T2_PHS.MAPPED },
 
-        { id: "calbSec", activePhase: p => p >= T2_PHS.MAPPED, openPhase: p => p === T2_PHS.MAPPED ? true : undefined },
+        { id: "calbSec", activePhase: p => p >= T2_PHS.MAPPED, openPhase: p => p === T2_PHS.MAPPED ? true : (p >= T2_PHS.PREVIEWED ? false : undefined) },
 
         { id: "stdzSec", activePhase: p => p >= T2_PHS.MAPPED, disablePhase: p => p < T2_PHS.MAPPED }
       ]

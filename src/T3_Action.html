@@ -4,8 +4,8 @@
     static get ssId() { return State.get("GLB.ssId"); }
 
     static async loadDB() {
+      // withAsyncLockの自動ローディングに委譲し、手動State.setを削除
       await CoreAction.withAsyncLock("T3ST.inst.status", async () => {
-        State.set("T3ST.inst.status", ["loading", "処理中..."]);
         const [pRes, wRes, cRes] = await Promise.all([
           API.fetchDT(T3Action.ssId, GLB.appShts.pxrf), 
           API.fetchDT(T3Action.ssId, GLB.rawShts.wdxrf), 
@@ -22,8 +22,8 @@
     }
 
     static async openRepo() {
-      await CoreAction.withAsyncLock("T3ST.repo.status", async () => {
-        State.set("T3ST.repo.status", ["loading", "テンプレート取得中..."]);
+      // 統合パイプラインを使用して確認から展開までをカプセル化
+      await CoreAction.confirmAndExecute("T3ST.repo.status", "確認", "ダッシュボードを展開しますか？", async () => {
         let template = await API.getReportTemplate();
         const { inst } = State.proxy.T3ST;
         const injectData = { pxrfDT: inst.data.pxrfDT || [], wdxrfDT: inst.data.wdxrfDT || [], corrDT: inst.data.corrDT || [] };
@@ -37,7 +37,8 @@
           document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
           return "レポートをダウンロードしました";
         } else {
-          window.open(url, '_blank'); return "別タブで展開しました";
+          window.open(url, '_blank'); 
+          return "別タブで展開しました";
         }
       });
     }
