@@ -7,6 +7,7 @@ class ApiResponse {
 const withErr = fn => {
   try { return fn(); } catch (e) { return ApiResponse.error("SYSTEM_ERR", e.message); }
 };
+
 // --- メニュー追加 (GAS用) ---
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("OBPLOT1.0")
@@ -15,19 +16,25 @@ function onOpen() {
     .addItem("ダッシュボード", "showSidebarT3")
     .addToUi();
 }
-function showSidebarT1() { openSidebar("tab1", "tracer5i抽出"); }
-function showSidebarT2() { openSidebar("tab2", "検量線・標準化"); }
-function showSidebarT3() { openSidebar("tab3", "ダッシュボード"); }
-function openSidebar(mode, title) {
-  const tpl = HtmlService.createTemplateFromFile("Sidebar");
+
+// --- 分離したサイドバーの呼び出し分岐 ---
+function showSidebarT1() { openSidebar("tab1", "tracer5i抽出", "Sidebar_Tracer"); }
+function showSidebarT2() { openSidebar("tab2", "検量線・標準化", "Sidebar_Tracer"); }
+function showSidebarT3() { openSidebar("tab3", "ダッシュボード", "Sidebar_Dash"); }
+
+function openSidebar(mode, title, filename) {
+  const tpl = HtmlService.createTemplateFromFile(filename);
   tpl.initialSsId = SpreadsheetApp.getActiveSpreadsheet().getId();
   tpl.appMode = mode;
   SpreadsheetApp.getUi().showSidebar(tpl.evaluate().setTitle(`OBPLOT1.0: ${title}`).setWidth(300));
 }
+
 // --- HTMLバインド ---
 function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
+
 // --- シート操作共通 ---
 const getSht = (ssId, name) => SpreadsheetApp.openById(ssId).getSheetByName(name);
+
 // --- データ取得 ---
 function fetchDT(ssId, shtName, qCol = null, lCol = null) {
   return withErr(() => {
@@ -40,6 +47,7 @@ function fetchDT(ssId, shtName, qCol = null, lCol = null) {
     return ApiResponse.success({ data, message: `取得: ${data.length} 行` });
   });
 }
+
 // --- データ出力 ---
 function writeData(ssId, shtName, data, opts = "clear") {
   return withErr(() => {
@@ -59,16 +67,19 @@ function writeData(ssId, shtName, data, opts = "clear") {
     return ApiResponse.success("書き出し完了");
   });
 }
+
 // --- レポートテンプレート取得 ---
 function getReportTemplate() { 
   return withErr(() => ApiResponse.success(HtmlService.createTemplateFromFile("Report").evaluate().getContent())); 
 }
+
 // --- ブック状態取得 ---
 function getWbState(ssId) {
   return withErr(() => ApiResponse.success(SpreadsheetApp.openById(ssId).getSheets().map(s => ({
     name: s.getName(), hdr: s.getLastColumn() ? s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0] : []
   }))));
 }
+
 // --- シート動的構築とソート ---
 function buildShts(ssId, buildPlan) {
   return withErr(() => {

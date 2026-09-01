@@ -1,0 +1,57 @@
+<!-- src/Report_Schema.html -->
+<script>
+  // --- ダッシュボード用ハードコード定数 ---
+  const RPT_CFG = {
+    lbl: { newCorr: "新規検量線", calib: "検量線", discr: "判別図", useCal: "検量線適用", useLOD: "LOD置換", unsel: "未選択" },
+    rng: {
+      gridRows: { min: 1, max: 3, step: 1, unit: "" },
+      gridCols: { min: 1, max: 3, step: 1, unit: "" },
+      panelGap: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      "margins.top": { min: 0, max: 100, step: 1, unit: "mm" },
+      "margins.bottom": { min: 0, max: 100, step: 1, unit: "mm" },
+      "margins.left": { min: 0, max: 100, step: 1, unit: "mm" },
+      "margins.right": { min: 0, max: 100, step: 1, unit: "mm" },
+      p_t: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      p_b: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      p_l: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      p_r: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      s_title: { min: 5, max: 50, step: 0.5, unit: "pt" },
+      s_name: { min: 3, max: 30, step: 0.5, unit: "pt" },
+      s_tick: { min: 3, max: 30, step: 0.5, unit: "pt" },
+      s_stats: { min: 3, max: 30, step: 0.5, unit: "pt" },
+      sym_size: { min: 1, max: 20, step: 0.5, unit: "pt" },
+      sym_bw: { min: 0, max: 5, step: 0.1, unit: "pt" },
+      lw_axis: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      lw_grid: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      lw_reg: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      c_base: { min: 0, max: 100, step: 1, unit: "%" },
+      c_axis: { min: 0, max: 100, step: 1, unit: "%" },
+      c_grid: { min: 0, max: 100, step: 1, unit: "%" }
+    }
+  };
+
+  // --- レポート UI Schema ---
+  const REPORT_SCHEMA = {
+    elements: [],
+    selects: [
+      { id: "boxGlobalCorr", bind: "correction", hasEmpty: false, optsFn: d => [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.corrDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))] },
+      { id: "boxSymbAxis", bind: "symb.baseKey", hasEmpty: false, opts: GLB.symbAxes, changeHook: "checkSymbAxis" },
+      { id: "boxFontEng", bind: "rawGph.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({label:v, val:v})) },
+      { id: "boxFontJp", bind: "rawGph.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({label:v, val:v})) },
+      { id: "boxGraphType", bind: "activePanel.graphType", hasEmpty: false, opts: [{label: RPT_CFG.lbl.calib, val: "calibration"}, {label: RPT_CFG.lbl.discr, val: "discrimination"}] },
+      { id: "boxCalibVal", bind: "activePanel.calibVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) },
+      { id: "boxDiscrX", bind: "activePanel.discrXVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) },
+      { id: "boxDiscrY", bind: "activePanel.discrYVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }
+    ],
+    toggles: [
+      { id: "boxGlobalCalTgl", bind: "useCal", label: RPT_CFG.lbl.useCal },
+      { id: "boxGlobalLodTgl", bind: "useLOD", label: RPT_CFG.lbl.useLOD }
+    ],
+    multiSelects: [
+      { id: "boxGlobalCalElms", bind: "calElms", opts: GLB.valElms },
+      { id: "boxFilterDB", bind: "filters.db", opts: [] },
+      { id: "boxFilterItem", bind: "filters.item", opts: [] },
+      { id: "boxFilterGroup", bind: "filters.group", opts: [] }
+    ]
+  };
+</script>

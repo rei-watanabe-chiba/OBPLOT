@@ -39,20 +39,16 @@
     <script>
       window.__INITIAL_SSID__ = "<?= typeof initialSsId !== 'undefined' ? initialSsId : '' ?>";
       window.__APP_MODE__ = "tab3";
-      
-      const T3_SCHEMA = {
-        elements: [
-          { id: "instSec", activePhase: true, openPhase: p => p < T3_PHS.LOADED },
-          { id: "repoSec", activePhase: p => p >= T3_PHS.LOADED }
-        ]
-      };
     </script>
     <?!= include('Global'); ?>
     <?!= include('PlatformAdapter'); ?>
     <?!= include('Model'); ?>
-    <?!= include('Method'); ?>
+    <?!= include('CoreMethod'); ?>
+    <?!= include('T3_Method'); ?>
     <?!= include('Component'); ?>
+    <?!= include('T3_Schema'); ?>
     <?!= include('CoreUIAutomator'); ?>
     <?!= include('CoreAction'); ?>
+    <?!= include('T3_Action'); ?>
   </body>
 </html>

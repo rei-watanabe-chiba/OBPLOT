@@ -1,13 +1,16 @@
 <!-- src/T3_Action.html -->
 <script>
-  // --- T3 特化アクション ---
   class T3Action {
     static get ssId() { return State.get("GLB.ssId"); }
 
     static async loadDB() {
       await CoreAction.withAsyncLock("T3ST.inst.status", async () => {
         State.set("T3ST.inst.status", ["loading", "処理中..."]);
-        const [pRes, wRes, cRes] = await Promise.all([API.fetchDT(this.ssId, GLB.appShts.pxrf), API.fetchDT(this.ssId, GLB.rawShts.wdxrf), API.fetchDT(this.ssId, GLB.appShts.correction).catch(() => ({ data: [] }))]);
+        const [pRes, wRes, cRes] = await Promise.all([
+          API.fetchDT(T3Action.ssId, GLB.appShts.pxrf), 
+          API.fetchDT(T3Action.ssId, GLB.rawShts.wdxrf), 
+          API.fetchDT(T3Action.ssId, GLB.appShts.correction).catch(() => ({ data: [] }))
+        ]);
         
         if (!pRes.data || pRes.data.length <= 1) throw new Error("PXRF不足");
         if (!wRes.data || wRes.data.length <= 1) throw new Error("WDXRF不足");
@@ -40,28 +43,35 @@
     }
   }
 
-  // --- グローバル登録 ---
   window.T3Action = T3Action;
 
-  // --- T3 初期化プロシージャ ---
   class AppDashInit {
     static async start() {
-      // ルーターの起動
       CoreAction.initGlobalRouter({ CoreAction, T3Action });
 
-      // Schema UIの初期化
-      const automatorT3 = new CoreUIAutomator(T3_SCHEMA, 'T3ST');
+      const automatorT3 = new CoreUIAutomator(T3_SIDEBAR_SCHEMA, 'T3ST');
       automatorT3.build();
 
-      // UI同期の購読
-      State.subscribe('*', () => automatorT3.update());
+      // UI同期の限定購読
+      State.subscribe("T3ST.phase", () => automatorT3.update());
+      
+      // グローバルロックの購読 (画面全体の保護)
+      State.subscribe("GLB.isLocked", v => {
+        const fs = document.getElementById("tab3Fieldset");
+        if (fs) fs.disabled = v;
+      });
 
-      // セッション開始 (T3は復元フックを持たない)
+      // 副作用の購読 (LOADED到達時のメッセージ表示)
+      State.subscribe("T3ST.phase", v => {
+        if (v === T3_PHS.LOADED) {
+          State.set({ "T3ST.repo.status": ["message", "グラフ展開用HTMLを作成"] });
+        }
+      });
+
       CoreAction.switchTab('tab3');
     }
   }
 
-  // 自動起動
   if (typeof Office !== 'undefined') {
     Office.onReady(() => AppDashInit.start());
   } else {

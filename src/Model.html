@@ -71,31 +71,6 @@
       this.set(updates);
     }
   }
-  // --- Gas通信Service ---
-  class GasService {
-    static #serverCall(funcName, ...args) {
-      return new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(r => r?.success ? resolve(r.payload) : reject(new Error(`[${r?.errorType || 'ERR'}] ${r?.message}`)))
-          .withFailureHandler(e => reject(new Error(`[NET_ERR] ${e.message}`)))
-          [funcName](...args);
-      });
-    }
-    static fetchDT(ssId, sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", ssId, sht, qCol, lCol); }
-    static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
-    static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
-    static getWbState(ssId) { return this.#serverCall("getWbState", ssId); }
-    static buildShts(ssId, buildPlan) { return this.#serverCall("buildShts", ssId, buildPlan); }
-  }
-  // --- ローカルストレージ ---
-  class LocalStorageAdapter {
-    static save(key, val) { localStorage.setItem(key, val); }
-    static load(key) { return localStorage.getItem(key); }
-    static clear(key) { localStorage.removeItem(key); }
-  }
-  // --- 環境判定とDI ---
-  const isExcelEnv = typeof Office !== 'undefined';
-  const API = isExcelEnv ? ExcelAdapter : GasService;
-  const StorageAPI = isExcelEnv ? OfficeStorageAdapter : LocalStorageAdapter;
   const State = new AppState();
+  window.State = State;
 </script>

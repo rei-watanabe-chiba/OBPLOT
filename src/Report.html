@@ -16,19 +16,11 @@
     <?!= include('Global'); ?>
     <?!= include('Model'); ?>
     
-    <!-- 新コアエンジンの注入 -->
     <?!= include('CoreMethod'); ?>
-    <?!= include('Method'); ?>
-    <script>
-      // 移行過渡期のブリッジ: 既存ロジックからの呼び出しをコアへリダイレクト
-      if (typeof Mtd !== 'undefined') {
-        Mtd.Util = CoreMethod.Util;
-        if (!Mtd.T2) Mtd.T2 = {};
-        Mtd.T2.Calc = CoreMethod.Calc;
-      }
-    </script>
-    <?!= include('CoreAction'); ?>
+    <?!= include('T3_Method'); ?>
+    
     <?!= include('CoreUIAutomator'); ?>
+    <?!= include('Report_Schema'); ?>
     
     <?!= include('Component'); ?>
     <?!= include('Chart'); ?>
@@ -264,6 +256,6 @@
         <button id="uDialogConfirmBtn" data-type="primary">OK</button>
       </div>
     </dialog>
-    <?!= include("ReportLogic"); ?>
+    <?!= include("ReportApp"); ?>
   </body>
 </html>

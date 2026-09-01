@@ -1,40 +1,42 @@
 <!-- src/PlatformAdapter.html -->
 <script>
-  // --- Excel用ストレージ ---
-  class OfficeStorageAdapter {
-    static save(key, data) {
-      try {
-        if (Office?.context?.document?.settings) {
-          Office.context.document.settings.set(key, data);
-          Office.context.document.settings.saveAsync();
-        }
-      } catch (e) {}
+  // ==========================================
+  // インフラ・通信・永続化層 (Platform Adapter)
+  // ==========================================
+  const isExcelEnv = typeof Office !== 'undefined';
+
+  // --- GAS用 通信API ---
+  class GasService {
+    static #serverCall(funcName, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(r => r?.success ? resolve(r.payload) : reject(new Error(`[${r?.errorType || 'ERR'}] ${r?.message}`)))
+          .withFailureHandler(e => reject(new Error(`[NET_ERR] ${e.message}`)))
+          [funcName](...args);
+      });
     }
-    static load(key) {
-      try {
-        if (Office?.context?.document?.settings) {
-          return Office.context.document.settings.get(key) || null;
-        }
-        return null;
-      } catch (e) { return null; }
-    }
-    static clear(key) {
-      try {
-        if (Office?.context?.document?.settings) {
-          Office.context.document.settings.remove(key);
-          Office.context.document.settings.saveAsync();
-        }
-      } catch (e) {}
-    }
+    static fetchDT(ssId, sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", ssId, sht, qCol, lCol); }
+    static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
+    static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
+    static getWbState(ssId) { return this.#serverCall("getWbState", ssId); }
+    static buildShts(ssId, buildPlan) { return this.#serverCall("buildShts", ssId, buildPlan); }
   }
-  // --- Excel用通信API ---
+
+  // --- GAS用 ローカルストレージ ---
+  class LocalStorageAdapter {
+    static save(key, val) { localStorage.setItem(key, val); }
+    static load(key) { return localStorage.getItem(key); }
+    static clear(key) { localStorage.removeItem(key); }
+  }
+
+  // --- Excel用 通信API ---
   class ExcelAdapter {
     static async #run(fn) {
       try { return await Excel.run(fn); }
       catch (e) { throw new Error(`[EXCEL_ERR] ${e.message}`); }
     }
-    // --- データ取得 ---
-    // GAS版に合わせ引数無視
+    
+    // データ取得
     static async fetchDT(ssId, shtName, qCol = null, lCol = null) {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
@@ -50,8 +52,8 @@
         return { data, message: `取得: ${data.length} 行` };
       });
     }
-    // --- データ出力 ---
-    // GAS版に合わせ引数無視
+
+    // データ出力
     static async writeData(ssId, shtName, data, opts = "clear") {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
@@ -75,14 +77,16 @@
         return "書き出し完了";
       });
     }
-    // --- レポートテンプレート取得 ---
+
+    // レポートテンプレート取得
     static async getReportTemplate() {
       if (window.__REPORT_TEMPLATE__) return window.__REPORT_TEMPLATE__;
       const res = await fetch('Report.html');
       if (!res.ok) throw new Error("テンプレート取得失敗");
       return await res.text();
     }
-    // --- ブック状態取得 ---
+
+    // ブック状態取得
     static async getWbState(ssId) {
       return this.#run(async (ctx) => {
         const shts = ctx.workbook.worksheets;
@@ -108,7 +112,8 @@
         }));
       });
     }
-    // --- シート動的構築とソート ---
+
+    // シート動的構築とソート
     static async buildShts(ssId, buildPlan) {
       return this.#run(async (ctx) => {
         const shts = ctx.workbook.worksheets;
@@ -138,4 +143,31 @@
       });
     }
   }
+
+  // --- Excel用 ストレージ ---
+  class OfficeStorageAdapter {
+    static save(key, data) {
+      try {
+        if (Office?.context?.document?.settings) {
+          Office.context.document.settings.set(key, data);
+          Office.context.document.settings.saveAsync();
+        }
+      } catch (e) {}
+    }
+    static load(key) {
+      try { return Office?.context?.document?.settings?.get(key) || null; } catch (e) { return null; }
+    }
+    static clear(key) {
+      try {
+        if (Office?.context?.document?.settings) {
+          Office.context.document.settings.remove(key);
+          Office.context.document.settings.saveAsync();
+        }
+      } catch (e) {}
+    }
+  }
+
+  // --- 環境に応じたDI (依存性注入) ---
+  const API = isExcelEnv ? ExcelAdapter : GasService;
+  const StorageAPI = isExcelEnv ? OfficeStorageAdapter : LocalStorageAdapter;
 </script>
