@@ -89,7 +89,7 @@
       const cntr = DOM.el(ref);
       if (!cntr) return;
       if (!statsDT) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
-      const rows = Mtd.Util.buildStats(statsDT);
+      const rows = CoreMethod.Util.buildStats(statsDT);
       if (!rows.length) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
       cntr.innerHTML = Tpl.Stats.cntr(rows.map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
     }
@@ -170,10 +170,6 @@
       static colorBox(clr) { return clr ? html`<span class="color-box" style="background: ${clr}"></span>` : ""; }
       static badge(val) { return html`<span class="badge">${val}</span>`; }
     };
-    static Stats = class {
-      static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
-      static cntr(rowsHtml) { return html`<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`; }
-    };
     static Dialog = class {
       static confirm() { 
         return html`<dialog id="universalConfirm"><h3 id="uDialogTitle">確認</h3><p id="uDialogMessage"></p><div class="field-row"><button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button><button id="uDialogConfirmBtn" data-type="primary">OK</button></div></dialog>`; 
@@ -184,6 +180,10 @@
     };
     static Toggle = class {
       static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
+    };
+    static Stats = class {
+      static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
+      static cntr(rowsHtml) { return html`<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`; }
     };
     static MultiSelect = class {
       static item(val, dataChange) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }

@@ -34,25 +34,45 @@
         // 【重要】監視登録直後の現在値で初期化（ロード時の表示漏れ防止）
         applyStatus(this.getVal(path));
       });
+
+      // 【追加】3. 双方向バインディング要素のリアルタイムバインディング
+      document.querySelectorAll(`[data-bind^="${this.stateTarget}"]`).forEach(el => {
+        const path = el.dataset.bind;
+        
+        // 状態反映関数
+        const applyBind = (val) => {
+          if (val === undefined) return;
+
+          if (el.type === 'checkbox') {
+            if (el.checked !== !!val) el.checked = !!val;
+          } else if (el.tagName === 'OB-MULTI-SELECT') {
+            el.refs = val; 
+          } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
+            if (el.value !== String(val ?? '')) el.value = val ?? '';
+          }
+        };
+
+        // 監視を登録
+        State.subscribe(path, applyBind);
+        // ロード時の初期値適用
+        applyBind(this.getVal(path));
+      });
+      // 【追加】3. オプションリスト(opts)のリアルタイムバインディング（かつてのView.htmlからの復元）
+      document.querySelectorAll(`[data-bind-opts^="${this.stateTarget}"]`).forEach(el => {
+        const path = el.dataset.bindOpts;
+        const applyOpts = (val) => {
+          if (val !== undefined) el.opts = val;
+        };
+        State.subscribe(path, applyOpts);
+        // ロード時の初期値適用
+        applyOpts(this.getVal(path));
+      });
     }
 
     update() {
       const curPhase = State.get(`${this.stateTarget}.phase`) ?? 1;
 
-      // 1. 双方向バインディング要素のPatch同期
-      document.querySelectorAll(`[data-bind^="${this.stateTarget}"]`).forEach(el => {
-        const path = el.dataset.bind;
-        const val = this.getVal(path);
-        if (val === undefined) return;
-
-        if (el.type === 'checkbox') {
-          el.checked = !!val;
-        } else if (el.tagName === 'OB-MULTI-SELECT') {
-          el.refs = val; 
-        } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
-          if (el.value !== String(val ?? '')) el.value = val ?? '';
-        }
-      });
+      // 【削除】双方向バインディング要素のPatch同期は build() に移行したため削除
 
       // 2. スキーマに基づくフェーズ評価とUI属性制御
       (this.schema.elements || []).forEach(def => {
