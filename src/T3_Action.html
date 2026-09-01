@@ -1,0 +1,71 @@
+<!-- src/T3_Action.html -->
+<script>
+  // --- T3 特化アクション ---
+  class T3Action {
+    static get ssId() { return State.get("GLB.ssId"); }
+
+    static async loadDB() {
+      await CoreAction.withAsyncLock("T3ST.inst.status", async () => {
+        State.set("T3ST.inst.status", ["loading", "処理中..."]);
+        const [pRes, wRes, cRes] = await Promise.all([API.fetchDT(this.ssId, GLB.appShts.pxrf), API.fetchDT(this.ssId, GLB.rawShts.wdxrf), API.fetchDT(this.ssId, GLB.appShts.correction).catch(() => ({ data: [] }))]);
+        
+        if (!pRes.data || pRes.data.length <= 1) throw new Error("PXRF不足");
+        if (!wRes.data || wRes.data.length <= 1) throw new Error("WDXRF不足");
+        
+        const { pxrfDT, wdxrfDT, corrDT } = Mtd.T3.mgmtDT.loadDB(pRes.data, wRes.data, cRes.data);
+        State.set({ "T3ST.inst.data.pxrfDT": pxrfDT, "T3ST.inst.data.wdxrfDT": wdxrfDT, "T3ST.inst.data.corrDT": corrDT, "T3ST.phase": T3_PHS.LOADED });
+        return `読込完了: PXRF ${pxrfDT.length - 1}件`;
+      });
+    }
+
+    static async openRepo() {
+      await CoreAction.withAsyncLock("T3ST.repo.status", async () => {
+        State.set("T3ST.repo.status", ["loading", "テンプレート取得中..."]);
+        let template = await API.getReportTemplate();
+        const { inst } = State.proxy.T3ST;
+        const injectData = { pxrfDT: inst.data.pxrfDT || [], wdxrfDT: inst.data.wdxrfDT || [], corrDT: inst.data.corrDT || [] };
+        const safeJson = JSON.stringify(injectData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+        template = template.replace("'INJECT_TARGET'", () => safeJson);
+        const blob = new Blob([template], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        
+        if (typeof Office !== 'undefined') {
+          const a = document.createElement('a'); a.href = url; a.download = "OBPLOT_Report.html";
+          document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+          return "レポートをダウンロードしました";
+        } else {
+          window.open(url, '_blank'); return "別タブで展開しました";
+        }
+      });
+    }
+  }
+
+  // --- グローバル登録 ---
+  window.T3Action = T3Action;
+
+  // --- T3 初期化プロシージャ ---
+  class AppDashInit {
+    static async start() {
+      // ルーターの起動
+      CoreAction.initGlobalRouter({ CoreAction, T3Action });
+
+      // Schema UIの初期化
+      const automatorT3 = new CoreUIAutomator(T3_SCHEMA, 'T3ST');
+      automatorT3.build();
+
+      // UI同期の購読
+      State.subscribe('*', () => automatorT3.update());
+
+      // セッション開始 (T3は復元フックを持たない)
+      CoreAction.switchTab('tab3');
+    }
+  }
+
+  // 自動起動
+  if (typeof Office !== 'undefined') {
+    Office.onReady(() => AppDashInit.start());
+  } else {
+    if (document.readyState === 'loading') { window.addEventListener("DOMContentLoaded", () => AppDashInit.start()); } 
+    else { AppDashInit.start(); }
+  }
+</script>

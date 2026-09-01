@@ -1,6 +1,7 @@
 <!-- src/CoreUIAutomator.html -->
 <script>
   class CoreUIAutomator {
+    // schema: UI_SCHEMA (elements等を含む), stateTarget: 対象Stateルート(例:'T1ST')
     constructor(schema, stateTarget) {
       this.schema = schema;
       this.stateTarget = stateTarget;
@@ -11,11 +12,19 @@
       return State.get(path.includes('.') ? path : `${this.stateTarget}.${path}`);
     }
 
+    // --- 初回構築 (主に出力層向け、Tab1/2ではフォームコンポーネントの初期化用) ---
+    build() {
+      // ※ T1/T2のDOMは静的にSidebarに存在するため、ここではSchemaに基づく
+      // 初期値同期や特殊コンポーネントの補完等が必要な場合のみ拡張する
+      this.update();
+    }
+
     // --- 差分同期 ＆ フェーズ評価 (Patch Update) ---
+    // 旧 UIStateUpdater + UIPhase.#apply の統合
     update() {
       const curPhase = State.get(`${this.stateTarget}.phase`) ?? 1;
 
-      // 1. バインディング要素のPatch更新（破壊的再構築を回避）
+      // 1. バインディング要素のPatch更新（値の同期）
       document.querySelectorAll(`[data-bind^="${this.stateTarget}"]`).forEach(el => {
         const path = el.dataset.bind;
         const val = this.getVal(path);
@@ -24,13 +33,13 @@
         if (el.type === 'checkbox') {
           el.checked = !!val;
         } else if (el.tagName === 'OB-MULTI-SELECT') {
-          el.refs = val;
+          el.refs = val; // Web Componentsへの値注入
         } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
           if (el.value !== String(val ?? '')) el.value = val ?? '';
         }
       });
 
-      // 2. スキーマに基づくフェーズ・活性制御 (Phase-Aware Evaluation)
+      // 2. スキーマに基づくフェーズ制御・UIルール適用 (Phase-Aware Evaluation)
       (this.schema.elements || []).forEach(def => {
         let targetEl = null;
         if (def.id) {
@@ -41,13 +50,13 @@
         }
         if (!targetEl) return;
 
-        // 可視制御
+        // --- 表示/非表示制御 (旧 isShow) ---
         if (def.visiblePhase !== undefined) {
           const isVisible = typeof def.visiblePhase === 'function' ? def.visiblePhase(curPhase) : curPhase >= def.visiblePhase;
           targetEl.style.display = isVisible ? '' : 'none';
         }
 
-        // 活性・非活性制御
+        // --- 活性/非活性制御 (旧 isDis / isActive) ---
         if (def.activePhase !== undefined) {
           const isActive = typeof def.activePhase === 'function' ? def.activePhase(curPhase) : curPhase >= def.activePhase;
           if (targetEl.tagName === 'DETAILS') {
@@ -58,18 +67,22 @@
           }
         }
 
-        // Detailsの開閉制御
+        // --- アコーディオン開閉制御 (旧 isOpen) ---
         if (def.openPhase !== undefined && targetEl.tagName === 'DETAILS') {
           const isOpen = typeof def.openPhase === 'function' ? def.openPhase(curPhase) : curPhase >= def.openPhase;
-          if (isOpen !== undefined) {
+          if (isOpen !== undefined && targetEl.open !== isOpen) {
+            // トランジション保護のため微小な遅延を挿入
             setTimeout(() => { targetEl.open = isOpen; }, 200);
           }
         }
 
-        // クラスやテキストの動的更新
+        // --- クラス更新 (旧 className) ---
         if (def.className !== undefined) {
-          targetEl.className = typeof def.className === 'function' ? def.className(curPhase) : def.className;
+          const cls = typeof def.className === 'function' ? def.className(curPhase) : def.className;
+          if (targetEl.className !== cls) targetEl.className = cls;
         }
+
+        // --- テキスト更新 (旧 text) ---
         if (def.text !== undefined) {
           const txt = typeof def.text === 'function' ? def.text(curPhase) : def.text;
           if (targetEl.innerText !== txt) targetEl.innerText = txt;

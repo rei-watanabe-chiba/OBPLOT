@@ -1,7 +1,52 @@
 <!-- src/CoreAction.html -->
 <script>
+  // --- バックアップ管理 (旧 Evt.MakeBU) ---
+  class CoreMakeBU {
+    static #K = "OBP_BU";
+    static #isQ = false;
+    static init() { State.subscribe('*', () => this.#queue()); }
+    static #queue() {
+      if (this.#isQ) return;
+      this.#isQ = true;
+      queueMicrotask(() => { this.save(); this.#isQ = false; });
+    }
+    static save() {
+      const { phase, asgn, symb, calb, prev, stdz } = State.proxy.T2ST;
+      phase < T2_PHS.LOADED ? this.clear() : StorageAPI.save(this.#K, JSON.stringify({ phase, asgn: { r: asgn.refs, s: asgn.status }, symb: { r: symb.refs, s: symb.status }, calb: { r: calb.refs, s: calb.status }, prev: { r: prev.refs, s: prev.status }, stdz: { r: stdz.refs, s: stdz.status } }));
+    }
+    static load() {
+      try { return JSON.parse(StorageAPI.load(this.#K)); } catch (e) { return null; } 
+    }
+    static clear() { StorageAPI.clear(this.#K); }
+  }
+
+  // --- アイドル検知 (旧 Evt.IdlTm) ---
+  class CoreIdlTm {
+    static #MS = 5 * 60000;
+    static #tm = null;
+    static init() {
+      if (isExcelEnv) return;
+      const rst = () => { 
+        clearTimeout(this.#tm); 
+        this.#tm = setTimeout(() => {
+          const forceReload = () => {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+              google.script.run.withFailureHandler(() => google.script.host.close()).showSidebar();
+            } else { window.location.reload(); }
+          };
+          NewDOM.toast("GAS通信エラー", "一定時間操作がなかったため、サイドバーを再起動してください", forceReload);
+        }, this.#MS); 
+      };
+      ['mousemove', 'keydown', 'touchstart', 'click', 'scroll'].forEach(e => document.addEventListener(e, rst, { passive: true })); 
+      rst();
+    }
+  }
+
+  // --- コントローラー基盤 ＆ アプリケーション管理 ---
   class CoreAction {
-    // --- 汎用非同期ラッパー ---
+    static get #ssId() { return State.get("GLB.ssId"); }
+
+    // --- 非同期ラッパー (旧 CoreCtrl.withAsyncLock) ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
       try {
@@ -9,13 +54,10 @@
         if (typeof res === "string") State.set(statusPath, ["success", res]);
         else if (Array.isArray(res)) State.set(statusPath, res);
       } catch (err) { State.set(statusPath, ["error", err.message]); }
-      finally { 
-        if (finallyFn) await finallyFn(); 
-        State.set("GLB.isLocked", false); 
-      }
+      finally { if (finallyFn) await finallyFn(); State.set("GLB.isLocked", false); }
     }
 
-    // --- アプリ接続フロー (全層共通) ---
+    // --- 環境検証と接続 (旧 CoreCtrl.connectApp) ---
     static async connectApp(ssId) {
       State.set("GLB.isLocked", true);
       const activeTab = State.get("GLB.activeTab");
@@ -23,8 +65,10 @@
       try {
         State.set(statPath, ["loading", "環境確認中..."]);
         const curShts = await API.getWbState(ssId);
+        // ※Phase2: Mtd.Util は CoreMethod.Util へ分離済み
         const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, activeTab);
         if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
+        
         if (buildPlan.length) {
           if (missingNames.length) {
             State.set(statPath, ["message", "確認待ち"]);
@@ -47,46 +91,64 @@
         return false;
       }
     }
-  }
 
-  // --- システム基盤 (アイドル検知・バックアップ) ---
-  class CoreSystem {
-    static initIdleTimer() {
-      if (isExcelEnv) return;
-      let tm = null;
-      const rst = () => { 
-        clearTimeout(tm); 
-        tm = setTimeout(() => {
-          const forceReload = () => {
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-              google.script.run.withFailureHandler(() => google.script.host.close()).showSidebar();
-            } else { window.location.reload(); }
-          };
-          NewDOM.toast("GAS通信エラー", "一定時間操作がなかったため、サイドバーを再起動してください", forceReload);
-        }, 5 * 60000); 
-      };
-      ['mousemove', 'keydown', 'touchstart', 'click', 'scroll'].forEach(e => document.addEventListener(e, rst, { passive: true })); 
-      rst();
+    // --- セッション開始パイプライン (旧 Evt.startSession) ---
+    // ※特化ロジック (restore等) は hooks 経由で DI する設計
+    static async startSession(ssId, isSwitch = false, hooks = {}) {
+      if (!isSwitch) {
+        const isConnected = await this.connectApp(ssId);
+        if (!isConnected) return; 
+      }
+
+      // 特化型ツール (T1/T2) 用のリストア処理等の実行
+      if (hooks.onBeforeInit) {
+         await hooks.onBeforeInit(isSwitch, CoreMakeBU.load());
+      }
+
+      if (!isSwitch) {
+        CoreMakeBU.init();
+        CoreIdlTm.init();
+      }
+
+      State.set("GLB.isLocked", false);
+      
+      // アクティブタブの初期化完了フック
+      if (hooks.onAfterInit) hooks.onAfterInit();
+    }
+
+    // --- タブ切り替え (旧 Evt.switchAPP) ---
+    static switchTab(btnOrId, hooks = {}) {
+      const tabId = typeof btnOrId === 'string' ? btnOrId : btnOrId.dataset.target;
+      document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+      document.getElementById(tabId)?.classList.add("active");
+      document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
+      document.body.setAttribute('data-theme', tabId);
+      State.set("GLB.activeTab", tabId);
+      
+      this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks);
     }
     
-    // 汎用バックアップ管理
-    static initBackup(key, statePathsArray, getProxyFn) {
-      let isQ = false;
-      const saveFn = () => {
-        const proxy = getProxyFn();
-        const dataToSave = statePathsArray.reduce((acc, path) => {
-           acc[path] = proxy[path]; 
-           return acc;
-        }, {});
-        StorageAPI.save(key, JSON.stringify(dataToSave));
-      };
-      const queueFn = () => {
-        if (isQ) return;
-        isQ = true;
-        queueMicrotask(() => { saveFn(); isQ = false; });
-      };
-      State.subscribe('*', queueFn);
-      return { load: () => { try { return JSON.parse(StorageAPI.load(key)); } catch(e){ return null; } }, clear: () => StorageAPI.clear(key) };
+    // --- イベント委譲ルーター (旧 Evt.#handleClick / #handleChange) ---
+    // ※ HTML内の data-action="T1Action.loadRaw" 等を動的解決して実行
+    static initGlobalRouter(actionClasses = {}) {
+      document.addEventListener("click", e => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn || btn.disabled) return;
+        const [ns, method] = btn.dataset.action.split('.');
+        if (actionClasses[ns]?.[method]) actionClasses[ns][method](btn);
+        else if (window[ns]?.[method]) window[ns][method](btn);
+      });
+
+      document.addEventListener("change", e => {
+        const tgt = e.target, bindPath = tgt.dataset.bind, changePath = tgt.dataset.change;
+        if (bindPath) State.set(bindPath, tgt.type === "checkbox" ? tgt.checked : tgt.value);
+        if (changePath) {
+          const [ns, method] = changePath.split('.');
+          if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt);
+          else if (window[ns]?.[method]) window[ns][method](tgt);
+        }
+      });
     }
   }
 </script>
