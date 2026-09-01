@@ -1,6 +1,5 @@
 <!-- src/CoreAction.html -->
 <script>
-  // --- バックアップ管理 (旧 Evt.MakeBU) ---
   class CoreMakeBU {
     static #K = "OBP_BU";
     static #isQ = false;
@@ -20,7 +19,6 @@
     static clear() { StorageAPI.clear(this.#K); }
   }
 
-  // --- アイドル検知 (旧 Evt.IdlTm) ---
   class CoreIdlTm {
     static #MS = 5 * 60000;
     static #tm = null;
@@ -42,41 +40,54 @@
     }
   }
 
-  // --- コントローラー基盤 ＆ アプリケーション管理 ---
   class CoreAction {
     static get #ssId() { return State.get("GLB.ssId"); }
-    
-    // 二重初期化防止フラグ
     static #isInitialized = false;
-    
-    // DI: ツール側から設定を動的に受け取るリゾルバ
     static configResolver = null;
 
-    // --- 非同期ラッパー (旧 CoreCtrl.withAsyncLock) ---
+    // --- ダイアログ確認と非同期実行の統合パイプライン ---
+    static async confirmAndExecute(statusPath, title, msg, processFn, finallyFn = null) {
+      const svStat = State.get(statusPath);
+      State.set(statusPath, ["loading", "実行中..."]);
+      
+      if (!await NewDOM.confirm(title, msg)) {
+        State.set(statusPath, svStat || ["hidden", ""]);
+        return false;
+      }
+      
+      await this.withAsyncLock(statusPath, processFn, finallyFn);
+      return true;
+    }
+
+    // --- 非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
+      State.set(statusPath, ["loading", "実行中..."]); 
       try {
         const res = await processFn();
         if (typeof res === "string") State.set(statusPath, ["success", res]);
         else if (Array.isArray(res)) State.set(statusPath, res);
-      } catch (err) { State.set(statusPath, ["error", err.message]); }
-      finally { if (finallyFn) await finallyFn(); State.set("GLB.isLocked", false); }
+      } catch (err) { 
+        State.set(statusPath, ["error", err.message]); 
+      } finally { 
+        if (finallyFn) await finallyFn(); 
+        State.set("GLB.isLocked", false); 
+      }
     }
 
-    // --- 環境検証と接続 (旧 CoreCtrl.connectApp) ---
     static async connectApp(ssId, config) {
       State.set("GLB.isLocked", true);
       const statPath = config.statPath;
       try {
         State.set(statPath, ["loading", "環境確認中..."]);
         const curShts = await API.getWbState(ssId);
-        // configからスキーマキーを受け取り環境を検証
         const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, config.schemaKey);
         if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
         
         if (buildPlan.length) {
           if (missingNames.length) {
             State.set(statPath, ["message", "確認待ち"]);
+            // Tpl化された純粋なconfirmを使用。キャンセル時は処理を中断
             if (!await NewDOM.confirm("確認", `「${missingNames.join('、')}」が不足しています。\n新たに作成しますか？`)) {
               State.set("GLB.isLocked", false);
               State.set(statPath, ["hidden", ""]);
@@ -97,33 +108,24 @@
       }
     }
 
-    // --- セッション開始パイプライン (旧 Evt.startSession) ---
     static async startSession(ssId, isSwitch = false, hooks = {}, config = {}) {
       if (!isSwitch) {
-        // 二重初期化防止ガード
         if (this.#isInitialized) return; 
         const isConnected = await this.connectApp(ssId, config);
         if (!isConnected) return; 
         this.#isInitialized = true;
       }
-
-      // 特化型ツール (T1/T2) 用のリストア処理等の実行
       if (hooks.onBeforeInit) {
          await hooks.onBeforeInit(isSwitch, CoreMakeBU.load());
       }
-
       if (!isSwitch) {
         CoreMakeBU.init();
         CoreIdlTm.init();
       }
-
       State.set("GLB.isLocked", false);
-      
-      // アクティブタブの初期化完了フック
       if (hooks.onAfterInit) hooks.onAfterInit();
     }
 
-    // --- 純粋なタブUIとStateの切り替え ---
     static activateTabUI(tabId) {
       document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
       document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
@@ -133,16 +135,13 @@
       State.set("GLB.activeTab", tabId);
     }
 
-    // --- タブ切り替えアクション (旧 Evt.switchAPP) ---
     static switchTab(btnOrId, hooks = {}) {
       const tabId = typeof btnOrId === 'string' ? btnOrId : btnOrId.dataset.target;
       this.activateTabUI(tabId);
-      // リゾルバを通じて動的に設定を取得し、Coreはtab1やtab2の詳細を知らずにセッションを開始する
       const config = this.configResolver ? this.configResolver(tabId) : {};
       this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks, config);
     }
     
-    // --- イベント委譲ルーター (旧 Evt.#handleClick / #handleChange) ---
     static initGlobalRouter(actionClasses = {}) {
       document.addEventListener("click", e => {
         const btn = e.target.closest('[data-action]');

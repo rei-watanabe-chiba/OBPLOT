@@ -11,6 +11,43 @@
   }
   // --- DOM構築 ---
   class NewDOM {
+    static status(ref, status = null) {
+      const elm = DOM.el(ref);
+      if (elm) [elm.dataset.status, elm.innerText] = status?.length ? status : ["hidden", ""];
+    }
+    static #ensureDialog(type) {
+      const id = type === 'confirm' ? 'universalConfirm' : 'idleToast';
+      let dlg = DOM.el(id);
+      if (!dlg) {
+        document.body.insertAdjacentHTML('beforeend', Tpl.Dialog[type]());
+        dlg = DOM.el(id);
+      }
+      return dlg;
+    }
+    static confirm(title, msg) {
+      return new Promise(resolve => {
+        const dlg = this.#ensureDialog('confirm');
+        DOM.updateText("uDialogTitle", title);
+        DOM.updateText("uDialogMessage", msg);
+        const closeDlg = () => { dlg.close(); };
+        dlg.showModal();
+        DOM.el("uDialogConfirmBtn").onclick = () => { closeDlg(); resolve(true); };
+        DOM.el("uDialogCancelBtn").onclick = () => { closeDlg(); resolve(false); };
+      });
+    }
+    static toast(title, msg, onOk = null) {
+      const dlg = this.#ensureDialog('toast');
+      DOM.updateText("idleToastTitle", title);
+      DOM.updateText("idleToastMessage", msg);
+      if (!dlg.open) dlg.showModal();
+      DOM.el("idleToastOkBtn").onclick = () => {
+        dlg.close();
+        if (onOk) onOk();
+      };
+    }
+    static inputs(ref, errFlags) {
+      DOM.el(ref)?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
+    }
     static buildFormFields(confArr, ref, isClear = false) {
       const cntr = DOM.el(ref);
       if (!cntr || (!isClear && cntr.hasChildNodes())) return;
@@ -42,39 +79,6 @@
         return elm;
       }));
     }
-    static status(ref, status = null) {
-      const elm = DOM.el(ref);
-      if (elm) [elm.dataset.status, elm.innerText] = status?.length ? status : ["hidden", ""];
-    }
-    static confirm(title, msg, ref = null) {
-      const elm = DOM.el(ref);
-      const svStat = elm ? [elm.dataset.status || "hidden", elm.innerText] : null;
-      if (elm) this.status(elm, ["loading", "実行中..."]);
-      return new Promise(resolve => {
-        const dlg = DOM.el("universalConfirm");
-        DOM.updateText("uDialogTitle", title);
-        DOM.updateText("uDialogMessage", msg);
-        const closeDlg = () => { dlg.close(); };
-        dlg.showModal();
-        DOM.el("uDialogConfirmBtn").onclick = () => { closeDlg(); resolve(true); };
-        DOM.el("uDialogCancelBtn").onclick = () => {
-          closeDlg();
-          if (elm) this.status(elm, svStat);
-          resolve(false);
-        };
-      });
-    }
-    static toast(title, msg, onOk = null) {
-      const dlg = DOM.el("idleToast");
-      if (!dlg) return;
-      DOM.updateText("idleToastTitle", title);
-      DOM.updateText("idleToastMessage", msg);
-      if (!dlg.open) dlg.showModal();
-      DOM.el("idleToastOkBtn").onclick = () => {
-        dlg.close();
-        if (onOk) onOk();
-      };
-    }
     static buildToggle(conf, ref, isClear = false) {
       const cntr = DOM.el(ref);
       if (!cntr || (!isClear && cntr.hasChildNodes())) return;
@@ -89,11 +93,8 @@
       if (!rows.length) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
       cntr.innerHTML = Tpl.Stats.cntr(rows.map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
     }
-    static inputs(ref, errFlags) {
-      DOM.el(ref)?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
-    }
   }
-
+  
   // --- ObPopover (ライフサイクル保護改修版) ---
   class ObPopover extends HTMLElement {
     #uid = null;
@@ -169,12 +170,20 @@
       static colorBox(clr) { return clr ? html`<span class="color-box" style="background: ${clr}"></span>` : ""; }
       static badge(val) { return html`<span class="badge">${val}</span>`; }
     };
-    static Toggle = class {
-      static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
-    };
     static Stats = class {
       static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
       static cntr(rowsHtml) { return html`<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`; }
+    };
+    static Dialog = class {
+      static confirm() { 
+        return html`<dialog id="universalConfirm"><h3 id="uDialogTitle">確認</h3><p id="uDialogMessage"></p><div class="field-row"><button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button><button id="uDialogConfirmBtn" data-type="primary">OK</button></div></dialog>`; 
+      }
+      static toast() { 
+        return html`<dialog id="idleToast"><h3 id="idleToastTitle"></h3><p id="idleToastMessage"></p><div class="field-row"><button id="idleToastOkBtn" data-type="primary">OK</button></div></dialog>`; 
+      }
+    };
+    static Toggle = class {
+      static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
     };
     static MultiSelect = class {
       static item(val, dataChange) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }
