@@ -11,7 +11,29 @@
     }
 
     build() {
+      // 1. 初回の画面状態を一括適用
       this.update();
+
+      // 2. ステータスバーのリアルタイムバインディング（初期化時に1度だけ登録）
+      document.querySelectorAll(`[data-bind-status^="${this.stateTarget}"]`).forEach(el => {
+        const path = el.dataset.bindStatus;
+        
+        // 状態反映関数
+        const applyStatus = (val) => {
+          if (Array.isArray(val) && val.length >= 2) {
+            if (el.dataset.status !== val[0]) el.dataset.status = val[0];
+            if (el.innerText !== val[1]) el.innerText = val[1];
+          } else {
+            el.dataset.status = "hidden";
+            el.innerText = "";
+          }
+        };
+
+        // 監視を登録
+        State.subscribe(path, applyStatus);
+        // 【重要】監視登録直後の現在値で初期化（ロード時の表示漏れ防止）
+        applyStatus(this.getVal(path));
+      });
     }
 
     update() {
@@ -43,14 +65,27 @@
           targetEl.style.display = isVisible ? '' : 'none';
         }
 
-        // 活性・非活性制御
-        if (def.activePhase !== undefined) {
-          const isActive = typeof def.activePhase === 'function' ? def.activePhase(curPhase) : curPhase >= def.activePhase;
+        // 活性・非活性およびハイライト（State）の独立制御
+        if (def.activePhase !== undefined || def.disablePhase !== undefined) {
+          // activePhaseは data-state="active" (ハイライト) を決定
+          const isActive = def.activePhase !== undefined 
+            ? (typeof def.activePhase === 'function' ? def.activePhase(curPhase) : curPhase >= def.activePhase) 
+            : true;
+            
+          // disablePhaseは disabled (非活性) を決定。未定義ならactivePhaseの反転とする
+          const isDis = def.disablePhase !== undefined 
+            ? (typeof def.disablePhase === 'function' ? def.disablePhase(curPhase) : curPhase >= def.disablePhase) 
+            : !isActive; 
+
           if (targetEl.tagName === 'DETAILS') {
-            targetEl.setAttribute('data-type', isActive ? '' : 'disabled');
             targetEl.setAttribute('data-state', isActive ? 'active' : '');
+            if (isDis) {
+              targetEl.setAttribute('data-type', 'disabled');
+            } else {
+              targetEl.removeAttribute('data-type');
+            }
           } else {
-            targetEl.disabled = !isActive;
+            targetEl.disabled = isDis;
           }
         }
 

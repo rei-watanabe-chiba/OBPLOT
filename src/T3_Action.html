@@ -49,6 +49,11 @@
     static async start() {
       CoreAction.initGlobalRouter({ CoreAction, T3Action });
 
+      // DI: CoreActionへのアプリ設定リゾルバの注入
+      CoreAction.configResolver = (tabId) => {
+        return { schemaKey: 'tab3', statPath: 'T3ST.inst.status' };
+      };
+
       const automatorT3 = new CoreUIAutomator(T3_SIDEBAR_SCHEMA, 'T3ST');
       automatorT3.build();
 
@@ -68,7 +73,12 @@
         }
       });
 
-      CoreAction.switchTab('tab3');
+      // UI初期化とセッション接続を明示的に分離して実行
+      const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";
+      CoreAction.activateTabUI('tab3');
+      
+      const initConfig = CoreAction.configResolver('tab3');
+      await CoreAction.startSession(ssId, false, {}, initConfig);
     }
   }
 

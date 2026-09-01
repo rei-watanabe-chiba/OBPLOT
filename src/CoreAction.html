@@ -45,6 +45,12 @@
   // --- コントローラー基盤 ＆ アプリケーション管理 ---
   class CoreAction {
     static get #ssId() { return State.get("GLB.ssId"); }
+    
+    // 二重初期化防止フラグ
+    static #isInitialized = false;
+    
+    // DI: ツール側から設定を動的に受け取るリゾルバ
+    static configResolver = null;
 
     // --- 非同期ラッパー (旧 CoreCtrl.withAsyncLock) ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
@@ -58,15 +64,14 @@
     }
 
     // --- 環境検証と接続 (旧 CoreCtrl.connectApp) ---
-    static async connectApp(ssId) {
+    static async connectApp(ssId, config) {
       State.set("GLB.isLocked", true);
-      const activeTab = State.get("GLB.activeTab");
-      const statPath = activeTab === 'tab1' ? "T1ST.pref.status" : (activeTab === 'tab2' ? "T2ST.asgn.status" : "T3ST.inst.status");
+      const statPath = config.statPath;
       try {
         State.set(statPath, ["loading", "環境確認中..."]);
         const curShts = await API.getWbState(ssId);
-        // ※Phase2: Mtd.Util は CoreMethod.Util へ分離済み
-        const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, activeTab);
+        // configからスキーマキーを受け取り環境を検証
+        const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, config.schemaKey);
         if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
         
         if (buildPlan.length) {
@@ -93,11 +98,13 @@
     }
 
     // --- セッション開始パイプライン (旧 Evt.startSession) ---
-    // ※特化ロジック (restore等) は hooks 経由で DI する設計
-    static async startSession(ssId, isSwitch = false, hooks = {}) {
+    static async startSession(ssId, isSwitch = false, hooks = {}, config = {}) {
       if (!isSwitch) {
-        const isConnected = await this.connectApp(ssId);
+        // 二重初期化防止ガード
+        if (this.#isInitialized) return; 
+        const isConnected = await this.connectApp(ssId, config);
         if (!isConnected) return; 
+        this.#isInitialized = true;
       }
 
       // 特化型ツール (T1/T2) 用のリストア処理等の実行
@@ -116,21 +123,26 @@
       if (hooks.onAfterInit) hooks.onAfterInit();
     }
 
-    // --- タブ切り替え (旧 Evt.switchAPP) ---
-    static switchTab(btnOrId, hooks = {}) {
-      const tabId = typeof btnOrId === 'string' ? btnOrId : btnOrId.dataset.target;
+    // --- 純粋なタブUIとStateの切り替え ---
+    static activateTabUI(tabId) {
       document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
       document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
       document.getElementById(tabId)?.classList.add("active");
       document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
       document.body.setAttribute('data-theme', tabId);
       State.set("GLB.activeTab", tabId);
-      
-      this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks);
+    }
+
+    // --- タブ切り替えアクション (旧 Evt.switchAPP) ---
+    static switchTab(btnOrId, hooks = {}) {
+      const tabId = typeof btnOrId === 'string' ? btnOrId : btnOrId.dataset.target;
+      this.activateTabUI(tabId);
+      // リゾルバを通じて動的に設定を取得し、Coreはtab1やtab2の詳細を知らずにセッションを開始する
+      const config = this.configResolver ? this.configResolver(tabId) : {};
+      this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks, config);
     }
     
     // --- イベント委譲ルーター (旧 Evt.#handleClick / #handleChange) ---
-    // ※ HTML内の data-action="T1Action.loadRaw" 等を動的解決して実行
     static initGlobalRouter(actionClasses = {}) {
       document.addEventListener("click", e => {
         const btn = e.target.closest('[data-action]');
@@ -139,9 +151,9 @@
         if (actionClasses[ns]?.[method]) actionClasses[ns][method](btn);
         else if (window[ns]?.[method]) window[ns][method](btn);
       });
-
       document.addEventListener("change", e => {
-        const tgt = e.target, bindPath = tgt.dataset.bind, changePath = tgt.dataset.change;
+        const tgt = e.target.closest('[data-bind], [data-change]') || e.target;
+        const bindPath = tgt.dataset.bind, changePath = tgt.dataset.change;
         if (bindPath) State.set(bindPath, tgt.type === "checkbox" ? tgt.checked : tgt.value);
         if (changePath) {
           const [ns, method] = changePath.split('.');

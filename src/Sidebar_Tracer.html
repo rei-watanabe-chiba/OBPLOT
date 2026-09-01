@@ -156,7 +156,7 @@
     
     <script>
       window.__INITIAL_SSID__ = "<?= typeof initialSsId !== 'undefined' ? initialSsId : '' ?>";
-      window.__APP_MODE__ = "tab1";
+      window.__APP_MODE__ = "<?= typeof appMode !== 'undefined' ? appMode : 'tab1' ?>";
     </script>
     <?!= include('Global'); ?>
     <?!= include('PlatformAdapter'); ?>

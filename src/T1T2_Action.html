@@ -14,13 +14,19 @@
       }
       State.set({ "T1ST.pref.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出対応" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "T1ST.phase": isInit ? T1_PHS.READY : T1_PHS.INVALID } : {}) });
     }
-    static renewRawRefs(tgt) {
-      State.set(`T1ST.raw.refs.${tgt.dataset.field}`, tgt.value);
-      T1Action.checkRawRefs();
-    }
     static checkRawRefs() {
       const flags = CoreMethod.Util.validateSelect(GLB.fileFields.map(f => State.get(`T1ST.raw.refs.${f.key}`) || ""), 3);
-      State.set({ "T1ST.raw.flags": flags, "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") });
+      State.set({ 
+        "T1ST.raw.flags": flags, 
+        "T1ST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("T1ST.raw.cachedStatus") 
+      });
+    }
+    static checkExtrRefs() {
+      const isErr = !(State.get(`T1ST.extr.refs.${GLB.idx.key1}`)?.trim());
+      State.set({ 
+        "T1ST.extr.flags": [isErr, false, false], 
+        "T1ST.extr.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""] 
+      }); 
     }
     static checkExtrRefs() {
       const isErr = !(State.get(`T1ST.extr.refs.${GLB.idx.key1}`)?.trim());
@@ -30,11 +36,13 @@
     // --- 非同期アクション ---
     static async loadRaw() {
       if (!(await NewDOM.confirm("確認", State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？"))) return;
+      State.set("T1ST.raw.status", ["loading", "データを取得中..."]); 
       await CoreAction.withAsyncLock("T1ST.raw.status", async () => {
         const { data, message } = await API.fetchDT(T1Action.ssId, GLB.rawShts.file, 5);
         State.reset(['T1ST.extr']); 
         State.set({ "T1ST.raw.data": data, "T1ST.raw.refs": Object.fromEntries(GLB.fileFields.map(f => [f.key, ""])), "T1ST.raw.flags": [true, true, true, false, false], "T1ST.raw.cachedStatus": ["success", message], "T1ST.phase": T1_PHS.LOAD });
-        T1Action.checkRawRefs(); return message; 
+        T1Action.checkRawRefs(); 
+        return State.get("T1ST.raw.status"); 
       });
     }
     static async stateDI(rawDT, act = "make") {
@@ -52,10 +60,12 @@
       T1Action.checkRawRefs();
       const { raw } = State.proxy.T1ST;
       if (raw.flags.some(Boolean) || !(await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？"))) return;
+      State.set("T1ST.raw.status", ["loading", "リストを生成中..."]); 
       await CoreAction.withAsyncLock("T1ST.raw.status", async () => (await T1Action.stateDI(CoreMethod.Util.remapArry(raw.data, GLB.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), CoreMethod.Util.buildHeader('rawFile')), "make")).statArr);
     }
     static async valdList() {
       if (!await NewDOM.confirm("確認", "「ファイルリスト」を上書きしますか？")) return;
+      State.set("T1ST.raw.status", ["loading", "データを検証中..."]); 
       await CoreAction.withAsyncLock("T1ST.raw.status", async () => (await T1Action.stateDI((await API.fetchDT(T1Action.ssId, GLB.appShts.filelist, 5, 5)).data, "validate")).statArr);
     }
     static async runExtr() {
@@ -228,6 +238,13 @@
       
       CoreAction.initGlobalRouter({ CoreAction, T1Action, T2Action });
 
+      // DI: CoreActionへのアプリ設定リゾルバの注入
+      CoreAction.configResolver = (tabId) => {
+        return tabId === 'tab1' 
+          ? { schemaKey: 'tab1', statPath: 'T1ST.pref.status' }
+          : { schemaKey: 'tab2', statPath: 'T2ST.asgn.status' };
+      };
+
       const automatorT1 = new CoreUIAutomator(T1T2_SCHEMA.T1, 'T1ST');
       const automatorT2 = new CoreUIAutomator(T1T2_SCHEMA.T2, 'T2ST');
 
@@ -250,8 +267,22 @@
       // UI同期の限定購読
       State.subscribe("T1ST.phase", () => automatorT1.update());
       State.subscribe("T1ST.raw.flags", () => automatorT1.update());
-      State.subscribe("T1ST.extr.flags", () => automatorT1.update());
-      State.subscribe("T2ST.phase", () => automatorT2.update());
+      State.subscribe("T1ST.raw.flags", flags => {
+        NewDOM.inputs("t1RawBox", flags);
+        automatorT1.update();
+      });
+      State.subscribe("T1ST.extr.flags", flags => {
+        NewDOM.inputs("t1ExtrBox", flags);
+        automatorT1.update();
+      });
+
+      // 【追加】グローバルロックの購読 (画面全体の保護)
+      State.subscribe("GLB.isLocked", v => {
+        const fs1 = document.getElementById("tab1Fieldset");
+        const fs2 = document.getElementById("tab2Fieldset");
+        if (fs1) fs1.disabled = v;
+        if (fs2) fs2.disabled = v;
+      });
 
       // 特化型副作用の購読
       State.subscribe(`T1ST.extr.refs.${GLB.idx.key1}`, () => T1Action.checkExtrRefs());
@@ -304,7 +335,13 @@
           }
         }
       };
-      CoreAction.switchTab(activeMode, hooks);
+
+      // UI初期化とセッション接続を明示的に分離して実行
+      const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";
+      CoreAction.activateTabUI(activeMode);
+      
+      const initConfig = CoreAction.configResolver(activeMode);
+      await CoreAction.startSession(ssId, false, hooks, initConfig);
     }
   }
 

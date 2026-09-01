@@ -3,16 +3,18 @@
   const T1T2_SCHEMA = {
     T1: {
       elements: [
-        { id: "prefSec", activePhase: p => p === T1_PHS.INIT },
+        // prefSecは常に操作可能 (isDis: falseを復元)
+        { id: "prefSec", activePhase: p => p === T1_PHS.INIT, disablePhase: p => false },
         
-        { id: "rawSec", activePhase: p => p >= T1_PHS.READY, openPhase: p => p >= T1_PHS.READY && p < T1_PHS.VALID },
-        { id: "btn-load-raw", text: p => p <= T1_PHS.READY ? "データを取得" : "再取得" },
+        { id: "rawSec", activePhase: p => p >= T1_PHS.READY, disablePhase: p => p < T1_PHS.READY, openPhase: p => p >= T1_PHS.READY && p < T1_PHS.VALID },
+        // データ取得ボタンは常に操作可能 (isDis: falseを復元)
+        { id: "btn-load-raw", disablePhase: p => false, text: p => p <= T1_PHS.READY ? "データを取得" : "再取得" },
         { id: "btn-make-list", activePhase: p => p >= T1_PHS.READY },
         { id: "btn-vald-list", activePhase: p => p >= T1_PHS.INVALID && !State.get("T1ST.raw.flags").some(Boolean), className: p => p === T1_PHS.INVALID ? "" : "outline" },
         { id: "rawSecArea", visiblePhase: p => p >= T1_PHS.LOAD },
         { id: "rawSecBtnBox", visiblePhase: p => p >= T1_PHS.LOAD },
         
-        { id: "extrSec", activePhase: p => p >= T1_PHS.VALID, openPhase: p => p >= T1_PHS.VALID && p < T1_PHS.OUTPUT },
+        { id: "extrSec", activePhase: p => p >= T1_PHS.VALID, disablePhase: p => p < T1_PHS.VALID, openPhase: p => p >= T1_PHS.VALID && p < T1_PHS.OUTPUT },
         { id: "btn-extr-run", activePhase: p => p >= T1_PHS.VALID && !State.get("T1ST.extr.flags").some(Boolean) },
         { id: "btn-push-extr", activePhase: p => p >= T1_PHS.EXTRACT, visiblePhase: p => p >= T1_PHS.EXTRACT },
         { id: "extrSecArea", visiblePhase: p => p >= T1_PHS.VALID }
@@ -20,21 +22,24 @@
     },
     T2: {
       elements: [
-        { id: "asgnSec", activePhase: p => true, openPhase: p => p < T2_PHS.FILTERED },
+        // asgnSecは常に操作可能 (isDis: falseを復元)
+        { id: "asgnSec", activePhase: p => true, disablePhase: p => false, openPhase: p => p < T2_PHS.FILTERED },
+        // データ取得ボタンは常に操作可能 (isDis: falseを復元)
+        { id: "btn-load-db", disablePhase: p => false },
         { id: "btn-fltr-db", activePhase: p => p >= T2_PHS.LOADED },
         { id: "asgnSecArea", visiblePhase: p => p >= T2_PHS.LOADED },
 
-        { id: "symbSec", activePhase: p => p >= T2_PHS.FILTERED, openPhase: p => p >= T2_PHS.FILTERED && p < T2_PHS.MAPPED },
+        { id: "symbSec", activePhase: p => p >= T2_PHS.FILTERED, disablePhase: p => p < T2_PHS.FILTERED, openPhase: p => p >= T2_PHS.FILTERED && p < T2_PHS.MAPPED },
         { id: "btn-symb", activePhase: p => p >= T2_PHS.FILTERED },
         { id: "t2AxisBox", activePhase: p => p >= T2_PHS.FILTERED },
         { id: "symbSecArea", visiblePhase: p => p >= T2_PHS.FILTERED },
 
-        { id: "prevSec", activePhase: p => p >= T2_PHS.MAPPED },
+        { id: "prevSec", activePhase: p => p >= T2_PHS.MAPPED, disablePhase: p => p < T2_PHS.MAPPED },
         { id: "btn-make-prev", activePhase: p => p >= T2_PHS.MAPPED },
 
         { id: "calbSec", activePhase: p => p >= T2_PHS.MAPPED, openPhase: p => p === T2_PHS.MAPPED ? true : undefined },
 
-        { id: "stdzSec", activePhase: p => p >= T2_PHS.MAPPED }
+        { id: "stdzSec", activePhase: p => p >= T2_PHS.MAPPED, disablePhase: p => p < T2_PHS.MAPPED }
       ]
     }
   };
