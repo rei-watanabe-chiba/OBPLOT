@@ -1,56 +1,60 @@
-# ROADMAP.md: OBPLOT1.0 Schema-Driven Refactoring
+# ROADMAP.md: OBPLOT1.0 Legacy Eradication & Optimization
 
-## 1. SAVEPOINT.md からの主要な変更点
+## 1. パラダイムシフトとレガシー駆逐の判断基準
 
-### 1.1 アーキテクチャと状態管理の進化
-* **変更前:** UI状態制御は `data-action` や `data-ui` 属性に基づくイベントルーターと相対DOM参照エンジンによって行われていた。また、DOMの再構築や再描画を伴う破壊的な更新が主であった。
-* **変更後:** 全層において、`SCHEMA` 定義と `CoreUIAutomator` を中核とする「完全スキーマ駆動アーキテクチャ」に統合。状態変化時はDOMツリーを破壊せず、既存要素のプロパティや属性のみを書き換える「Patch（差分）型同期」を採用。
-* **【New】完全な宣言的UIへの昇華:** 値の双方向バインディングのみならず、コンポーネントのソース（`src`）、統計データ（`stats`）、動的フォーム（`fields`）、エラーハイライト（`errs`）、選択肢（`opts`）に至るまで、すべてのDOM操作をカスタム属性（`data-bind-*`）によるリアルタイム監視へ移行。直接的なDOM操作（`getElementById`等）を全廃した。
+システム全体が「完全スキーマ駆動・単方向データフロー」へ進化したことに伴い、設計思想に合致しない旧アーキテクチャ（レガシーコード）を特定し、安全に駆逐するための判断基準（Before / After）を定義する。
 
-### 1.2 ファイル構成・モジュール責務の再編 (A, B, Cへの分離)
-システムの責務を「汎用コア（A）」と「独自ツール（B/C）」に明確に分割する。
+### 1.1 DOM操作とUI同期のパラダイムシフト
+* **【Legacy (Before)】命令的・直接的DOM操作:**
+  * `document.getElementById('...').opts = ...` のような直接代入。
+  * `replaceChildren()` によるDOMツリーの破壊的更新。
+  * 各Action内での手動によるステータスバー操作（`State.set(..., ["loading", ...])`の散在）。
+* **【Modern (After)】宣言的UIとPatch型同期への完全委譲:**
+  * DOM操作はすべて `SCHEMA` のフェーズ定義（`activePhase`, `disablePhase`等）と、カスタム属性（`data-bind-opts`, `data-bind-src`, `data-bind-fields`等）によるバインディングに委譲する[cite: 26]。
+  * **[Why]**: DOMの直接操作はWeb Componentsの参照ロスト（UI凍結）を生む。単方向データフロー（State → UI）の原則を破る命令的処理は、UIの不整合と保守性低下の温床となるため、一掃する必要がある。
 
-* **A（共通コアエンジン）**:
-    * `CoreModel.html`: `AppState` 基盤の提供。
-    * `PlatformAdapter.html`: 通信（GAS/Excel）と永続化のインターフェース・DIを集約。
-    * `CoreAction.html`: グローバルイベントルーター（委譲）、非同期ロック、システム基盤（初期化・バックアップ）を一手に担う。**【New】DIリゾルバによる依存性注入を実装し、ドメイン固有の名前空間から完全に独立。**
-    * `CoreUIAutomator.html`: 全層共通の差分同期エンジン。バインディングとフェーズ評価（Phase-Aware）を統括。
-    * `CoreMethod.html`: 回帰計算、スケール計算など、ドメインに依存しない純粋な共通ユーティリティ。
-    * `Component.html`, `Chart.html`, `CSS.html`: 全環境共通のUIコンポーネント群。
-* **B（Tab1, 2 特化ツール / Tracer5i用）**:
-    * `Sidebar_Tracer.html`: B専用のUI静的骨格。
-    * `T1T2_Schema.html`: フェーズ制約（`activePhase`, `disablePhase`等）を内包したDOM定義配列。
-    * `T1T2_Action.html`: データ抽出・検量線パイプラインの非同期コントローラー。
-    * `T1T2_Method.html`: Tracer固有のデータ変換・ビジネスロジック。
-* **C（Tab3 汎用ツール / Dashboard用）**:
-    * `Sidebar_Dash.html` / `Report.html`: サイドバー用とレポート本体用の独立したUI骨格。
-    * `T3_Sidebar_Schema.html` / `Report_Schema.html`: サイドバー側とレポート側のコンテキスト衝突を防ぐための独立スキーマ。
-    * `T3_Action.html` / `ReportApp.html`: ダッシュボード向けのコントローラーとエントリーポイント。
-    * `T3_Method.html`: 汎用レポートデータ生成ロジック。
+### 1.2 制御フローと状態管理のパラダイムシフト
+* **【Legacy (Before)】個別実装された制御フロー:**
+  * 各非同期アクション内に記述された `if (!await NewDOM.confirm(...)) return;` によるガード節と、後続の `withAsyncLock` 呼び出しの二段構え。
+  * UI表示のためだけにAction層で生データを加工し、そのままDOMへ渡す処理。
+* **【Modern (After)】統合パイプラインと派生状態（Derived State）:**
+  * 確認〜ロック〜実行〜復元の定型フローは `CoreAction.confirmAndExecute` に完全カプセル化する[cite: 26]。
+  * 生データから生成されるUI用データ（選択肢リストやコンポーネント設定）は、派生状態として `State` の別パスに保存し、自動同期させる。
+  * **[Why]**: 制御ロジックの散在はUndo漏れやステータス不整合を引き起こす。Action層から制御構文を排除し、純粋なビジネスロジックのみを記述できる構造を維持するため。
 
-### 1.3 実行環境・ビルドパイプラインの変更
-* **変更前:** 単一の `App.html` を生成し、URLパラメータで擬似的に切り替えていた。
-* **変更後:** `infra/build.js` を改修し、A+Bの結合である `App_Tracer.html` と、A+Cの結合である `App_Dash.html` を完全に独立して出力する。Excel用マニフェストも2系統に分離。
+### 1.3 依存関係とモジュール結合のパラダイムシフト
+* **【Legacy (Before)】ドメイン密結合:**
+  * コア層がTab1/Tab2などの特定ドメインの知識やステータスパスを直接参照していた。
+  * 旧名前空間（`Mtd.Util`など）への依存。
+* **【Modern (After)】DI（依存性の注入）と完全抽象化:**
+  * ツール側から `CoreAction.configResolver` を通じて初期化情報（スキーマキーや監視パス）を注入する[cite: 26]。
+  * 汎用計算は `CoreMethod` に完全集約。
+  * **[Why]**: コアエンジン（A）を将来的に独立したGASライブラリとして配布するためには、コア内部から特化ツール（B/C）固有の知識を完全に排除しなければならないため[cite: 26]。
 
 ---
 
-## 2. リファクタリング・ロードマップ（段階的稼働テスト）
+## 2. 最適化・クリーンアップ ロードマップ
 
-### Phase 1: コアエンジン (A) の抽出と統合基盤の構築 【完了】
-* `Controller`, `Event`, `View`, `Method` から共通機能を抽出し、インフラ・基盤クラス群（`CoreAction`, `CoreUIAutomator`, `CoreMethod`, `PlatformAdapter`）を確立。
+安定動作を確認した現行システムから、不要な残骸を安全に削ぎ落とし、ライブラリ化に向けた最終最適化を行う。
 
-### Phase 2: 特化型ツール (B/C) のスキーマ駆動化と完全分離 【完了】
-* **達成されたブレイクスルー**: 
-  * **DIの確立:** `CoreAction` に `configResolver` を導入。汎用コアが「どのツールが動いているか」を知ることなく、B/C側から動的にスキーマや状態パスを注入する設計を確立。これにより、単一HTML内での複数アプリの同居と、将来のコアライブラリ化を両立させた。
-  * **アクション・パイプラインのカプセル化:** 「ダイアログによる確認 → ローディングUIの展開 → 非同期処理のロック → 成功/エラー時のUI復元」という一連の定型フローを `CoreAction.confirmAndExecute` として完全にカプセル化。Action層から制御構文を排除し、純粋なビジネスロジックのみを記述できる構造へ進化した。
-  * **フェーズ制約の分離:** `activePhase` (ハイライト) と `disablePhase` (非活性化) の評価軸を分離し、より柔軟かつ厳密な宣言的UI制御を実現した。
-
-### Phase 3: ダッシュボード (Tab3) 動作検証とビルドパイプライン分割 【Next】
+### Phase 1: レガシーDOM APIと旧制御構文の走査・駆逐 【Next】
 * **タスク**:
-  1. 確立されたDI基盤と宣言的UIアーキテクチャの上で、C用ファイルの動作検証を実施。
-  2. `infra/build.js` を改修し、独立出力させる。マニフェストを分割・最適化する。
+  1. 全HTMLファイルを走査し、`getElementById` や `querySelector` を用いた直接的なプロパティ代入（`innerHTML`, `opts`, `src`等）が残留していないか確認し、すべて `data-bind-*` に置き換える。
+  2. Action層（`T1T2_Action.html`, `T3_Action.html`）を走査し、旧式の `NewDOM.confirm` や単独の `withAsyncLock`（ローディングの手動セットを含む）が残存していないか確認。すべて `confirmAndExecute` に統合する。
+  3. 不要になったレガシーUIヘルパー（`Component.html` 内の古い描画メソッド等）を削除する。
 
-### Phase 4: GASライブラリ化の確立と総合テスト
+### Phase 2: デッドコード・旧名前空間のパージ
 * **タスク**:
-  1. コアエンジン (A) を独立したGASプロジェクト（非公開ライブラリ）としてデプロイ。
-  2. 配布用テンプレート側からライブラリ参照し、HTML生成の中継を実装。
+  1. `Mtd.Util` などの旧名前空間への参照が、コメント内や `T1T2_Method.html`, `T3_Method.html`, `Chart.html` などに残っていないか確認・修正する。
+  2. 使用されなくなった旧スキーマ定義、使用済みの旧CSSクラス、到達不能な（Dead）Actionメソッドや分岐ロジックを削除し、ファイルサイズを削減する。
+
+### Phase 3: 状態（State）ツリーのシェイプアップと派生処理の最適化
+* **タスク**:
+  1. `State` オブジェクト内に、不要になった一時変数や重複するデータ（キャッシュ用プロパティなど）が残留していないか精査する。
+  2. 派生状態（Derived State）を生成する処理（例: `updateDerivedState`）が、必要最小限の依存関係でのみ発火するよう（余計な再計算が走らないよう）Subscribeの登録粒度を最適化する。
+
+### Phase 4: ビルドパイプライン分割とGASライブラリ化
+* **タスク**:
+  1. クリーンアップが完了したコードベースに対し、`infra/build.js` を改修し、ツールB用（Tracer）とツールC用（Dashboard）の静的HTMLを独立して出力・最小化（Minify）する[cite: 26]。
+  2. Excelアドイン用の `manifest.xml` を分割・最適化する[cite: 26]。
+  3. 汎用コア（A）を独立したGASプロジェクト（非公開ライブラリ）としてデプロイし、エンドユーザー配布用テンプレートから参照するアーキテクチャを完成させる[cite: 26]。
