@@ -1,0 +1,49 @@
+<!-- src/T1T2_Schema.html -->
+<script>
+  const T1T2_SCHEMA = {
+    T1: {
+      elements: [
+        // --- prefSec ---
+        { id: "prefSec", activePhase: p => p === T1_PHS.INIT },
+        
+        // --- rawSec ---
+        { id: "rawSec", activePhase: p => p >= T1_PHS.READY, openPhase: p => p >= T1_PHS.READY && p < T1_PHS.VALID },
+        { secId: "rawSec", dataUi: "btn-load", text: p => p <= T1_PHS.READY ? "データを取得" : "再取得" },
+        { secId: "rawSec", dataUi: "btn-make", activePhase: p => p >= T1_PHS.READY },
+        { secId: "rawSec", dataUi: "btn-vald", activePhase: p => p >= T1_PHS.INVALID && !State.get("T1ST.raw.flags").some(Boolean), className: p => p === T1_PHS.INVALID ? "" : "outline" },
+        { secId: "rawSec", dataUi: "area", visiblePhase: p => p >= T1_PHS.LOAD },
+        { secId: "rawSec", dataUi: "btn-box", visiblePhase: p => p >= T1_PHS.LOAD },
+        
+        // --- extrSec ---
+        { id: "extrSec", activePhase: p => p >= T1_PHS.VALID, openPhase: p => p >= T1_PHS.VALID && p < T1_PHS.OUTPUT },
+        { secId: "extrSec", dataUi: "btn-extr", activePhase: p => p >= T1_PHS.VALID && !State.get("T1ST.extr.flags").some(Boolean) },
+        { secId: "extrSec", dataUi: "btn-push", activePhase: p => p >= T1_PHS.EXTRACT, visiblePhase: p => p >= T1_PHS.EXTRACT },
+        { secId: "extrSec", dataUi: "area", visiblePhase: p => p >= T1_PHS.VALID }
+      ]
+    },
+    T2: {
+      elements: [
+        // --- asgnSec ---
+        { id: "asgnSec", activePhase: true, openPhase: p => p < T2_PHS.FILTERED },
+        { secId: "asgnSec", dataUi: "btn-fltr", activePhase: p => p >= T2_PHS.LOADED },
+        { secId: "asgnSec", dataUi: "area", visiblePhase: p => p >= T2_PHS.LOADED },
+
+        // --- symbSec ---
+        { id: "symbSec", activePhase: p => p >= T2_PHS.FILTERED, openPhase: p => p >= T2_PHS.FILTERED && p < T2_PHS.MAPPED },
+        { secId: "symbSec", dataUi: "btn-symb", activePhase: p => p >= T2_PHS.FILTERED },
+        { secId: "symbSec", dataUi: "axis-box", activePhase: p => p >= T2_PHS.FILTERED },
+        { secId: "symbSec", dataUi: "area", visiblePhase: p => p >= T2_PHS.FILTERED },
+
+        // --- prevSec ---
+        { id: "prevSec", activePhase: p => p >= T2_PHS.MAPPED },
+        { secId: "prevSec", dataUi: "btn-make", activePhase: p => p >= T2_PHS.MAPPED },
+
+        // --- calbSec ---
+        { id: "calbSec", activePhase: p => p >= T2_PHS.MAPPED, openPhase: p => p === T2_PHS.MAPPED ? true : undefined },
+
+        // --- stdzSec ---
+        { id: "stdzSec", activePhase: p => p >= T2_PHS.MAPPED }
+      ]
+    }
+  };
+</script>

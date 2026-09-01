@@ -7,6 +7,7 @@
     static load() { try { return JSON.parse(localStorage.getItem(this.K)); } catch(e){ return null; } }
     static clear() { localStorage.removeItem(this.K); }
   }
+
   // --- ハードコード定数群 ---
   const DASH_BU_KEY = "OBP_DASH_BU";
   const RPT_CFG = {
@@ -37,6 +38,7 @@
       c_grid: { min: 0, max: 100, step: 1, unit: "%" }
     }
   };
+
   // --- 初期値 ---
   const getInitRawGph = () => {
     const fts = (GLB.defaultGraphStyle.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
@@ -49,11 +51,12 @@
     };
   };
   const getDefPnl = () => ({ graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" });
+
   // --- UI Schema ---
   const UI_SCHEMA = {
     selects: [
       { id: "boxGlobalCorr", bind: "correction", hasEmpty: false, optsFn: d => [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.corrDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))] },
-      { id: "boxSymbAxis", bind: "symb.baseKey", hasEmpty: false, opts: GLB.symbAxes },
+      { id: "boxSymbAxis", bind: "symb.baseKey", hasEmpty: false, opts: GLB.symbAxes, changeHook: "checkSymbAxis" }, // カスタムフックを登録
       { id: "boxFontEng", bind: "rawGph.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({label:v, val:v})) },
       { id: "boxFontJp", bind: "rawGph.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({label:v, val:v})) },
       { id: "boxGraphType", bind: "activePanel.graphType", hasEmpty: false, opts: [{label: RPT_CFG.lbl.calib, val: "calibration"}, {label: RPT_CFG.lbl.discr, val: "discrimination"}] },
@@ -72,139 +75,7 @@
       { id: "boxFilterGroup", bind: "filters.group", opts: [] }
     ]
   };
-  // ==========================================
-  // UIAutomator
-  // ==========================================
-  class UIAutomator {
-    constructor(app) { this.app = app; }
-    // --- 値取得 ---
-    getVal(path) {
-      if (path.startsWith('activePanel.')) return this.app.activePanel?.[path.split('.')[1]] ?? "";
-      return path.split('.').reduce((o, i) => o?.[i], this.app.state.refs);
-    }
-    // --- 値設定 ---
-    setVal(path, val) {
-      if (path.startsWith('activePanel.')) {
-        if (this.app.activePanel) this.app.activePanel[path.split('.')[1]] = val;
-      } else {
-        const keys = path.split('.'), last = keys.pop();
-        keys.reduce((o, i) => o[i], this.app.state.refs)[last] = val;
-      }
-    }
-    // --- 構築 ---
-    build() {
-      UI_SCHEMA.selects.forEach(s => {
-        NewDOM.buildFormFields([{ type: "select", opts: s.optsFn ? s.optsFn(this.app.state.data) : s.opts, bind: s.bind, hasEmpty: s.hasEmpty }], s.id, true);
-        const el = document.querySelector(`[data-bind="${s.bind}"]`);
-        if (el) el.value = this.getVal(s.bind);
-      });
-      UI_SCHEMA.toggles.forEach(t => {
-        NewDOM.buildToggle({ label: t.label, bind: t.bind }, t.id, true);
-        const el = document.querySelector(`[data-bind="${t.bind}"]`);
-        if (el) el.checked = this.getVal(t.bind);
-      });
-      UI_SCHEMA.multiSelects.forEach(m => {
-        const el = document.getElementById(m.id);
-        if (el) { el.opts = m.opts; el.refs = this.getVal(m.bind); }
-      });
-      document.querySelectorAll('input[type="number"], input[type="range"], input[type="text"][data-gph]').forEach(el => {
-        const key = el.dataset.gph || el.dataset.bind;
-        const cnf = RPT_CFG.rng[key];
-        if (cnf) {
-          if (el.type === 'number' || el.type === 'range') { el.min = cnf.min; el.max = cnf.max; el.step = cnf.step; }
-          if (cnf.unit && (el.type === 'number' || el.type === 'text') && !el.parentNode.classList.contains('input-wrap')) {
-            const wrap = document.createElement('div');
-            wrap.className = 'input-wrap';
-            el.parentNode.insertBefore(wrap, el);
-            wrap.appendChild(el);
-            const unitSp = document.createElement('span');
-            unitSp.className = 'input-unit';
-            unitSp.textContent = cnf.unit;
-            wrap.appendChild(unitSp);
-          }
-        }
-      });
-      document.querySelectorAll('[data-bind]:not(select):not([type="checkbox"])').forEach(el => {
-        const val = this.getVal(el.dataset.bind);
-        if (val !== undefined) el.value = val;
-      });
-      document.querySelectorAll('[data-gph]').forEach(el => {
-        const val = this.getVal('rawGph.' + el.dataset.gph);
-        if (val !== undefined) el.value = val;
-      });
-    }
-    // --- イベントバインド ---
-    bindEvents() {
-      const sb = document.getElementById('dashSidebar');
-      let oldSymbAxis = this.getVal('symb.baseKey');
-      sb.addEventListener('click', e => {
-        const btn = e.target.closest('button');
-        if (btn && btn.dataset.action && typeof ReportApp[btn.dataset.action] === 'function') {
-          ReportApp[btn.dataset.action](btn);
-        }
-      });
-      sb.addEventListener('input', e => {
-        const { gph, bind } = e.target.dataset;
-        if (gph) {
-          let val = e.target.value;
-          if (e.target.type === 'text') {
-            val = val.replace(/[^0-9]/g, '');
-            if (val !== "") {
-               const cnf = RPT_CFG.rng[gph];
-               if (cnf) val = String(Math.max(cnf.min, Math.min(cnf.max, Number(val))));
-            }
-            e.target.value = val;
-            if (val === "") return;
-          }
-          val = Number(val);
-          this.setVal('rawGph.' + gph, val);
-          document.querySelectorAll(`[data-gph="${gph}"]`).forEach(el => { if (el !== e.target) el.value = val; });
-          this.app.queueSave();
-        } else if (bind) {
-          this.setVal(bind, e.target.type === 'number' ? Number(e.target.value) : e.target.value);
-          this.app.queueSave();
-        }
-      });
-      sb.addEventListener('change', async e => {
-        const { bind } = e.target.dataset;
-        if (bind) {
-          if (bind === 'symb.baseKey') {
-             if (await NewDOM.confirm("確認", "リセットしますか？")) {
-               this.setVal(bind, e.target.value);
-               this.app.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
-               oldSymbAxis = e.target.value; ReportApp.renderSymbTable();
-             } else { e.target.value = oldSymbAxis; }
-             return ReportApp.saveState();
-          }
-          this.setVal(bind, e.target.type === 'checkbox' ? e.target.checked : (e.target.type === 'number' ? Number(e.target.value) : e.target.value));
-          if (['activePanel.graphType', 'activePanel.calibVal', 'activePanel.discrXVal', 'activePanel.discrYVal'].includes(bind)) {
-            const ap = this.app.activePanel;
-            if (ap.graphType === 'calibration') {
-              ap.title = ap.calibVal || ""; ap.xLabel = "WDXRF"; ap.yLabel = "pXRF";
-            } else if (ap.graphType === 'discrimination') {
-              const xV = ap.discrXVal || "", yV = ap.discrYVal || "";
-              ap.title = (xV || yV) ? `${xV} vs ${yV}` : ""; 
-              ap.xLabel = xV; ap.yLabel = yV;
-            }
-            const sInp = (k, v) => { const el = document.querySelector(`[data-bind="activePanel.${k}"]`); if(el) el.value = v; };
-            sInp("title", ap.title); sInp("xLabel", ap.xLabel); sInp("yLabel", ap.yLabel);
-            if (bind === 'activePanel.graphType') document.getElementById('panelConfigSec').dataset.graphtype = ap.graphType;
-          }
-          this.app.saveState();
-        } else if (e.target.closest('ob-multi-select')) {
-          const cntr = e.target.closest('ob-multi-select');
-          const schemaDef = UI_SCHEMA.multiSelects.find(m => m.id === cntr.id);
-          if (schemaDef) {
-            const cbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
-            if (e.target.classList.contains('select-all-cb')) cbs.forEach(cb => cb.checked = e.target.checked);
-            else if (allCb) allCb.checked = cbs.length > 0 && cbs.every(cb => cb.checked);
-            const vals = cbs.filter(cb => cb.checked).map(cb => cb.value);
-            this.setVal(schemaDef.bind, vals); cntr.refs = vals; this.app.saveState();
-          }
-        }
-      });
-    }
-  }
+
   // ==========================================
   // ReportApp
   // ==========================================
@@ -221,6 +92,9 @@
         panels: [{ id: "p_0", ...getDefPnl() }]
       }
     };
+    
+    static oldSymbAxis = GLB.symbBaseKey; // 変更検知用の一時保持変数
+
     // --- 初期化 ---
     static async init() {
       if (window.__IS_PRINT_TAB__) {
@@ -235,18 +109,15 @@
       let bu = null;
       if (buStr) try { bu = JSON.parse(buStr); } catch(e) {}
       
-      // 値がない場合は空配列ではなく null を返すように変更
       const pxrf = this.state.data.pxrfDT || [];
       const exVals = (key) => {
         const vals = [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
-        return vals.length > 0 ? vals : null; // ← ここがポイント
+        return vals.length > 0 ? vals : null; 
       };
       
       const optsDB = exVals(GLB.idx.key1);
       const optsItem = exVals(GLB.idx.p1);
       const optsGroup = exVals(GLB.idx.wd1);
-
-      // 復元時のヘルパー（配列として存在していれば文字列化、そうでなければ初期値）
       const initFltr = (buVal, opts) => Array.isArray(buVal) ? buVal.map(String) : opts;
 
       if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
@@ -268,23 +139,67 @@
         this.state.refs = bu;
       } else { 
         StorageAPI.clear(DASH_BU_KEY);
-        // 初期状態は optsDB など（配列 または null）をそのまま代入
         this.state.refs.filters = { db: optsDB, item: optsItem, group: optsGroup };
       }
+      this.oldSymbAxis = this.state.refs.symb.baseKey;
 
-      // optsにnullが渡ってもUIコンポーネント側で「データなし」表示に自動処理されます
       const mSchema = UI_SCHEMA.multiSelects;
       mSchema.find(m => m.id === "boxFilterDB").opts = optsDB;
       mSchema.find(m => m.id === "boxFilterItem").opts = optsItem;
       mSchema.find(m => m.id === "boxFilterGroup").opts = optsGroup;
-
       const setLbl = (id, text) => { const e = document.getElementById(id); if(e) e.textContent = text; };
       setLbl("lblFilterDB", GLB.idx.key1); setLbl("lblFilterItem", GLB.idx.p1); setLbl("lblFilterGroup", GLB.idx.wd1);
       
       this.syncPanels();
-      this.automator = new UIAutomator(this);
+
+      // ==========================================
+      // CoreUIAutomator への依存性注入 (DI)
+      // ==========================================
+      const stateProvider = {
+        get: (path) => {
+          if (path === 'data') return this.state.data;
+          if (path.startsWith('activePanel.')) return this.activePanel?.[path.split('.')[1]] ?? "";
+          return path.split('.').reduce((o, i) => o?.[i], this.state.refs);
+        },
+        set: (path, val) => {
+          if (path.startsWith('activePanel.')) {
+            if (this.activePanel) this.activePanel[path.split('.')[1]] = val;
+            if (['activePanel.graphType', 'activePanel.calibVal', 'activePanel.discrXVal', 'activePanel.discrYVal'].includes(path)) {
+              this.updatePanelLabels();
+            }
+          } else {
+            const keys = path.split('.'), last = keys.pop();
+            keys.reduce((o, i) => o[i], this.state.refs)[last] = val;
+          }
+        },
+        save: (isQueue) => isQueue ? this.queueSave() : this.saveState()
+      };
+
+      const actionRouter = {
+        execute: (btn, action) => {
+          if (typeof ReportApp[action] === 'function') ReportApp[action](btn);
+        },
+        executeHook: async (hook, target) => {
+          if (hook === 'checkSymbAxis') {
+            if (await NewDOM.confirm("確認", "リセットしますか？")) {
+               stateProvider.set('symb.baseKey', target.value);
+               this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
+               this.oldSymbAxis = target.value; 
+               this.renderSymbTable();
+               return true;
+            } else { 
+               target.value = this.oldSymbAxis; 
+               return false; 
+            }
+          }
+          return true;
+        }
+      };
+
+      this.automator = new CoreUIAutomator(UI_SCHEMA, stateProvider, RPT_CFG, actionRouter);
       this.automator.build();
-      this.automator.bindEvents();
+      this.automator.bindEvents('dashSidebar');
+      
       this.renderSymbTable();
       this.render();
       window.addEventListener('resize', () => {
@@ -299,6 +214,23 @@
          }, 100);
       });
     }
+
+    // --- パネルタイトル等の自動更新 ---
+    static updatePanelLabels() {
+      const ap = this.activePanel;
+      if (!ap) return;
+      if (ap.graphType === 'calibration') {
+        ap.title = ap.calibVal || ""; ap.xLabel = "WDXRF"; ap.yLabel = "pXRF";
+      } else if (ap.graphType === 'discrimination') {
+        const xV = ap.discrXVal || "", yV = ap.discrYVal || "";
+        ap.title = (xV || yV) ? `${xV} vs ${yV}` : ""; 
+        ap.xLabel = xV; ap.yLabel = yV;
+      }
+      const sInp = (k, v) => { const el = document.querySelector(`[data-bind="activePanel.${k}"]`); if(el) el.value = v; };
+      sInp("title", ap.title); sInp("xLabel", ap.xLabel); sInp("yLabel", ap.yLabel);
+      document.getElementById('panelConfigSec').dataset.graphtype = ap.graphType;
+    }
+
     // --- アクションメソッド群 ---
     static switchTab(btn) {
       const tId = btn.dataset.tab;

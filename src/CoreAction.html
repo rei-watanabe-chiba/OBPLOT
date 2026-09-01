@@ -1,0 +1,92 @@
+<!-- src/CoreAction.html -->
+<script>
+  class CoreAction {
+    // --- 汎用非同期ラッパー ---
+    static async withAsyncLock(statusPath, processFn, finallyFn = null) {
+      State.set("GLB.isLocked", true);
+      try {
+        const res = await processFn();
+        if (typeof res === "string") State.set(statusPath, ["success", res]);
+        else if (Array.isArray(res)) State.set(statusPath, res);
+      } catch (err) { State.set(statusPath, ["error", err.message]); }
+      finally { 
+        if (finallyFn) await finallyFn(); 
+        State.set("GLB.isLocked", false); 
+      }
+    }
+
+    // --- アプリ接続フロー (全層共通) ---
+    static async connectApp(ssId) {
+      State.set("GLB.isLocked", true);
+      const activeTab = State.get("GLB.activeTab");
+      const statPath = activeTab === 'tab1' ? "T1ST.pref.status" : (activeTab === 'tab2' ? "T2ST.asgn.status" : "T3ST.inst.status");
+      try {
+        State.set(statPath, ["loading", "環境確認中..."]);
+        const curShts = await API.getWbState(ssId);
+        const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, activeTab);
+        if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
+        if (buildPlan.length) {
+          if (missingNames.length) {
+            State.set(statPath, ["message", "確認待ち"]);
+            if (!await NewDOM.confirm("確認", `「${missingNames.join('、')}」が不足しています。\n新たに作成しますか？`)) {
+              State.set("GLB.isLocked", false);
+              State.set(statPath, ["hidden", ""]);
+              return false;
+            }
+          }
+          State.set(statPath, ["loading", "シート構成を更新中..."]);
+          await API.buildShts(ssId, buildPlan);
+        }
+        State.set("GLB.ssId", ssId);
+        State.set(statPath, ["hidden", ""]);
+        return true;
+      } catch (e) {
+        State.set(statPath, ["hidden", ""]);
+        await NewDOM.confirm("接続エラー", e.message.includes("【検証エラー】") ? e.message : `予期せぬエラーです。\n\n${e.message}`);
+        State.set("GLB.isLocked", false);
+        return false;
+      }
+    }
+  }
+
+  // --- システム基盤 (アイドル検知・バックアップ) ---
+  class CoreSystem {
+    static initIdleTimer() {
+      if (isExcelEnv) return;
+      let tm = null;
+      const rst = () => { 
+        clearTimeout(tm); 
+        tm = setTimeout(() => {
+          const forceReload = () => {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+              google.script.run.withFailureHandler(() => google.script.host.close()).showSidebar();
+            } else { window.location.reload(); }
+          };
+          NewDOM.toast("GAS通信エラー", "一定時間操作がなかったため、サイドバーを再起動してください", forceReload);
+        }, 5 * 60000); 
+      };
+      ['mousemove', 'keydown', 'touchstart', 'click', 'scroll'].forEach(e => document.addEventListener(e, rst, { passive: true })); 
+      rst();
+    }
+    
+    // 汎用バックアップ管理
+    static initBackup(key, statePathsArray, getProxyFn) {
+      let isQ = false;
+      const saveFn = () => {
+        const proxy = getProxyFn();
+        const dataToSave = statePathsArray.reduce((acc, path) => {
+           acc[path] = proxy[path]; 
+           return acc;
+        }, {});
+        StorageAPI.save(key, JSON.stringify(dataToSave));
+      };
+      const queueFn = () => {
+        if (isQ) return;
+        isQ = true;
+        queueMicrotask(() => { saveFn(); isQ = false; });
+      };
+      State.subscribe('*', queueFn);
+      return { load: () => { try { return JSON.parse(StorageAPI.load(key)); } catch(e){ return null; } }, clear: () => StorageAPI.clear(key) };
+    }
+  }
+</script>

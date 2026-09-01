@@ -1,0 +1,80 @@
+<!-- src/CoreUIAutomator.html -->
+<script>
+  class CoreUIAutomator {
+    constructor(schema, stateTarget) {
+      this.schema = schema;
+      this.stateTarget = stateTarget;
+    }
+
+    // --- 値の安全な取得 ---
+    getVal(path) {
+      return State.get(path.includes('.') ? path : `${this.stateTarget}.${path}`);
+    }
+
+    // --- 差分同期 ＆ フェーズ評価 (Patch Update) ---
+    update() {
+      const curPhase = State.get(`${this.stateTarget}.phase`) ?? 1;
+
+      // 1. バインディング要素のPatch更新（破壊的再構築を回避）
+      document.querySelectorAll(`[data-bind^="${this.stateTarget}"]`).forEach(el => {
+        const path = el.dataset.bind;
+        const val = this.getVal(path);
+        if (val === undefined) return;
+
+        if (el.type === 'checkbox') {
+          el.checked = !!val;
+        } else if (el.tagName === 'OB-MULTI-SELECT') {
+          el.refs = val;
+        } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
+          if (el.value !== String(val ?? '')) el.value = val ?? '';
+        }
+      });
+
+      // 2. スキーマに基づくフェーズ・活性制御 (Phase-Aware Evaluation)
+      (this.schema.elements || []).forEach(def => {
+        let targetEl = null;
+        if (def.id) {
+          targetEl = document.getElementById(def.id);
+        } else if (def.secId && def.dataUi) {
+          const sec = document.getElementById(def.secId);
+          if (sec) targetEl = sec.querySelector(`[data-ui="${def.dataUi}"]`);
+        }
+        if (!targetEl) return;
+
+        // 可視制御
+        if (def.visiblePhase !== undefined) {
+          const isVisible = typeof def.visiblePhase === 'function' ? def.visiblePhase(curPhase) : curPhase >= def.visiblePhase;
+          targetEl.style.display = isVisible ? '' : 'none';
+        }
+
+        // 活性・非活性制御
+        if (def.activePhase !== undefined) {
+          const isActive = typeof def.activePhase === 'function' ? def.activePhase(curPhase) : curPhase >= def.activePhase;
+          if (targetEl.tagName === 'DETAILS') {
+            targetEl.setAttribute('data-type', isActive ? '' : 'disabled');
+            targetEl.setAttribute('data-state', isActive ? 'active' : '');
+          } else {
+            targetEl.disabled = !isActive;
+          }
+        }
+
+        // Detailsの開閉制御
+        if (def.openPhase !== undefined && targetEl.tagName === 'DETAILS') {
+          const isOpen = typeof def.openPhase === 'function' ? def.openPhase(curPhase) : curPhase >= def.openPhase;
+          if (isOpen !== undefined) {
+            setTimeout(() => { targetEl.open = isOpen; }, 200);
+          }
+        }
+
+        // クラスやテキストの動的更新
+        if (def.className !== undefined) {
+          targetEl.className = typeof def.className === 'function' ? def.className(curPhase) : def.className;
+        }
+        if (def.text !== undefined) {
+          const txt = typeof def.text === 'function' ? def.text(curPhase) : def.text;
+          if (targetEl.innerText !== txt) targetEl.innerText = txt;
+        }
+      });
+    }
+  }
+</script>
