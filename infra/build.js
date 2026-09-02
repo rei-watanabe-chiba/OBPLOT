@@ -9,7 +9,7 @@ const manifestSrc = path.join(__dirname, 'manifest.xml');
 
 if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
 
-// Sidebar.html と Report.html の共通 include 置換関数
+// include 置換関数
 const processInclude = (htmlStr) => {
   let result = htmlStr.replace(/<\?!= include\(['"]([^'"]+)['"]\); \?>/g, (match, fileName) => {
     const exts = ['.html', '.js'];
@@ -28,12 +28,7 @@ const processInclude = (htmlStr) => {
   return result.replace(/<\?=[\s\S]*?\?>/g, ''); 
 };
 
-let sidebarHtml = fs.readFileSync(path.join(srcDir, 'Sidebar.html'), 'utf-8');
-sidebarHtml = processInclude(sidebarHtml);
-
-// Excel環境（App.html）の時だけ office.js を自動注入
 const officeScript = `<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" type="text/javascript"></script>`;
-sidebarHtml = sidebarHtml.replace('</head>', `${officeScript}\n</head>`);
 
 // Report.html の処理 (include解決後にエスケープ)
 let reportHtml = fs.readFileSync(path.join(srcDir, 'Report.html'), 'utf-8');
@@ -46,11 +41,22 @@ const escapedReport = reportHtml
   .replace(/<\/script>/ig, '<\\/script>');
 
 const injectScript = `<script>window.__REPORT_TEMPLATE__ = \`${escapedReport}\`;<\/script>`;
-sidebarHtml = sidebarHtml.replace('</head>', `${injectScript}</head>`);
 
-fs.writeFileSync(path.join(distDir, 'App.html'), sidebarHtml);
+// Tracer.html (Sidebar_Tracer.html -> Tracer.html)
+let tracerHtml = fs.readFileSync(path.join(srcDir, 'Sidebar_Tracer.html'), 'utf-8');
+tracerHtml = processInclude(tracerHtml);
+tracerHtml = tracerHtml.replace('</head>', `${officeScript}\n</head>`);
+fs.writeFileSync(path.join(distDir, 'Tracer.html'), tracerHtml);
+
+// Dash.html (Sidebar_Dash.html -> Dash.html)
+let dashHtml = fs.readFileSync(path.join(srcDir, 'Sidebar_Dash.html'), 'utf-8');
+dashHtml = processInclude(dashHtml);
+dashHtml = dashHtml.replace('</head>', `${officeScript}\n${injectScript}\n</head>`);
+fs.writeFileSync(path.join(distDir, 'Dash.html'), dashHtml);
+
+// Reportはそのまま出力
 fs.writeFileSync(path.join(distDir, 'Report.html'), reportHtml);
-console.log('Build completed! App.html and Report.html generated successfully.');
+console.log('Build completed! Tracer.html, Dash.html and Report.html generated successfully.');
 
 // --- GitHub Pagesデプロイ用のアセットコピー処理を追加 ---
 if (fs.existsSync(imgDir)) {
