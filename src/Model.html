@@ -79,14 +79,18 @@
             const childVal = listenerPath.split('.').reduce((o, k) => o?.[k], this.#state);
             this.#listeners[listenerPath].forEach(cb => cb(childVal));
           }
+          if (pathStr.startsWith(`${listenerPath}.`)) {
+            const parentVal = listenerPath.split('.').reduce((o, k) => o?.[k], this.#state);
+            this.#listeners[listenerPath].forEach(cb => cb(parentVal));
+          }
         });
         this.#listeners['*']?.forEach(cb => cb());
       }
     }
     // --- 変更購読 ---
     subscribe(path, cb) {
-      const key = Array.isArray(path) ? path.join('.') : path;
-      (this.#listeners[key] ??= []).push(cb);
+      if (Array.isArray(path)) return path.forEach(p => this.subscribe(p, cb));
+      (this.#listeners[path] ??= []).push(cb);
     }
     // --- State初期化 ---
     reset(paths) {

@@ -81,6 +81,7 @@
           this.dispatchEvent(new CustomEvent('render-finished'));
         });
       }
+      this.#chart.resize({ width: containerWidth, height: containerHeight });
       const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
       const { niceMin, niceMax, niceTicks } = CoreMethod.Util.calcScale(validPoints.map(d => d.x), validPoints.map(d => d.y));
       const itv = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
@@ -114,8 +115,8 @@
       if (titleText) {
         graphics.push({
           type: 'text',
-          left: gridLeft + GAP.tick,
-          bottom: (containerHeight - gridTop) + GAP.tick,
+          left: gridLeft,
+          top: Math.max(GAP.padT, gridTop - overY - GAP.tick - titleSizePx),
           style: { text: titleText, fontFamily: STYLE.font, fontSize: titleSizePx, fill: STYLE.fontC.base }
         });
       }

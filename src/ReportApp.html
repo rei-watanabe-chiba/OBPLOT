@@ -128,7 +128,7 @@
         refs.rawGph = getInitRawGph();
       }
       this.oldSymbAxis = refs.symb.baseKey;
-      State.set("RPTST.refs", refs);
+      State.set("RPTST.refs", structuredClone(refs));
 
       document.getElementById("lblFilterDB").textContent = GLB.idx.key1; 
       document.getElementById("lblFilterItem").textContent = GLB.idx.p1; 
@@ -192,6 +192,7 @@
             }
          }
          State.set("RPTST.refs.panels", [...panels]);
+         this.updateActivePanelContext();
          this.queueSave();
       }
     }
