@@ -16,7 +16,8 @@
     constructor() {
       super();
       this.#box = document.createElement('div');
-      this.#box.style.cssText = 'width: 100%; position: relative;';
+      // [修正] overflow: hidden を追加して、height: 0 の時の中身（canvas）のはみ出しによるクリック妨害を防ぐ
+      this.#box.style.cssText = 'width: 100%; position: relative; overflow: hidden;';
       this.#observer = new ResizeObserver(() => {
         const curW = this.clientWidth;
         if (curW > 0 && curW !== this.#lastW && this.#src) {
@@ -45,6 +46,7 @@
       this.#src = null;
       if (this.#chart) this.#chart.clear();
       this.#box.style.height = '0px';
+      this.#box.style.display = 'none';
     }
     #render() {
       const { prevDT, statsDT, symb, gph, panel } = this.#src || {};
@@ -72,6 +74,7 @@
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridRight = safePadR + overX;
       const plotSize = containerWidth - gridLeft - gridRight, containerHeight = plotSize + gridTop + gridBottom;
+      this.#box.style.display = 'block';
       this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
       this.#box.style.backgroundColor = STYLE.bgOuter;
       if (!this.#chart) {

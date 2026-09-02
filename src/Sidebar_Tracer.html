@@ -185,5 +185,24 @@
     <?!= include('CoreUIAutomator'); ?>
     <?!= include('CoreAction'); ?>
     <?!= include('T1T2_Action'); ?>
+    <script>
+      // デバッグ用: マウスクリック時にどの要素が反応しているかを可視化
+      document.addEventListener('click', (e) => {
+        console.log('%c[Debug Click]', 'background: #333; color: #fff', e.target);
+        console.log('Pointer Events (Computed):', getComputedStyle(e.target).pointerEvents);
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+          console.log('Disabled property:', e.target.disabled);
+        }
+        
+        const prevSec = document.getElementById('prevSec');
+        if (prevSec) {
+          console.log('-- prevSec state --');
+          console.log('data-type:', prevSec.getAttribute('data-type'));
+          console.log('open:', prevSec.open);
+          const btn = document.getElementById('btn-make-prev');
+          console.log('btn-make-prev disabled:', btn?.disabled);
+        }
+      }, true); // キャプチャフェーズで拾う
+    </script>
   </body>
 </html>

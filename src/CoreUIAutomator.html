@@ -123,6 +123,16 @@
             targetEl.setAttribute('data-state', isActive ? 'active' : '');
             if (isDis) targetEl.setAttribute('data-type', 'disabled');
             else targetEl.removeAttribute('data-type');
+            
+            // --- [追加] 下層フォーム要素への物理的な disabled 強制同期ガード ---
+            targetEl.querySelectorAll('input, select, button, textarea, ob-multi-select').forEach(child => {
+              if (child.tagName === 'OB-MULTI-SELECT') {
+                const sum = child.querySelector('.popover-summary');
+                if (sum) sum.disabled = isDis;
+              }
+              child.disabled = isDis;
+            });
+            // -----------------------------------------------------------------
           } else {
             targetEl.disabled = isDis;
           }

@@ -6,7 +6,7 @@
   const T3_PHS = { INIT: 1, LOADED: 2 };
   // --- AppState ---
   class AppState {
-    #state; #initialState; #listeners; 
+    #state; #initialState; #listeners; #updating;
     // --- セクション単位のstate生成 ---
     constructor() {
       const createSec = (overrides = {}) => ({ status: [], data: null, refs: {}, flags: [], ...overrides });
@@ -71,26 +71,38 @@
       const keys = pathStr.split('.');
       const last = keys.pop();
       const tgt = keys.reduce((o, k) => o[k] ??= {}, this.#state);
+      
       if (tgt[last] !== v) {
         tgt[last] = v;
-        this.#listeners[pathStr]?.forEach(cb => cb(v));
-        Object.keys(this.#listeners).forEach(listenerPath => {
-          if (listenerPath.startsWith(`${pathStr}.`)) {
-            const childVal = listenerPath.split('.').reduce((o, k) => o?.[k], this.#state);
-            this.#listeners[listenerPath].forEach(cb => cb(childVal));
-          }
-          if (pathStr.startsWith(`${listenerPath}.`)) {
-            const parentVal = listenerPath.split('.').reduce((o, k) => o?.[k], this.#state);
-            this.#listeners[listenerPath].forEach(cb => cb(parentVal));
-          }
-        });
-        this.#listeners['*']?.forEach(cb => cb());
+        
+        // 循環更新（無限ループ）ガード
+        this.#updating ??= new Set();
+        if (this.#updating.has(pathStr)) return;
+        this.#updating.add(pathStr);
+        
+        try {
+          this.#listeners[pathStr]?.forEach(cb => cb(v));
+          Object.keys(this.#listeners).forEach(listenerPath => {
+            if (listenerPath.startsWith(`${pathStr}.`)) {
+              const childVal = listenerPath.split('.').reduce((o, k) => o?.[k], this.#state);
+              this.#listeners[listenerPath].forEach(cb => cb(childVal));
+            }
+            if (pathStr.startsWith(`${listenerPath}.`)) {
+              const parentVal = listenerPath.split('.').reduce((o, k) => o?.[k], this.#state);
+              this.#listeners[listenerPath].forEach(cb => cb(parentVal));
+            }
+          });
+          this.#listeners['*']?.forEach(cb => cb());
+        } finally {
+          this.#updating.delete(pathStr);
+        }
       }
     }
     // --- 変更購読 ---
     subscribe(path, cb) {
       if (Array.isArray(path)) return path.forEach(p => this.subscribe(p, cb));
-      (this.#listeners[path] ??= []).push(cb);
+      this.#listeners[path] ??= [];
+      if (!this.#listeners[path].includes(cb)) this.#listeners[path].push(cb);
     }
     // --- State初期化 ---
     reset(paths) {
