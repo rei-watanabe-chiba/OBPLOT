@@ -3,11 +3,9 @@
   const T1T2_SCHEMA = {
     T1: {
       elements: [
-        // prefSecは常に操作可能 (isDis: falseを復元)
         { id: "prefSec", activePhase: p => p === T1_PHS.INIT, disablePhase: p => false },
         
         { id: "rawSec", activePhase: p => p >= T1_PHS.READY, disablePhase: p => p < T1_PHS.READY, openPhase: p => p >= T1_PHS.READY && p < T1_PHS.VALID },
-        // データ取得ボタンは常に操作可能 (isDis: falseを復元)
         { id: "btn-load-raw", disablePhase: p => false, text: p => p <= T1_PHS.READY ? "データを取得" : "再取得" },
         { id: "btn-make-list", activePhase: p => p >= T1_PHS.READY },
         { id: "btn-vald-list", activePhase: p => p >= T1_PHS.INVALID && !State.get("T1ST.raw.flags").some(Boolean), className: p => p === T1_PHS.INVALID ? "" : "outline" },
@@ -22,9 +20,7 @@
     },
     T2: {
       elements: [
-        // asgnSecは常に操作可能 (isDis: falseを復元)
         { id: "asgnSec", activePhase: p => true, disablePhase: p => false, openPhase: p => p < T2_PHS.FILTERED },
-        // データ取得ボタンは常に操作可能 (isDis: falseを復元)
         { id: "btn-load-db", disablePhase: p => false },
         { id: "btn-fltr-db", activePhase: p => p >= T2_PHS.LOADED },
         { id: "asgnSecArea", visiblePhase: p => p >= T2_PHS.LOADED },
@@ -34,12 +30,13 @@
         { id: "t2AxisBox", activePhase: p => p >= T2_PHS.FILTERED },
         { id: "symbSecArea", visiblePhase: p => p >= T2_PHS.FILTERED },
 
-        { id: "prevSec", activePhase: p => p >= T2_PHS.MAPPED, disablePhase: p => p < T2_PHS.MAPPED },
+        // ダウンフェーズ (p < 4) 時は false (強制閉鎖)、それ以上は undefined (ユーザー操作維持)
+        { id: "prevSec", activePhase: p => p >= T2_PHS.MAPPED, disablePhase: p => p < T2_PHS.MAPPED, openPhase: p => p < T2_PHS.MAPPED ? false : undefined },
         { id: "btn-make-prev", activePhase: p => p >= T2_PHS.MAPPED },
 
         { id: "calbSec", activePhase: p => p >= T2_PHS.MAPPED, openPhase: p => p === T2_PHS.MAPPED ? true : (p >= T2_PHS.PREVIEWED ? false : undefined) },
 
-        { id: "stdzSec", activePhase: p => p >= T2_PHS.MAPPED, disablePhase: p => p < T2_PHS.MAPPED }
+        { id: "stdzSec", activePhase: p => p >= T2_PHS.MAPPED, disablePhase: p => p < T2_PHS.MAPPED, openPhase: p => p < T2_PHS.MAPPED ? false : undefined }
       ]
     }
   };

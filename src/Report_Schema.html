@@ -30,28 +30,7 @@
     }
   };
 
-  // --- レポート UI Schema ---
   const REPORT_SCHEMA = {
-    elements: [],
-    selects: [
-      { id: "boxGlobalCorr", bind: "correction", hasEmpty: false, optsFn: d => [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.corrDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))] },
-      { id: "boxSymbAxis", bind: "symb.baseKey", hasEmpty: false, opts: GLB.symbAxes, changeHook: "checkSymbAxis" },
-      { id: "boxFontEng", bind: "rawGph.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({label:v, val:v})) },
-      { id: "boxFontJp", bind: "rawGph.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({label:v, val:v})) },
-      { id: "boxGraphType", bind: "activePanel.graphType", hasEmpty: false, opts: [{label: RPT_CFG.lbl.calib, val: "calibration"}, {label: RPT_CFG.lbl.discr, val: "discrimination"}] },
-      { id: "boxCalibVal", bind: "activePanel.calibVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) },
-      { id: "boxDiscrX", bind: "activePanel.discrXVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) },
-      { id: "boxDiscrY", bind: "activePanel.discrYVal", hasEmpty: true, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }
-    ],
-    toggles: [
-      { id: "boxGlobalCalTgl", bind: "useCal", label: RPT_CFG.lbl.useCal },
-      { id: "boxGlobalLodTgl", bind: "useLOD", label: RPT_CFG.lbl.useLOD }
-    ],
-    multiSelects: [
-      { id: "boxGlobalCalElms", bind: "calElms", opts: GLB.valElms },
-      { id: "boxFilterDB", bind: "filters.db", opts: [] },
-      { id: "boxFilterItem", bind: "filters.item", opts: [] },
-      { id: "boxFilterGroup", bind: "filters.group", opts: [] }
-    ]
+    elements: []
   };
 </script>

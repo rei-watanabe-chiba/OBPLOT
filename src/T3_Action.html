@@ -4,8 +4,8 @@
     static get ssId() { return State.get("GLB.ssId"); }
 
     static async loadDB() {
-      // withAsyncLockの自動ローディングに委譲し、手動State.setを削除
-      await CoreAction.withAsyncLock("T3ST.inst.status", async () => {
+      // 統合パイプラインへの集約（確認スキップ）
+      await CoreAction.confirmAndExecute("T3ST.inst.status", null, null, async () => {
         const [pRes, wRes, cRes] = await Promise.all([
           API.fetchDT(T3Action.ssId, GLB.appShts.pxrf), 
           API.fetchDT(T3Action.ssId, GLB.rawShts.wdxrf), 
@@ -22,7 +22,6 @@
     }
 
     static async openRepo() {
-      // 統合パイプラインを使用して確認から展開までをカプセル化
       await CoreAction.confirmAndExecute("T3ST.repo.status", "確認", "ダッシュボードを展開しますか？", async () => {
         let template = await API.getReportTemplate();
         const { inst } = State.proxy.T3ST;
@@ -50,7 +49,6 @@
     static async start() {
       CoreAction.initGlobalRouter({ CoreAction, T3Action });
 
-      // DI: CoreActionへのアプリ設定リゾルバの注入
       CoreAction.configResolver = (tabId) => {
         return { schemaKey: 'tab3', statPath: 'T3ST.inst.status' };
       };
@@ -58,23 +56,19 @@
       const automatorT3 = new CoreUIAutomator(T3_SIDEBAR_SCHEMA, 'T3ST');
       automatorT3.build();
 
-      // UI同期の限定購読
       State.subscribe("T3ST.phase", () => automatorT3.update());
       
-      // グローバルロックの購読 (画面全体の保護)
       State.subscribe("GLB.isLocked", v => {
         const fs = document.getElementById("tab3Fieldset");
         if (fs) fs.disabled = v;
       });
 
-      // 副作用の購読 (LOADED到達時のメッセージ表示)
       State.subscribe("T3ST.phase", v => {
         if (v === T3_PHS.LOADED) {
           State.set({ "T3ST.repo.status": ["message", "グラフ展開用HTMLを作成"] });
         }
       });
 
-      // UI初期化とセッション接続を明示的に分離して実行
       const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";
       CoreAction.activateTabUI('tab3');
       

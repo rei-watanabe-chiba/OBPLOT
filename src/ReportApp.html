@@ -20,71 +20,67 @@
   const getDefPnl = () => ({ graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" });
 
   class ReportApp {
-    static state = {
-      data: window.__INJECTED_DATA__ || { pxrfDT: [], wdxrfDT: [], corrDT: [] },
-      refs: {
-        correction: "new", useCal: false, useLOD: false, calElms: [...GLB.valElms], 
-        filters: { db: [], item: [], group: [] }, gridRows: 1, gridCols: 1, panelGap: 4,
-        margins: { top: 15, bottom: 15, left: 15, right: 15 },
-        activePanelId: "p_0",
-        symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
-        rawGph: getInitRawGph(),
-        panels: [{ id: "p_0", ...getDefPnl() }]
-      }
-    };
-    
     static oldSymbAxis = GLB.symbBaseKey; 
+    static gphTimer = null;
+    static resizeTimer = null;
 
     static async init() {
       if (window.__IS_PRINT_TAB__) {
-         this.state = window.__PRINT_STATE__;
+         State.set(window.__PRINT_STATE__);
          document.body.classList.add('is-print'); 
          const loading = document.createElement('div');
          loading.className = 'print-loading'; loading.textContent = '印刷用PDF生成中...';
          document.body.appendChild(loading);
-         this.render(); return;
+         
+         this.syncPanelDom();
+         this.drawCharts(window.__PRECALC_DATA__);
+         return;
       }
+
+      CoreAction.initGlobalRouter({ CoreAction, ReportApp });
+      const automator = new CoreUIAutomator(REPORT_SCHEMA, 'RPTST');
+      automator.build();
+
+      // 【修正】文字列のままStateに注入されてエラーになるのを防ぐため、厳密にオブジェクト型か判定
+      const initDataRaw = window.__INJECTED_DATA__;
+      const injData = (typeof initDataRaw === 'object' && initDataRaw !== null) ? initDataRaw : { pxrfDT: [], wdxrfDT: [], corrDT: [] };
+      State.set("RPTST.data.raw", injData);
+
+      // 【修正】プロパティ代入ではなくHTML属性として明示的にセットし、ルーター側で正しくブロックさせる
+      document.querySelectorAll('input[type="number"], input[type="range"]').forEach(el => {
+        const bindPath = el.dataset.bind;
+        if (!bindPath) return;
+        const cfgKey = Object.keys(RPT_CFG.rng).find(k => bindPath.endsWith(k));
+        if (cfgKey && RPT_CFG.rng[cfgKey]) {
+          el.setAttribute('min', RPT_CFG.rng[cfgKey].min);
+          el.setAttribute('max', RPT_CFG.rng[cfgKey].max);
+          el.setAttribute('step', RPT_CFG.rng[cfgKey].step);
+        }
+      });
 
       const bu = DashBU.load();
-      const pxrf = this.state.data.pxrfDT || [];
-      const exVals = (key) => {
-        const vals = [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
-        return vals.length > 0 ? vals : null; 
-      };
+      await this.setupInitialState(bu, injData);
+
+      this.syncPanelDom();
+      this.drawCharts();
+
+      State.subscribe(['RPTST.refs.gridRows', 'RPTST.refs.gridCols', 'RPTST.refs.panelGap', 'RPTST.refs.margins'], () => {
+          this.syncPanelDom();
+          this.queueSave();
+      });
       
-      const optsDB = exVals(GLB.idx.key1);
-      const optsItem = exVals(GLB.idx.p1);
-      const optsGroup = exVals(GLB.idx.wd1);
-      const initFltr = (buVal, opts) => Array.isArray(buVal) ? buVal.map(String) : opts;
+      State.subscribe(['RPTST.refs.filters', 'RPTST.refs.useCal', 'RPTST.refs.useLOD', 'RPTST.refs.correction', 'RPTST.refs.calElms', 'RPTST.refs.symb', 'RPTST.refs.rawGph', 'RPTST.refs.panels'], () => {
+          this.queueRender();
+      });
 
-      if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
-        bu.rawGph = { ...getInitRawGph(), ...(bu.rawGph || {}) };
-        if (!bu.symb) bu.symb = this.state.refs.symb;
-        if (bu.panelGap === undefined || bu.panelGap === 16 || bu.panelGap === 12) bu.panelGap = 4;
-        if (!bu.calElms || bu.calElms.length === 0) bu.calElms = [...GLB.valElms]; 
-        
-        if (!bu.filters || Array.isArray(bu.filters)) {
-          bu.filters = { db: optsDB, item: optsItem, group: optsGroup };
-        } else {
-          bu.filters.db = initFltr(bu.filters.db, optsDB);
-          bu.filters.item = initFltr(bu.filters.item, optsItem);
-          bu.filters.group = initFltr(bu.filters.group, optsGroup);
-        }
-        
-        if (bu.useLOD === undefined) bu.useLOD = false;
-        bu.panels = (bu.panels || []).map(p => ({ ...getDefPnl(), ...p }));
-        this.state.refs = bu;
-      } else { 
-        DashBU.clear();
-        this.state.refs.filters = { db: optsDB, item: optsItem, group: optsGroup };
-      }
-      this.oldSymbAxis = this.state.refs.symb.baseKey;
+      State.subscribe('RPTST.refs.activePanelId', () => {
+          this.updateActivePanelContext();
+          this.updateActivePanelClass();
+          this.queueSave();
+      });
 
-      this.buildFormControls(optsDB, optsItem, optsGroup);
-      this.setupEventListeners();
-      this.syncPanels();
-      this.renderSymbTable();
-      this.render();
+      State.subscribe('RPTST.refs.symb.baseKey', () => this.updateDerivedSymbState());
+      State.subscribe('RPTST.refs.symb.rls', () => this.updateDerivedSymbState());
 
       window.addEventListener('resize', () => {
          clearTimeout(this.resizeTimer);
@@ -92,142 +88,139 @@
              this.fitA4Scale();
              const gph = this.buildGph();
              this.calcPanelSize(gph);
-             const grid = document.getElementById('dashGrid');
-             const plots = grid.querySelectorAll('ob-cal-plot');
-             this.state.refs.panels.forEach((p, i) => { if (plots[i]) this.drawChart(p, plots[i], gph, i); });
+             const plots = document.getElementById('dashGrid').querySelectorAll('ob-cal-plot');
+             plots.forEach(plot => { plot.src = { ...plot.src, gph: gph }; });
          }, 100);
       });
     }
 
-    static buildFormControls(optsDB, optsItem, optsGroup) {
-      REPORT_SCHEMA.selects.forEach(conf => {
-        const opts = conf.optsFn ? conf.optsFn(this.state.data) : conf.opts;
-        NewDOM.buildFormFields([{ type: "select", bind: conf.bind, opts: opts, hasEmpty: conf.hasEmpty }], conf.id, true);
-      });
-
-      REPORT_SCHEMA.toggles.forEach(conf => {
-        NewDOM.buildToggle({ label: conf.label, bind: conf.bind }, conf.id, true);
-      });
-
-      const setM = (id, opts, refs) => {
-        const el = document.getElementById(id);
-        if (el) { el.opts = opts || []; el.refs = refs || []; }
+    static async setupInitialState(bu, d) {
+      const pxrf = d.pxrfDT || [];
+      const exVals = (key) => {
+        const vals = [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
+        return vals.length > 0 ? vals : null; 
       };
-      setM("boxFilterDB", optsDB, this.state.refs.filters.db);
-      setM("boxFilterItem", optsItem, this.state.refs.filters.item);
-      setM("boxFilterGroup", optsGroup, this.state.refs.filters.group);
-      setM("boxGlobalCalElms", GLB.valElms, this.state.refs.calElms);
+      
+      const optsDB = exVals(GLB.idx.key1) || [];
+      const optsItem = exVals(GLB.idx.p1) || [];
+      const optsGroup = exVals(GLB.idx.wd1) || [];
+      const initFltr = (buVal, opts) => Array.isArray(buVal) ? buVal.map(String) : opts;
 
-      const setLbl = (id, text) => { const e = document.getElementById(id); if (e) e.textContent = text; };
-      setLbl("lblFilterDB", GLB.idx.key1); setLbl("lblFilterItem", GLB.idx.p1); setLbl("lblFilterGroup", GLB.idx.wd1);
-    }
-
-    static setupEventListeners() {
-      document.addEventListener("click", e => {
-        const btn = e.target.closest('[data-action]');
-        if (!btn || btn.disabled) return;
-        const act = btn.dataset.action;
-        if (typeof ReportApp[act] === 'function') ReportApp[act](btn);
-      });
-
-      document.addEventListener("change", async e => {
-        // 【修正】チェックボックスを最優先で捕捉し、発生元(e.target)のcheckedを反映する
-        if (e.target.classList.contains('dataset-cb') || e.target.classList.contains('select-all-cb')) {
-          const ms = e.target.closest('ob-multi-select');
-          if (!ms) return;
-          
-          const cbs = [...ms.querySelectorAll('.dataset-cb')];
-          const isAllBtn = e.target.classList.contains('select-all-cb');
-          
-          if (isAllBtn) {
-            cbs.forEach(cb => cb.checked = e.target.checked);
-          } else {
-            const allCb = ms.querySelector('.select-all-cb');
-            if (allCb) allCb.checked = cbs.length > 0 && cbs.every(cb => cb.checked);
-          }
-          
-          const selVals = cbs.filter(cb => cb.checked).map(cb => cb.value);
-          
-          if (ms.id === "boxFilterDB") this.state.refs.filters.db = selVals;
-          else if (ms.id === "boxFilterItem") this.state.refs.filters.item = selVals;
-          else if (ms.id === "boxFilterGroup") this.state.refs.filters.group = selVals;
-          else if (ms.id === "boxGlobalCalElms") this.state.refs.calElms = selVals;
-          
-          ms.refs = selVals;
-          this.saveState();
-          return;
+      let refs = State.get("RPTST.refs");
+      if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
+        bu.rawGph = { ...getInitRawGph(), ...(bu.rawGph || {}) };
+        if (!bu.symb) bu.symb = refs.symb;
+        if (bu.panelGap === undefined || bu.panelGap === 16 || bu.panelGap === 12) bu.panelGap = 4;
+        if (!bu.calElms || bu.calElms.length === 0) bu.calElms = [...GLB.valElms]; 
+        if (!bu.filters || Array.isArray(bu.filters)) bu.filters = { db: optsDB, item: optsItem, group: optsGroup };
+        else {
+          bu.filters.db = initFltr(bu.filters.db, optsDB);
+          bu.filters.item = initFltr(bu.filters.item, optsItem);
+          bu.filters.group = initFltr(bu.filters.group, optsGroup);
         }
-
-        const tgt = e.target.closest('[data-bind], [data-gph]') || e.target;
-        if (!tgt) return;
-
-        const bPath = tgt.dataset.bind;
-        if (bPath) {
-          const val = tgt.type === "checkbox" ? tgt.checked : (tgt.type === "number" ? Number(tgt.value) : tgt.value);
-          
-          if (bPath === "symb.baseKey") {
-            if (val !== this.oldSymbAxis) {
-              if (await NewDOM.confirm("確認", "属性を変更するとシンボル設定がリセットされます。よろしいですか？")) {
-                this.state.refs.symb.baseKey = val;
-                this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }];
-                this.oldSymbAxis = val;
-                this.renderSymbTable();
-                this.saveState();
-              } else {
-                tgt.value = this.oldSymbAxis;
-              }
-              return;
-            }
-          }
-
-          if (bPath.startsWith("activePanel.")) {
-            const key = bPath.split(".")[1];
-            if (this.activePanel) this.activePanel[key] = val;
-            if (['graphType', 'calibVal', 'discrXVal', 'discrYVal'].includes(key)) {
-              this.updatePanelLabels();
-            }
-          } else {
-            const keys = bPath.split('.'), last = keys.pop();
-            keys.reduce((o, k) => o[k] ??= {}, this.state.refs)[last] = val;
-          }
-          this.saveState();
-          return;
-        }
-
-        const gKey = tgt.dataset.gph;
-        if (gKey) {
-          const numVal = Number(tgt.value);
-          this.state.refs.rawGph[gKey] = numVal;
-          document.querySelectorAll(`[data-gph="${gKey}"]`).forEach(el => { if (el !== tgt) el.value = tgt.value; });
-          this.queueSave();
-        }
-      });
-
-      document.addEventListener("input", e => {
-        const tgt = e.target;
-        const gKey = tgt.dataset.gph;
-        if (gKey) {
-          const numVal = Number(tgt.value);
-          this.state.refs.rawGph[gKey] = numVal;
-          document.querySelectorAll(`[data-gph="${gKey}"]`).forEach(el => { if (el !== tgt) el.value = tgt.value; });
-          this.queueSave();
-        }
-      });
-    }
-
-    static updatePanelLabels() {
-      const ap = this.activePanel;
-      if (!ap) return;
-      if (ap.graphType === 'calibration') {
-        ap.title = ap.calibVal || ""; ap.xLabel = "WDXRF"; ap.yLabel = "pXRF";
-      } else if (ap.graphType === 'discrimination') {
-        const xV = ap.discrXVal || "", yV = ap.discrYVal || "";
-        ap.title = (xV || yV) ? `${xV} vs ${yV}` : ""; 
-        ap.xLabel = xV; ap.yLabel = yV;
+        if (bu.useLOD === undefined) bu.useLOD = false;
+        bu.panels = (bu.panels || []).map(p => ({ ...getDefPnl(), ...p }));
+        refs = bu;
+      } else { 
+        DashBU.clear();
+        refs.filters = { db: optsDB, item: optsItem, group: optsGroup };
+        // 【修正】新規作成・リセット時にレイアウト用の初期値を明示的に注入し、NaN崩壊を防ぐ
+        refs.rawGph = getInitRawGph();
       }
-      const sInp = (k, v) => { const el = document.querySelector(`[data-bind="activePanel.${k}"]`); if (el) el.value = v; };
-      sInp("title", ap.title); sInp("xLabel", ap.xLabel); sInp("yLabel", ap.yLabel);
-      document.getElementById('panelConfigSec').dataset.graphtype = ap.graphType;
+      this.oldSymbAxis = refs.symb.baseKey;
+      State.set("RPTST.refs", refs);
+
+      document.getElementById("lblFilterDB").textContent = GLB.idx.key1; 
+      document.getElementById("lblFilterItem").textContent = GLB.idx.p1; 
+      document.getElementById("lblFilterGroup").textContent = GLB.idx.wd1;
+
+      const optsCorr = [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.corrDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
+      const optValLgc = [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v }));
+
+      State.set({
+        "RPTST.data.corrFields": [{ type: "select", bind: "RPTST.refs.correction", hasEmpty: false, opts: optsCorr }],
+        "RPTST.data.fontEngFields": [{ type: "select", bind: "RPTST.refs.rawGph.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({label:v, val:v})) }],
+        "RPTST.data.fontJpFields": [{ type: "select", bind: "RPTST.refs.rawGph.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({label:v, val:v})) }],
+        "RPTST.data.graphTypeFields": [{ type: "select", bind: "RPTST.data.apGraphType", change: "ReportApp.updateActivePanelRef", hasEmpty: false, opts: [{label: RPT_CFG.lbl.calib, val: "calibration"}, {label: RPT_CFG.lbl.discr, val: "discrimination"}] }],
+        "RPTST.data.calibValFields": [{ type: "select", bind: "RPTST.data.apCalibVal", change: "ReportApp.updateActivePanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.discrXFields": [{ type: "select", bind: "RPTST.data.apDiscrXVal", change: "ReportApp.updateActivePanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.discrYFields": [{ type: "select", bind: "RPTST.data.apDiscrYVal", change: "ReportApp.updateActivePanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.axisFields": [{ type: "select", bind: "RPTST.refs.symb.baseKey", change: "ReportApp.checkSymbAxis", hasEmpty: false, opts: GLB.symbAxes }],
+        "RPTST.data.filterDBOpts": optsDB, 
+        "RPTST.data.filterItemOpts": optsItem, 
+        "RPTST.data.filterGroupOpts": optsGroup, 
+        "RPTST.data.calElmsOpts": GLB.valElms
+      });
+      
+      this.updateDerivedSymbState();
+    }
+
+    static tglMulti(tgt) {
+      const cntr = tgt.closest('ob-multi-select');
+      if (!cntr) return;
+      const bindPath = cntr.dataset.bind;
+      const itemCbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
+      if (allCb) allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
+      if (bindPath) State.set(bindPath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
+    }
+
+    static tglAllMulti(tgt) {
+      const cntr = tgt.closest('ob-multi-select');
+      if (!cntr) return;
+      const bindPath = cntr.dataset.bind;
+      const itemCbs = cntr.querySelectorAll('.dataset-cb');
+      itemCbs.forEach(cb => cb.checked = tgt.checked);
+      if (bindPath) State.set(bindPath, tgt.checked ? [...itemCbs].map(cb => cb.value) : []);
+    }
+
+    static updateActivePanelRef(tgt) {
+      const key = tgt.dataset.apKey || tgt.dataset.bind?.split('.').pop().replace('ap', '');
+      const apKey = key.charAt(0).toLowerCase() + key.slice(1);
+      const val = tgt.value;
+      const activeId = State.get("RPTST.refs.activePanelId");
+      const panels = State.get("RPTST.refs.panels");
+      const panel = panels.find(p => p.id === activeId);
+      
+      if (panel) {
+         panel[apKey] = val;
+         if (['graphType', 'calibVal', 'discrXVal', 'discrYVal'].includes(apKey)) {
+            if (panel.graphType === 'calibration') {
+              panel.title = panel.calibVal || ""; panel.xLabel = "WDXRF"; panel.yLabel = "pXRF";
+            } else if (panel.graphType === 'discrimination') {
+              const xV = panel.discrXVal || "", yV = panel.discrYVal || "";
+              panel.title = (xV || yV) ? `${xV} vs ${yV}` : ""; panel.xLabel = xV; panel.yLabel = yV;
+            }
+         }
+         State.set("RPTST.refs.panels", [...panels]);
+         this.queueSave();
+      }
+    }
+
+    static updateActivePanelContext() {
+      const activeId = State.get("RPTST.refs.activePanelId");
+      const panel = State.get("RPTST.refs.panels").find(p => p.id === activeId);
+      if (!panel || window.__IS_PRINT_TAB__) {
+        document.getElementById('panelConfigSec').style.display = 'none';
+        return;
+      }
+      document.getElementById('panelConfigSec').style.display = 'block';
+      document.getElementById('panelConfigSec').dataset.graphtype = panel.graphType;
+      State.set({
+        "RPTST.data.apGraphType": panel.graphType, 
+        "RPTST.data.apCalibVal": panel.calibVal, 
+        "RPTST.data.apDiscrXVal": panel.discrXVal, 
+        "RPTST.data.apDiscrYVal": panel.discrYVal,
+        "RPTST.data.apTitle": panel.title, 
+        "RPTST.data.apXLabel": panel.xLabel, 
+        "RPTST.data.apYLabel": panel.yLabel
+      });
+    }
+
+    static updateActivePanelClass() {
+      const activeId = State.get("RPTST.refs.activePanelId");
+      document.querySelectorAll('.grid-panel').forEach(el => {
+        el.classList.toggle('active', !window.__IS_PRINT_TAB__ && el.dataset.panelId === activeId);
+      });
     }
 
     static switchTab(btn) {
@@ -247,54 +240,108 @@
     }
 
     static printPDF() {
-      const r = this.state.refs, d = this.state.data;
+      const r = State.get("RPTST.refs"), d = State.get("RPTST.data.raw");
       const preCalc = r.panels.map(p => {
         if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
         const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, discrXVal: p.discrXVal, discrYVal: p.discrYVal };
         return Mtd.T3.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
       });
       if (!preCalc.some(res => res.prevDT?.length > 0)) return NewDOM.toast("警告", "有効なグラフが一つもありません。\n指標設定やデータを確認してください。");
-      const safeState = JSON.stringify(this.state).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      const safeState = JSON.stringify({ RPTST: State.proxy.RPTST }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const safePreCalc = JSON.stringify(preCalc).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${safeState}; window.__PRECALC_DATA__=${safePreCalc};<\/script>`);
       window.open(URL.createObjectURL(new Blob(['<!DOCTYPE html>' + htmlStr], { type: 'text/html' })), '_blank');
     }
 
-    static resetSymb() { this.state.refs.symb.rls = [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; this.renderSymbTable(); this.saveState(); }
-    static addSymb() { 
-      this.state.refs.symb.rls = [...this.state.refs.symb.rls, { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]; 
-      this.renderSymbTable(); this.saveState(); 
-    }
-    static removeSymb(btn) { 
-      this.state.refs.symb.rls = this.state.refs.symb.rls.filter(rw => rw.key !== btn.dataset.ruleKey); 
-      this.renderSymbTable(); this.saveState(); 
-    }
-    static renewSymb(btn) {
-      const { symbolIdx: i, symbolType: t } = btn.dataset;
-      if (i != null && t && this.state.refs.symb.rls[i]) { 
-        const newSym = JSON.parse(JSON.stringify(this.state.refs.symb.rls));
-        newSym[i][t] = btn.value; 
-        this.state.refs.symb.rls = newSym;
-        this.renderSymbTable(); this.saveState(); 
+    static async checkSymbAxis(tgt) {
+      const newVal = tgt.value, oldVal = this.oldSymbAxis;
+      if (newVal === oldVal) return;
+      if (await NewDOM.confirm("確認", "属性を変更するとシンボル設定がリセットされます。よろしいですか？")) {
+        State.set({ "RPTST.refs.symb.baseKey": newVal, "RPTST.refs.symb.rls": [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] });
+        this.oldSymbAxis = newVal;
+        this.queueSave();
+      } else {
+        tgt.value = oldVal;
+        State.set("RPTST.refs.symb.baseKey", oldVal);
       }
     }
 
-    static saveState() { 
-      if (window.__IS_PRINT_TAB__) return; 
-      this.syncPanels(); 
-      DashBU.save(this.state.refs); 
-      this.render(); 
+    static resetSymb() { State.set("RPTST.refs.symb.rls", [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); this.queueSave(); }
+    static addSymb() { State.set("RPTST.refs.symb.rls", [...State.get("RPTST.refs.symb.rls"), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); this.queueSave(); }
+    static removeSymb(btn) { State.set("RPTST.refs.symb.rls", State.get("RPTST.refs.symb.rls").filter(rw => rw.key !== btn.dataset.ruleKey)); this.queueSave(); }
+    static renewSymb(btn) {
+      const i = btn.dataset.symbolIdx, t = btn.dataset.symbolType;
+      if (i != null && t) { 
+        const newSym = JSON.parse(JSON.stringify(State.get("RPTST.refs.symb.rls")));
+        newSym[i][t] = btn.value; 
+        State.set("RPTST.refs.symb.rls", newSym);
+        this.queueSave(); 
+      }
     }
-    static queueSave() { clearTimeout(this.gphTimer); this.gphTimer = setTimeout(() => this.saveState(), 100); }
 
-    static get activePanel() { return this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId); }
-    static syncPanels() {
-      const { gridRows, gridCols } = this.state.refs;
-      const activeIds = [];
-      for (let r = 0; r < gridRows; r++) for (let c = 0; c < gridCols; c++) activeIds.push(`p_${r * 3 + c}`);
-      activeIds.forEach(id => { if (!this.state.refs.panels.find(p => p.id === id)) this.state.refs.panels.push({ id, ...getDefPnl() }); });
-      this.state.refs.panels = activeIds.map(id => this.state.refs.panels.find(p => p.id === id));
-      if (!this.state.refs.panels.find(p => p.id === this.state.refs.activePanelId)) this.state.refs.activePanelId = this.state.refs.panels[0]?.id || "p_0";
+    static updateDerivedSymbState() {
+      const d = State.get("RPTST.data.raw"), r = State.get("RPTST.refs");
+      if (!d?.pxrfDT?.length) return;
+      const vals = [...new Set(d.pxrfDT.map(pt => pt[r.symb.baseKey]).filter(Boolean))];
+      State.set("RPTST.data.symbSrc", { rls: r.symb.rls, optsConf: { target: [{ val: "", label: RPT_CFG.lbl.unsel }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "ReportApp.addSymb", remove: "ReportApp.removeSymb", update: "ReportApp.renewSymb"} });
+    }
+
+    static queueSave() { 
+      if (window.__IS_PRINT_TAB__) return;
+      clearTimeout(this.gphTimer); 
+      this.gphTimer = setTimeout(() => DashBU.save(State.get("RPTST.refs")), 100); 
+    }
+    
+    static queueRender() {
+      if (window.__IS_PRINT_TAB__) return;
+      clearTimeout(this.renderTimer);
+      this.renderTimer = setTimeout(() => this.drawCharts(), 50);
+      this.queueSave();
+    }
+
+    static syncPanelDom() {
+      const r = State.get("RPTST.refs");
+      const grid = document.getElementById('dashGrid');
+      const reqIds = [];
+      for (let i = 0; i < r.gridRows * r.gridCols; i++) reqIds.push(`p_${i}`);
+      
+      let panels = [...State.get("RPTST.refs.panels")];
+      reqIds.forEach(id => { if (!panels.find(p => p.id === id)) panels.push({ id, ...getDefPnl() }); });
+      panels = reqIds.map(id => panels.find(p => p.id === id));
+      State.set("RPTST.refs.panels", panels);
+      
+      if (!panels.find(p => p.id === r.activePanelId)) State.set("RPTST.refs.activePanelId", panels[0]?.id || "p_0");
+
+      const existing = Array.from(grid.children);
+      const existingIds = existing.map(el => el.dataset.panelId);
+      
+      existing.forEach(el => { if (!reqIds.includes(el.dataset.panelId)) grid.removeChild(el); });
+      
+      reqIds.forEach(id => {
+        if (!existingIds.includes(id)) {
+          const div = document.createElement('div');
+          div.className = 'grid-panel';
+          div.dataset.panelId = id;
+          div.onclick = () => State.set("RPTST.refs.activePanelId", id);
+          const chart = document.createElement('ob-cal-plot');
+          chart.style.cssText = 'width: 100%; height: 100%;';
+          chart.setAttribute('data-renderer', window.__IS_PRINT_TAB__ ? 'svg' : 'canvas');
+          div.appendChild(chart);
+          grid.appendChild(div);
+        }
+      });
+      
+      this.updateActivePanelClass();
+      this.updateActivePanelContext();
+
+      const cont = document.getElementById('a4Container');
+      cont.style.setProperty('--col-count', r.gridCols); 
+      cont.style.setProperty('--row-count', r.gridRows);
+      cont.style.setProperty('--panel-gap', `${(r.panelGap !== undefined ? Number(r.panelGap) : 4)}mm`);
+      ['top','right','bottom','left'].forEach(p => cont.style.setProperty(`--margin-${p}`, `${r.margins[p]}mm`));
+      
+      this.fitA4Scale();
+      this.drawCharts();
     }
 
     static fitA4Scale() {
@@ -307,15 +354,14 @@
     }
 
     static buildGph() {
-      const raw = this.state.refs.rawGph;
+      // 【修正】生のStateからフェイルセーフでマージして読み取る
+      const raw = { ...getInitRawGph(), ...(State.get("RPTST.refs.rawGph") || {}) };
       const pt2px = pt => Number(pt) * 1.33;
       const mm2px = mm => Number(mm) * 3.78; 
       const [s_title, s_stats, sym_base, lw_reg, s_tick, s_name, g_name, g_tick, sym_bw, lw_axis, lw_grid] = 
         [raw.s_title, raw.s_stats, raw.sym_size, raw.lw_reg, raw.s_tick, raw.s_name, raw.g_name, raw.g_tick, raw.sym_bw, raw.lw_axis, raw.lw_grid].map(pt2px);
       const [p_t, p_b, p_l, p_r] = [raw.p_t, raw.p_b, raw.p_l, raw.p_r].map(mm2px);
-      let finalPadT = p_t;
-      let finalPadR = p_r;
-      if (p_r < s_tick) finalPadR = p_r + s_tick;
+      let finalPadR = p_r < s_tick ? p_r + s_tick : p_r;
       return {
         style: {
           font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`, fontS: { title: s_title, tick: s_tick, name: s_name, stats: s_stats, tip: s_stats },
@@ -325,129 +371,65 @@
           lineC: { axis: `hsl(0, 0%, ${100 - raw.c_axis}%)`, grid: `hsl(0, 0%, ${100 - raw.c_grid}%)`, reg: `hsl(0, 0%, ${100 - raw.c_base}%)` },
           bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
         },
-        gap: { name: g_name, tick: g_tick, padT: finalPadT, padB: p_b, padL: p_l, padR: finalPadR }
+        gap: { name: g_name, tick: g_tick, padT: p_t, padB: p_b, padL: p_l, padR: finalPadR }
       };
     }
 
-    static renderSymbTable() {
-      const d = this.state.data, r = this.state.refs, symbElm = document.getElementById('tblSymb');
-      if (!symbElm || !d.pxrfDT?.length) return;
-      const vals = [...new Set(d.pxrfDT.map(pt => pt[r.symb.baseKey]).filter(Boolean))];
-      symbElm.src = { rls: r.symb.rls, optsConf: { target: [{ val: "", label: RPT_CFG.lbl.unsel }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "addSymb", remove: "removeSymb", update: "renewSymb"} };
-    }
-
     static calcPanelSize(gph) {
-      const grid = document.getElementById('dashGrid'), r = this.state.refs;
+      const grid = document.getElementById('dashGrid'), r = State.get("RPTST.refs");
       grid.style.removeProperty('--panel-w'); grid.style.removeProperty('--panel-h');
       const gw = grid.clientWidth, gh = grid.clientHeight;
       if (gw === 0 || gh === 0) return;
       const gapPx = (r.panelGap !== undefined ? Number(r.panelGap) : 4) * 3.78;
       const maxW = (gw - (r.gridCols - 1) * gapPx) / r.gridCols, maxH = (gh - (r.gridRows - 1) * gapPx) / r.gridRows;
-      const style = gph.style;
-      const gap = gph.gap;
+      const style = gph.style, gap = gph.gap;
       const charWidth = style.fontS.tick * 0.6;
-      const overY = (4 * charWidth) / 2;
-      const overX = (2 * charWidth) / 2;
       const titleSizePx = (r.rawGph.s_title || 12) * 1.33;
-      let hasTitle = r.panels.some(p => p.title);
-      const requiredPadT = Math.max(style.fontS.tick, hasTitle ? titleSizePx + gap.tick : 0);
-      const safePadT = gap.padT < requiredPadT ? gap.padT + requiredPadT : gap.padT;
-      const safePadR = gap.padR < style.fontS.tick ? gap.padR + style.fontS.tick : gap.padR;
-      const gridTop = safePadT + overY;
+      const requiredPadT = Math.max(style.fontS.tick, r.panels.some(p => p.title) ? titleSizePx + gap.tick : 0);
+      const gridTop = (gap.padT < requiredPadT ? gap.padT + requiredPadT : gap.padT) + ((4 * charWidth) / 2);
       const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridLeft = gap.padL + overX + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridRight = safePadR + overX;
-      const totalPadX = gridLeft + gridRight;
-      const totalPadY = gridTop + gridBottom;
-      const plotLen = Math.max(10, Math.min(maxW - totalPadX, maxH - totalPadY));
-      grid.style.setProperty('--panel-w', `${plotLen + totalPadX}px`);
-      grid.style.setProperty('--panel-h', `${plotLen + totalPadY}px`);
+      const gridLeft = gap.padL + ((2 * charWidth) / 2) + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      const gridRight = (gap.padR < style.fontS.tick ? gap.padR + style.fontS.tick : gap.padR) + ((2 * charWidth) / 2);
+      const plotLen = Math.max(10, Math.min(maxW - (gridLeft + gridRight), maxH - (gridTop + gridBottom)));
+      grid.style.setProperty('--panel-w', `${plotLen + gridLeft + gridRight}px`);
+      grid.style.setProperty('--panel-h', `${plotLen + gridTop + gridBottom}px`);
     }
 
-    static render() {
-      const r = this.state.refs, cont = document.getElementById('a4Container');
-      cont.style.setProperty('--col-count', r.gridCols); cont.style.setProperty('--row-count', r.gridRows);
-      cont.style.setProperty('--panel-gap', `${(r.panelGap !== undefined ? Number(r.panelGap) : 4)}mm`);
-      ['top','right','bottom','left'].forEach(p => cont.style.setProperty(`--margin-${p}`, `${r.margins[p]}mm`));
+    static drawCharts(preCalcData = null) {
+      const gph = this.buildGph();
+      this.calcPanelSize(gph);
+      const r = State.get("RPTST.refs"), d = State.get("RPTST.data.raw");
+      const plots = document.getElementById('dashGrid').querySelectorAll('ob-cal-plot');
       
-      const gph = this.buildGph(), grid = document.getElementById('dashGrid');
-      grid.innerHTML = ''; const chartsToDraw = [];
-      
-      r.panels.forEach(p => {
-        const div = document.createElement('div');
-        div.className = `grid-panel ${(!window.__IS_PRINT_TAB__ && p.id === r.activePanelId) ? 'active' : ''}`;
-        const chart = document.createElement('ob-cal-plot');
-        chart.style.cssText = 'width: 100%; height: 100%;';
-        chart.setAttribute('data-renderer', window.__IS_PRINT_TAB__ ? 'svg' : 'canvas');
-        div.appendChild(chart); div.onclick = () => { r.activePanelId = p.id; this.saveState(); };
-        grid.appendChild(div); chartsToDraw.push({ p, chart });
-      });
+      const draw = () => {
+        r.panels.forEach((p, idx) => {
+          if (!plots[idx]) return;
+          if (preCalcData?.[idx]) {
+            plots[idx].src = { prevDT: preCalcData[idx].prevDT, statsDT: preCalcData[idx].statsDT, symb: r.symb, gph: gph, panel: p };
+          } else {
+            if (!d?.pxrfDT?.length) return;
+            const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, discrXVal: p.discrXVal, discrYVal: p.discrYVal };
+            const { prevDT, statsDT } = Mtd.T3.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+            plots[idx].src = { prevDT, statsDT, symb: r.symb, gph: gph, panel: p };
+          }
+        });
+      };
 
-      requestAnimationFrame(() => {
-         this.fitA4Scale(); this.calcPanelSize(gph);
-         requestAnimationFrame(() => {
-            if (window.__IS_PRINT_TAB__) {
-               let finishedCount = 0, printFired = false;
-               const executePrint = () => { 
-                 if (printFired) return; 
-                 printFired = true; 
-                 document.querySelectorAll('.grid-panel').forEach(el => el.classList.remove('active'));
-                 const loader = document.querySelector('.print-loading');
-                 if (loader) loader.style.display = 'none';
-                 setTimeout(() => { window.print(); window.close(); }, 500); 
-               };
-               chartsToDraw.forEach(item => { item.chart.addEventListener('render-finished', () => { finishedCount++; if (finishedCount === chartsToDraw.length) executePrint(); }, { once: true }); });
-               setTimeout(executePrint, 5000);
-            }
-            chartsToDraw.forEach((item, idx) => this.drawChart(item.p, item.chart, gph, idx));
-         });
-      });
-
-      const ap = this.activePanel;
-      if (ap && !window.__IS_PRINT_TAB__) {
-        const pSec = document.getElementById('panelConfigSec');
-        pSec.style.display = 'block';
-        pSec.dataset.graphtype = ap.graphType;
-        
-        const setVal = (b, v) => { const el = document.querySelector(`[data-bind="${b}"]`); if (el) el.value = v || ""; };
-        setVal("activePanel.graphType", ap.graphType); 
-        setVal("activePanel.calibVal", ap.calibVal); 
-        setVal("activePanel.discrXVal", ap.discrXVal); 
-        setVal("activePanel.discrYVal", ap.discrYVal);
-        setVal("activePanel.title", ap.title); 
-        setVal("activePanel.xLabel", ap.xLabel); 
-        setVal("activePanel.yLabel", ap.yLabel);
-      } else if (!window.__IS_PRINT_TAB__) { 
-        document.getElementById('panelConfigSec').style.display = 'none'; 
-      }
-
-      document.querySelectorAll('[data-bind]').forEach(el => {
-        const p = el.dataset.bind;
-        if (!p.startsWith('activePanel.')) {
-          const v = p.split('.').reduce((o, k) => o?.[k], this.state.refs);
-          if (el.type === 'checkbox') el.checked = !!v;
-          else if (v !== undefined) el.value = v;
-        }
-      });
-
-      document.querySelectorAll('[data-gph]').forEach(el => {
-        const k = el.dataset.gph;
-        const v = this.state.refs.rawGph[k];
-        if (v !== undefined) el.value = v;
-      });
-    }
-
-    static drawChart(panel, chart, gph, idx) {
-      const r = this.state.refs, d = this.state.data;
-      if (!d.pxrfDT?.length) return;
-      let prevDT, statsDT;
-      if (window.__IS_PRINT_TAB__ && window.__PRECALC_DATA__?.[idx]) {
-        ({ prevDT, statsDT } = window.__PRECALC_DATA__[idx]);
+      if (window.__IS_PRINT_TAB__) {
+         let finishedCount = 0, printFired = false;
+         const executePrint = () => { 
+           if (printFired) return; 
+           printFired = true; 
+           const loader = document.querySelector('.print-loading');
+           if (loader) loader.style.display = 'none';
+           setTimeout(() => { window.print(); window.close(); }, 500); 
+         };
+         plots.forEach(plot => { plot.addEventListener('render-finished', () => { finishedCount++; if (finishedCount === plots.length) executePrint(); }, { once: true }); });
+         setTimeout(executePrint, 5000);
+         requestAnimationFrame(draw);
       } else {
-        const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, graphType: panel.graphType, calibVal: panel.calibVal, discrXVal: panel.discrXVal, discrYVal: panel.discrYVal };
-        ({ prevDT, statsDT } = Mtd.T3.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf));
+         requestAnimationFrame(draw);
       }
-      chart.src = { prevDT, statsDT, symb: r.symb, gph: gph, panel: panel };
     }
   }
 

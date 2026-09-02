@@ -45,21 +45,21 @@
     static #isInitialized = false;
     static configResolver = null;
 
-    // --- ダイアログ確認と非同期実行の統合パイプライン ---
     static async confirmAndExecute(statusPath, title, msg, processFn, finallyFn = null) {
       const svStat = State.get(statusPath);
       State.set(statusPath, ["loading", "実行中..."]);
       
-      if (!await NewDOM.confirm(title, msg)) {
-        State.set(statusPath, svStat || ["hidden", ""]);
-        return false;
+      if (title && msg) {
+        if (!await NewDOM.confirm(title, msg)) {
+          State.set(statusPath, svStat || ["hidden", ""]);
+          return false;
+        }
       }
       
       await this.withAsyncLock(statusPath, processFn, finallyFn);
       return true;
     }
 
-    // --- 非同期ラッパー ---
     static async withAsyncLock(statusPath, processFn, finallyFn = null) {
       State.set("GLB.isLocked", true);
       State.set(statusPath, ["loading", "実行中..."]); 
@@ -87,7 +87,6 @@
         if (buildPlan.length) {
           if (missingNames.length) {
             State.set(statPath, ["message", "確認待ち"]);
-            // Tpl化された純粋なconfirmを使用。キャンセル時は処理を中断
             if (!await NewDOM.confirm("確認", `「${missingNames.join('、')}」が不足しています。\n新たに作成しますか？`)) {
               State.set("GLB.isLocked", false);
               State.set(statPath, ["hidden", ""]);
@@ -150,16 +149,36 @@
         if (actionClasses[ns]?.[method]) actionClasses[ns][method](btn);
         else if (window[ns]?.[method]) window[ns][method](btn);
       });
-      document.addEventListener("change", e => {
+      
+      const handleInput = e => {
         const tgt = e.target.closest('[data-bind], [data-change]') || e.target;
+        if (!tgt) return;
         const bindPath = tgt.dataset.bind, changePath = tgt.dataset.change;
-        if (bindPath) State.set(bindPath, tgt.type === "checkbox" ? tgt.checked : tgt.value);
-        if (changePath) {
+        
+        const isLiveInput = e.type === 'input' && tgt.tagName === 'INPUT' && !['checkbox', 'radio'].includes(tgt.type);
+        const isChange = e.type === 'change';
+        
+        if (bindPath && (isLiveInput || isChange)) {
+          let val = tgt.type === "checkbox" ? tgt.checked : (['number', 'range'].includes(tgt.type) ? Number(tgt.value) : tgt.value);
+          
+          if (['number', 'range'].includes(tgt.type)) {
+            // 【修正】HTML属性(min/max)から直接読み取ってクリッピングを行う
+            if (tgt.hasAttribute('min') && val < Number(tgt.getAttribute('min'))) val = Number(tgt.getAttribute('min'));
+            if (tgt.hasAttribute('max') && val > Number(tgt.getAttribute('max'))) val = Number(tgt.getAttribute('max'));
+            tgt.value = val;
+          }
+          State.set(bindPath, val);
+        }
+        
+        if (changePath && (isLiveInput || isChange)) {
           const [ns, method] = changePath.split('.');
           if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt);
           else if (window[ns]?.[method]) window[ns][method](tgt);
         }
-      });
+      };
+
+      document.addEventListener("change", handleInput);
+      document.addEventListener("input", handleInput);
     }
   }
 </script>

@@ -14,23 +14,43 @@
         GLB: { activeTab: "tab1", isLocked: false, ssId: "" },
         T1ST: {
           phase: T1_PHS.INIT,
-          pref: createSec({ refs: { mode: "" } }),
+          pref: createSec({ refs: { mode: "" }, data: { modeFields: [{ type: "select", opts: GLB.confMods, bind: "T1ST.pref.refs.mode", change: "T1Action.checkT1Pref", hasEmpty: false }] } }),
           raw:  createSec({ flags: GLB.initFlags.raw }),
-          extr: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr })
+          extr: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr, data: { extrFields: GLB.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })) } })
         },
         T2ST: {
           phase: T2_PHS.INIT,
           asgn: createSec({ data: { corrDT: [], wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], filter: [] } }),
-          symb: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] } }),
-          calb: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], correction: "new", useLOD: false, useCal: false } }),
-          prev: createSec({ refs: { itemMap: [], val: GLB.valElms[0], saveIndexName: "" }, data: { correctionLogic: {}, prevDT: null, statsDT: null } }),
-          stdz: createSec({ refs: { itemMap: [], modeMap: [...GLB.optElms], useLOD: false, saveIndexName: "" } })
+          symb: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] }, data: { axisFields: [{ type: "select", opts: GLB.symbAxes, change: "T2Action.checkAxis", hasEmpty: false }] } }),
+          calb: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], correction: "new", useLOD: false, useCal: false }, data: { modeOpts: GLB.optElms, calElmOpts: GLB.valElms } }),
+          prev: createSec({ refs: { itemMap: [], val: GLB.valLgc.length ? GLB.valLgc[0] : GLB.valElms[0], saveIndexName: "" }, data: { correctionLogic: {}, prevDT: null, statsDT: null, chartSrc: null, valFields: [{ type: "select", bind: "T2ST.prev.refs.val", hasEmpty: false, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }] } }),
+          stdz: createSec({ refs: { itemMap: [], modeMap: [...GLB.optElms], useLOD: false, saveIndexName: "" }, data: { modeOpts: GLB.optElms } })
         },
         T3ST: {
           phase: T3_PHS.INIT,
           inst: createSec({ data: { pxrfDT: null, wdxrfDT: null, corrDT: null } }),
           repo: createSec({ refs: {} }),
           gph: { style: GLB.defaultGraphStyle, gap: GLB.defaultGraphGap }
+        },
+        // 【追加】レポート専用のステートマシン
+        RPTST: {
+          phase: 1,
+          refs: {
+            correction: "new", useCal: false, useLOD: false, calElms: [...GLB.valElms], 
+            filters: { db: [], item: [], group: [] }, gridRows: 1, gridCols: 1, panelGap: 4,
+            margins: { top: 15, bottom: 15, left: 15, right: 15 },
+            activePanelId: "p_0",
+            symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
+            rawGph: {},
+            panels: []
+          },
+          data: {
+            raw: { pxrfDT: [], wdxrfDT: [], corrDT: [] },
+            corrFields: [], filterDBOpts: [], filterItemOpts: [], filterGroupOpts: [],
+            fontEngFields: [], fontJpFields: [], graphTypeFields: [], calibValFields: [], discrXFields: [], discrYFields: [],
+            symbSrc: null,
+            apTitle: "", apXLabel: "", apYLabel: "", apGraphType: "", apCalibVal: "", apDiscrXVal: "", apDiscrYVal: ""
+          }
         }
       };
       this.#initialState = JSON.parse(JSON.stringify(initDef));
@@ -47,12 +67,19 @@
     // --- State設定 ---
     set(updates, v) {
       if (typeof updates === 'object' && !Array.isArray(updates)) return Object.entries(updates).forEach(([k, val]) => this.set(k, val));
-      const keys = Array.isArray(updates) ? updates : updates.split('.');
+      const pathStr = Array.isArray(updates) ? updates.join('.') : updates;
+      const keys = pathStr.split('.');
       const last = keys.pop();
       const tgt = keys.reduce((o, k) => o[k] ??= {}, this.#state);
       if (tgt[last] !== v) {
         tgt[last] = v;
-        this.#listeners[[...keys, last].join('.')]?.forEach(cb => cb(v));
+        this.#listeners[pathStr]?.forEach(cb => cb(v));
+        Object.keys(this.#listeners).forEach(listenerPath => {
+          if (listenerPath.startsWith(`${pathStr}.`)) {
+            const childVal = listenerPath.split('.').reduce((o, k) => o?.[k], this.#state);
+            this.#listeners[listenerPath].forEach(cb => cb(childVal));
+          }
+        });
         this.#listeners['*']?.forEach(cb => cb());
       }
     }

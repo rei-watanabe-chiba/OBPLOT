@@ -13,6 +13,22 @@
     build() {
       this.update();
 
+      const bindElement = (el, path) => {
+        if (!path) return;
+        const applyBind = (val) => {
+          if (val === undefined) return;
+          if (el.type === 'checkbox') {
+            if (el.checked !== !!val) el.checked = !!val;
+          } else if (el.tagName === 'OB-MULTI-SELECT') {
+            el.refs = val; 
+          } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
+            if (el.value !== String(val ?? '')) el.value = val ?? '';
+          }
+        };
+        State.subscribe(path, applyBind);
+        applyBind(this.getVal(path));
+      };
+
       document.querySelectorAll(`[data-bind-status^="${this.stateTarget}"]`).forEach(el => {
         const path = el.dataset.bindStatus;
         const applyStatus = (val) => {
@@ -28,21 +44,7 @@
         applyStatus(this.getVal(path));
       });
 
-      document.querySelectorAll(`[data-bind^="${this.stateTarget}"]`).forEach(el => {
-        const path = el.dataset.bind;
-        const applyBind = (val) => {
-          if (val === undefined) return;
-          if (el.type === 'checkbox') {
-            if (el.checked !== !!val) el.checked = !!val;
-          } else if (el.tagName === 'OB-MULTI-SELECT') {
-            el.refs = val; 
-          } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
-            if (el.value !== String(val ?? '')) el.value = val ?? '';
-          }
-        };
-        State.subscribe(path, applyBind);
-        applyBind(this.getVal(path));
-      });
+      document.querySelectorAll(`[data-bind^="${this.stateTarget}"]`).forEach(el => bindElement(el, el.dataset.bind));
 
       document.querySelectorAll(`[data-bind-opts^="${this.stateTarget}"]`).forEach(el => {
         const path = el.dataset.bindOpts;
@@ -51,7 +53,6 @@
         applyOpts(this.getVal(path));
       });
 
-      // 【追加】コンポーネント(src)のリアルタイムバインディング
       document.querySelectorAll(`[data-bind-src^="${this.stateTarget}"]`).forEach(el => {
         const path = el.dataset.bindSrc;
         const applySrc = (val) => { if (val !== undefined) el.src = val; };
@@ -59,7 +60,6 @@
         applySrc(this.getVal(path));
       });
 
-      // 【追加】統計テーブル(stats)のリアルタイムバインディング
       document.querySelectorAll(`[data-bind-stats^="${this.stateTarget}"]`).forEach(el => {
         const path = el.dataset.bindStats;
         const applyStats = (val) => { if (val !== undefined) NewDOM.buildStats(val, el); };
@@ -67,7 +67,6 @@
         applyStats(this.getVal(path));
       });
 
-      // 【追加】エラーハイライト(errs)のリアルタイムバインディング
       document.querySelectorAll(`[data-bind-errs^="${this.stateTarget}"]`).forEach(el => {
         const path = el.dataset.bindErrs;
         const applyErrs = (val) => { if (val !== undefined) NewDOM.inputs(el, val); };
@@ -75,10 +74,14 @@
         applyErrs(this.getVal(path));
       });
 
-      // 【追加】動的フォーム構築(fields)のリアルタイムバインディング
       document.querySelectorAll(`[data-bind-fields^="${this.stateTarget}"]`).forEach(el => {
         const path = el.dataset.bindFields;
-        const applyFields = (val) => { if (val !== undefined) NewDOM.buildFormFields(val, el, true); };
+        const applyFields = (val) => { 
+          if (val !== undefined) {
+            NewDOM.buildFormFields(val, el, true);
+            el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
+          }
+        };
         State.subscribe(path, applyFields);
         applyFields(this.getVal(path));
       });
@@ -96,6 +99,18 @@
           targetEl.style.display = isVisible ? '' : 'none';
         }
 
+        // 修正: openPhase を先に評価し、閉じる場合は即時反映させてアニメーション競合を避ける
+        if (def.openPhase !== undefined && targetEl.tagName === 'DETAILS') {
+          const isOpen = typeof def.openPhase === 'function' ? def.openPhase(curPhase) : curPhase >= def.openPhase;
+          if (isOpen !== undefined && targetEl.open !== isOpen) {
+            if (isOpen) {
+              setTimeout(() => { targetEl.open = true; }, 200);
+            } else {
+              targetEl.open = false; // 閉じる時は遅延させない
+            }
+          }
+        }
+
         if (def.activePhase !== undefined || def.disablePhase !== undefined) {
           const isActive = def.activePhase !== undefined 
             ? (typeof def.activePhase === 'function' ? def.activePhase(curPhase) : curPhase >= def.activePhase) 
@@ -110,13 +125,6 @@
             else targetEl.removeAttribute('data-type');
           } else {
             targetEl.disabled = isDis;
-          }
-        }
-
-        if (def.openPhase !== undefined && targetEl.tagName === 'DETAILS') {
-          const isOpen = typeof def.openPhase === 'function' ? def.openPhase(curPhase) : curPhase >= def.openPhase;
-          if (isOpen !== undefined && targetEl.open !== isOpen) {
-            setTimeout(() => { targetEl.open = isOpen; }, 200);
           }
         }
 

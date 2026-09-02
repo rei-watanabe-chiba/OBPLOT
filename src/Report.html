@@ -21,6 +21,8 @@
     <?!= include('Component'); ?>
     <?!= include('Chart'); ?>
     <?!= include('Report_Schema'); ?>
+    <?!= include('CoreUIAutomator'); ?>
+    <?!= include('CoreAction'); ?> <!-- 【追加】ルーター・パイプラインの読み込み -->
     
     <div class="dash-layout">
       <!-- 左サイドバー -->
@@ -30,47 +32,47 @@
           <h4 class="pane-title">選択中のパネル設定</h4>
           <div class="prop-row">
             <label class="prop-label panel">タイプ</label>
-            <div class="prop-controls" id="boxGraphType"></div>
+            <div class="prop-controls" id="boxGraphType" data-bind-fields="RPTST.data.graphTypeFields"></div>
           </div>
           <div id="secCalibration">
             <div class="prop-row">
               <label class="prop-label panel">対象指標</label>
-              <div class="prop-controls" id="boxCalibVal"></div>
+              <div class="prop-controls" id="boxCalibVal" data-bind-fields="RPTST.data.calibValFields"></div>
             </div>
           </div>
           <div id="secDiscrimination">
             <div class="prop-row">
               <label class="prop-label panel">X<span class="badge-label">項目</span></label>
-              <div class="prop-controls" id="boxDiscrX"></div>
+              <div class="prop-controls" id="boxDiscrX" data-bind-fields="RPTST.data.discrXFields"></div>
             </div>
             <div class="prop-row">
               <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
-              <div class="prop-controls" id="boxDiscrY"></div>
+              <div class="prop-controls" id="boxDiscrY" data-bind-fields="RPTST.data.discrYFields"></div>
             </div>
           </div>
           <div class="prop-row">
             <label class="prop-label panel">タイトル</label>
             <div class="prop-controls">
-              <input type="text" data-bind="activePanel.title" placeholder="パネルタイトルを入力" class="form-control">
+              <input type="text" data-ap-key="title" data-change="ReportApp.updateActivePanelRef" data-bind="RPTST.data.apTitle" placeholder="パネルタイトルを入力" class="form-control">
             </div>
           </div>
           <div class="prop-row">
             <label class="prop-label panel">X/Y<span class="badge-label">ラベル</span></label>
             <div class="prop-controls">
-              <input type="text" data-bind="activePanel.xLabel" class="form-control" placeholder="X軸">
-              <input type="text" data-bind="activePanel.yLabel" class="form-control" placeholder="Y軸">
+              <input type="text" data-ap-key="xLabel" data-change="ReportApp.updateActivePanelRef" data-bind="RPTST.data.apXLabel" class="form-control" placeholder="X軸">
+              <input type="text" data-ap-key="yLabel" data-change="ReportApp.updateActivePanelRef" data-bind="RPTST.data.apYLabel" class="form-control" placeholder="Y軸">
             </div>
           </div>
         </div>
         <div class="prop-row" style="margin-top:4px;">
-          <button data-action="printPDF" data-type="primary">PDF出力（印刷用ページ生成）</button>
+          <button data-action="ReportApp.printPDF" data-type="primary">PDF出力（印刷用ページ生成）</button>
         </div>
         <!-- タブナビゲーション -->
         <nav class="sidebar-tabs">
-          <button class="tab-icon active" data-action="switchTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
-          <button class="tab-icon" data-action="switchTab" data-tab="tabData" title="データ設定"><span class="material-symbols-outlined">database</span></button>
-          <button class="tab-icon" data-action="switchTab" data-tab="tabStyle" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
-          <button class="tab-icon" data-action="switchTab" data-tab="tabSymb" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
+          <button class="tab-icon active" data-action="ReportApp.switchTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
+          <button class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabData" title="データ設定"><span class="material-symbols-outlined">database</span></button>
+          <button class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabStyle" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
+          <button class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabSymb" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
         </nav>
         <div class="tab-content-area">
           <!-- タブ1: レイアウト -->
@@ -79,41 +81,41 @@
             <div class="prop-row" style="margin-bottom:16px;">
               <label class="prop-label">行数 / 列数</label>
               <div class="prop-controls">
-                <input type="number" data-bind="gridRows" class="form-control" title="行数">
-                <input type="number" data-bind="gridCols" class="form-control" title="列数">
+                <input type="number" data-bind="RPTST.refs.gridRows" class="form-control" title="行数">
+                <input type="number" data-bind="RPTST.refs.gridCols" class="form-control" title="列数">
               </div>
             </div>
             <h5 class="pane-title" style="margin-bottom:8px;">余白設定</h5>
             <div class="prop-row">
               <label class="prop-label">パネル間隔</label>
-              <div class="prop-controls"><input type="number" data-bind="panelGap" class="form-control"></div>
+              <div class="prop-controls"><input type="number" data-bind="RPTST.refs.panelGap" class="form-control"></div>
             </div>
             <div class="prop-row">
               <label class="prop-label">キャンバス 上/下</label>
               <div class="prop-controls">
-                <input type="number" data-bind="margins.top" class="form-control">
-                <input type="number" data-bind="margins.bottom" class="form-control">
+                <input type="number" data-bind="RPTST.refs.margins.top" class="form-control">
+                <input type="number" data-bind="RPTST.refs.margins.bottom" class="form-control">
               </div>
             </div>
             <div class="prop-row">
               <label class="prop-label">キャンバス 左/右</label>
               <div class="prop-controls">
-                <input type="number" data-bind="margins.left" class="form-control">
-                <input type="number" data-bind="margins.right" class="form-control">
+                <input type="number" data-bind="RPTST.refs.margins.left" class="form-control">
+                <input type="number" data-bind="RPTST.refs.margins.right" class="form-control">
               </div>
             </div>
             <div class="prop-row">
               <label class="prop-label">パネル内 上/下</label>
               <div class="prop-controls">
-                <input type="number" data-gph="p_t" class="form-control">
-                <input type="number" data-gph="p_b" class="form-control">
+                <input type="number" data-bind="RPTST.refs.rawGph.p_t" class="form-control">
+                <input type="number" data-bind="RPTST.refs.rawGph.p_b" class="form-control">
               </div>
             </div>
             <div class="prop-row">
               <label class="prop-label">パネル内 左/右</label>
               <div class="prop-controls">
-                <input type="number" data-gph="p_l" class="form-control">
-                <input type="number" data-gph="p_r" class="form-control">
+                <input type="number" data-bind="RPTST.refs.rawGph.p_l" class="form-control">
+                <input type="number" data-bind="RPTST.refs.rawGph.p_r" class="form-control">
               </div>
             </div>
           </div>
@@ -122,104 +124,107 @@
             <h5 class="pane-title" style="margin-bottom:8px;">データフィルター</h5>
             <div class="prop-row">
               <label class="prop-label panel" id="lblFilterDB">dataset</label>
-              <div class="prop-controls"><ob-multi-select id="boxFilterDB" data-change-item="fltrDB" data-change-all="fltrAllDB"></ob-multi-select></div>
+              <div class="prop-controls"><ob-multi-select id="boxFilterDB" data-change-item="ReportApp.tglMulti" data-change-all="ReportApp.tglAllMulti" data-bind="RPTST.refs.filters.db" data-bind-opts="RPTST.data.filterDBOpts"></ob-multi-select></div>
             </div>
             <div class="prop-row">
               <label class="prop-label panel" id="lblFilterItem">item</label>
-              <div class="prop-controls"><ob-multi-select id="boxFilterItem" data-change-item="fltrItem" data-change-all="fltrAllItem"></ob-multi-select></div>
+              <div class="prop-controls"><ob-multi-select id="boxFilterItem" data-change-item="ReportApp.tglMulti" data-change-all="ReportApp.tglAllMulti" data-bind="RPTST.refs.filters.item" data-bind-opts="RPTST.data.filterItemOpts"></ob-multi-select></div>
             </div>
             <div class="prop-row">
               <label class="prop-label panel" id="lblFilterGroup">Group</label>
-              <div class="prop-controls"><ob-multi-select id="boxFilterGroup" data-change-item="fltrGroup" data-change-all="fltrAllGroup"></ob-multi-select></div>
+              <div class="prop-controls"><ob-multi-select id="boxFilterGroup" data-change-item="ReportApp.tglMulti" data-change-all="ReportApp.tglAllMulti" data-bind="RPTST.refs.filters.group" data-bind-opts="RPTST.data.filterGroupOpts"></ob-multi-select></div>
             </div>
             <h5 class="pane-title" style="margin-top:16px; margin-bottom:8px;">データ補正</h5>
             <div class="prop-row">
               <label class="prop-label panel">検量線</label>
-              <div class="prop-controls" id="boxGlobalCorr"></div>
+              <div class="prop-controls" id="boxGlobalCorr" data-bind-fields="RPTST.data.corrFields"></div>
             </div>
             <div class="prop-row">
               <label class="prop-label panel">対象元素</label>
-              <div class="prop-controls"><ob-multi-select id="boxGlobalCalElms" data-change-item="calElm" data-change-all="calAllElm"></ob-multi-select></div>
+              <div class="prop-controls"><ob-multi-select id="boxGlobalCalElms" data-change-item="ReportApp.tglMulti" data-change-all="ReportApp.tglAllMulti" data-bind="RPTST.refs.calElms" data-bind-opts="RPTST.data.calElmsOpts"></ob-multi-select></div>
             </div>
             <div class="prop-row" style="margin-top:16px;">
-              <div class="prop-controls" id="boxGlobalCalTgl"></div>
-              <div class="prop-controls" id="boxGlobalLodTgl"></div>
+              <div class="prop-controls">
+                <div class="toggle-row"><span class="toggle-label">検量線適用</span><label class="toggle-switch"><input type="checkbox" data-bind="RPTST.refs.useCal"><span class="toggle-slider"></span></label></div>
+              </div>
+              <div class="prop-controls">
+                <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-bind="RPTST.refs.useLOD"><span class="toggle-slider"></span></label></div>
+              </div>
             </div>
           </div>
           <!-- タブ3: グラフスタイル -->
           <div id="tabStyle" class="sidebar-tab-pane">
-            <!-- セグメントトグル -->
             <div class="segment-ctrl">
-              <button class="segment-btn active" data-action="switchSub" data-target="subFont">フォント</button>
-              <button class="segment-btn" data-action="switchSub" data-target="subArea">グラフエリア</button>
+              <button class="segment-btn active" data-action="ReportApp.switchSub" data-target="subFont">フォント</button>
+              <button class="segment-btn" data-action="ReportApp.switchSub" data-target="subArea">グラフエリア</button>
             </div>
             <div id="subFont" class="sub-pane active">
               <div class="prop-row">
                 <label class="prop-label">欧文スタイル</label>
-                <div class="prop-controls" id="boxFontEng"></div>
+                <div class="prop-controls" id="boxFontEng" data-bind-fields="RPTST.data.fontEngFields"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">和文スタイル</label>
-                <div class="prop-controls" id="boxFontJp"></div>
+                <div class="prop-controls" id="boxFontJp" data-bind-fields="RPTST.data.fontJpFields"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">カラー<span class="badge-label">K</span></label>
                 <div class="prop-controls">
-                  <input type="range" data-gph="c_base" style="flex:1.8;">
-                  <input type="text" data-gph="c_base" class="form-control" style="flex:1.2;text-align:center;">
+                  <input type="range" data-bind="RPTST.refs.rawGph.c_base" style="flex:1.8;">
+                  <input type="text" data-bind="RPTST.refs.rawGph.c_base" class="form-control" style="flex:1.2;text-align:center;">
                 </div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">タイトル</label>
-                <div class="prop-controls"><input type="number" data-gph="s_title" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.s_title" class="form-control"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">軸名</label>
-                <div class="prop-controls"><input type="number" data-gph="s_name" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.s_name" class="form-control"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">目盛</label>
-                <div class="prop-controls"><input type="number" data-gph="s_tick" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.s_tick" class="form-control"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">回帰式</label>
-                <div class="prop-controls"><input type="number" data-gph="s_stats" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.s_stats" class="form-control"></div>
               </div>
             </div>
             <div id="subArea" class="sub-pane">
               <div class="prop-row">
                 <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
-                <div class="prop-controls"><input type="number" data-gph="sym_size" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.sym_size" class="form-control"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">シンボル<span class="badge-label">線幅</span></label>
-                <div class="prop-controls"><input type="number" data-gph="sym_bw" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.sym_bw" class="form-control"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">軸線<span class="badge-label">線幅</span></label>
-                <div class="prop-controls"><input type="number" data-gph="lw_axis" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.lw_axis" class="form-control"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">軸線<span class="badge-label">K</span></label>
                 <div class="prop-controls">
-                  <input type="range" data-gph="c_axis" style="flex:1.8;">
-                  <input type="text" data-gph="c_axis" class="form-control" style="flex:1.2;text-align:center;">
+                  <input type="range" data-bind="RPTST.refs.rawGph.c_axis" style="flex:1.8;">
+                  <input type="text" data-bind="RPTST.refs.rawGph.c_axis" class="form-control" style="flex:1.2;text-align:center;">
                 </div>
               </div>
                <div class="prop-row">
                 <label class="prop-label">グリッド<span class="badge-label">線幅</span></label>
-                <div class="prop-controls"><input type="number" data-gph="lw_grid" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.lw_grid" class="form-control"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label">グリッド<span class="badge-label">K</span></label>
                 <div class="prop-controls">
-                  <input type="range" data-gph="c_grid" style="flex:1.8;">
-                  <input type="text" data-gph="c_grid" class="form-control" style="flex:1.2;text-align:center;">
+                  <input type="range" data-bind="RPTST.refs.rawGph.c_grid" style="flex:1.8;">
+                  <input type="text" data-bind="RPTST.refs.rawGph.c_grid" class="form-control" style="flex:1.2;text-align:center;">
                 </div>
               </div>
                <div class="prop-row">
                 <label class="prop-label">回帰線<span class="badge-label">線幅</span></label>
-                <div class="prop-controls"><input type="number" data-gph="lw_reg" class="form-control"></div>
+                <div class="prop-controls"><input type="number" data-bind="RPTST.refs.rawGph.lw_reg" class="form-control"></div>
               </div>
             </div>
           </div>
@@ -228,12 +233,12 @@
             <div class="prop-row" style="margin-bottom:12px;">
               <label class="prop-label panel">属性選択</label>
               <div class="prop-controls">
-                <div id="boxSymbAxis" style="flex:1;"></div>
-                <button data-action="resetSymb" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
+                <div id="boxSymbAxis" data-bind-fields="RPTST.data.axisFields" style="flex:1;"></div>
+                <button data-action="ReportApp.resetSymb" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
               </div>
             </div>
             <div class="scroll-box">
-              <ob-symbol-table id="tblSymb"></ob-symbol-table>
+              <ob-symbol-table id="tblSymb" data-bind-src="RPTST.data.symbSrc"></ob-symbol-table>
             </div>
           </div>
         </div>
