@@ -37,7 +37,7 @@
                   <bt:Image size="32" resid="Icon32"/>
                   <bt:Image size="80" resid="Icon80"/>
                 </Icon>
-                <Control xsi:type="Button" id="BtnTab1">
+        <Control xsi:type="Button" id="BtnTab1">
                   <Label resid="Btn1Label"/>
                   <Supertip><Title resid="Btn1Title"/><Description resid="Btn1Desc"/></Supertip>
                   <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
@@ -55,6 +55,15 @@
                     <SourceLocation resid="UrlTab2"/>
                   </Action>
                 </Control>
+                <Control xsi:type="Button" id="BtnTab3">
+                  <Label resid="Btn3Label"/>
+                  <Supertip><Title resid="Btn3Title"/><Description resid="Btn3Desc"/></Supertip>
+                  <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>PaneT3</TaskpaneId>
+                    <SourceLocation resid="UrlTab3"/>
+                  </Action>
+                </Control>
               </Group>
               <Label resid="TabLabel"/>
             </CustomTab>
@@ -70,21 +79,25 @@
         <bt:Image id="Icon80" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon80.png"/>
       </bt:Images>
       <bt:Urls>
-        <!-- ★重要：Web版Excelの強烈なキャッシュを破棄するため「&amp;v=2」を付与 -->
-        <bt:Url id="UrlTab1" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab1&amp;v=2"/>
-        <bt:Url id="UrlTab2" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/App.html?mode=tab2&amp;v=2"/>
+        <!-- ★重要：Web版Excelの強烈なキャッシュを破棄するため「&amp;v=3」を付与 -->
+        <bt:Url id="UrlTab1" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Tracer.html?mode=tab1&amp;v=3"/>
+        <bt:Url id="UrlTab2" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Tracer.html?mode=tab2&amp;v=3"/>
+        <bt:Url id="UrlTab3" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Dash.html?mode=tab3&amp;v=3"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="OBPLOT"/>
         <bt:String id="TabLabel" DefaultValue="OBPLOT"/>
-        <bt:String id="Btn1Label" DefaultValue="抽出ツール"/>
+        <bt:String id="Btn1Label" DefaultValue="tracer5i抽出"/>
         <bt:String id="Btn1Title" DefaultValue="データ抽出ツールを起動"/>
-        <bt:String id="Btn2Label" DefaultValue="グラフツール"/>
-        <bt:String id="Btn2Title" DefaultValue="グラフ作成ツールを起動"/>
+        <bt:String id="Btn2Label" DefaultValue="検量線・標準化"/>
+        <bt:String id="Btn2Title" DefaultValue="簡易プレビュー＆データ標準化ツールを起動"/>
+        <bt:String id="Btn3Label" DefaultValue="ダッシュボード"/>
+        <bt:String id="Btn3Title" DefaultValue="グラフダッシュボードを起動"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="Btn1Desc" DefaultValue="ファイルリストの生成やデータ抽出を行います"/>
-        <bt:String id="Btn2Desc" DefaultValue="抽出データを用いたグラフ作成と検量線補正を行います"/>
+        <bt:String id="Btn1Desc" DefaultValue="tracer5iデータのモード対応抽出を行います"/>
+        <bt:String id="Btn2Desc" DefaultValue="tracer5iデータをプレビューして標準データに変換します"/>
+        <bt:String id="Btn3Desc" DefaultValue="グラフ作成・出力用ダッシュボードを作成します"/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
