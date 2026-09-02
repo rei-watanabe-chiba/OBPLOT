@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Build App.html
+      - name: Build HTML files
         run: node infra/build.js
         
       # === 以下、2026年最新の公式ベストプラクティス ===
