@@ -5,24 +5,29 @@
 
     static async loadDB() {
       // 統合パイプラインへの集約（確認スキップ）
-      await CoreAction.confirmAndExecute("T3ST.inst.status", null, null, async () => {
-        const [pRes, wRes, cRes] = await Promise.all([
-          API.fetchDT(T3Action.ssId, GLB.appShts.pxrf), 
-          API.fetchDT(T3Action.ssId, GLB.rawShts.wdxrf), 
-          API.fetchDT(T3Action.ssId, GLB.appShts.correction).catch(() => ({ data: [] }))
-        ]);
+      await CoreAction.withAsync("T3ST.inst.status", async () => {
+        const [pRes, wRes, cRes] = await API.fetchMultiple(T3Action.ssId, [{ sht: GLB.appShts.pxrf }, { sht: GLB.rawShts.wdxrf }, { sht: GLB.appShts.correction }]);
         
-        if (!pRes.data || pRes.data.length <= 1) throw new Error("PXRF不足");
-        if (!wRes.data || wRes.data.length <= 1) throw new Error("WDXRF不足");
+        const pData = pRes.success ? pRes.payload.data : null;
+        const wData = wRes.success ? wRes.payload.data : null;
+        const cData = cRes.success ? cRes.payload.data : [];
         
-        const { pxrfDT, wdxrfDT, corrDT } = Mtd.T3.mgmtDT.loadDB(pRes.data, wRes.data, cRes.data);
-        State.set({ "T3ST.inst.data.pxrfDT": pxrfDT, "T3ST.inst.data.wdxrfDT": wdxrfDT, "T3ST.inst.data.corrDT": corrDT, "T3ST.phase": T3_PHS.LOADED });
-        return `読込完了: PXRF ${pxrfDT.length - 1}件`;
+        if (!pData || pData.length <= 1) throw new Error("PXRF不足");
+        if (!wData || wData.length <= 1) throw new Error("WDXRF不足");
+        
+        State.set({ 
+          "T3ST.inst.data.pxrfDT": pData, 
+          "T3ST.inst.data.wdxrfDT": wData, 
+          "T3ST.inst.data.corrDT": cData, 
+          "T3ST.phase": T3_PHS.LOADED,
+          "T3ST.repo.status": ["message", "グラフ展開用HTMLを作成"] 
+        });
+        return "データセット構築完了";
       });
     }
 
     static async openRepo() {
-      await CoreAction.confirmAndExecute("T3ST.repo.status", "確認", "ダッシュボードを展開しますか？", async () => {
+      await CoreAction.withAsync("T3ST.repo.status", async () => {
         let template = await API.getReportTemplate();
         const { inst } = State.proxy.T3ST;
         const injectData = { pxrfDT: inst.data.pxrfDT || [], wdxrfDT: inst.data.wdxrfDT || [], corrDT: inst.data.corrDT || [] };
@@ -58,15 +63,8 @@
 
       State.subscribe("T3ST.phase", () => automatorT3.update());
       
-      State.subscribe("GLB.isLocked", v => {
-        const fs = document.getElementById("tab3Fieldset");
-        if (fs) fs.disabled = v;
-      });
-
-      State.subscribe("T3ST.phase", v => {
-        if (v === T3_PHS.LOADED) {
-          State.set({ "T3ST.repo.status": ["message", "グラフ展開用HTMLを作成"] });
-        }
+      State.subscribe("GLB.isLocked", () => {
+        automatorT3.update();
       });
 
       const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";

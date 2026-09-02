@@ -34,7 +34,7 @@
 
     static async loadRaw() {
       const msg = State.get("T1ST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？";
-      await CoreAction.confirmAndExecute("T1ST.raw.status", "確認", msg, async () => {
+      await CoreAction.withAsync("T1ST.raw.status", msg, async () => {
         const { data, message } = await API.fetchDT(T1Action.ssId, GLB.rawShts.file, 5);
         State.set({ 
           "T1ST.raw.data": data, 
@@ -53,7 +53,6 @@
     static async stateDI(rawDT, act = "make") {
       const outData = Mtd.T1.FVald.valdList(rawDT, CoreMethod.Util.buildHeader('filelist'), GLB.validModes, State.get("T1ST.pref.refs.mode"));
       const isErr = outData.slice(1).some(r => r.at(-1) !== ""); 
-      await API.writeData(T1Action.ssId, GLB.appShts.filelist, outData, "rule");
       
       const statArr = act === "extract"
         ? (isErr ? ["alert", "抽出中断: リストの再検証が必要です"] : State.get("T1ST.raw.cachedStatus"))
@@ -76,27 +75,44 @@
       T1Action.checkRawRefs();
       const { raw } = State.proxy.T1ST;
       if (raw.flags.some(Boolean)) return;
-      await CoreAction.confirmAndExecute("T1ST.raw.status", "確認", "「ファイルリスト」を上書きしますか？", async () => {
-        return (await T1Action.stateDI(CoreMethod.Util.remapArry(raw.data, GLB.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), CoreMethod.Util.buildHeader('rawFile')), "make")).statArr;
+      await CoreAction.withAsync("T1ST.raw.status", "「ファイルリスト」を上書きしますか？", async () => {
+        const { statArr, outData } = await T1Action.stateDI(CoreMethod.Util.remapArry(raw.data, GLB.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), CoreMethod.Util.buildHeader('rawFile')), "make");
+        await API.writeData(T1Action.ssId, GLB.appShts.filelist, outData, "rule");
+        return statArr;
       });
     }
     
     static async valdList() {
-      await CoreAction.confirmAndExecute("T1ST.raw.status", "確認", "「ファイルリスト」を上書きしますか？", async () => {
-        return (await T1Action.stateDI((await API.fetchDT(T1Action.ssId, GLB.appShts.filelist, 5, 5)).data, "validate")).statArr;
+      await CoreAction.withAsync("T1ST.raw.status", "「ファイルリスト」を上書きしますか？", async () => {
+        const { data } = await API.fetchDT(T1Action.ssId, GLB.appShts.filelist, 5, 5);
+        const { statArr, outData } = await T1Action.stateDI(data, "validate");
+        await API.writeData(T1Action.ssId, GLB.appShts.filelist, outData, "rule");
+        return statArr;
       });
     }
     
     static async runExtr() {
-      await CoreAction.confirmAndExecute("T1ST.extr.status", "確認", "「抽出データ」を上書きしますか？", async () => {
-        const { isErr, outData: validFileDT } = await T1Action.stateDI((await API.fetchDT(T1Action.ssId, GLB.appShts.filelist, 5, 5)).data, "extract");
-        if (isErr) return State.get("T1ST.extr.status");
-        const resDT = await API.fetchDT(T1Action.ssId, GLB.rawShts.results);
-        const outData = Mtd.T1.Extr.runExtr(validFileDT, resDT.data, State.get("T1ST.extr.refs"));
-        if (!outData || outData.length <= 1) throw new Error("対象データなし");
-        await API.writeData(T1Action.ssId, GLB.appShts.extract, outData);
+      await CoreAction.withAsync("T1ST.extr.status", "「抽出データ」を上書きしますか？", async () => {
+        const [fRes, rRes] = await API.fetchMultiple(T1Action.ssId, [{ sht: GLB.appShts.filelist, qCol: 5, lCol: 5 }, { sht: GLB.rawShts.results }]);
+        if (!fRes.success) throw new Error(fRes.message);
+        if (!rRes.success) throw new Error(rRes.message);
+        
+        const { isErr, outData: validFileDT } = await T1Action.stateDI(fRes.payload.data, "extract");
+        if (isErr) {
+          await API.writeData(T1Action.ssId, GLB.appShts.filelist, validFileDT, "rule");
+          return State.get("T1ST.extr.status");
+        }
+        
+        const extrDT = Mtd.T1.Extr.runExtr(validFileDT, rRes.payload.data, State.get("T1ST.extr.refs"));
+        if (!extrDT || extrDT.length <= 1) throw new Error("対象データなし");
+        
+        await API.writeMultiple(T1Action.ssId, [
+          { sht: GLB.appShts.filelist, data: validFileDT, opts: "rule" },
+          { sht: GLB.appShts.extract, data: extrDT, opts: "clear" }
+        ]);
+        
         State.set("T1ST.phase", T1_PHS.EXTRACT); 
-        return `抽出: ${outData.length - 1} 件`;
+        return `抽出: ${extrDT.length - 1} 件`;
       });
     }
     
@@ -105,8 +121,10 @@
       State.set("T1ST.extr.status", ["loading", "データ確認中..."]);
       let extrRes, trcRes, checkRes;
       try {
-        extrRes = await API.fetchDT(T1Action.ssId, GLB.appShts.extract);
-        trcRes = await API.fetchDT(T1Action.ssId, GLB.rawShts.tracer5i).catch(() => ({ data: [CoreMethod.Util.buildHeader('tracer5i')] }));
+        const [eRes, tRes] = await API.fetchMultiple(T1Action.ssId, [{ sht: GLB.appShts.extract }, { sht: GLB.rawShts.tracer5i }]);
+        if (!eRes.success) throw new Error(eRes.message);
+        extrRes = eRes.payload;
+        trcRes = tRes.success ? tRes.payload : { data: [CoreMethod.Util.buildHeader('tracer5i')] };
         checkRes = Mtd.T1.PVald.checkPxrf(trcRes.data, extrRes.data);
       } catch (e) {
         State.set("T1ST.extr.status", ["error", e.message]);
@@ -117,7 +135,7 @@
 
       const msg = checkRes.isDup ? "重複IDがあります。上書き格納しますか？" : "tracer5iシートに格納しますか？";
       
-      await CoreAction.confirmAndExecute("T1ST.extr.status", "確認", msg, async () => {
+      await CoreAction.withAsync("T1ST.extr.status", msg, async () => {
         await API.writeData(T1Action.ssId, GLB.rawShts.tracer5i, checkRes.isDup ? checkRes.data : extrRes.data.slice(1), checkRes.isDup ? "clear" : ["append"]);
         State.set("T1ST.phase", T1_PHS.OUTPUT); 
         return `格納完了: ${extrRes.data.length - 1} 件`;
@@ -156,18 +174,21 @@
     static tglAllStdzItem(tgt) { this.tglAllMulti(tgt, "T2ST.stdz.refs.itemMap"); }
 
     static async loadDB() {
-      await CoreAction.confirmAndExecute("T2ST.asgn.status", null, null, async () => {
-        const [pRes, wRes, cRes] = await Promise.all([API.fetchDT(T2Action.ssId, GLB.rawShts.tracer5i), API.fetchDT(T2Action.ssId, GLB.rawShts.wdxrf), API.fetchDT(T2Action.ssId, GLB.appShts.correction).catch(() => ({ data: [] }))]);
-        if (!pRes.data || pRes.data.length <= 1) throw new Error("tracer5i不足");
-        if (!wRes.data || wRes.data.length <= 1) throw new Error("WDXRF不足");
+      await CoreAction.withAsync("T2ST.asgn.status", async () => {
+        const [pRes, wRes, cRes] = await API.fetchMultiple(T2Action.ssId, [{ sht: GLB.rawShts.tracer5i }, { sht: GLB.rawShts.wdxrf }, { sht: GLB.appShts.correction }]);
+        const pData = pRes.success ? pRes.payload.data : null;
+        const wData = wRes.success ? wRes.payload.data : null;
+        const cData = cRes.success ? cRes.payload.data : [];
+        if (!pData || pData.length <= 1) throw new Error("tracer5i不足");
+        if (!wData || wData.length <= 1) throw new Error("WDXRF不足");
         State.reset(['T2ST.asgn', 'T2ST.symb', 'T2ST.calb', 'T2ST.prev', 'T2ST.stdz']);
-        const { wrapPXRF, wrapWDXRF, dbs } = Mtd.T2.mgmtDT.loadDB(pRes.data, wRes.data);
-        State.set({ "T2ST.asgn.data.wrapPXRF": wrapPXRF, "T2ST.asgn.data.wrapWDXRF": wrapWDXRF, "T2ST.asgn.data.corrDT": cRes.data, "T2ST.asgn.refs.available": dbs, "T2ST.asgn.refs.filter": dbs, "T2ST.phase": T2_PHS.LOADED, "T2ST.calb.refs.modeMap": [...GLB.optElms], "T2ST.calb.refs.calElms": [...GLB.valElms], "T2ST.stdz.refs.modeMap": [...GLB.optElms] });
+        const { wrapPXRF, wrapWDXRF, dbs } = Mtd.T2.mgmtDT.loadDB(pData, wData);
+        State.set({ "T2ST.asgn.data.wrapPXRF": wrapPXRF, "T2ST.asgn.data.wrapWDXRF": wrapWDXRF, "T2ST.asgn.data.corrDT": cData, "T2ST.asgn.refs.available": dbs, "T2ST.asgn.refs.filter": dbs, "T2ST.phase": T2_PHS.LOADED, "T2ST.calb.refs.modeMap": [...GLB.optElms], "T2ST.calb.refs.calElms": [...GLB.valElms], "T2ST.stdz.refs.modeMap": [...GLB.optElms] });
         return `読込完了: database ${dbs.length}件`;
       });
     }
     static async fltrDB() {
-      await CoreAction.confirmAndExecute("T2ST.asgn.status", null, null, async () => {
+      await CoreAction.withAsync("T2ST.asgn.status", async () => {
         const { asgn } = State.proxy.T2ST;
         if (!asgn.refs.filter?.length) throw new Error("DB未選択");
         State.reset(['T2ST.symb', 'T2ST.calb', 'T2ST.prev', 'T2ST.stdz']);
@@ -176,8 +197,12 @@
       });
     }
     static async setSymb() { 
-      await CoreAction.confirmAndExecute("T2ST.symb.status", null, null, async () => { 
-        State.set("T2ST.phase", T2_PHS.MAPPED); 
+      await CoreAction.withAsync("T2ST.symb.status", async () => { 
+        State.set({
+          "T2ST.phase": T2_PHS.MAPPED,
+          "T2ST.prev.status": ["message", "データと検量線のプレビュー"],
+          "T2ST.stdz.status": ["message", "検量線と標準pXRFデータの出力"]
+        }); 
         return "シンボル確定"; 
       }); 
     }
@@ -188,7 +213,7 @@
       const newVal = tgtSelect.value, oldVal = State.get("T2ST.symb.refs.baseKey");
       if (newVal === oldVal) return;
       
-      const isConfirmed = await CoreAction.confirmAndExecute("T2ST.symb.status", "確認", "属性を変更するとシンボル設定がリセットされます。よろしいですか？", async () => {
+      const isConfirmed = await CoreAction.withAsync("T2ST.symb.status", { title: "警告", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
         State.set({ "T2ST.symb.refs.baseKey": newVal }); 
         State.reset("T2ST.symb.refs.rls");
         return ["hidden", ""];
@@ -212,7 +237,7 @@
     }
 
     static async buildPrev() {
-      await CoreAction.confirmAndExecute("T2ST.prev.status", "確認", "プレビューを更新しますか？", async () => {
+      await CoreAction.withAsync("T2ST.prev.status", async () => {
         const { prev, calb, asgn, symb } = State.proxy.T2ST;
         const conf = { ...prev.refs, ...calb.refs, corrDT: asgn.data.corrDT, graphType: 'calibration', calibVal: prev.refs.val }; 
         const { prevDT, statsDT } = Mtd.T2.mgmPrev.generateChartData(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf);
@@ -225,7 +250,7 @@
           "T2ST.prev.data.chartSrc": { prevDT, statsDT, symb: symb.refs },
           "T2ST.phase": T2_PHS.PREVIEWED 
         }); 
-        return ["message", "検量線とデータ補正のプレビュー"];
+        return ["message", "データと検量線のプレビュー"];
       });
     }
     static async saveCorr() {
@@ -236,7 +261,7 @@
       const isDup = asgn.data.corrDT?.slice(1).some(r => r[0] === idxName);
       const msg = isDup ? `全対象元素の検量線を上書きしますか？\n名前：${idxName}` : `全対象元素の検量線を出力しますか？\n名前：${idxName}`;
       
-      await CoreAction.confirmAndExecute("T2ST.stdz.status", "確認", msg, async () => {
+      await CoreAction.withAsync("T2ST.stdz.status", msg, async () => {
         const newRow = Mtd.T2.mgmStdz.calcAllCalib(asgn.data.pxrfDT, asgn.data.wdxrfDT, stdz.refs, idxName);
         let updData = asgn.data.corrDT?.length ? [...asgn.data.corrDT] : [CoreMethod.Util.buildHeader('corr')];
         if (isDup) updData[updData.findIndex(r => r[0] === idxName)] = newRow; else updData.push(newRow);
@@ -246,7 +271,7 @@
       });
     }
     static async pushStdz() {
-      await CoreAction.confirmAndExecute("T2ST.stdz.status", "確認", "PXRFシートに出力しますか？", async () => {
+      await CoreAction.withAsync("T2ST.stdz.status", "PXRFシートに出力しますか？", async () => {
         const { asgn, stdz } = State.proxy.T2ST;
         const outData = Mtd.T2.mgmStdz.genNewPxrf(asgn.data.pxrfDT, stdz.refs.modeMap);
         await API.writeData(T2Action.ssId, GLB.appShts.pxrf, outData, "clear");
@@ -308,11 +333,9 @@
       State.subscribe("T1ST.raw.flags", () => automatorT1.update());
       State.subscribe("T1ST.extr.flags", () => automatorT1.update());
 
-      State.subscribe("GLB.isLocked", v => {
-        const fs1 = document.getElementById("tab1Fieldset");
-        const fs2 = document.getElementById("tab2Fieldset");
-        if (fs1) fs1.disabled = v;
-        if (fs2) fs2.disabled = v;
+      State.subscribe("GLB.isLocked", () => {
+        automatorT1.update();
+        automatorT2.update();
       });
 
       // --- 派生状態（UI用データ）の自動更新監視 ---

@@ -36,35 +36,59 @@ function include(filename) { return HtmlService.createHtmlOutputFromFile(filenam
 const getSht = (ssId, name) => SpreadsheetApp.openById(ssId).getSheetByName(name);
 
 // --- データ取得 ---
+const _fetchDT = (ss, shtName, qCol, lCol) => {
+  const sht = ss.getSheetByName(shtName);
+  if (!sht) throw new Error(`シート「${shtName}」不在`);
+  const rawDT = sht.getDataRange().getValues();
+  if (rawDT.length <= 1) throw new Error("データが1行以下");
+  if (qCol && rawDT[0].length < qCol) throw new Error("データ列不足"); 
+  const data = lCol ? rawDT.map(r => r.slice(0, lCol)) : rawDT; 
+  return { data, message: `取得: ${data.length} 行` };
+};
+
 function fetchDT(ssId, shtName, qCol = null, lCol = null) {
+  return withErr(() => ApiResponse.success(_fetchDT(SpreadsheetApp.openById(ssId), shtName, qCol, lCol)));
+}
+
+function fetchMultiple(ssId, reqs) {
   return withErr(() => {
-    const sht = getSht(ssId, shtName);
-    if (!sht) return ApiResponse.error("SHEET_ERR", `シート「${shtName}」不在`);
-    const rawDT = sht.getDataRange().getValues();
-    if (rawDT.length <= 1) return ApiResponse.error("DATA_ERR", "データが1行以下");
-    if (qCol && rawDT[0].length < qCol) return ApiResponse.error("DATA_ERR", "データ列不足"); 
-    const data = lCol ? rawDT.map(r => r.slice(0, lCol)) : rawDT; 
-    return ApiResponse.success({ data, message: `取得: ${data.length} 行` });
+    const ss = SpreadsheetApp.openById(ssId);
+    return ApiResponse.success(reqs.map(req => {
+      try { return { success: true, payload: _fetchDT(ss, req.sht, req.qCol, req.lCol) }; }
+      catch (e) { return { success: false, message: e.message }; }
+    }));
   });
 }
 
 // --- データ出力 ---
-function writeData(ssId, shtName, data, opts = "clear") {
-  return withErr(() => {
-    const sht = getSht(ssId, shtName);
-    if (!sht) return ApiResponse.error("SHEET_ERR", `シート「${shtName}」不在`);
-    const optArr = [].concat(opts);
-    if (optArr.includes("clear")) sht.clearContents(); 
-    const sRow = optArr.includes("append") ? (sht.getLastRow() || 1) + 1 : 1;
-    sht.getRange(sRow, 1, data.length, data[0].length).setValues(data);
-    if (optArr.includes("rule")) { 
-      const rls = sht.getConditionalFormatRules();
-      if (rls.length) {
-        rls[0] = rls[0].copy().setRanges([sht.getRange(1, 1, sht.getLastRow(), data[0].length)]).build();
-        sht.setConditionalFormatRules(rls);
-      }
+const _writeData = (ss, shtName, data, opts) => {
+  const sht = ss.getSheetByName(shtName);
+  if (!sht) throw new Error(`シート「${shtName}」不在`);
+  const optArr = [].concat(opts);
+  if (optArr.includes("clear")) sht.clearContents(); 
+  const sRow = optArr.includes("append") ? (sht.getLastRow() || 1) + 1 : 1;
+  sht.getRange(sRow, 1, data.length, data[0].length).setValues(data);
+  if (optArr.includes("rule")) { 
+    const rls = sht.getConditionalFormatRules();
+    if (rls.length) {
+      rls[0] = rls[0].copy().setRanges([sht.getRange(1, 1, sht.getLastRow(), data[0].length)]).build();
+      sht.setConditionalFormatRules(rls);
     }
-    return ApiResponse.success("書き出し完了");
+  }
+  return "書き出し完了";
+};
+
+function writeData(ssId, shtName, data, opts = "clear") {
+  return withErr(() => ApiResponse.success(_writeData(SpreadsheetApp.openById(ssId), shtName, data, opts)));
+}
+
+function writeMultiple(ssId, reqs) {
+  return withErr(() => {
+    const ss = SpreadsheetApp.openById(ssId);
+    return ApiResponse.success(reqs.map(req => {
+      try { return { success: true, payload: _writeData(ss, req.sht, req.data, req.opts || "clear") }; }
+      catch (e) { return { success: false, message: e.message }; }
+    }));
   });
 }
 
@@ -74,10 +98,15 @@ function getReportTemplate() {
 }
 
 // --- ブック状態取得 ---
-function getWbState(ssId) {
-  return withErr(() => ApiResponse.success(SpreadsheetApp.openById(ssId).getSheets().map(s => ({
-    name: s.getName(), hdr: s.getLastColumn() ? s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0] : []
-  }))));
+function getWbState(ssId, targetShts = []) {
+  return withErr(() => {
+    const ss = SpreadsheetApp.openById(ssId);
+    return ApiResponse.success(ss.getSheets().map(s => {
+      const name = s.getName();
+      if (targetShts.length > 0 && !targetShts.includes(name)) return { name, hdr: [] };
+      return { name, hdr: s.getLastColumn() ? s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0] : [] };
+    }));
+  });
 }
 
 // --- シート動的構築とソート ---

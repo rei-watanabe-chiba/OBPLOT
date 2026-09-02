@@ -3,11 +3,12 @@
   const T1T2_SCHEMA = {
     T1: {
       elements: [
+        { id: "tab1Fieldset", disablePhase: () => State.get("GLB.isLocked") },
         { id: "prefSec", activePhase: p => p === T1_PHS.INIT, disablePhase: p => false },
         
         { id: "rawSec", activePhase: p => p >= T1_PHS.READY, disablePhase: p => p < T1_PHS.READY, openPhase: p => p >= T1_PHS.READY && p < T1_PHS.VALID },
         { id: "btn-load-raw", disablePhase: p => false, text: p => p <= T1_PHS.READY ? "データを取得" : "再取得" },
-        { id: "btn-make-list", activePhase: p => p >= T1_PHS.READY },
+        { id: "btn-make-list", activePhase: p => p >= T1_PHS.READY, className: p => p === T1_PHS.LOAD ? "" : "outline" },
         { id: "btn-vald-list", activePhase: p => p >= T1_PHS.INVALID && !State.get("T1ST.raw.flags").some(Boolean), className: p => p === T1_PHS.INVALID ? "" : "outline" },
         { id: "rawSecArea", visiblePhase: p => p >= T1_PHS.LOAD },
         { id: "rawSecBtnBox", visiblePhase: p => p >= T1_PHS.LOAD },
@@ -20,6 +21,7 @@
     },
     T2: {
       elements: [
+        { id: "tab2Fieldset", disablePhase: () => State.get("GLB.isLocked") },
         { id: "asgnSec", activePhase: p => true, disablePhase: p => false, openPhase: p => p < T2_PHS.FILTERED },
         { id: "btn-load-db", disablePhase: p => false },
         { id: "btn-fltr-db", activePhase: p => p >= T2_PHS.LOADED },

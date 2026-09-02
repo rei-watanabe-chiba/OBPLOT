@@ -147,6 +147,15 @@
           const txt = typeof def.text === 'function' ? def.text(curPhase) : def.text;
           if (targetEl.innerText !== txt) targetEl.innerText = txt;
         }
+
+        if (def.dataset !== undefined) {
+          const ds = typeof def.dataset === 'function' ? def.dataset(curPhase) : def.dataset;
+          if (ds && typeof ds === 'object') {
+            for (const key in ds) {
+              if (targetEl.dataset[key] !== String(ds[key])) targetEl.dataset[key] = ds[key];
+            }
+          }
+        }
       });
     }
   }

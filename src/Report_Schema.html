@@ -31,6 +31,28 @@
   };
 
   const REPORT_SCHEMA = {
-    elements: []
+    elements: [
+      { id: "lblFilterDB", text: () => GLB.idx.key1 },
+      { id: "lblFilterItem", text: () => GLB.idx.p1 },
+      { id: "lblFilterGroup", text: () => GLB.idx.wd1 },
+      { 
+        id: "panelConfigSec", 
+        visiblePhase: () => !window.__IS_PRINT_TAB__ && !!State.get("RPTST.refs.panels")?.find(p => p.id === State.get("RPTST.refs.activePanelId")),
+        dataset: () => ({ graphtype: State.get("RPTST.data.apGraphType") })
+      },
+      { id: "tabBtnLayout", className: () => State.get("RPTST.ui.activeTab") === "tabLayout" ? "tab-icon active" : "tab-icon" },
+      { id: "tabBtnData", className: () => State.get("RPTST.ui.activeTab") === "tabData" ? "tab-icon active" : "tab-icon" },
+      { id: "tabBtnStyle", className: () => State.get("RPTST.ui.activeTab") === "tabStyle" ? "tab-icon active" : "tab-icon" },
+      { id: "tabBtnSymb", className: () => State.get("RPTST.ui.activeTab") === "tabSymb" ? "tab-icon active" : "tab-icon" },
+      { id: "tabLayout", className: () => State.get("RPTST.ui.activeTab") === "tabLayout" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
+      { id: "tabData", className: () => State.get("RPTST.ui.activeTab") === "tabData" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
+      { id: "tabStyle", className: () => State.get("RPTST.ui.activeTab") === "tabStyle" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
+      { id: "tabSymb", className: () => State.get("RPTST.ui.activeTab") === "tabSymb" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
+      
+      { id: "segBtnFont", className: () => State.get("RPTST.ui.activeSub") === "subFont" ? "segment-btn active" : "segment-btn" },
+      { id: "segBtnArea", className: () => State.get("RPTST.ui.activeSub") === "subArea" ? "segment-btn active" : "segment-btn" },
+      { id: "subFont", className: () => State.get("RPTST.ui.activeSub") === "subFont" ? "sub-pane active" : "sub-pane" },
+      { id: "subArea", className: () => State.get("RPTST.ui.activeSub") === "subArea" ? "sub-pane active" : "sub-pane" }
+    ]
   };
 </script>

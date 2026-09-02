@@ -17,8 +17,10 @@
     }
     static fetchDT(ssId, sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", ssId, sht, qCol, lCol); }
     static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
+    static fetchMultiple(ssId, reqs) { return this.#serverCall("fetchMultiple", ssId, reqs); }
+    static writeMultiple(ssId, reqs) { return this.#serverCall("writeMultiple", ssId, reqs); }
     static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
-    static getWbState(ssId) { return this.#serverCall("getWbState", ssId); }
+    static getWbState(ssId, targetShts = []) { return this.#serverCall("getWbState", ssId, targetShts); }
     static buildShts(ssId, buildPlan) { return this.#serverCall("buildShts", ssId, buildPlan); }
   }
 
@@ -76,6 +78,32 @@
         await ctx.sync();
         return "書き出し完了";
       });
+    }
+
+    static async fetchMultiple(ssId, reqs) {
+      const results = [];
+      for (const req of reqs) {
+        try {
+          const res = await this.fetchDT(ssId, req.sht, req.qCol, req.lCol);
+          results.push({ success: true, payload: res });
+        } catch (e) {
+          results.push({ success: false, message: e.message });
+        }
+      }
+      return results;
+    }
+
+    static async writeMultiple(ssId, reqs) {
+      const results = [];
+      for (const req of reqs) {
+        try {
+          const res = await this.writeData(ssId, req.sht, req.data, req.opts || "clear");
+          results.push({ success: true, payload: res });
+        } catch (e) {
+          results.push({ success: false, message: e.message });
+        }
+      }
+      return results;
     }
 
     // レポートテンプレート取得

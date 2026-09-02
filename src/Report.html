@@ -69,10 +69,10 @@
         </div>
         <!-- タブナビゲーション -->
         <nav class="sidebar-tabs">
-          <button class="tab-icon active" data-action="ReportApp.switchTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
-          <button class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabData" title="データ設定"><span class="material-symbols-outlined">database</span></button>
-          <button class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabStyle" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
-          <button class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabSymb" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
+          <button id="tabBtnLayout" class="tab-icon active" data-action="ReportApp.switchTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
+          <button id="tabBtnData" class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabData" title="データ設定"><span class="material-symbols-outlined">database</span></button>
+          <button id="tabBtnStyle" class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabStyle" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
+          <button id="tabBtnSymb" class="tab-icon" data-action="ReportApp.switchTab" data-tab="tabSymb" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
         </nav>
         <div class="tab-content-area">
           <!-- タブ1: レイアウト -->
@@ -155,8 +155,8 @@
           <!-- タブ3: グラフスタイル -->
           <div id="tabStyle" class="sidebar-tab-pane">
             <div class="segment-ctrl">
-              <button class="segment-btn active" data-action="ReportApp.switchSub" data-target="subFont">フォント</button>
-              <button class="segment-btn" data-action="ReportApp.switchSub" data-target="subArea">グラフエリア</button>
+              <button id="segBtnFont" class="segment-btn active" data-action="ReportApp.switchSub" data-target="subFont">フォント</button>
+              <button id="segBtnArea" class="segment-btn" data-action="ReportApp.switchSub" data-target="subArea">グラフエリア</button>
             </div>
             <div id="subFont" class="sub-pane active">
               <div class="prop-row">

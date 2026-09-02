@@ -38,8 +38,9 @@
       }
 
       CoreAction.initGlobalRouter({ CoreAction, ReportApp });
-      const automator = new CoreUIAutomator(REPORT_SCHEMA, 'RPTST');
-      automator.build();
+      ReportApp.automator = new CoreUIAutomator(REPORT_SCHEMA, 'RPTST');
+      State.set({"RPTST.ui.activeTab": "tabLayout", "RPTST.ui.activeSub": "subFont"});
+      ReportApp.automator.build();
 
       // 【修正】文字列のままStateに注入されてエラーになるのを防ぐため、厳密にオブジェクト型か判定
       const initDataRaw = window.__INJECTED_DATA__;
@@ -75,7 +76,6 @@
 
       State.subscribe('RPTST.refs.activePanelId', () => {
           this.updateActivePanelContext();
-          this.updateActivePanelClass();
           this.queueSave();
       });
 
@@ -130,9 +130,7 @@
       this.oldSymbAxis = refs.symb.baseKey;
       State.set("RPTST.refs", structuredClone(refs));
 
-      document.getElementById("lblFilterDB").textContent = GLB.idx.key1; 
-      document.getElementById("lblFilterItem").textContent = GLB.idx.p1; 
-      document.getElementById("lblFilterGroup").textContent = GLB.idx.wd1;
+
 
       const optsCorr = [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.corrDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
       const optValLgc = [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v }));
@@ -199,45 +197,31 @@
 
     static updateActivePanelContext() {
       const activeId = State.get("RPTST.refs.activePanelId");
-      const panel = State.get("RPTST.refs.panels").find(p => p.id === activeId);
-      if (!panel || window.__IS_PRINT_TAB__) {
-        document.getElementById('panelConfigSec').style.display = 'none';
-        return;
-      }
-      document.getElementById('panelConfigSec').style.display = 'block';
-      document.getElementById('panelConfigSec').dataset.graphtype = panel.graphType;
+      const panels = State.get("RPTST.refs.panels") || [];
+      const panel = panels.find(p => p.id === activeId);
+      
       State.set({
-        "RPTST.data.apGraphType": panel.graphType, 
-        "RPTST.data.apCalibVal": panel.calibVal, 
-        "RPTST.data.apDiscrXVal": panel.discrXVal, 
-        "RPTST.data.apDiscrYVal": panel.discrYVal,
-        "RPTST.data.apTitle": panel.title, 
-        "RPTST.data.apXLabel": panel.xLabel, 
-        "RPTST.data.apYLabel": panel.yLabel
+        "RPTST.data.apGraphType": panel?.graphType || "", 
+        "RPTST.data.apCalibVal": panel?.calibVal || "", 
+        "RPTST.data.apDiscrXVal": panel?.discrXVal || "", 
+        "RPTST.data.apDiscrYVal": panel?.discrYVal || "",
+        "RPTST.data.apTitle": panel?.title || "", 
+        "RPTST.data.apXLabel": panel?.xLabel || "", 
+        "RPTST.data.apYLabel": panel?.yLabel || ""
       });
+      ReportApp.automator.update();
     }
 
-    static updateActivePanelClass() {
-      const activeId = State.get("RPTST.refs.activePanelId");
-      document.querySelectorAll('.grid-panel').forEach(el => {
-        el.classList.toggle('active', !window.__IS_PRINT_TAB__ && el.dataset.panelId === activeId);
-      });
-    }
+
 
     static switchTab(btn) {
-      const tId = btn.dataset.tab;
-      document.querySelectorAll('.tab-icon').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.sidebar-tab-pane').forEach(el => el.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(tId)?.classList.add('active');
+      State.set("RPTST.ui.activeTab", btn.dataset.tab);
+      ReportApp.automator.update();
     }
 
     static switchSub(btn) {
-      const tId = btn.dataset.target;
-      document.querySelectorAll('.segment-btn').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.sub-pane').forEach(el => el.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(tId)?.classList.add('active');
+      State.set("RPTST.ui.activeSub", btn.dataset.target);
+      ReportApp.automator.update();
     }
 
     static printPDF() {
@@ -257,11 +241,13 @@
     static async checkSymbAxis(tgt) {
       const newVal = tgt.value, oldVal = this.oldSymbAxis;
       if (newVal === oldVal) return;
-      if (await NewDOM.confirm("確認", "属性を変更するとシンボル設定がリセットされます。よろしいですか？")) {
+      const isConfirmed = await CoreAction.withAsync(null, { title: "確認", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
         State.set({ "RPTST.refs.symb.baseKey": newVal, "RPTST.refs.symb.rls": [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] });
         this.oldSymbAxis = newVal;
         this.queueSave();
-      } else {
+        return null;
+      });
+      if (!isConfirmed) {
         tgt.value = oldVal;
         State.set("RPTST.refs.symb.baseKey", oldVal);
       }
@@ -316,11 +302,18 @@
       const existing = Array.from(grid.children);
       const existingIds = existing.map(el => el.dataset.panelId);
       
-      existing.forEach(el => { if (!reqIds.includes(el.dataset.panelId)) grid.removeChild(el); });
+      existing.forEach(el => { 
+        if (!reqIds.includes(el.dataset.panelId)) {
+          grid.removeChild(el); 
+          const idx = REPORT_SCHEMA.elements.findIndex(e => e.id === el.id);
+          if (idx > -1) REPORT_SCHEMA.elements.splice(idx, 1);
+        } 
+      });
       
       reqIds.forEach(id => {
         if (!existingIds.includes(id)) {
           const div = document.createElement('div');
+          div.id = id;
           div.className = 'grid-panel';
           div.dataset.panelId = id;
           div.onclick = () => State.set("RPTST.refs.activePanelId", id);
@@ -330,9 +323,14 @@
           div.appendChild(chart);
           grid.appendChild(div);
         }
+        if (!REPORT_SCHEMA.elements.find(e => e.id === id)) {
+           REPORT_SCHEMA.elements.push({ 
+             id: id, 
+             className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === id) ? "grid-panel active" : "grid-panel" 
+           });
+        }
       });
       
-      this.updateActivePanelClass();
       this.updateActivePanelContext();
 
       const cont = document.getElementById('a4Container');

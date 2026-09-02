@@ -1,55 +1,43 @@
 <!-- src/Component.html -->
 <script>
-  // --- DOM操作 ---
-  class DOM {
-    static el = ref => typeof ref === "string" ? document.getElementById(ref) : ref;
-    static updateText = (ref, text) => { if (text !== undefined && this.el(ref)) this.el(ref).innerText = text; };
-    static tgl = (ref, isShow) => { if (this.el(ref)) this.el(ref).style.display = isShow ? "" : "none"; };
-    static open = (ref, isOpen) => { if (this.el(ref)?.tagName === "DETAILS") setTimeout(() => { this.el(ref).open = isOpen; }, 200); };
-    static setDis = (ref, isDis) => { if (this.el(ref)) this.el(ref).disabled = isDis; };
-    static setAttr = (ref, attr, val) => val ? this.el(ref)?.setAttribute(attr, val) : this.el(ref)?.removeAttribute(attr);
-  }
   // --- DOM構築 ---
   class NewDOM {
-    static status(ref, status = null) {
-      const elm = DOM.el(ref);
-      if (elm) [elm.dataset.status, elm.innerText] = status?.length ? status : ["hidden", ""];
-    }
     static #ensureDialog(type) {
       const id = type === 'confirm' ? 'universalConfirm' : 'idleToast';
-      let dlg = DOM.el(id);
+      let dlg = document.getElementById(id);
       if (!dlg) {
         document.body.insertAdjacentHTML('beforeend', Tpl.Dialog[type]());
-        dlg = DOM.el(id);
+        dlg = document.getElementById(id);
       }
       return dlg;
     }
     static confirm(title, msg) {
       return new Promise(resolve => {
         const dlg = this.#ensureDialog('confirm');
-        DOM.updateText("uDialogTitle", title);
-        DOM.updateText("uDialogMessage", msg);
+        document.getElementById("uDialogTitle").innerText = title;
+        document.getElementById("uDialogMessage").innerText = msg;
         const closeDlg = () => { dlg.close(); };
         dlg.showModal();
-        DOM.el("uDialogConfirmBtn").onclick = () => { closeDlg(); resolve(true); };
-        DOM.el("uDialogCancelBtn").onclick = () => { closeDlg(); resolve(false); };
+        document.getElementById("uDialogConfirmBtn").onclick = () => { closeDlg(); resolve(true); };
+        document.getElementById("uDialogCancelBtn").onclick = () => { closeDlg(); resolve(false); };
       });
     }
     static toast(title, msg, onOk = null) {
       const dlg = this.#ensureDialog('toast');
-      DOM.updateText("idleToastTitle", title);
-      DOM.updateText("idleToastMessage", msg);
+      document.getElementById("idleToastTitle").innerText = title;
+      document.getElementById("idleToastMessage").innerText = msg;
       if (!dlg.open) dlg.showModal();
-      DOM.el("idleToastOkBtn").onclick = () => {
+      document.getElementById("idleToastOkBtn").onclick = () => {
         dlg.close();
         if (onOk) onOk();
       };
     }
     static inputs(ref, errFlags) {
-      DOM.el(ref)?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
+      const elm = typeof ref === "string" ? document.getElementById(ref) : ref;
+      elm?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
     }
     static buildFormFields(confArr, ref, isClear = false) {
-      const cntr = DOM.el(ref);
+      const cntr = typeof ref === "string" ? document.getElementById(ref) : ref;
       if (!cntr || (!isClear && cntr.hasChildNodes())) return;
       if (isClear) cntr.replaceChildren();
       cntr.append(...confArr.map(conf => {
@@ -79,14 +67,8 @@
         return elm;
       }));
     }
-    static buildToggle(conf, ref, isClear = false) {
-      const cntr = DOM.el(ref);
-      if (!cntr || (!isClear && cntr.hasChildNodes())) return;
-      if (isClear) cntr.replaceChildren();
-      cntr.insertAdjacentHTML('beforeend', Tpl.Toggle.row(conf.label, conf.bind, conf.change, conf.isCheck));
-    }
     static buildStats(statsDT, ref) {
-      const cntr = DOM.el(ref);
+      const cntr = typeof ref === "string" ? document.getElementById(ref) : ref;
       if (!cntr) return;
       if (!statsDT) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
       const rows = CoreMethod.Util.buildStats(statsDT);

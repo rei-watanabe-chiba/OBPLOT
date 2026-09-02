@@ -45,33 +45,41 @@
     static #isInitialized = false;
     static configResolver = null;
 
-    static async confirmAndExecute(statusPath, title, msg, processFn, finallyFn = null) {
-      const svStat = State.get(statusPath);
-      State.set(statusPath, ["loading", "実行中..."]);
+    static async withAsync(statusPath, optOrFn, fn = null, finallyFn = null) {
+      const isFn = typeof optOrFn === 'function';
+      const actualProcessFn = isFn ? optOrFn : fn;
+      const actualFinallyFn = isFn ? fn : finallyFn;
+      const opt = isFn ? null : optOrFn;
       
-      if (title && msg) {
-        if (!await NewDOM.confirm(title, msg)) {
-          State.set(statusPath, svStat || ["hidden", ""]);
-          return false;
-        }
-      }
-      
-      await this.withAsyncLock(statusPath, processFn, finallyFn);
-      return true;
-    }
-
-    static async withAsyncLock(statusPath, processFn, finallyFn = null) {
+      const svStat = statusPath ? State.get(statusPath) : null;
       State.set("GLB.isLocked", true);
-      State.set(statusPath, ["loading", "実行中..."]); 
+      if (statusPath) State.set(statusPath, ["loading", "実行中..."]);
+      
       try {
-        const res = await processFn();
-        if (typeof res === "string") State.set(statusPath, ["success", res]);
-        else if (Array.isArray(res)) State.set(statusPath, res);
-      } catch (err) { 
-        State.set(statusPath, ["error", err.message]); 
-      } finally { 
-        if (finallyFn) await finallyFn(); 
-        State.set("GLB.isLocked", false); 
+        if (opt) {
+          const title = typeof opt === 'object' && opt.title ? opt.title : "確認";
+          const msg = typeof opt === 'object' && opt.msg ? opt.msg : (typeof opt === 'string' ? opt : "");
+          if (msg) {
+            if (!await NewDOM.confirm(title, msg)) {
+              if (statusPath) State.set(statusPath, svStat || ["hidden", ""]);
+              State.set("GLB.isLocked", false);
+              return false;
+            }
+          }
+        }
+        
+        const res = await actualProcessFn();
+        if (statusPath) {
+          if (typeof res === "string") State.set(statusPath, ["success", res]);
+          else if (Array.isArray(res)) State.set(statusPath, res);
+        }
+        return true;
+      } catch (err) {
+        if (statusPath) State.set(statusPath, ["error", err.message]);
+        return false;
+      } finally {
+        if (actualFinallyFn) await actualFinallyFn();
+        State.set("GLB.isLocked", false);
       }
     }
 
@@ -80,7 +88,8 @@
       const statPath = config.statPath;
       try {
         State.set(statPath, ["loading", "環境確認中..."]);
-        const curShts = await API.getWbState(ssId);
+        const targetShts = GLB.schema[config.schemaKey].map(s => s.name);
+        const curShts = await API.getWbState(ssId, targetShts);
         const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, config.schemaKey);
         if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
         
