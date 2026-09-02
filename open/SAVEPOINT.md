@@ -3,6 +3,7 @@
 ## 🎯 Target: Both (Thinker & Coder) - 共通の事実ベース
 
 ### 1. ディレクトリ構造と関数一覧（モジュール責務）
+- **[A:Coreモジュール]**:
 - `Code.js`: [API] バックエンドAPI (GAS通信, I/O, サイドバー起動)
 - `PlatformAdapter.html`: [Infra] API/Storageのアダプター・環境DI
 - `CoreModel.html`: [Model] 状態管理 (`AppState`)・グローバル定数
@@ -11,8 +12,8 @@
 - `CoreMethod.html`: [Logic] 汎用ユーティリティ（計算・配列操作）
 - `Component.html`: [Component] DOMビルダー・Web Components・Lazy Dialog Injection
 - `Chart.html`: [Component] グラフ描画 (`<ob-cal-plot>`)
-- **[Tab1/Tab2 特化]**: `Sidebar_Tracer.html`, `T1T2_Schema.html`, `T1T2_Action.html`, `T1T2_Method.html`
-- **[Tab3/Report 特化]**: `Sidebar_Dash.html`, `T3_Sidebar_Schema.html`, `T3_Action.html`, `T3_Method.html`, `Report.html`, `Report_Schema.html`, `ReportApp.html`, `ReportCSS.html`
+- **[B:Tab1/Tab2 特化モジュール]**: `Sidebar_Tracer.html`, `T1T2_Schema.html`, `T1T2_Action.html`, `T1T2_Method.html`
+- **[C:Tab3/Report 特化モジュール]**: `Sidebar_Dash.html`, `T3_Sidebar_Schema.html`, `T3_Action.html`, `T3_Method.html`, `Report.html`, `Report_Schema.html`, `ReportApp.html`, `ReportCSS.html`
 
 ### 2. フェーズ・ステートマシン（状態遷移定義）
 - **Tab 1 (データ抽出)**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
@@ -27,9 +28,10 @@
 - **SPA型 MVMS + Web Components + Presenter**
 - **状態管理**: `AppState` による厳格なObserverモデル。状態はセクションごとに階層化し、軽量なrefsとphaseのバックアップを行う。
 - **プレゼンテーション**: 各画面専用の `SCHEMA` オブジェクトにフェーズ制約を宣言。`data-bind-*` 属性を用い、`CoreUIAutomator` を介してリアルタイムかつ差分のみをPatch同期する。
-- **汎用コアの完全抽象化 (DI)**: `CoreAction` に `configResolver` を実装し、ツール（呼び出し元）側が初期化時に設定を注入する。
+- **汎用コアの完全抽象化 (DI)**: 最終的にA:Coreモジュールをライブラリ化、B・CをAを読み込む別々のアプリとして配布するため、`CoreAction` に `configResolver` を実装し、ツール（呼び出し元）側が初期化時に設定を注入する。
+- **グラフレポートの独立（repoECS.md）**: Excel版での動作を保証するために、グラフレポートは本体アプリケーションから完全に独立して稼働する単一のHTML（SPA）として実装する。
 
-### 4. マルチ環境実装原理
+### 4. マルチ環境実装原理（excellECS.md）
 - `PlatformAdapter.html` によるAPI (通信) と Storage (永続化) の環境ごとの動的切り替え。
 - `infra/build.js` による自動ビルド機構（Excel環境のCSP制限回避と純粋な静的HTMLの生成）。
 
@@ -39,7 +41,7 @@
 - **アクション・パイプライン**: 確認ダイアログや非同期処理を伴うアクションは、必ず `CoreAction.confirmAndExecute` を経由する。
 
 ### 6. 開発状況と次ステップ
-- **現状**: Tab1〜Tab3、およびReport層の基本機能・PDF出力までの動作確認完了。
+- **現状**: ROADMAP.mdのレガシーコードを排除した最適化コードについて、Tab1〜Tab3までの動作確認完了。
 - **次ステップ**: tab3 Reportのエラーをユーザーとの対話形式で原因特定しリファクタリングする。
 
 ---
