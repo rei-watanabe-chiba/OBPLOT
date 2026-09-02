@@ -115,18 +115,20 @@
     }
 
     // ブック状態取得
-    static async getWbState(ssId) {
+    static async getWbState(ssId, targetShts = []) {
       return this.#run(async (ctx) => {
         const shts = ctx.workbook.worksheets;
         shts.load("items/name");
         await ctx.sync();
         const rngInfo = shts.items.map(s => {
+          if (targetShts.length > 0 && !targetShts.includes(s.name)) return null;
           const rng = s.getUsedRangeOrNullObject();
           rng.load("columnCount");
           return rng;
         });
         await ctx.sync();
         const hdrs = shts.items.map((s, i) => {
+          if (!rngInfo[i]) return null;
           const c = rngInfo[i].columnCount;
           if (rngInfo[i].isNullObject || c === 0) return null;
           const hRng = s.getRangeByIndexes(0, 0, 1, c);
