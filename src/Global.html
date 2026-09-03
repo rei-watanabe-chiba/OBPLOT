@@ -26,7 +26,7 @@
     fontEngList: ["Roboto", "Arial", "Helvetica", "Times New Roman"],
     fontJpList: ["Noto Sans JP", "Hiragino Kaku Gothic ProN", "Meiryo", "MS PGothic"],
     // グラフデフォルト設定 ---------------
-    defaultGraphStyle: {
+    defGraphStyle: {
       font: "'Roboto', 'Noto Sans JP', sans-serif",
       fontS: { tick: 10, name: 11, stats: 10, tip: 11 },
       fontC: { base: 'var(--grey600)', stats: 'var(--grey600)', tip: 'var(--text-main)' },
@@ -36,7 +36,7 @@
       bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
     },
     // グラフ余白
-    defaultGraphGap: { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 },
+    defGraphGap: { tick: 5, name: 5, padT: 10, padB: 8, padL: 5, padR: 15 },
     // ツールチップ表示項目（GLBidxベースで'計測ID','item','date'も対応） ---------------
     tooltipKeys: [GLBidx.key1, GLBidx.key2, GLBidx.wd1],
 
@@ -45,12 +45,12 @@
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
     mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
     rawShts: { file: "File", results: "Results", tracer5i: "tracer5i", wdxrf: "WDXRF" },
-    appShts: { filelist: "ファイルリスト", extract: "抽出データ", correction: "Correction", pxrf: "PXRF" },
+    appShts: { filelist: "ファイルリスト", extract: "抽出データ", crct: "Correction", pxrf: "PXRF" },
     initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
     extrFields: [
-      { key: GLBidx.key1, label: `${GLBidx.key1} *必須`, placeholder: "データセット名", bind: `T1ST.extr.refs.${GLBidx.key1}` },
-      { key: GLBidx.p1, label: GLBidx.p1, placeholder: "計測情報", bind: `T1ST.extr.refs.${GLBidx.p1}` },
-      { key: GLBidx.p2, label: GLBidx.p2, placeholder: "計測日", bind: `T1ST.extr.refs.${GLBidx.p2}` }
+      { key: GLBidx.key1, label: `${GLBidx.key1} *必須`, placeholder: "データセット名", bind: `ENTST.extr.refs.${GLBidx.key1}` },
+      { key: GLBidx.p1, label: GLBidx.p1, placeholder: "計測情報", bind: `ENTST.extr.refs.${GLBidx.p1}` },
+      { key: GLBidx.p2, label: GLBidx.p2, placeholder: "計測日", bind: `ENTST.extr.refs.${GLBidx.p2}` }
     ],
     symbAxes: [{ val: GLBidx.key1, label: GLBidx.key1 }, { val: GLBidx.p1, label: GLBidx.p1 }, { val: GLBidx.wd1, label: GLBidx.wd1 }, { val: GLBidx.wd2, label: GLBidx.wd2 }],
     fileFields: [
@@ -59,23 +59,25 @@
     ],
     confMods: [{ val: "", label: "モードを選択", disabled: true, hidden: true }, { val: "Dual", label: "Dualモード" }, { val: "Single", label: "Singleモード" }],
     schema: {
-      tab1: [
+      ent: [
         { name: 'ファイルリスト', hdrType: 'filelist', clr: true },
         { name: 'File' }, { name: 'Results' },
         { name: '抽出データ', hdrType: 'tracer5i', clr: true },
         { name: 'tracer5i', hdrType: 'tracer5i', lock: true, validRule: 'tracer5i' }
       ],
-      tab2: [
+      adp: [
         { name: 'tracer5i', hdrType: 'tracer5i', lock: true, validRule: 'tracer5i' },
         { name: 'WDXRF', hdrType: 'wdxrf', lock: true, validRule: 'wdxrf' },
-        { name: 'Correction', hdrType: 'corr', lock: true, validRule: 'corr' },
+        { name: 'Correction', hdrType: 'crct', lock: true, validRule: 'crct' },
         { name: 'PXRF', hdrType: 'pxrf', lock: true, validRule: 'pxrf' }
       ],
-      tab3: [
+      dash: [
         { name: 'PXRF', hdrType: 'pxrf', lock: true, validRule: 'pxrf' },
         { name: 'WDXRF', hdrType: 'wdxrf', lock: true, validRule: 'wdxrf' },
-        { name: 'Correction', hdrType: 'corr', lock: true, validRule: 'corr' }
+        { name: 'Correction', hdrType: 'crct', lock: true, validRule: 'crct' }
       ]
     }
   };
+  GLB.schema.entry = GLB.schema.ent;
+  GLB.schema.adapter = GLB.schema.adp;
 </script>

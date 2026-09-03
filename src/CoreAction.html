@@ -4,6 +4,10 @@
   class CoreMakeBU {
     static #K = "OBP_BU";
     static #isQ = false;
+    static #getActiveConfig() {
+      const activeTab = State.get("GLB.activeTab");
+      return CoreAction.configResolver ? CoreAction.configResolver(activeTab) : null;
+    }
     static init() { State.subscribe('*', () => this.#queue()); }
     static #queue() {
       if (this.#isQ) return;
@@ -11,26 +15,39 @@
       queueMicrotask(() => { this.save(); this.#isQ = false; });
     }
     static save() {
-      const phase = State.get("T2ST.phase");
-      if (phase < T2_PHS.LOADED) {
+      const config = this.#getActiveConfig();
+      if (!config) return;
+      const statePrefix = config.statePrefix || (config.statPath ? config.statPath.split('.')[0] : null);
+      if (!statePrefix) return;
+      const paths = config.persistPaths || config.schema?.persistPaths || [];
+      if (!paths.length) return;
+      const phase = State.get(`${statePrefix}.phase`);
+      const minPhase = config.minSavePhase ?? 2;
+      if (phase == null || phase < minPhase) {
         this.clear();
         return;
       }
       const data = { phase };
-      const paths = typeof T1T2_SCHEMA !== "undefined" && T1T2_SCHEMA.T2.persistPaths ? T1T2_SCHEMA.T2.persistPaths : [];
       paths.forEach(p => { data[p] = State.get(p); });
       StorageAPI.save(this.#K, JSON.stringify(data));
     }
-    static restore(bu, matchPaths) {
+    static restore(bu, matchPaths = null) {
       if (!bu) return;
       const stateObj = {};
       const keys = Object.keys(bu).filter(k => k !== "phase");
-      matchPaths.forEach(pattern => {
-        const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*/g, ".*") + "$");
-        keys.forEach(k => {
-          if (regex.test(k)) stateObj[k] = bu[k];
+      const config = this.#getActiveConfig();
+      const defaultPaths = config?.persistPaths || config?.schema?.persistPaths || [];
+      const patterns = matchPaths || (defaultPaths.length ? defaultPaths : null);
+      if (patterns) {
+        patterns.forEach(pattern => {
+          const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*/g, ".*") + "$");
+          keys.forEach(k => {
+            if (regex.test(k)) stateObj[k] = bu[k];
+          });
         });
-      });
+      } else {
+        keys.forEach(k => { stateObj[k] = bu[k]; });
+      }
       if (Object.keys(stateObj).length > 0) State.set(stateObj);
     }
     static load() {
@@ -173,7 +190,7 @@
       const config = this.configResolver ? this.configResolver(tabId) : {};
       this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks, config);
     }
-    static initGlobalRouter(actionClasses = {}) {
+    static rootGLB(actionClasses = {}) {
       document.addEventListener("click", e => {
         const btn = e.target.closest('[data-action]');
         if (!btn || btn.disabled) return;

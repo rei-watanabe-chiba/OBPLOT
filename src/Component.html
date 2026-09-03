@@ -9,33 +9,7 @@
     static buildFormFields(confArr, ref, isClear = false) {
       const cntr = typeof ref === "string" ? document.getElementById(ref) : ref;
       if (!cntr || (!isClear && cntr.hasChildNodes())) return;
-      if (isClear) cntr.replaceChildren();
-      cntr.append(...confArr.map(conf => {
-        const { type, bind, change, field, opts, hasEmpty, inputType, placeholder, label } = conf;
-        const elm = document.createElement(type === "select" ? "select" : "input");
-        elm.className = `field-${type} form-control`;
-        if (bind) elm.dataset.bind = bind;
-        if (change) elm.dataset.change = change;
-        if (field) elm.dataset.field = field;
-        if (type === "select") {
-          hasEmpty !== false && elm.add(new Option("---未選択---", ""));
-          opts?.forEach(opt => {
-            const o = new Option(opt.label ?? opt, opt.val ?? opt);
-            if (opt.disabled) o.disabled = true;
-            if (opt.hidden) o.hidden = true;
-            if (opt.selected || opt.val === "") o.selected = true;
-            elm.add(o);
-          });
-        } else {
-          elm.type = inputType || "text";
-          if (placeholder) elm.placeholder = placeholder;
-        }
-        if (label) {
-          const lbl = document.createElement("label");
-          lbl.className = "field-label"; lbl.textContent = `${label} `; lbl.appendChild(elm); return lbl;
-        }
-        return elm;
-      }));
+      cntr.innerHTML = Tpl.Form.fields(confArr);
     }
     static buildStats(statsDT, ref) {
       const cntr = typeof ref === "string" ? document.getElementById(ref) : ref;
@@ -140,6 +114,41 @@
   // --- Tpl ---
   const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
   class Tpl {
+    static Form = class {
+      static option(opt) {
+        const label = opt?.label ?? opt?.val ?? opt ?? '';
+        const val = opt?.val ?? opt?.label ?? opt ?? '';
+        const dis = opt?.disabled ? ' disabled' : '';
+        const hid = opt?.hidden ? ' hidden' : '';
+        const sel = (opt?.selected || (opt && opt.val === '')) ? ' selected' : '';
+        return html`<option value="${val}"${dis}${hid}${sel}>${label}</option>`;
+      }
+      static options(opts = [], hasEmpty = true) {
+        const emptyOpt = (hasEmpty !== false) ? '<option value="">---未選択---</option>' : '';
+        const items = (opts || []).map(opt => this.option(opt)).join('');
+        return emptyOpt + items;
+      }
+      static select(conf) {
+        const { type = 'select', bind, change, field, opts, hasEmpty } = conf;
+        const ds = `${bind ? ` data-bind="${bind}"` : ''}${change ? ` data-change="${change}"` : ''}${field ? ` data-field="${field}"` : ''}`;
+        return html`<select class="field-${type} form-control"${ds}>${this.options(opts, hasEmpty)}</select>`;
+      }
+      static input(conf) {
+        const { type = 'text', bind, change, field, inputType, placeholder } = conf;
+        const ds = `${bind ? ` data-bind="${bind}"` : ''}${change ? ` data-change="${change}"` : ''}${field ? ` data-field="${field}"` : ''}`;
+        const ph = placeholder ? ` placeholder="${placeholder}"` : '';
+        return html`<input type="${inputType || 'text'}" class="field-${type} form-control"${ph}${ds}>`;
+      }
+      static field(conf) {
+        const { type = 'text', label } = conf;
+        const ctrl = type === 'select' ? this.select(conf) : this.input(conf);
+        return label ? html`<label class="field-label">${label} ${ctrl}</label>` : ctrl;
+      }
+      static fields(confArr) {
+        if (!Array.isArray(confArr)) return '';
+        return confArr.map(conf => this.field(conf)).join('');
+      }
+    };
     static Common = class {
       static popover(sumHtml, cntHtml, sumCls = "", cntCls = "") { return html`<ob-popover><button type="button" class="popover-summary ${sumCls}">${sumHtml}</button><div class="popover-content scroll-y ${cntCls}">${cntHtml}</div></ob-popover>`; }
       static colorBox(clr) { return clr ? html`<span class="color-box" style="background: ${clr}"></span>` : ""; }
@@ -168,6 +177,73 @@
       static col(clsName, cntHtml) { return html`<div class="${clsName}">${cntHtml}</div>`; }
       static row(btnHtml, colsHtml) { return html`<div class="symb-table-row"><div class="symb-col-btn">${btnHtml}</div>${colsHtml}</div>`; }
       static addRow(actionAdd, colsArr) { return this.row(this.btn(actionAdd, "", "+", false), colsArr.map(c => this.col(c.className, "")).join('')); }
+    };
+    static Sidebar = class {
+      static buildRows(rows) {
+        if (!Array.isArray(rows)) return '';
+        return rows.map(r => this.row(r)).join('\n');
+      }
+
+      static row(r) {
+        if (r.type === 'section') {
+          return html`<div id="${r.id}">
+            ${r.rows.map(sr => this.row(sr)).join('\n            ')}
+          </div>`;
+        }
+        if (r.type === 'symbolTable') {
+          return html`<div class="scroll-box">
+            <ob-symbol-table id="${r.id}" data-bind-src="${r.bindSrc}"></ob-symbol-table>
+          </div>`;
+        }
+        if (r.type === 'toggles') {
+          return html`<div class="prop-row"${r.topMargin ? ` style="margin-top:${r.topMargin};"` : ''}>
+            ${r.toggles.map(t => html`<div class="prop-controls">
+              <div class="toggle-row"><span class="toggle-label">${t.label}</span><label class="toggle-switch"><input type="checkbox" data-bind="${t.bind}"><span class="toggle-slider"></span></label></div>
+            </div>`).join('\n            ')}
+          </div>`;
+        }
+        
+        const labelHtml = r.labelHTML ? r.labelHTML : (r.label ? r.label : '');
+        const lblCls = r.labelClass ? `prop-label ${r.labelClass}` : 'prop-label';
+        const lblAttrs = r.labelId ? ` id="${r.labelId}"` : '';
+        const lbl = labelHtml ? html`<label class="${lblCls}"${lblAttrs}>${labelHtml}</label>` : '';
+        
+        let controls = '';
+        if (r.type === 'fields') {
+          controls = html`<div class="prop-controls" id="${r.id}" data-bind-fields="${r.bindFields}"></div>`;
+        } else if (r.type === 'inputs') {
+          controls = html`<div class="prop-controls">
+            ${r.inputs.map(inp => {
+              const bind = inp.bind ? ` data-bind="${inp.bind}"` : '';
+              const apKey = inp.apKey ? ` data-ap-key="${inp.apKey}"` : '';
+              const change = inp.change ? ` data-change="${inp.change}"` : '';
+              const cls = inp.className ? ` class="${inp.className}"` : '';
+              const ph = inp.placeholder ? ` placeholder="${inp.placeholder}"` : '';
+              const title = inp.title ? ` title="${inp.title}"` : '';
+              const inner = html`<input type="${inp.inputType}"${apKey}${change}${bind}${cls}${ph}${title}>`;
+              return inp.unit ? html`<div class="input-wrap">${inner}<span class="input-unit">${inp.unit}</span></div>` : inner;
+            }).join('\n            ')}
+          </div>`;
+        } else if (r.type === 'multiSelect') {
+          controls = html`<div class="prop-controls"><ob-multi-select id="${r.id}" data-change-item="${r.changeItem}" data-change-all="${r.changeAll}" data-bind="${r.bind}" data-bind-opts="${r.bindOpts}"></ob-multi-select></div>`;
+        } else if (r.type === 'rangeText') {
+          controls = html`<div class="prop-controls">
+            <input type="range" data-bind="${r.bind}" style="flex:1.8;">
+            <input type="text" data-bind="${r.bind}" class="form-control" style="flex:1.2;text-align:center;">
+          </div>`;
+        } else if (r.type === 'symbAxis') {
+          controls = html`<div class="prop-controls">
+            <div id="${r.id}" data-bind-fields="${r.bindFields}" style="flex:1;"></div>
+            <button data-action="${r.resetAction}" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
+          </div>`;
+        }
+        
+        const style = r.marginBottom ? ` style="margin-bottom:${r.marginBottom};"` : (r.marginTop ? ` style="margin-top:${r.marginTop};"` : '');
+        return html`<div class="prop-row"${style}>
+          ${lbl}
+          ${controls}
+        </div>`;
+      }
     };
   }
   customElements.define('ob-popover', ObPopover);

@@ -1,0 +1,190 @@
+<!-- src/Tracer5i.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">    
+    <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+    <?!= include("CSS"); ?>
+  </head>
+  <body data-theme="entry">
+    <ob-dialog></ob-dialog>
+    <nav class="nav-tabs" id="nav">
+      <button class="tab-btn active" data-action="CoreAction.switchTab" data-target="entry">データ抽出</button>
+      <button class="tab-btn" data-action="CoreAction.switchTab" data-target="adapter">検量線・標準化</button>
+    </nav>
+    <main class="scroll-y">
+      <!-- ENT (旧 Tab1) -->
+      <div id="entry" class="tab-content active">
+        <fieldset id="entFieldset">
+          <details id="prefSec" open>
+            <summary>抽出設定</summary>
+            <!-- 動的フォームバインディング -->
+            <div><div id="entModeBox" data-bind-fields="ENTST.pref.data.modeFields"></div></div>
+            <div id="prefBar" class="status-bar" data-status="hidden" data-bind-status="ENTST.pref.status"></div>
+          </details>
+          <hr>
+          <details id="rawSec">
+            <summary>読込と検証</summary>
+            <div class="flex-row">
+              <button id="btn-load-raw" data-action="ENTAction.loadRaw" data-type="primary">データを取得</button>
+              <span class="txt-btninfo">読込シート「File」</span>
+            </div>
+            <div id="rawSecArea">
+              <!-- エラーとフォーム動的バインディング -->
+              <div id="entRawBox" data-bind-errs="ENTST.raw.flags" data-bind-fields="ENTST.raw.data.fields"></div>
+            </div>
+            <div id="rawSecBtnBox" class="field-row">
+              <button id="btn-make-list" data-action="ENTAction.makeList" data-type="primary">リスト生成</button>
+              <button id="btn-vald-list" data-action="ENTAction.valdList" data-type="primary">検証</button>
+            </div>
+          </details>
+          <div id="rawBar" class="status-bar" data-status="hidden" data-bind-status="ENTST.raw.status"></div>
+          <hr>
+          <details id="extrSec">
+            <summary>抽出と格納</summary>
+            <div class="flex-row">
+              <button id="btn-extr-run" data-action="ENTAction.runExtr" data-type="primary">データを抽出</button>
+              <span class="txt-btninfo">読込シート「Results」</span>
+            </div>
+            <div id="extrSecArea">
+              <!-- エラーとフォーム動的バインディング -->
+              <div id="entExtrBox" data-bind-errs="ENTST.extr.flags" data-bind-fields="ENTST.extr.data.extrFields"></div>
+            </div>
+            <div class="field-row">
+              <button id="btn-push-extr" data-action="ENTAction.pushExtr" data-type="primary" class="outline">tracer5iに格納</button>
+            </div>
+          </details>
+          <div id="extrBar" class="status-bar" data-status="hidden" data-bind-status="ENTST.extr.status"></div>
+        </fieldset>
+      </div>
+      <!-- ADP (旧 Tab2) -->
+      <div id="adapter" class="tab-content">
+        <fieldset id="adpFieldset">
+          <details id="asgnSec" open>
+            <summary>データ読込・選択</summary>
+            <div id="asgnSecArea">
+              <label>データセット選択</label>
+              <ob-multi-select data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="ADPST.asgn.refs.filter" data-bind-opts="ADPST.asgn.refs.available"></ob-multi-select>
+            </div>
+            <div class="field-row">
+              <button id="btn-load-db" data-action="ADPAction.loadDB" data-type="primary">データを読込</button>
+              <button id="btn-fltr-db" data-action="ADPAction.fltrDB" data-type="primary" class="outline">データを確定</button>
+            </div>
+          </details>
+          <div id="asgnBar" class="status-bar" data-status="hidden" data-bind-status="ADPST.asgn.status"></div>
+          <hr>
+          <details id="symbSec">
+            <summary>シンボル設定</summary>
+            <div id="symbSecArea">
+              <label>属性選択</label>
+              <div class="field-row" style="margin-top: var(--unit)">
+                <!-- 動的フォームバインディング -->
+                <div id="adpAxisBox" data-bind-fields="ADPST.symb.data.axisFields" style="flex:1;"></div>
+                <button data-action="ADPAction.resetSymb" data-type="primary" class="outline" style="flex:none;">リセット</button>
+              </div>
+              <label>シンボル設定</label>
+              <div class="scroll-y" style="max-height: calc(var(--unit) * 50); border: 1px solid var(--grey200); border-radius: var(--unit); padding: var(--unit) calc(var(--unit) * 2);">
+                <!-- srcの動的バインディング -->
+                <ob-symbol-table id="symbTbl" data-bind-src="ADPST.symb.data.src"></ob-symbol-table>
+              </div>
+            </div>
+            <div class="field-row">
+              <button id="btn-symb" data-action="ADPAction.setSymb" data-type="primary">シンボル確定</button>
+            </div>
+          </details>
+          <div id="symbBar" class="status-bar" data-status="hidden" data-bind-status="ADPST.symb.status"></div>
+          <hr>
+          <details id="prevSec">
+            <summary>プレビュー</summary>
+            <div id="prevChartBox" style="width: 100%; height: auto;">
+              <!-- チャートsrcバインディング -->
+              <ob-cal-plot data-bind-src="ADPST.prev.data.chartSrc"></ob-cal-plot>
+            </div>
+            <!-- statsバインディング -->
+            <div id="prevStatsTbl" data-bind-stats="ADPST.prev.data.statsDT"></div>
+            <div id="prevSecArea">
+              <div class="field-row">
+                <div class="field-col">
+                  <label>プレビュー値</label>
+                  <!-- 動的フォームバインディング -->
+                  <div id="adpPrevValBox" data-bind-fields="ADPST.prev.data.valFields"></div>
+                </div>
+              </div>
+              <label>対象Item</label>
+              <!-- optsとbindバインディング -->
+              <ob-multi-select id="prevItemBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="ADPST.prev.refs.itemMap" data-bind-opts="ADPST.asgn.refs.availableItems"></ob-multi-select>
+              <div class="field-row">
+                <button id="btn-make-prev" data-action="ADPAction.buildPrev" data-type="primary">プレビュー更新</button>
+              </div>
+              <hr style="margin: calc(var(--unit) * 4) 0 calc(var(--unit) * 2);">
+              <details id="calbSec" class="sub-sec">
+                <summary>プレビュー補正設定</summary>
+                <div class="field-row">
+                  <div class="field-col">
+                    <label>補正方法</label>
+                    <!-- 動的フォームバインディング -->
+                    <div id="adpCalCrctBox" data-bind-fields="ADPST.calb.data.crctFields"></div>
+                  </div>
+                </div>
+                <label>Obsidianモード計測値</label>
+                <!-- optsとbindバインディング -->
+                <ob-multi-select id="adpPrevModeBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="ADPST.calb.refs.modeMap" data-bind-opts="ADPST.calb.data.modeOpts"></ob-multi-select>
+                <label>検量線適用対象</label>
+                <ob-multi-select id="adpPrevCalElmBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="ADPST.calb.refs.calElms" data-bind-opts="ADPST.calb.data.calElmOpts"></ob-multi-select>
+                <div class="field-row">
+                  <!-- インラインHTML直接バインディング -->
+                  <div class="field-col">
+                    <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-bind="ADPST.calb.refs.useLOD"><span class="toggle-slider"></span></label></div>
+                  </div>
+                  <div class="field-col">
+                    <div class="toggle-row"><span class="toggle-label">検量線適用</span><label class="toggle-switch"><input type="checkbox" data-bind="ADPST.calb.refs.useCal"><span class="toggle-slider"></span></label></div>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </details>
+          <div id="prevBar" class="status-bar" data-status="hidden" data-bind-status="ADPST.prev.status"></div>
+          <hr>
+          <details id="stdzSec">
+            <summary>出力と標準化</summary>
+            <label>対象Item（検量線計算用）</label>
+            <ob-multi-select id="stdzItemBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="ADPST.stdz.refs.itemMap" data-bind-opts="ADPST.asgn.refs.availableItems"></ob-multi-select>
+            <label>Obsidianモード計測値</label>
+            <ob-multi-select id="adpStdzModeBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="ADPST.stdz.refs.modeMap" data-bind-opts="ADPST.stdz.data.modeOpts"></ob-multi-select>
+            <div class="field-row">
+              <div class="field-col">
+                <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-bind="ADPST.stdz.refs.useLOD"><span class="toggle-slider"></span></label></div>
+              </div>
+            </div>
+            <div class="field-row" style="margin-top: calc(var(--unit) * 3);">
+              <input type="text" class="form-control" placeholder="インデックス名を入力" data-bind="ADPST.stdz.refs.saveIndexName">
+              <button id="btn-save-crct" data-action="ADPAction.saveCrct" data-type="primary">検量線出力</button>
+            </div>
+            <div class="field-row">
+              <button id="btn-push-stdz" data-action="ADPAction.pushStdz" data-type="primary" class="outline">新PXRFシート出力</button>
+            </div>
+          </details>
+          <div id="stdzBar" class="status-bar" data-status="hidden" data-bind-status="ADPST.stdz.status"></div>
+        </fieldset>
+      </div>
+    </main>
+    <script>
+      window.__INITIAL_SSID__ = "<?= typeof initialSsId !== 'undefined' ? initialSsId : '' ?>";
+      window.__APP_MODE__ = "<?= typeof appMode !== 'undefined' ? appMode : 'entry' ?>";
+    </script>
+    <?!= include('Global'); ?>
+    <?!= include('PlatformAdapter'); ?>
+    <?!= include('Model'); ?>
+    <?!= include('CoreMethod'); ?>
+    <?!= include('Tracer5i_Method'); ?>
+    <?!= include('Component'); ?>
+    <?!= include('Chart'); ?>
+    <?!= include('Tracer5i_Schema'); ?>
+    <?!= include('CoreUI'); ?>
+    <?!= include('CoreAction'); ?>
+    <?!= include('Tracer5i_Action'); ?>
+
+  </body>
+</html>

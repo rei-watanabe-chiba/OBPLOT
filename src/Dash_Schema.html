@@ -1,0 +1,13 @@
+<!-- src/Dash_Schema.html -->
+<script>
+  const DASH_SIDEBAR_SCHEMA = {
+    elements: [
+      { id: "dashFieldset", disablePhase: () => State.get("GLB.isLocked") },
+      { id: "instSec", activePhase: p => true, disablePhase: p => false, openPhase: p => p < DASH_PHS.LOADED },
+      { id: "btn-load-dash", activePhase: p => true, disablePhase: p => false },
+      { id: "repoSec", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED, openPhase: p => p >= DASH_PHS.LOADED ? true : false },
+      { id: "btn-repo", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED }
+    ]
+  };
+  const T3_SIDEBAR_SCHEMA = DASH_SIDEBAR_SCHEMA;
+</script>

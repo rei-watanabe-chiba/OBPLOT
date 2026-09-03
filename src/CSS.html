@@ -20,6 +20,8 @@
       --main-blue-hover: #1F41B6;
       --main-green: #34A853;
       --main-green-hover: #1F843C;
+      --main-yellow: #FBC02D;
+      --main-yellow-hover: #F57F17;
       --main-red: #ea4335;
       --grey50: #ECEFF1;
       --grey200: #B0BEC5;
@@ -45,7 +47,12 @@
       overflow-x: hidden;
       /*user-select: none;*/
     }
-    body[data-theme="tab2"] {
+    body[data-theme="entry"],
+    body[data-theme="adapter"] {
+      --theme-color: var(--main-blue);
+      --theme-hover: var(--main-blue-hover);
+    }
+    body[data-theme="dash"] {
       --theme-color: var(--main-green);
       --theme-hover: var(--main-green-hover);
     }
@@ -254,7 +261,7 @@
         height: 0;
         opacity: 0;
         overflow: clip;
-        transition: height 0.4s ease, opacity 0.4s ease, content-visibility 0.4s ease allow-discrete;
+        transition: height 0.4s ease, opacity 0.4s ease, content-visibility 0.4s ease allow-clusete;
       }
       &[open]::details-content {
         height: auto;

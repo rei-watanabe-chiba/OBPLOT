@@ -1,0 +1,53 @@
+<!-- src/Tracer5i_Schema.html -->
+<script>
+  const ENT_SCHEMA = {
+
+      elements: [
+        { id: "entFieldset", disablePhase: () => State.get("GLB.isLocked") },
+        { id: "prefSec", activePhase: p => p === ENT_PHS.INIT, disablePhase: p => false },
+        
+        { id: "rawSec", activePhase: p => p >= ENT_PHS.READY, disablePhase: p => p < ENT_PHS.READY, openPhase: p => p >= ENT_PHS.READY && p < ENT_PHS.VALID },
+        { id: "btn-load-raw", disablePhase: p => false, text: p => p <= ENT_PHS.READY ? "データを取得" : "再取得" },
+        { id: "btn-make-list", activePhase: p => p >= ENT_PHS.READY, className: p => p === ENT_PHS.LOAD ? "" : "outline" },
+        { id: "btn-vald-list", activePhase: p => p >= ENT_PHS.INVALID && !State.get("ENTST.raw.flags").some(Boolean), className: p => p === ENT_PHS.INVALID ? "" : "outline" },
+        { id: "rawSecArea", visiblePhase: p => p >= ENT_PHS.LOAD },
+        { id: "rawSecBtnBox", visiblePhase: p => p >= ENT_PHS.LOAD },
+        
+        { id: "extrSec", activePhase: p => p >= ENT_PHS.VALID, disablePhase: p => p < ENT_PHS.VALID, openPhase: p => p >= ENT_PHS.VALID && p < ENT_PHS.OUTPUT },
+        { id: "btn-extr-run", activePhase: p => p >= ENT_PHS.VALID && !State.get("ENTST.extr.flags").some(Boolean) },
+        { id: "btn-push-extr", activePhase: p => p >= ENT_PHS.EXTRACT, visiblePhase: p => p >= ENT_PHS.EXTRACT },
+        { id: "extrSecArea", visiblePhase: p => p >= ENT_PHS.VALID }
+      ]
+};
+const ADP_SCHEMA = {
+
+      persistPaths: [
+        "ADPST.asgn.refs.available", "ADPST.asgn.refs.filter",
+        "ADPST.symb.refs.baseKey", "ADPST.symb.refs.rls",
+        "ADPST.calb.refs.modeMap", "ADPST.calb.refs.calElms", "ADPST.calb.refs.crct", "ADPST.calb.refs.useLOD", "ADPST.calb.refs.useCal",
+        "ADPST.prev.refs.itemMap", "ADPST.prev.refs.val", "ADPST.prev.refs.saveIndexName",
+        "ADPST.stdz.refs.itemMap", "ADPST.stdz.refs.modeMap", "ADPST.stdz.refs.useLOD", "ADPST.stdz.refs.saveIndexName",
+        "ADPST.asgn.status", "ADPST.symb.status", "ADPST.calb.status", "ADPST.prev.status", "ADPST.stdz.status"
+      ],
+      elements: [
+        { id: "adpFieldset", disablePhase: () => State.get("GLB.isLocked") },
+        { id: "asgnSec", activePhase: p => true, disablePhase: p => false, openPhase: p => p < ADP_PHS.FILTERED },
+        { id: "btn-load-db", disablePhase: p => false },
+        { id: "btn-fltr-db", activePhase: p => p >= ADP_PHS.LOADED },
+        { id: "asgnSecArea", visiblePhase: p => p >= ADP_PHS.LOADED },
+
+        { id: "symbSec", activePhase: p => p >= ADP_PHS.FILTERED, disablePhase: p => p < ADP_PHS.FILTERED, openPhase: p => p >= ADP_PHS.FILTERED && p < ADP_PHS.MAPPED },
+        { id: "btn-symb", activePhase: p => p >= ADP_PHS.FILTERED },
+        { id: "adpAxisBox", activePhase: p => p >= ADP_PHS.FILTERED },
+        { id: "symbSecArea", visiblePhase: p => p >= ADP_PHS.FILTERED },
+
+        // ダウンフェーズ (p < 4) 時は false (強制閉鎖)、それ以上は undefined (ユーザー操作維持)
+        { id: "prevSec", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined },
+        { id: "btn-make-prev", activePhase: p => p >= ADP_PHS.MAPPED },
+
+        { id: "calbSec", activePhase: p => p >= ADP_PHS.MAPPED, openPhase: p => p === ADP_PHS.MAPPED ? true : (p >= ADP_PHS.PREVIEWED ? false : undefined) },
+
+        { id: "stdzSec", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined }
+      ]
+};
+  </script>

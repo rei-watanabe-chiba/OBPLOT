@@ -11,6 +11,94 @@
       return this.#cache.get(key);
     }
   }
+  class CHARTDT {
+    static _getVal(r, elm, conf) {
+      if (r[elm] !== undefined) return { val: r[elm], err: r[`${elm}_Err`] };
+      const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+      return { val: r[`${pfx}_${elm}`], err: r[`${pfx}_${elm}_Err`] };
+    }
+    static generateChartData(pxrfDT, wdxrfDT, conf) {
+      let pDT = pxrfDT, wDT = wdxrfDT;
+      if (conf.filters) {
+        const { db, item, group } = conf.filters;
+        if (Array.isArray(db) && db.length > 0) {
+          pDT = pDT.filter(r => db.includes(String(r[GLB.idx.key1])));
+          wDT = wDT.filter(r => db.includes(String(r[GLB.idx.key1])));
+        }
+        if (Array.isArray(item) && item.length > 0) {
+          pDT = pDT.filter(r => item.includes(String(r[GLB.idx.p1])));
+        }
+        if (Array.isArray(group) && group.length > 0) {
+          pDT = pDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
+          wDT = wDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
+        }
+      }
+      let prevDT = [], statsDT = null;
+      if (conf.graphType === 'calibration' && conf.calibVal) {
+         prevDT = this.buildPrev(pDT, wDT, { ...conf, val: conf.calibVal });
+         statsDT = CoreMethod.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), CoreMethod.Util.getValidNums(prevDT.map(pt => pt.err)));
+      } else if (conf.graphType === 'clusimination' && conf.clusXVal && conf.clusYVal) {
+         const useCal = conf.useCal !== undefined ? conf.useCal : false;
+         const calibBase = this.buildPrev(pDT, wDT, { ...conf, val: GLB.valElms[0], useCal });
+         const mapPts = (wList, pList) => [...wList.map(w => ({ ...w, x: CoreMethod.Calc.evaluate(conf.clusXVal, w), y: CoreMethod.Calc.evaluate(conf.clusYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pList.map(p => ({ ...p, x: CoreMethod.Calc.evaluate(conf.clusXVal, p), y: CoreMethod.Calc.evaluate(conf.clusYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
+         prevDT = mapPts(wDT, calibBase);
+      }
+      return { prevDT, statsDT };
+    }
+    static buildPrev(pxrfDT, wdxrfDT, conf) {
+      if (!pxrfDT?.length || !wdxrfDT?.length) return [];
+      const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
+      const wMap = new Map(wdxrfDT.map(w => [`${String(w[k1])}_${String(w[k2])}`, w]));
+      const minMap = conf.useLOD ? this.getMinMap(pxrfDT, conf) : {};
+      const cfs = this.#resCoeffs(pxrfDT, wMap, conf, minMap);
+      return pxrfDT.reduce((acc, r) => {
+        const itemVal = r[p1];
+        if (conf.itemMap?.length && !conf.itemMap.includes(itemVal)) return acc;
+        const w = wMap.get(`${String(r[k1])}_${String(r[k2])}`);
+        if (!w) return acc;
+        const pDT = { '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: itemVal, [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
+        GLB.valElms.forEach(elm => {
+          const { val: rawV, err } = this._getVal(r, elm, conf);
+          const isLod = typeof rawV === 'string' && rawV.includes('LOD');
+          let val = (isLod && conf.useLOD) ? (minMap[elm] ?? null) : (rawV != null && rawV !== "" && !isNaN(Number(rawV)) ? Number(rawV) : null);
+          if (cfs?.[elm] && val != null) val = (val - cfs[elm].int) / cfs[elm].slp;
+          pDT[elm] = val; pDT[`${elm}_Err`] = err ?? null;
+        });
+        const xVal = CoreMethod.Calc.evaluate(conf.val, w), yVal = CoreMethod.Calc.evaluate(conf.val, pDT);
+        acc.push({ ...pDT, x: xVal, y: yVal, err: GLB.valElms.includes(conf.val) ? (pDT[`${conf.val}_Err`] ?? null) : null });
+        return acc;
+      }, []);
+    }
+    static getMinMap(pxrfDT, conf) {
+      return Object.fromEntries(GLB.valElms.map(elm => {
+        const nums = CoreMethod.Util.getValidNums(pxrfDT.map(r => this._getVal(r, elm, conf).val), true);
+        return [elm, nums.length ? Math.min(...nums) : null];
+      }));
+    }
+    static #resCoeffs(pxrfDT, wMap, conf, minMap) {
+      if (!conf.useCal || !conf.calElms?.length) return null;
+      const { key1: k1, key2: k2 } = GLB.idx;
+      if (conf.crct === "new") {
+        return Object.fromEntries(conf.calElms.map(elm => {
+          const vList = pxrfDT.reduce((acc, p) => {
+            const w = wMap.get(`${String(p[k1])}_${String(p[k2])}`);
+            if (!w || w[elm] == null) return acc;
+            const { val: raw } = this._getVal(p, elm, conf);
+            const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
+            if (v != null) { acc.w.push(Number(w[elm])); acc.p.push(v); }
+            return acc;
+          }, { w: [], p: [] });
+          return [elm, CoreMethod.Calc.calcCalib(vList.w, vList.p)];
+        }).filter(([, v]) => v));
+      }
+      const r = conf.crctDT?.find(rw => rw[0] === conf.crct);
+      if (!r) return null;
+      return Object.fromEntries(conf.calElms.map(elm => {
+        const sIdx = conf.crctDT[0].indexOf(`${elm}_slp`), iIdx = conf.crctDT[0].indexOf(`${elm}_int`);
+        return sIdx !== -1 && iIdx !== -1 && r[sIdx] !== "" ? [elm, { slp: Number(r[sIdx]), int: Number(r[iIdx]) }] : [elm, null];
+      }).filter(([, v]) => v));
+    }
+  }
   class ObCalPlot extends HTMLElement {
     #box; #chart = null; #observer; #src = null; #lastW = 0;
     constructor() {
@@ -47,6 +135,7 @@
       if (this.#chart) this.#chart.clear();
       this.#box.style.height = '0px';
       this.#box.style.display = 'none';
+      this.dispatchEvent(new CustomEvent('render-finished'));
     }
     #render() {
       const { prevDT, statsDT, symb, gph, panel } = this.#src || {};
@@ -54,7 +143,7 @@
       const containerWidth = this.clientWidth;
       if (containerWidth === 0) return;
       this.#lastW = containerWidth;
-      const rS = gph?.style || GLB.defaultGraphStyle;
+      const rS = gph?.style || GLB.defGraphStyle;
       const STYLE = {
         font: rS.font, fontS: { ...rS.fontS },
         fontC: { base: CSSToken.get(rS.fontC.base), stats: CSSToken.get(rS.fontC.stats), tip: CSSToken.get(rS.fontC.tip) },
@@ -62,7 +151,7 @@
         lineC: { grid: CSSToken.get(rS.lineC.grid), axis: CSSToken.get(rS.lineC.axis), reg: CSSToken.get(rS.lineC.reg)},
         bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
-      const GAP = { ...(gph?.gap || GLB.defaultGraphGap) };
+      const GAP = { ...(gph?.gap || GLB.defGraphGap) };
       const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
       const titleText = panel?.title || "";
       const titleSizePx = STYLE.fontS.title || (12 * 1.33);

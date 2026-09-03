@@ -7,20 +7,18 @@ class ApiResponse {
 const withErr = fn => {
   try { return fn(); } catch (e) { return ApiResponse.error("SYSTEM_ERR", e.message); }
 };
-
 // --- メニュー追加 (GAS用) ---
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("OBPLOT1.0")
-    .addItem("tracer5i抽出", "showSidebarT1")
-    .addItem("検量線・標準化", "showSidebarT2")
-    .addItem("ダッシュボード", "showSidebarT3")
+    .addItem("tracer5i抽出", "showSidebarENT")
+    .addItem("検量線・標準化", "showSidebarADP")
+    .addItem("ダッシュボード", "showSidebarDash")
     .addToUi();
 }
-
-// --- 分離したサイドバーの呼び出し分岐 ---
-function showSidebarT1() { openSidebar("tab1", "tracer5i抽出", "Sidebar_Tracer"); }
-function showSidebarT2() { openSidebar("tab2", "検量線・標準化", "Sidebar_Tracer"); }
-function showSidebarT3() { openSidebar("tab3", "ダッシュボード", "Sidebar_Dash"); }
+// --- サイドバーの呼び出し分岐 ---
+function showSidebarENT() { openSidebar("entry", "tracer5i抽出", "Tracer5i"); }
+function showSidebarADP() { openSidebar("adapter", "検量線・標準化", "Tracer5i"); }
+function showSidebarDash() { openSidebar("dash", "ダッシュボード", "Dash"); }
 
 function openSidebar(mode, title, filename) {
   const tpl = HtmlService.createTemplateFromFile(filename);
@@ -28,13 +26,10 @@ function openSidebar(mode, title, filename) {
   tpl.appMode = mode;
   SpreadsheetApp.getUi().showSidebar(tpl.evaluate().setTitle(`OBPLOT1.0: ${title}`).setWidth(300));
 }
-
 // --- HTMLバインド ---
 function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
-
 // --- シート操作共通 ---
 const getSht = (ssId, name) => SpreadsheetApp.openById(ssId).getSheetByName(name);
-
 // --- データ取得 ---
 const _fetchDT = (ss, shtName, qCol, lCol) => {
   const sht = ss.getSheetByName(shtName);
@@ -45,11 +40,9 @@ const _fetchDT = (ss, shtName, qCol, lCol) => {
   const data = lCol ? rawDT.map(r => r.slice(0, lCol)) : rawDT; 
   return { data, message: `取得: ${data.length} 行` };
 };
-
 function fetchDT(ssId, shtName, qCol = null, lCol = null) {
   return withErr(() => ApiResponse.success(_fetchDT(SpreadsheetApp.openById(ssId), shtName, qCol, lCol)));
 }
-
 function fetchMultiple(ssId, reqs) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
@@ -59,7 +52,6 @@ function fetchMultiple(ssId, reqs) {
     }));
   });
 }
-
 // --- データ出力 ---
 const _writeData = (ss, shtName, data, opts) => {
   const sht = ss.getSheetByName(shtName);
@@ -77,11 +69,9 @@ const _writeData = (ss, shtName, data, opts) => {
   }
   return "書き出し完了";
 };
-
 function writeData(ssId, shtName, data, opts = "clear") {
   return withErr(() => ApiResponse.success(_writeData(SpreadsheetApp.openById(ssId), shtName, data, opts)));
 }
-
 function writeMultiple(ssId, reqs) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
@@ -91,12 +81,10 @@ function writeMultiple(ssId, reqs) {
     }));
   });
 }
-
 // --- レポートテンプレート取得 ---
 function getReportTemplate() { 
   return withErr(() => ApiResponse.success(HtmlService.createTemplateFromFile("Report").evaluate().getContent())); 
 }
-
 // --- ブック状態取得 ---
 function getWbState(ssId, targetShts = []) {
   return withErr(() => {
@@ -108,7 +96,6 @@ function getWbState(ssId, targetShts = []) {
     }));
   });
 }
-
 // --- シート動的構築とソート ---
 function buildShts(ssId, buildPlan) {
   return withErr(() => {

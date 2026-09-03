@@ -1,0 +1,165 @@
+<!-- src/CoreUI.html -->
+<script>
+  class CoreUI {
+    constructor(schema, stateTarget) {
+      this.schema = schema;
+      this.stateTarget = stateTarget;
+    }
+
+    getVal(path) {
+      return State.get(path.includes('.') ? path : `${this.stateTarget}.${path}`);
+    }
+
+    build() {
+      this.update();
+
+      // --- 単一要素への値バインド ---
+      const bindElement = (el, path) => {
+        if (!path) return;
+        const applyBind = (val) => {
+          if (val === undefined) return;
+          if (el.type === 'checkbox') {
+            if (el.checked !== !!val) el.checked = !!val;
+          } else if (el.tagName === 'OB-MULTI-SELECT') {
+            el.refs = val; 
+          } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
+            if (el.value !== String(val ?? '')) el.value = val ?? '';
+          }
+        };
+        State.subscribe(path, applyBind);
+        applyBind(this.getVal(path));
+      };
+
+      // --- バインディング属性定義とハンドラー群 ---
+      const bindDefs = [
+        { key: 'bindStatus', attr: 'data-bind-status', fn: (el, path) => {
+          const applyStatus = (val) => {
+            if (Array.isArray(val) && val.length >= 2) {
+              if (el.dataset.status !== val[0]) el.dataset.status = val[0];
+              if (el.innerText !== val[1]) el.innerText = val[1];
+            } else {
+              el.dataset.status = "hidden";
+              el.innerText = "";
+            }
+          };
+          State.subscribe(path, applyStatus);
+          applyStatus(this.getVal(path));
+        }},
+        { key: 'bind', attr: 'data-bind', fn: (el, path) => bindElement(el, path) },
+        { key: 'bindOpts', attr: 'data-bind-opts', fn: (el, path) => {
+          const applyOpts = (val) => { if (val !== undefined) el.opts = val; };
+          State.subscribe(path, applyOpts);
+          applyOpts(this.getVal(path));
+        }},
+        { key: 'bindSrc', attr: 'data-bind-src', fn: (el, path) => {
+          const applySrc = (val) => { if (val !== undefined) el.src = val; };
+          State.subscribe(path, applySrc);
+          applySrc(this.getVal(path));
+        }},
+        { key: 'bindStats', attr: 'data-bind-stats', fn: (el, path) => {
+          const applyStats = (val) => { if (val !== undefined) NewDOM.buildStats(val, el); };
+          State.subscribe(path, applyStats);
+          applyStats(this.getVal(path));
+        }},
+        { key: 'bindErrs', attr: 'data-bind-errs', fn: (el, path) => {
+          const applyErrs = (val) => { if (val !== undefined) NewDOM.inputs(el, val); };
+          State.subscribe(path, applyErrs);
+          applyErrs(this.getVal(path));
+        }},
+        { key: 'bindFields', attr: 'data-bind-fields', fn: (el, path) => {
+          const applyFields = (val) => { 
+            if (val !== undefined) {
+              NewDOM.buildFormFields(val, el, true);
+              el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
+            }
+          };
+          State.subscribe(path, applyFields);
+          applyFields(this.getVal(path));
+        }}
+      ];
+
+      // --- 単一セレクタによるDOM走査と一括バインド ---
+      const selector = bindDefs.map(d => `[${d.attr}^="${this.stateTarget}"]`).join(',');
+      document.querySelectorAll(selector).forEach(el => {
+        bindDefs.forEach(def => {
+          const path = el.dataset[def.key];
+          if (path && path.startsWith(this.stateTarget)) {
+            def.fn(el, path);
+          }
+        });
+      });
+    }
+
+    update() {
+      const curPhase = State.get(`${this.stateTarget}.phase`) ?? 1;
+
+      (this.schema.elements || []).forEach(def => {
+        const targetEl = document.getElementById(def.id);
+        if (!targetEl) return;
+
+        if (def.visiblePhase !== undefined) {
+          const isVisible = typeof def.visiblePhase === 'function' ? def.visiblePhase(curPhase) : curPhase >= def.visiblePhase;
+          targetEl.style.display = isVisible ? '' : 'none';
+        }
+
+        // 修正: openPhase を先に評価し、閉じる場合は即時反映させてアニメーション競合を避ける
+        if (def.openPhase !== undefined && targetEl.tagName === 'DETAILS') {
+          const isOpen = typeof def.openPhase === 'function' ? def.openPhase(curPhase) : curPhase >= def.openPhase;
+          if (isOpen !== undefined && targetEl.open !== isOpen) {
+            if (isOpen) {
+              setTimeout(() => { targetEl.open = true; }, 200);
+            } else {
+              targetEl.open = false; // 閉じる時は遅延させない
+            }
+          }
+        }
+
+        if (def.activePhase !== undefined || def.disablePhase !== undefined) {
+          const isActive = def.activePhase !== undefined 
+            ? (typeof def.activePhase === 'function' ? def.activePhase(curPhase) : curPhase >= def.activePhase) 
+            : true;
+          const isDis = def.disablePhase !== undefined 
+            ? (typeof def.disablePhase === 'function' ? def.disablePhase(curPhase) : curPhase >= def.disablePhase) 
+            : !isActive; 
+
+          if (targetEl.tagName === 'DETAILS') {
+            targetEl.setAttribute('data-state', isActive ? 'active' : '');
+            if (isDis) targetEl.setAttribute('data-type', 'disabled');
+            else targetEl.removeAttribute('data-type');
+            
+            // --- [追加] 下層フォーム要素への物理的な disabled 強制同期ガード ---
+            targetEl.querySelectorAll('input, select, button, textarea, ob-multi-select').forEach(child => {
+              if (child.tagName === 'OB-MULTI-SELECT') {
+                const sum = child.querySelector('.popover-summary');
+                if (sum) sum.disabled = isDis;
+              }
+              child.disabled = isDis;
+            });
+            // -----------------------------------------------------------------
+          } else {
+            targetEl.disabled = isDis;
+          }
+        }
+
+        if (def.className !== undefined) {
+          const cls = typeof def.className === 'function' ? def.className(curPhase) : def.className;
+          if (targetEl.className !== cls) targetEl.className = cls;
+        }
+
+        if (def.text !== undefined) {
+          const txt = typeof def.text === 'function' ? def.text(curPhase) : def.text;
+          if (targetEl.innerText !== txt) targetEl.innerText = txt;
+        }
+
+        if (def.dataset !== undefined) {
+          const ds = typeof def.dataset === 'function' ? def.dataset(curPhase) : def.dataset;
+          if (ds && typeof ds === 'object') {
+            for (const key in ds) {
+              if (targetEl.dataset[key] !== String(ds[key])) targetEl.dataset[key] = ds[key];
+            }
+          }
+        }
+      });
+    }
+  }
+</script>

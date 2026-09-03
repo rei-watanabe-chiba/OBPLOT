@@ -4,7 +4,7 @@
     static oldSymbAxis = GLB.symbBaseKey; 
 
     static getInitRawGph() {
-      const fts = (GLB.defaultGraphStyle.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
+      const fts = (GLB.defGraphStyle.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
       return {
         fontEng: GLB.fontEngList.find(f => f.includes(fts[0])) || GLB.fontEngList[0],
         fontJp: GLB.fontJpList.find(f => f.includes(fts[1])) || GLB.fontJpList[0],
@@ -15,7 +15,7 @@
     }
 
     static getDefPnl() {
-      return { graphType: "calibration", calibVal: "", discrXVal: "", discrYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" };
+      return { graphType: "calibration", calibVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" };
     }
 
     static async setupInitialState(buObj, d) {
@@ -58,17 +58,17 @@
       }
       this.oldSymbAxis = State.get("RPTST.refs.symb.baseKey") || GLB.symbBaseKey;
 
-      const optsCorr = [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.corrDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
+      const optsCorr = [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.crctDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
       const optValLgc = [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v }));
 
       State.set({
-        "RPTST.data.corrFields": [{ type: "select", bind: "RPTST.refs.correction", hasEmpty: false, opts: optsCorr }],
+        "RPTST.data.crctFields": [{ type: "select", bind: "RPTST.refs.crct", hasEmpty: false, opts: optsCorr }],
         "RPTST.data.fontEngFields": [{ type: "select", bind: "RPTST.refs.rawGph.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({label:v, val:v})) }],
         "RPTST.data.fontJpFields": [{ type: "select", bind: "RPTST.refs.rawGph.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({label:v, val:v})) }],
-        "RPTST.data.graphTypeFields": [{ type: "select", bind: "RPTST.data.apGraphType", change: "ReportState.updateActivePanelRef", hasEmpty: false, opts: [{label: RPT_CFG.lbl.calib, val: "calibration"}, {label: RPT_CFG.lbl.discr, val: "discrimination"}] }],
-        "RPTST.data.calibValFields": [{ type: "select", bind: "RPTST.data.apCalibVal", change: "ReportState.updateActivePanelRef", hasEmpty: true, opts: optValLgc }],
-        "RPTST.data.discrXFields": [{ type: "select", bind: "RPTST.data.apDiscrXVal", change: "ReportState.updateActivePanelRef", hasEmpty: true, opts: optValLgc }],
-        "RPTST.data.discrYFields": [{ type: "select", bind: "RPTST.data.apDiscrYVal", change: "ReportState.updateActivePanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.graphTypeFields": [{ type: "select", bind: "RPTST.data.apGraphType", change: "ReportState.renewPanelRef", hasEmpty: false, opts: [{label: RPT_CFG.lbl.calib, val: "calibration"}, {label: RPT_CFG.lbl.clus, val: "clusimination"}] }],
+        "RPTST.data.calibValFields": [{ type: "select", bind: "RPTST.data.apCalibVal", change: "ReportState.renewPanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.clusXFields": [{ type: "select", bind: "RPTST.data.apClusXVal", change: "ReportState.renewPanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.clusYFields": [{ type: "select", bind: "RPTST.data.apClusYVal", change: "ReportState.renewPanelRef", hasEmpty: true, opts: optValLgc }],
         "RPTST.data.axisFields": [{ type: "select", bind: "RPTST.refs.symb.baseKey", change: "ReportState.checkSymbAxis", hasEmpty: false, opts: GLB.symbAxes }],
         "RPTST.data.filterDBOpts": optsDB, 
         "RPTST.data.filterItemOpts": optsItem, 
@@ -76,7 +76,7 @@
         "RPTST.data.calElmsOpts": GLB.valElms
       });
       
-      this.updateDerivedSymbState();
+      this.renewSymbState();
     }
 
     static async checkSymbAxis(tgt) {
@@ -107,14 +107,14 @@
       }
     }
 
-    static updateDerivedSymbState() {
+    static renewSymbState() {
       const d = State.get("RPTST.data.raw"), r = State.get("RPTST.refs");
       if (!d?.pxrfDT?.length) return;
       const vals = [...new Set(d.pxrfDT.map(pt => pt[r.symb.baseKey]).filter(Boolean))];
       State.set("RPTST.data.symbSrc", { rls: r.symb.rls, optsConf: { target: [{ val: "", label: RPT_CFG.lbl.unsel }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "ReportState.addSymb", remove: "ReportState.removeSymb", update: "ReportState.renewSymb"} });
     }
 
-    static updateActivePanelRef(tgt) {
+    static renewPanelRef(tgt) {
       const key = tgt.dataset.apKey || tgt.dataset.bind?.split('.').pop().replace('ap', '');
       const apKey = key.charAt(0).toLowerCase() + key.slice(1);
       const val = tgt.value;
@@ -124,21 +124,21 @@
       
       if (panel) {
          panel[apKey] = val;
-         if (['graphType', 'calibVal', 'discrXVal', 'discrYVal'].includes(apKey)) {
+         if (['graphType', 'calibVal', 'clusXVal', 'clusYVal'].includes(apKey)) {
             if (panel.graphType === 'calibration') {
               panel.title = panel.calibVal || ""; panel.xLabel = "WDXRF"; panel.yLabel = "pXRF";
-            } else if (panel.graphType === 'discrimination') {
-              const xV = panel.discrXVal || "", yV = panel.discrYVal || "";
+            } else if (panel.graphType === 'clusimination') {
+              const xV = panel.clusXVal || "", yV = panel.clusYVal || "";
               panel.title = (xV || yV) ? `${xV} vs ${yV}` : ""; panel.xLabel = xV; panel.yLabel = yV;
             }
          }
          State.set("RPTST.refs.panels", [...panels]);
-         this.updateActivePanelContext();
+         this.renewPanel();
          ReportApp.queueSave();
       }
     }
 
-    static updateActivePanelContext() {
+    static renewPanel() {
       const activeId = State.get("RPTST.refs.activePanelId");
       const panels = State.get("RPTST.refs.panels") || [];
       const panel = panels.find(p => p.id === activeId);
@@ -146,8 +146,8 @@
       State.set({
         "RPTST.data.apGraphType": panel?.graphType || "", 
         "RPTST.data.apCalibVal": panel?.calibVal || "", 
-        "RPTST.data.apDiscrXVal": panel?.discrXVal || "", 
-        "RPTST.data.apDiscrYVal": panel?.discrYVal || "",
+        "RPTST.data.apClusXVal": panel?.clusXVal || "", 
+        "RPTST.data.apClusYVal": panel?.clusYVal || "",
         "RPTST.data.apTitle": panel?.title || "", 
         "RPTST.data.apXLabel": panel?.xLabel || "", 
         "RPTST.data.apYLabel": panel?.yLabel || ""
@@ -179,7 +179,7 @@
       
       if (!panels.find(p => p.id === r.activePanelId)) State.set("RPTST.refs.activePanelId", panels[0]?.id || "p_0");
 
-      ReportState.updateActivePanelContext();
+      ReportState.renewPanel();
 
       const cont = document.getElementById('a4Container');
       cont.style.setProperty('--col-count', r.gridCols); 
@@ -256,8 +256,8 @@
             plots[idx].src = { prevDT: preCalcData[idx].prevDT, statsDT: preCalcData[idx].statsDT, symb: r.symb, gph: gph, panel: p };
           } else {
             if (!d?.pxrfDT?.length) return;
-            const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, discrXVal: p.discrXVal, discrYVal: p.discrYVal };
-            const { prevDT, statsDT } = Mtd.T3.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+            const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
+            const { prevDT, statsDT } = CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
             plots[idx].src = { prevDT, statsDT, symb: r.symb, gph: gph, panel: p };
           }
         });
@@ -297,8 +297,8 @@
     static automator = null;
 
     static async init() {
-      CoreAction.initGlobalRouter({ CoreAction, ReportApp, ReportState, ReportUI });
-      ReportApp.automator = new CoreUIAutomator(REPORT_SCHEMA, 'RPTST');
+      CoreAction.rootGLB({ CoreAction, ReportApp, ReportState, ReportUI });
+      ReportApp.automator = new CoreUI(REPORT_SCHEMA, 'RPTST');
 
       if (window.__IS_PRINT_TAB__) {
          State.set(window.__PRINT_STATE__);
@@ -336,10 +336,26 @@
       }
 
       State.set({"RPTST.ui.activeTab": "tabLayout", "RPTST.ui.activeSub": "subFont"});
+      
+      const mounts = [
+        { id: 'mount-panel-config', key: 'panel-config' },
+        { id: 'mount-layout-panel', key: 'layout-panel' },
+        { id: 'mount-layout-margins', key: 'layout-margins' },
+        { id: 'mount-data-filters', key: 'data-filters' },
+        { id: 'mount-data-crct', key: 'data-crct' },
+        { id: 'mount-style-font', key: 'style-font' },
+        { id: 'mount-style-area', key: 'style-area' },
+        { id: 'mount-symb', key: 'symb' }
+      ];
+      mounts.forEach(m => {
+        const el = document.getElementById(m.id);
+        if (el && SIDEBAR_PARTS[m.key]) el.innerHTML = Tpl.Sidebar.buildRows(SIDEBAR_PARTS[m.key]);
+      });
+
       ReportApp.automator.build();
 
       const initDataRaw = window.__INJECTED_DATA__;
-      const injData = (typeof initDataRaw === 'object' && initDataRaw !== null) ? initDataRaw : { pxrfDT: [], wdxrfDT: [], corrDT: [] };
+      const injData = (typeof initDataRaw === 'object' && initDataRaw !== null) ? initDataRaw : { pxrfDT: [], wdxrfDT: [], crctDT: [] };
       State.set("RPTST.data.raw", injData);
 
       document.querySelectorAll('input[type="number"], input[type="range"]').forEach(el => {
@@ -367,17 +383,17 @@
           this.queueSave();
       });
       
-      State.subscribe(['RPTST.refs.filters', 'RPTST.refs.useCal', 'RPTST.refs.useLOD', 'RPTST.refs.correction', 'RPTST.refs.calElms', 'RPTST.refs.symb', 'RPTST.refs.rawGph', 'RPTST.refs.panels'], () => {
+      State.subscribe(['RPTST.refs.filters', 'RPTST.refs.useCal', 'RPTST.refs.useLOD', 'RPTST.refs.crct', 'RPTST.refs.calElms', 'RPTST.refs.symb', 'RPTST.refs.rawGph', 'RPTST.refs.panels'], () => {
           this.queueRender();
       });
 
       State.subscribe('RPTST.refs.activePanelId', () => {
-          ReportState.updateActivePanelContext();
+          ReportState.renewPanel();
           this.queueSave();
       });
 
-      State.subscribe('RPTST.refs.symb.baseKey', () => ReportState.updateDerivedSymbState());
-      State.subscribe('RPTST.refs.symb.rls', () => ReportState.updateDerivedSymbState());
+      State.subscribe('RPTST.refs.symb.baseKey', () => ReportState.renewSymbState());
+      State.subscribe('RPTST.refs.symb.rls', () => ReportState.renewSymbState());
 
       window.addEventListener('resize', () => {
          clearTimeout(this.resizeTimer);
@@ -399,8 +415,8 @@
       const r = State.get("RPTST.refs"), d = State.get("RPTST.data.raw");
       const preCalc = r.panels.map(p => {
         if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
-        const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, discrXVal: p.discrXVal, discrYVal: p.discrYVal };
-        return Mtd.T3.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+        const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
+        return CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
       });
       if (!preCalc.some(res => res.prevDT?.length > 0)) return CoreAction.toast("警告", "有効なグラフが一つもありません。\n標準化設定やデータを確認してください。");
       const safeState = JSON.stringify({ RPTST: State.proxy.RPTST }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');

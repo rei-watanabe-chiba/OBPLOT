@@ -64,7 +64,7 @@
           case 'tracer5i': return ['計測ID', key1, key2, p1, p2, ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
           case 'pxrf': return ['計測ID', key1, key2, p1, p2, wd1, wd2, ...GLB.valElms, ...GLB.valElms.map(e => `${e}_Err`)];
           case 'wdxrf': return [key1, key2, wd1, wd2, ...GLB.valElms];
-          case 'corr': return ['IndexName', ...GLB.valElms.flatMap(e => [`${e}_slp`, `${e}_int`])];
+          case 'crct': return ['IndexName', ...GLB.valElms.flatMap(e => [`${e}_slp`, `${e}_int`])];
           case 'filelist': return ['file', 'mode', key2, 'sub_id', 'info', '計測ID'];
           case 'rawFile': return ['file', 'mode', key2, 'sub_id', 'info'];
           default: return [];
@@ -76,7 +76,7 @@
         const vls = {
           tracer5i: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・tracer5iヘッダー不正" : null,
           pxrf: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・PXRFヘッダー不正" : null,
-          corr: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・Correctionヘッダー不正" : null,
+          crct: (h, req) => JSON.stringify(h) !== JSON.stringify(req) ? "・Correctionヘッダー不正" : null,
           wdxrf: (h, req) => { const ms = req.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須項目不足: ${ms.join(', ')}` : null; }
         };
         const errs = schema.map(s => exMap.has(s.name) && s.validRule ? vls[s.validRule]?.(exMap.get(s.name), s.hdr) : null).filter(Boolean);
@@ -85,6 +85,38 @@
         const buildPlan = (isMissing || needsSort) ? schema.map((s, idx) => ({ name: s.name, hdr: s.hdr, lock: s.lock, clr: s.clr || !exMap.has(s.name), idx })) : [];
         const missingNames = schema.filter(s => !exMap.has(s.name)).map(s => s.name);
         return { errs, buildPlan, missingNames };
+      }
+      static buildDB(pxrfDT, wdxrfDT, conf = {}) {
+        const pObjs = CoreMethod.Util.toObjArray(pxrfDT);
+        const wObjs = CoreMethod.Util.toObjArray(wdxrfDT);
+        const { key1: k1, key2: k2, wd1: w1, wd2: w2 } = GLB.idx;
+        const wMap = new Map(wObjs.map(o => [`${String(o[k1])}_${String(o[k2])}`, o]));
+        const dbs = new Set();
+        pObjs.forEach(pObj => {
+          const wObj = wMap.get(`${String(pObj[k1])}_${String(pObj[k2])}`);
+          if (conf.mixWD === true) {
+            pObj[w1] = wObj?.[w1] ?? "Unknown"; 
+            pObj[w2] = wObj?.[w2] ?? "Unknown";
+          }
+          if (pObj[k1]) dbs.add(pObj[k1]);
+        });
+        return { pxrfDT: pObjs, wdxrfDT: wObjs, dbs: [...dbs] };
+      }
+      static fltrDB(wrapPXRF, wrapWDXRF, selDBs, isTracer5i = false) {
+        const tgtSet = new Set(selDBs);
+        const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
+        const pxrfDT = wrapPXRF.filter(obj => tgtSet.has(obj[k1])).map(r => {
+          const base = { '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: r[p1], [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
+          const vals = isTracer5i 
+            ? Object.fromEntries(GLB.valElms.flatMap(elm => [[`ob_${elm}`, r[`ob_${elm}`]], [`md_${elm}`, r[`md_${elm}`]], [`ob_${elm}_Err`, r[`ob_${elm}_Err`]], [`md_${elm}_Err`, r[`md_${elm}_Err`]]]))
+            : Object.fromEntries(GLB.valElms.flatMap(elm => [[elm, r[elm]], [`${elm}_Err`, r[`${elm}_Err`]]]));
+          return { ...base, ...vals };
+        });
+        const wdxrfDT = wrapWDXRF.filter(obj => tgtSet.has(obj[k1])).map(r => ({
+          [k1]: r[k1], [k2]: r[k2], [w1]: r[w1], [w2]: r[w2],
+          ...Object.fromEntries(GLB.valElms.map(elm => [elm, r[elm]]))
+        }));
+        return { pxrfDT, wdxrfDT };
       }
     },
     Calc: class {

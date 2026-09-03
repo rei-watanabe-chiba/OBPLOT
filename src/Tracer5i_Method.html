@@ -1,0 +1,115 @@
+<!-- src/Tracer5i_Method.html -->
+<script>
+  window.Mtd = window.Mtd || {};
+  
+  Object.assign(window.Mtd, {
+    // --- データ抽出フェーズ (ENT) ---
+    ENT: {
+      FVald: class {
+        static valdList(shtDT, outHdr, validMods, exacMode) {
+          if (!shtDT?.length) return [];
+          const [hdr, ...body] = shtDT;
+          const getIdx = k => hdr.findIndex(h => h === k); 
+          const colFile = getIdx('file'), colMode = getIdx('mode'), colId = getIdx(GLB.idx.key2), colSub = getIdx('sub_id');
+          const getScanID = r => r[colSub] ? `${r[colId]}_${r[colSub]}` : `${r[colId]}`;
+          const statsDT = body.reduce((acc, r) => {
+            acc.file.set(r[colFile], (acc.file.get(r[colFile]) || 0) + 1);
+            const sId = getScanID(r);
+            const s = acc.scan.get(sId) || { modes: new Set(), count: 0 };
+            s.modes.add(r[colMode]); s.count++; acc.scan.set(sId, s);
+            return acc;
+          }, { file: new Map(), scan: new Map() });
+          const rls = [
+            { check: r => !/^\d+$/.test(r[colFile] ?? ""), err: " file形式" },
+            { check: r => !validMods.includes(r[colMode]), err: " mode形式" },
+            { check: r => !r[colId], err: " id形式" },
+            { check: r => statsDT.file.get(r[colFile]) > 1, err: " file重複" },
+            { check: r => {
+                const s = statsDT.scan.get(getScanID(r));
+                return exacMode === "Single" ? s.count > 1 : !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
+              }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式" }
+          ];
+          return [[...outHdr, "error"], ...body.map(r => [...r, getScanID(r), rls.filter(rl => rl.check(r)).map(rl => rl.err).join(",")])];
+        }
+      },
+      Extr: class {
+        static runExtr(fileDT, resDT, extrRefs) {
+          if (!fileDT?.length || !resDT?.length) return [];
+          const resMap = new Map(resDT.slice(1).map(r => [String(r[0]), r]));
+          const scanIDMap = fileDT.slice(1).reduce((map, r) => {
+            const entry = map.get(r[5]) || { id: r[2], files: {} };
+            entry.files[String(r[1]).toLowerCase()] = r[0]; map.set(r[5], entry); return map;
+          }, new Map());
+          const obKeys = CoreMethod.Util.sortKeysByVal(GLB.obsidianIndex), mdKeys = CoreMethod.Util.sortKeysByVal(GLB.mudrockIndex);
+          const fmt = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
+          const extract = (file, keys, idxObj) => {
+            const r = resMap.get(String(file ?? ""));
+            return keys.reduce((acc, k) => {
+              const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
+              acc.vals.push(fmt(idx !== null ? (r?.[idx] ?? "") : ""));
+              acc.errs.push(fmt(idx !== null ? (r?.[idx + 1] ?? "") : ""));
+              return acc;
+            }, { vals: [], errs: [] });
+          };
+          return [CoreMethod.Util.buildHeader('tracer5i'), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+            const ob = extract(files.obsidian, obKeys, GLB.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.mudrockIndex);
+            return [scanId, extrRefs[GLB.idx.key1], id, extrRefs[GLB.idx.p1], extrRefs[GLB.idx.p2], ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
+          })];
+        }
+      },
+      PVald: class {
+        static checkPxrf(pxrfDT, newDT) {
+          if (!pxrfDT?.length || !newDT?.length) return { isDup: false, data: newDT };
+          const h = pxrfDT[0];
+          const iDB = h.indexOf(GLB.idx.key1), iID = h.indexOf(GLB.idx.key2);
+          const newKeys = new Set(newDT.slice(1).map(r => `${r[iDB]}_${r[iID]}`));
+          const fltrEx = pxrfDT.slice(1).filter(r => !newKeys.has(`${r[iDB]}_${r[iID]}`));
+          return fltrEx.length !== pxrfDT.length - 1 ? { isDup: true, data: [pxrfDT[0], ...fltrEx, ...newDT.slice(1)] } : { isDup: false, data: null };
+        }
+      }
+    },
+    // --- グラフ作成・分析フェーズ (ADP) ---
+    ADP: {
+      mgmPrev: class {
+      },
+      mgmStdz: class {
+        static genNewPxrf(pxrfDT, modeMap) {
+          const hdr = CoreMethod.Util.buildHeader('pxrf');
+          const data = pxrfDT.map(r => {
+            const row = [r['計測ID'], r[GLB.idx.key1], r[GLB.idx.key2], r[GLB.idx.p1], r[GLB.idx.p2], r[GLB.idx.wd1], r[GLB.idx.wd2]];
+            GLB.valElms.forEach(elm => {
+              const pfx = (GLB.optElms.includes(elm) && modeMap?.includes(elm)) ? 'ob' : 'md';
+              row.push(r[`${pfx}_${elm}`] ?? "");
+            });
+            GLB.valElms.forEach(elm => {
+              const pfx = (GLB.optElms.includes(elm) && modeMap?.includes(elm)) ? 'ob' : 'md';
+              row.push(r[`${pfx}_${elm}_Err`] ?? "");
+            });
+            return row;
+          });
+          return [hdr, ...data];
+        }
+        static calcAllCalib(pxrfDT, wdxrfDT, conf, idxName) {
+          const minMap = conf.useLOD ? CHARTDT.getMinMap(pxrfDT, conf) : {};
+          const wMap = new Map(wdxrfDT.map(w => [`${String(w[GLB.idx.key1])}_${String(w[GLB.idx.key2])}`, w]));
+          const res = [idxName];
+          GLB.valElms.forEach(elm => {
+            const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
+            const wArr = [], pArr = [];
+            pxrfDT.forEach(p => {
+              if (conf.itemMap?.length && !conf.itemMap.includes(p[GLB.idx.p1])) return;
+              const w = wMap.get(`${String(p[GLB.idx.key1])}_${String(p[GLB.idx.key2])}`);
+              if (!w || w[elm] == null) return;
+              const raw = p[`${pfx}_${elm}`];
+              const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[elm] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
+              if (v != null) { wArr.push(Number(w[elm])); pArr.push(v); }
+            });
+            const cfs = CoreMethod.Calc.calcCalib(wArr, pArr);
+            res.push(cfs?.slp ?? "", cfs?.int ?? "");
+          });
+          return res;
+        }
+      }
+    }
+  });
+  </script>

@@ -2,7 +2,7 @@
 <script>
   // --- ダッシュボード用ハードコード定数 ---
   const RPT_CFG = {
-    lbl: { newCorr: "新規検量線", calib: "検量線", discr: "判別図", useCal: "検量線適用", useLOD: "LOD置換", unsel: "未選択" },
+    lbl: { newCorr: "新規検量線", calib: "検量線", clus: "判別図", useCal: "検量線適用", useLOD: "LOD置換", unsel: "未選択" },
     rng: {
       gridRows: { min: 1, max: 3, step: 1, unit: "" },
       gridCols: { min: 1, max: 3, step: 1, unit: "" },
@@ -64,5 +64,87 @@
       { id: "p_8", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 8 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_8") ? "grid-panel active" : "grid-panel" }
     ],
     persistPaths: ["RPTST.refs"]
+  };
+
+  const SIDEBAR_PARTS = {
+    'panel-config': [
+      { type: "fields", label: "タイプ", labelClass: "panel", id: "boxGraphType", bindFields: "RPTST.data.graphTypeFields" },
+      { type: "section", id: "secCalibration", rows: [
+        { type: "fields", label: "対象指標", labelClass: "panel", id: "boxCalibVal", bindFields: "RPTST.data.calibValFields" }
+      ]},
+      { type: "section", id: "secCluster", rows: [
+        { type: "fields", labelHTML: 'X<span class="badge-label">項目</span>', labelClass: "panel", id: "boxClusX", bindFields: "RPTST.data.clusXFields" },
+        { type: "fields", labelHTML: 'Y<span class="badge-label">項目</span>', labelClass: "panel", id: "boxClusY", bindFields: "RPTST.data.clusYFields" }
+      ]},
+      { type: "inputs", label: "タイトル", labelClass: "panel", inputs: [
+        { inputType: "text", apKey: "title", change: "ReportState.renewPanelRef", bind: "RPTST.data.apTitle", placeholder: "パネルタイトルを入力", className: "form-control" }
+      ]},
+      { type: "inputs", labelHTML: 'X/Y<span class="badge-label">ラベル</span>', labelClass: "panel", inputs: [
+        { inputType: "text", apKey: "xLabel", change: "ReportState.renewPanelRef", bind: "RPTST.data.apXLabel", className: "form-control", placeholder: "X軸" },
+        { inputType: "text", apKey: "yLabel", change: "ReportState.renewPanelRef", bind: "RPTST.data.apYLabel", className: "form-control", placeholder: "Y軸" }
+      ]}
+    ],
+    'layout-panel': [
+      { type: "inputs", label: "行数 / 列数", marginBottom: "16px", inputs: [
+        { inputType: "number", bind: "RPTST.refs.gridRows", className: "form-control", title: "行数" },
+        { inputType: "number", bind: "RPTST.refs.gridCols", className: "form-control", title: "列数" }
+      ]}
+    ],
+    'layout-margins': [
+      { type: "inputs", label: "パネル間隔", inputs: [
+        { inputType: "number", bind: "RPTST.refs.panelGap", className: "form-control", unit: "mm" }
+      ]},
+      { type: "inputs", label: "キャンバス 上/下", inputs: [
+        { inputType: "number", bind: "RPTST.refs.margins.top", className: "form-control", unit: "mm" },
+        { inputType: "number", bind: "RPTST.refs.margins.bottom", className: "form-control", unit: "mm" }
+      ]},
+      { type: "inputs", label: "キャンバス 左/右", inputs: [
+        { inputType: "number", bind: "RPTST.refs.margins.left", className: "form-control", unit: "mm" },
+        { inputType: "number", bind: "RPTST.refs.margins.right", className: "form-control", unit: "mm" }
+      ]},
+      { type: "inputs", label: "パネル内 上/下", inputs: [
+        { inputType: "number", bind: "RPTST.refs.rawGph.p_t", className: "form-control", unit: "mm" },
+        { inputType: "number", bind: "RPTST.refs.rawGph.p_b", className: "form-control", unit: "mm" }
+      ]},
+      { type: "inputs", label: "パネル内 左/右", inputs: [
+        { inputType: "number", bind: "RPTST.refs.rawGph.p_l", className: "form-control", unit: "mm" },
+        { inputType: "number", bind: "RPTST.refs.rawGph.p_r", className: "form-control", unit: "mm" }
+      ]}
+    ],
+    'data-filters': [
+      { type: "multiSelect", label: "dataset", labelId: "lblFilterDB", labelClass: "panel", id: "boxFilterDB", changeItem: "CoreAction.tglMulti", changeAll: "CoreAction.tglAllMulti", bind: "RPTST.refs.filters.db", bindOpts: "RPTST.data.filterDBOpts" },
+      { type: "multiSelect", label: "item", labelId: "lblFilterItem", labelClass: "panel", id: "boxFilterItem", changeItem: "CoreAction.tglMulti", changeAll: "CoreAction.tglAllMulti", bind: "RPTST.refs.filters.item", bindOpts: "RPTST.data.filterItemOpts" },
+      { type: "multiSelect", label: "Group", labelId: "lblFilterGroup", labelClass: "panel", id: "boxFilterGroup", changeItem: "CoreAction.tglMulti", changeAll: "CoreAction.tglAllMulti", bind: "RPTST.refs.filters.group", bindOpts: "RPTST.data.filterGroupOpts" }
+    ],
+    'data-crct': [
+      { type: "fields", label: "検量線", labelClass: "panel", id: "boxGlobalCrct", bindFields: "RPTST.data.crctFields" },
+      { type: "multiSelect", label: "対象元素", labelClass: "panel", id: "boxGlobalCalElms", changeItem: "CoreAction.tglMulti", changeAll: "CoreAction.tglAllMulti", bind: "RPTST.refs.calElms", bindOpts: "RPTST.data.calElmsOpts" },
+      { type: "toggles", topMargin: "16px", toggles: [
+        { label: "検量線適用", bind: "RPTST.refs.useCal" },
+        { label: "LOD置換", bind: "RPTST.refs.useLOD" }
+      ]}
+    ],
+    'style-font': [
+      { type: "fields", label: "欧文スタイル", id: "boxFontEng", bindFields: "RPTST.data.fontEngFields" },
+      { type: "fields", label: "和文スタイル", id: "boxFontJp", bindFields: "RPTST.data.fontJpFields" },
+      { type: "rangeText", labelHTML: 'カラー<span class="badge-label">K</span>', bind: "RPTST.refs.rawGph.c_base" },
+      { type: "inputs", label: "タイトル", inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.s_title", className: "form-control", unit: "pt" }] },
+      { type: "inputs", label: "軸名", inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.s_name", className: "form-control", unit: "pt" }] },
+      { type: "inputs", label: "目盛", inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.s_tick", className: "form-control", unit: "pt" }] },
+      { type: "inputs", label: "回帰式", inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.s_stats", className: "form-control", unit: "pt" }] }
+    ],
+    'style-area': [
+      { type: "inputs", labelHTML: 'シンボル<span class="badge-label">サイズ</span>', inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.sym_size", className: "form-control", unit: "pt" }] },
+      { type: "inputs", labelHTML: 'シンボル<span class="badge-label">線幅</span>', inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.sym_bw", className: "form-control", unit: "pt" }] },
+      { type: "inputs", labelHTML: '軸線<span class="badge-label">線幅</span>', inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.lw_axis", className: "form-control", unit: "pt" }] },
+      { type: "rangeText", labelHTML: '軸線<span class="badge-label">K</span>', bind: "RPTST.refs.rawGph.c_axis" },
+      { type: "inputs", labelHTML: 'グリッド<span class="badge-label">線幅</span>', inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.lw_grid", className: "form-control", unit: "pt" }] },
+      { type: "rangeText", labelHTML: 'グリッド<span class="badge-label">K</span>', bind: "RPTST.refs.rawGph.c_grid" },
+      { type: "inputs", labelHTML: '回帰線<span class="badge-label">線幅</span>', inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.lw_reg", className: "form-control", unit: "pt" }] }
+    ],
+    'symb': [
+      { type: "symbAxis", label: "属性選択", labelClass: "panel", marginBottom: "12px", id: "boxSymbAxis", bindFields: "RPTST.data.axisFields", resetAction: "ReportState.resetSymb" },
+      { type: "symbolTable", id: "tblSymb", bindSrc: "RPTST.data.symbSrc" }
+    ]
   };
 </script>
