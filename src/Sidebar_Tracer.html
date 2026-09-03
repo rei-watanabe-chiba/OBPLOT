@@ -9,6 +9,7 @@
     <?!= include("CSS"); ?>
   </head>
   <body data-theme="tab1">
+    <ob-dialog></ob-dialog>
     <nav class="nav-tabs" id="nav">
       <button class="tab-btn active" data-action="CoreAction.switchTab" data-target="tab1">データ抽出</button>
       <button class="tab-btn" data-action="CoreAction.switchTab" data-target="tab2">検量線・標準化</button>
@@ -19,7 +20,7 @@
         <fieldset id="tab1Fieldset">
           <details id="prefSec" open>
             <summary>抽出設定</summary>
-            <!-- 動的フォーム(fields)のバインディングへ移行 -->
+            <!-- 動的フォームバインディング -->
             <div><div id="t1ModeBox" data-bind-fields="T1ST.pref.data.modeFields"></div></div>
             <div id="prefBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.pref.status"></div>
           </details>
@@ -31,7 +32,7 @@
               <span class="txt-btninfo">読込シート「File」</span>
             </div>
             <div id="rawSecArea">
-              <!-- 動的フォーム(fields)とエラーハイライト(errs)のバインディング -->
+              <!-- エラーとフォーム動的バインディング -->
               <div id="t1RawBox" data-bind-errs="T1ST.raw.flags" data-bind-fields="T1ST.raw.data.fields"></div>
             </div>
             <div id="rawSecBtnBox" class="field-row">
@@ -48,7 +49,7 @@
               <span class="txt-btninfo">読込シート「Results」</span>
             </div>
             <div id="extrSecArea">
-              <!-- エラーハイライト(errs)と動的フォーム(fields)のバインディング -->
+              <!-- エラーとフォーム動的バインディング -->
               <div id="t1ExtrBox" data-bind-errs="T1ST.extr.flags" data-bind-fields="T1ST.extr.data.extrFields"></div>
             </div>
             <div class="field-row">
@@ -58,7 +59,6 @@
           <div id="extrBar" class="status-bar" data-status="hidden" data-bind-status="T1ST.extr.status"></div>
         </fieldset>
       </div>
-
       <!-- Tab2 -->
       <div id="tab2" class="tab-content">
         <fieldset id="tab2Fieldset">
@@ -66,7 +66,7 @@
             <summary>データ読込・選択</summary>
             <div id="asgnSecArea">
               <label>データセット選択</label>
-              <ob-multi-select data-change-item="T2Action.tglDB" data-change-all="T2Action.tglAllDB" data-bind="T2ST.asgn.refs.filter" data-bind-opts="T2ST.asgn.refs.available"></ob-multi-select>
+              <ob-multi-select data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="T2ST.asgn.refs.filter" data-bind-opts="T2ST.asgn.refs.available"></ob-multi-select>
             </div>
             <div class="field-row">
               <button id="btn-load-db" data-action="T2Action.loadDB" data-type="primary">データを読込</button>
@@ -80,13 +80,13 @@
             <div id="symbSecArea">
               <label>属性選択</label>
               <div class="field-row" style="margin-top: var(--unit)">
-                <!-- 動的フォーム(fields)のバインディングへ移行 -->
+                <!-- 動的フォームバインディング -->
                 <div id="t2AxisBox" data-bind-fields="T2ST.symb.data.axisFields" style="flex:1;"></div>
                 <button data-action="T2Action.resetSymb" data-type="primary" class="outline" style="flex:none;">リセット</button>
               </div>
               <label>シンボル設定</label>
               <div class="scroll-y" style="max-height: calc(var(--unit) * 50); border: 1px solid var(--grey200); border-radius: var(--unit); padding: var(--unit) calc(var(--unit) * 2);">
-                <!-- srcのバインディング -->
+                <!-- srcの動的バインディング -->
                 <ob-symbol-table id="symbTbl" data-bind-src="T2ST.symb.data.src"></ob-symbol-table>
               </div>
             </div>
@@ -99,22 +99,22 @@
           <details id="prevSec">
             <summary>プレビュー</summary>
             <div id="prevChartBox" style="width: 100%; height: auto;">
-              <!-- チャートを静的配置し、srcのバインディングで動的更新 -->
+              <!-- チャートsrcバインディング -->
               <ob-cal-plot data-bind-src="T2ST.prev.data.chartSrc"></ob-cal-plot>
             </div>
-            <!-- statsのバインディング -->
+            <!-- statsバインディング -->
             <div id="prevStatsTbl" data-bind-stats="T2ST.prev.data.statsDT"></div>
             <div id="prevSecArea">
               <div class="field-row">
                 <div class="field-col">
                   <label>プレビュー値</label>
-                  <!-- 動的フォーム(fields)のバインディングへ移行 -->
+                  <!-- 動的フォームバインディング -->
                   <div id="t2PrevValBox" data-bind-fields="T2ST.prev.data.valFields"></div>
                 </div>
               </div>
               <label>対象Item</label>
-              <!-- optsとbindの両方をバインディング -->
-              <ob-multi-select id="prevItemBox" data-change-item="T2Action.tglPrevItem" data-change-all="T2Action.tglAllPrevItem" data-bind="T2ST.prev.refs.itemMap" data-bind-opts="T2ST.asgn.refs.availableItems"></ob-multi-select>
+              <!-- optsとbindバインディング -->
+              <ob-multi-select id="prevItemBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="T2ST.prev.refs.itemMap" data-bind-opts="T2ST.asgn.refs.availableItems"></ob-multi-select>
               <div class="field-row">
                 <button id="btn-make-prev" data-action="T2Action.buildPrev" data-type="primary">プレビュー更新</button>
               </div>
@@ -124,17 +124,17 @@
                 <div class="field-row">
                   <div class="field-col">
                     <label>補正方法</label>
-                    <!-- 動的フォーム(fields)のバインディング -->
+                    <!-- 動的フォームバインディング -->
                     <div id="t2CalCorrBox" data-bind-fields="T2ST.calb.data.corrFields"></div>
                   </div>
                 </div>
                 <label>Obsidianモード計測値</label>
-                <!-- optsとbindの両方をバインディング -->
-                <ob-multi-select id="t2PrevModeBox" data-change-item="T2Action.tglPrevMode" data-change-all="T2Action.tglAllPrevMode" data-bind="T2ST.calb.refs.modeMap" data-bind-opts="T2ST.calb.data.modeOpts"></ob-multi-select>
+                <!-- optsとbindバインディング -->
+                <ob-multi-select id="t2PrevModeBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="T2ST.calb.refs.modeMap" data-bind-opts="T2ST.calb.data.modeOpts"></ob-multi-select>
                 <label>検量線適用対象</label>
-                <ob-multi-select id="t2PrevCalElmBox" data-change-item="T2Action.tglCalElm" data-change-all="T2Action.tglAllCalElm" data-bind="T2ST.calb.refs.calElms" data-bind-opts="T2ST.calb.data.calElmOpts"></ob-multi-select>
+                <ob-multi-select id="t2PrevCalElmBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="T2ST.calb.refs.calElms" data-bind-opts="T2ST.calb.data.calElmOpts"></ob-multi-select>
                 <div class="field-row">
-                  <!-- JS構築からインラインHTMLでの直接バインディングへ移行 -->
+                  <!-- インラインHTML直接バインディング -->
                   <div class="field-col">
                     <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-bind="T2ST.calb.refs.useLOD"><span class="toggle-slider"></span></label></div>
                   </div>
@@ -150,9 +150,9 @@
           <details id="stdzSec">
             <summary>出力と標準化</summary>
             <label>対象Item（検量線計算用）</label>
-            <ob-multi-select id="stdzItemBox" data-change-item="T2Action.tglStdzItem" data-change-all="T2Action.tglAllStdzItem" data-bind="T2ST.stdz.refs.itemMap" data-bind-opts="T2ST.asgn.refs.availableItems"></ob-multi-select>
+            <ob-multi-select id="stdzItemBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="T2ST.stdz.refs.itemMap" data-bind-opts="T2ST.asgn.refs.availableItems"></ob-multi-select>
             <label>Obsidianモード計測値</label>
-            <ob-multi-select id="t2StdzModeBox" data-change-item="T2Action.tglStdzMode" data-change-all="T2Action.tglAllStdzMode" data-bind="T2ST.stdz.refs.modeMap" data-bind-opts="T2ST.stdz.data.modeOpts"></ob-multi-select>
+            <ob-multi-select id="t2StdzModeBox" data-change-item="CoreAction.tglMulti" data-change-all="CoreAction.tglAllMulti" data-bind="T2ST.stdz.refs.modeMap" data-bind-opts="T2ST.stdz.data.modeOpts"></ob-multi-select>
             <div class="field-row">
               <div class="field-col">
                 <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-bind="T2ST.stdz.refs.useLOD"><span class="toggle-slider"></span></label></div>
@@ -163,7 +163,7 @@
               <button id="btn-save-corr" data-action="T2Action.saveCorr" data-type="primary">検量線出力</button>
             </div>
             <div class="field-row">
-              <button id="btn-push-stdz" data-action="T2Action.pushStdz" data-type="primary" class="outline">PXRFシート出力</button>
+              <button id="btn-push-stdz" data-action="T2Action.pushStdz" data-type="primary" class="outline">新PXRFシート出力</button>
             </div>
           </details>
           <div id="stdzBar" class="status-bar" data-status="hidden" data-bind-status="T2ST.stdz.status"></div>
@@ -186,14 +186,13 @@
     <?!= include('CoreAction'); ?>
     <?!= include('T1T2_Action'); ?>
     <script>
-      // デバッグ用: マウスクリック時にどの要素が反応しているかを可視化
+      // イベントデバッグ用
       document.addEventListener('click', (e) => {
         console.log('%c[Debug Click]', 'background: #333; color: #fff', e.target);
         console.log('Pointer Events (Computed):', getComputedStyle(e.target).pointerEvents);
         if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
           console.log('Disabled property:', e.target.disabled);
         }
-        
         const prevSec = document.getElementById('prevSec');
         if (prevSec) {
           console.log('-- prevSec state --');
@@ -202,7 +201,7 @@
           const btn = document.getElementById('btn-make-prev');
           console.log('btn-make-prev disabled:', btn?.disabled);
         }
-      }, true); // キャプチャフェーズで拾う
+      }, true);
     </script>
   </body>
 </html>

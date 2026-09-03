@@ -11,7 +11,10 @@
     constructor() {
       const createSec = (overrides = {}) => ({ status: [], data: null, refs: {}, flags: [], ...overrides });
       const initDef = {
-        GLB: { activeTab: "tab1", isLocked: false, ssId: "" },
+        GLB: { 
+          activeTab: "tab1", isLocked: false, ssId: "",
+          dialog: { isOpen: false, type: "confirm", title: "", message: "" }
+        },
         T1ST: {
           phase: T1_PHS.INIT,
           pref: createSec({ refs: { mode: "" }, data: { modeFields: [{ type: "select", opts: GLB.confMods, bind: "T1ST.pref.refs.mode", change: "T1Action.checkT1Pref", hasEmpty: false }] } }),

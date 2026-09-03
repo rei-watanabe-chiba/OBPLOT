@@ -2,36 +2,6 @@
 <script>
   // --- DOM構築 ---
   class NewDOM {
-    static #ensureDialog(type) {
-      const id = type === 'confirm' ? 'universalConfirm' : 'idleToast';
-      let dlg = document.getElementById(id);
-      if (!dlg) {
-        document.body.insertAdjacentHTML('beforeend', Tpl.Dialog[type]());
-        dlg = document.getElementById(id);
-      }
-      return dlg;
-    }
-    static confirm(title, msg) {
-      return new Promise(resolve => {
-        const dlg = this.#ensureDialog('confirm');
-        document.getElementById("uDialogTitle").innerText = title;
-        document.getElementById("uDialogMessage").innerText = msg;
-        const closeDlg = () => { dlg.close(); };
-        dlg.showModal();
-        document.getElementById("uDialogConfirmBtn").onclick = () => { closeDlg(); resolve(true); };
-        document.getElementById("uDialogCancelBtn").onclick = () => { closeDlg(); resolve(false); };
-      });
-    }
-    static toast(title, msg, onOk = null) {
-      const dlg = this.#ensureDialog('toast');
-      document.getElementById("idleToastTitle").innerText = title;
-      document.getElementById("idleToastMessage").innerText = msg;
-      if (!dlg.open) dlg.showModal();
-      document.getElementById("idleToastOkBtn").onclick = () => {
-        dlg.close();
-        if (onOk) onOk();
-      };
-    }
     static inputs(ref, errFlags) {
       const elm = typeof ref === "string" ? document.getElementById(ref) : ref;
       elm?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
@@ -74,6 +44,29 @@
       const rows = CoreMethod.Util.buildStats(statsDT);
       if (!rows.length) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
       cntr.innerHTML = Tpl.Stats.cntr(rows.map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
+    }
+  }
+
+  // --- ObDialog (宣言的UIダイアログ) ---
+  class ObDialog extends HTMLElement {
+    connectedCallback() {
+      this.innerHTML = Tpl.Dialog.universal();
+      State.subscribe("GLB.dialog", (dlg) => this.render(dlg));
+    }
+    render(dlg) {
+      if (!dlg) return;
+      const dialogEl = this.querySelector('dialog');
+      if (!dialogEl) return;
+      
+      if (dlg.isOpen) {
+        this.querySelector('.d-title').innerText = dlg.title || (dlg.type === 'toast' ? '通知' : '確認');
+        this.querySelector('.d-msg').innerText = dlg.message || '';
+        const cancelBtn = this.querySelector('.d-cancel');
+        if (cancelBtn) cancelBtn.style.display = dlg.type === 'toast' ? 'none' : '';
+        if (!dialogEl.open) dialogEl.showModal();
+      } else {
+        if (dialogEl.open) dialogEl.close();
+      }
     }
   }
   
@@ -153,11 +146,8 @@
       static badge(val) { return html`<span class="badge">${val}</span>`; }
     };
     static Dialog = class {
-      static confirm() { 
-        return html`<dialog id="universalConfirm"><h3 id="uDialogTitle">確認</h3><p id="uDialogMessage"></p><div class="field-row"><button id="uDialogCancelBtn" data-type="primary" class="outline">キャンセル</button><button id="uDialogConfirmBtn" data-type="primary">OK</button></div></dialog>`; 
-      }
-      static toast() { 
-        return html`<dialog id="idleToast"><h3 id="idleToastTitle"></h3><p id="idleToastMessage"></p><div class="field-row"><button id="idleToastOkBtn" data-type="primary">OK</button></div></dialog>`; 
+      static universal() { 
+        return html`<dialog class="universal-dialog"><h3 class="d-title"></h3><p class="d-msg" style="white-space: pre-wrap;"></p><div class="field-row"><button class="d-cancel outline" data-type="primary" data-action="CoreAction.closeDialog" data-result="false">キャンセル</button><button class="d-ok" data-type="primary" data-action="CoreAction.closeDialog" data-result="true">OK</button></div></dialog>`; 
       }
     };
     static Toggle = class {
@@ -183,4 +173,5 @@
   customElements.define('ob-popover', ObPopover);
   customElements.define('ob-multi-select', ObMultiSelect);
   customElements.define('ob-symbol-table', ObSymbolTable);
+  customElements.define('ob-dialog', ObDialog);
 </script>

@@ -107,7 +107,7 @@
       const initFltr = (buVal, opts) => Array.isArray(buVal) ? buVal.map(String) : opts;
 
       let refs = State.get("RPTST.refs");
-      if (bu && await NewDOM.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
+      if (bu && await CoreAction.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
         bu.rawGph = { ...getInitRawGph(), ...(bu.rawGph || {}) };
         if (!bu.symb) bu.symb = refs.symb;
         if (bu.panelGap === undefined || bu.panelGap === 16 || bu.panelGap === 12) bu.panelGap = 4;
@@ -231,7 +231,7 @@
         const conf = { useCal: r.useCal, calElms: r.calElms, correction: r.correction, corrDT: d.corrDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, discrXVal: p.discrXVal, discrYVal: p.discrYVal };
         return Mtd.T3.mgmPrev.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
       });
-      if (!preCalc.some(res => res.prevDT?.length > 0)) return NewDOM.toast("警告", "有効なグラフが一つもありません。\n指標設定やデータを確認してください。");
+      if (!preCalc.some(res => res.prevDT?.length > 0)) return CoreAction.toast("警告", "有効なグラフが一つもありません。\n標準化設定やデータを確認してください。");
       const safeState = JSON.stringify({ RPTST: State.proxy.RPTST }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const safePreCalc = JSON.stringify(preCalc).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${safeState}; window.__PRECALC_DATA__=${safePreCalc};<\/script>`);
