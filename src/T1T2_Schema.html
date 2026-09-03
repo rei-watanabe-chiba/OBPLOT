@@ -20,6 +20,14 @@
       ]
     },
     T2: {
+      persistPaths: [
+        "T2ST.asgn.refs.available", "T2ST.asgn.refs.filter",
+        "T2ST.symb.refs.baseKey", "T2ST.symb.refs.rls",
+        "T2ST.calb.refs.modeMap", "T2ST.calb.refs.calElms", "T2ST.calb.refs.correction", "T2ST.calb.refs.useLOD", "T2ST.calb.refs.useCal",
+        "T2ST.prev.refs.itemMap", "T2ST.prev.refs.val", "T2ST.prev.refs.saveIndexName",
+        "T2ST.stdz.refs.itemMap", "T2ST.stdz.refs.modeMap", "T2ST.stdz.refs.useLOD", "T2ST.stdz.refs.saveIndexName",
+        "T2ST.asgn.status", "T2ST.symb.status", "T2ST.calb.status", "T2ST.prev.status", "T2ST.stdz.status"
+      ],
       elements: [
         { id: "tab2Fieldset", disablePhase: () => State.get("GLB.isLocked") },
         { id: "asgnSec", activePhase: p => true, disablePhase: p => false, openPhase: p => p < T2_PHS.FILTERED },

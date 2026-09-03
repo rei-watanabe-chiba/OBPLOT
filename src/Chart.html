@@ -16,8 +16,7 @@
     constructor() {
       super();
       this.#box = document.createElement('div');
-      // [修正] overflow: hidden を追加して、height: 0 の時の中身（canvas）のはみ出しによるクリック妨害を防ぐ
-      this.#box.style.cssText = 'width: 100%; position: relative; overflow: hidden;';
+      this.#box.style.cssText = 'width: 100%; position: relative;';
       this.#observer = new ResizeObserver(() => {
         const curW = this.clientWidth;
         if (curW > 0 && curW !== this.#lastW && this.#src) {
@@ -28,6 +27,7 @@
       });
     }
     connectedCallback() {
+      this.replaceChildren();
       this.style.display = 'grid';
       this.style.gridTemplateColumns = 'minmax(0, 1fr)';
       this.style.width = '100%';

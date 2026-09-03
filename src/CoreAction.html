@@ -11,8 +11,27 @@
       queueMicrotask(() => { this.save(); this.#isQ = false; });
     }
     static save() {
-      const { phase, asgn, symb, calb, prev, stdz } = State.proxy.T2ST;
-      phase < T2_PHS.LOADED ? this.clear() : StorageAPI.save(this.#K, JSON.stringify({ phase, asgn: { r: asgn.refs, s: asgn.status }, symb: { r: symb.refs, s: symb.status }, calb: { r: calb.refs, s: calb.status }, prev: { r: prev.refs, s: prev.status }, stdz: { r: stdz.refs, s: stdz.status } }));
+      const phase = State.get("T2ST.phase");
+      if (phase < T2_PHS.LOADED) {
+        this.clear();
+        return;
+      }
+      const data = { phase };
+      const paths = typeof T1T2_SCHEMA !== "undefined" && T1T2_SCHEMA.T2.persistPaths ? T1T2_SCHEMA.T2.persistPaths : [];
+      paths.forEach(p => { data[p] = State.get(p); });
+      StorageAPI.save(this.#K, JSON.stringify(data));
+    }
+    static restore(bu, matchPaths) {
+      if (!bu) return;
+      const stateObj = {};
+      const keys = Object.keys(bu).filter(k => k !== "phase");
+      matchPaths.forEach(pattern => {
+        const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*/g, ".*") + "$");
+        keys.forEach(k => {
+          if (regex.test(k)) stateObj[k] = bu[k];
+        });
+      });
+      if (Object.keys(stateObj).length > 0) State.set(stateObj);
     }
     static load() {
       try { return JSON.parse(StorageAPI.load(this.#K)); } catch (e) { return null; } 

@@ -52,7 +52,17 @@
       { id: "segBtnFont", className: () => State.get("RPTST.ui.activeSub") === "subFont" ? "segment-btn active" : "segment-btn" },
       { id: "segBtnArea", className: () => State.get("RPTST.ui.activeSub") === "subArea" ? "segment-btn active" : "segment-btn" },
       { id: "subFont", className: () => State.get("RPTST.ui.activeSub") === "subFont" ? "sub-pane active" : "sub-pane" },
-      { id: "subArea", className: () => State.get("RPTST.ui.activeSub") === "subArea" ? "sub-pane active" : "sub-pane" }
-    ]
+      { id: "subArea", className: () => State.get("RPTST.ui.activeSub") === "subArea" ? "sub-pane active" : "sub-pane" },
+      { id: "p_0", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 0 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_0") ? "grid-panel active" : "grid-panel" },
+      { id: "p_1", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 1 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_1") ? "grid-panel active" : "grid-panel" },
+      { id: "p_2", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 2 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_2") ? "grid-panel active" : "grid-panel" },
+      { id: "p_3", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 3 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_3") ? "grid-panel active" : "grid-panel" },
+      { id: "p_4", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 4 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_4") ? "grid-panel active" : "grid-panel" },
+      { id: "p_5", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 5 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_5") ? "grid-panel active" : "grid-panel" },
+      { id: "p_6", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 6 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_6") ? "grid-panel active" : "grid-panel" },
+      { id: "p_7", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 7 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_7") ? "grid-panel active" : "grid-panel" },
+      { id: "p_8", visiblePhase: () => { const r = State.get("RPTST.refs"); return r && 8 < (r.gridRows * r.gridCols); }, className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === "p_8") ? "grid-panel active" : "grid-panel" }
+    ],
+    persistPaths: ["RPTST.refs"]
   };
 </script>

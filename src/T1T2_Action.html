@@ -290,18 +290,13 @@
              if (await CoreAction.confirm("復元", "前回の作業状態を復元しますか？")) {
                 await T2Action.loadDB();
                 if (State.get("T2ST.phase") >= T2_PHS.LOADED) {
-                  State.set({ "T2ST.asgn.refs.available": bu.asgn.r.available, "T2ST.asgn.refs.filter": bu.asgn.r.filter });
+                  CoreMakeBU.restore(bu, ["T2ST.asgn.refs.*"]);
                   if (bu.phase >= T2_PHS.FILTERED) {
                      await T2Action.fltrDB();
-                     State.set({
-                       "T2ST.symb.refs.baseKey": bu.symb.r.baseKey, "T2ST.symb.refs.rls": bu.symb.r.rls,
-                       "T2ST.calb.refs.modeMap": bu.calb.r.modeMap, "T2ST.calb.refs.calElms": bu.calb.r.calElms, "T2ST.calb.refs.correction": bu.calb.r.correction, "T2ST.calb.refs.useLOD": bu.calb.r.useLOD, "T2ST.calb.refs.useCal": bu.calb.r.useCal,
-                       "T2ST.prev.refs.itemMap": bu.prev.r.itemMap, "T2ST.prev.refs.val": bu.prev.r.val, "T2ST.prev.refs.saveIndexName": bu.prev.r.saveIndexName,
-                       "T2ST.stdz.refs.itemMap": bu.stdz?.r.itemMap || [], "T2ST.stdz.refs.modeMap": bu.stdz?.r.modeMap || [...GLB.optElms], "T2ST.stdz.refs.useLOD": bu.stdz?.r.useLOD || false, "T2ST.stdz.refs.saveIndexName": bu.stdz?.r.saveIndexName || ""
-                     });
+                     CoreMakeBU.restore(bu, ["T2ST.symb.refs.*", "T2ST.calb.refs.*", "T2ST.prev.refs.*", "T2ST.stdz.refs.*"]);
                      if (bu.phase >= T2_PHS.PREVIEWED) await T2Action.buildPrev();
                   }
-                  State.set({ "T2ST.asgn.status": bu.asgn.s, "T2ST.symb.status": bu.symb.s, "T2ST.calb.status": bu.calb.s, "T2ST.prev.status": bu.prev.s, "T2ST.stdz.status": bu.stdz?.s || ["hidden", ""] });
+                  CoreMakeBU.restore(bu, ["T2ST.*.status"]);
                 }
              } else { CoreMakeBU.clear(); }
           }
