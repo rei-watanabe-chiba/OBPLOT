@@ -20,8 +20,8 @@
       --main-blue-hover: #1F41B6;
       --main-green: #34A853;
       --main-green-hover: #1F843C;
-      --main-yellow: #FBC02D;
-      --main-yellow-hover: #F57F17;
+      --main-yellow: #FE9C07;
+      --main-yellow-hover: #D15B0E;
       --main-red: #ea4335;
       --grey50: #ECEFF1;
       --grey200: #B0BEC5;
@@ -47,10 +47,13 @@
       overflow-x: hidden;
       /*user-select: none;*/
     }
-    body[data-theme="entry"],
-    body[data-theme="adapter"] {
+    body[data-theme="entry"]{
       --theme-color: var(--main-blue);
       --theme-hover: var(--main-blue-hover);
+    }
+    body[data-theme="adapter"]{
+      --theme-color: var(--main-yellow);
+      --theme-hover: var(--main-yellow-hover);
     }
     body[data-theme="dash"] {
       --theme-color: var(--main-green);
@@ -207,7 +210,7 @@
         --btn-bg: var(--bg-color);
         --btn-border: currentColor;
         &[data-type="primary"] { --btn-color: var(--theme-color); }
-        &:not(:disabled):hover { --btn-bg: color-mix(in srgb, currentColor 10%, var(--bg-color);); }
+        &:not(:disabled):hover { --btn-bg: color-mix(in srgb, var(--theme-color) 7%, var(--bg-color)); }
       }
       &:disabled {
         --btn-bg: var(--grey200);
