@@ -4,9 +4,9 @@
   class CoreMakeBU {
     static #K = "OBP_BU";
     static #isQ = false;
-    static #getActiveConfig() {
+    static #getActCfg() {
       const activeTab = State.get("GLB.activeTab");
-      return CoreAction.configResolver ? CoreAction.configResolver(activeTab) : null;
+      return CoreAct.cfgRslv ? CoreAct.cfgRslv(activeTab) : null;
     }
     static init() { State.subscribe('*', () => this.#queue()); }
     static #queue() {
@@ -15,7 +15,7 @@
       queueMicrotask(() => { this.save(); this.#isQ = false; });
     }
     static save() {
-      const config = this.#getActiveConfig();
+      const config = this.#getActCfg();
       if (!config) return;
       const statePrefix = config.statePrefix || (config.statPath ? config.statPath.split('.')[0] : null);
       if (!statePrefix) return;
@@ -35,7 +35,7 @@
       if (!bu) return;
       const stateObj = {};
       const keys = Object.keys(bu).filter(k => k !== "phase");
-      const config = this.#getActiveConfig();
+      const config = this.#getActCfg();
       const defaultPaths = config?.persistPaths || config?.schema?.persistPaths || [];
       const patterns = matchPaths || (defaultPaths.length ? defaultPaths : null);
       if (patterns) {
@@ -69,28 +69,33 @@
               google.script.run.withFailureHandler(() => google.script.host.close()).showSidebar();
             } else { window.location.reload(); }
           };
-          CoreAction.toast("GAS通信エラー", "一定時間操作がなかったため、サイドバーを再起動してください", forceReload);
+          CoreAct.toast("GAS通信エラー", "一定時間操作がなかったため、サイドバーを再起動してください", forceReload);
         }, this.#MS); 
       };
       ['mousemove', 'keydown', 'touchstart', 'click', 'scroll'].forEach(e => document.addEventListener(e, rst, { passive: true })); 
       rst();
     }
   }
-  // --- CoreAction ---
-  class CoreAction {
+  // --- CoreAct ---
+  class CoreAct {
     static get #ssId() { return State.get("GLB.ssId"); }
-    static #isInitialized = false;
-    static configResolver = null;
-    static confirm(title, message, isToast = false) {
+    static #isInit = false;
+    static cfgRslv = null;
+    static async ensureFetch(ssId, shts) {
+      const reqs = shts.map(s => typeof s === 'string' ? { sht: s } : s);
+      const resArr = await API.pullMult(ssId, reqs);
+      return resArr.map(res => (res?.success && res.pld?.data) ? res.pld.data : null);
+    }
+    static confirm(title, msg, isToast = false) {
       return new Promise(resolve => {
         window.__dialogResolve = resolve;
-        State.set("GLB.dialog", { isOpen: true, type: isToast ? "toast" : "confirm", title, message });
+        State.set("GLB.dialog", { isOpen: true, type: isToast ? "toast" : "confirm", title, msg });
       });
     }
-    static toast(title, message, onOk = null) {
-      this.confirm(title, message, true).then(res => { if (onOk) onOk(); });
+    static toast(title, msg, onOk = null) {
+      this.confirm(title, msg, true).then(res => { if (onOk) onOk(); });
     }
-    static closeDialog(tgt) {
+    static closeDlg(tgt) {
       const result = tgt.dataset.result === "true";
       State.set("GLB.dialog.isOpen", false);
       if (window.__dialogResolve) {
@@ -110,7 +115,7 @@
         if (opt) {
           const title = typeof opt === 'object' && opt.title ? opt.title : "確認";
           const msg = typeof opt === 'object' && opt.msg ? opt.msg : (typeof opt === 'string' ? opt : "");
-          if (msg && !(await CoreAction.confirm(title, msg))) {
+          if (msg && !(await CoreAct.confirm(title, msg))) {
             if (statusPath) State.set(statusPath, svStat ?? ["hidden", ""]);
             State.set("GLB.isLocked", false);
             return false;
@@ -130,43 +135,43 @@
         State.set("GLB.isLocked", false);
       }
     }
-    static async connectApp(ssId, config) {
+    static async connectApp(ssId, cfg) {
       State.set("GLB.isLocked", true);
-      const statPath = config.statPath;
+      const statPath = cfg.statPath;
       try {
         State.set(statPath, ["loading", "環境確認中..."]);
-        const targetShts = GLB.schema[config.schemaKey].map(s => s.name);
+        const targetShts = GLB.schema[cfg.schemaKey].map(s => s.name);
         const curShts = await API.getWbState(ssId, targetShts);
-        const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, config.schemaKey);
+        const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, cfg.schemaKey);
         if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
         if (buildPlan.length) {
           if (missingNames.length) {
             State.set(statPath, ["message", "確認待ち"]);
-            if (!(await CoreAction.confirm("確認", `「${missingNames.join('、')}」が不足しています。\n新たに作成しますか？`))) {
+            if (!(await CoreAct.confirm("確認", `「${missingNames.join('、')}」が不足しています。\n新たに作成しますか？`))) {
               State.set("GLB.isLocked", false);
               State.set(statPath, ["hidden", ""]);
               return false;
             }
           }
           State.set(statPath, ["loading", "シート構成を更新中..."]);
-          await API.buildShts(ssId, buildPlan);
+          await API.genShts(ssId, buildPlan);
         }
         State.set("GLB.ssId", ssId);
         State.set(statPath, ["hidden", ""]);
         return true;
       } catch (e) {
         State.set(statPath, ["hidden", ""]);
-        await CoreAction.confirm("接続エラー", e.message.includes("【検証エラー】") ? e.message : `予期せぬエラーです。\n\n${e.message}`, true);
+        await CoreAct.confirm("接続エラー", e.message.includes("【検証エラー】") ? e.message : `予期せぬエラーです。\n\n${e.message}`, true);
         State.set("GLB.isLocked", false);
         return false;
       }
     }
-    static async startSession(ssId, isSwitch = false, hooks = {}, config = {}) {
+    static async startSession(ssId, isSwitch = false, hooks = {}, cfg = {}) {
       if (!isSwitch) {
-        if (this.#isInitialized) return; 
-        const isConnected = await this.connectApp(ssId, config);
+        if (this.#isInit) return; 
+        const isConnected = await this.connectApp(ssId, cfg);
         if (!isConnected) return; 
-        this.#isInitialized = true;
+        this.#isInit = true;
       }
       if (hooks.onBeforeInit) await hooks.onBeforeInit(isSwitch, CoreMakeBU.load());
       if (!isSwitch) {
@@ -176,7 +181,7 @@
       State.set("GLB.isLocked", false);
       if (hooks.onAfterInit) hooks.onAfterInit();
     }
-    static activateTabUI(tabId) {
+    static actvTab(tabId) {
       document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
       document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
       document.getElementById(tabId)?.classList.add("active");
@@ -186,9 +191,9 @@
     }
     static switchTab(btnOrId, hooks = {}) {
       const tabId = typeof btnOrId === 'string' ? btnOrId : btnOrId.dataset.target;
-      this.activateTabUI(tabId);
-      const config = this.configResolver ? this.configResolver(tabId) : {};
-      this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks, config);
+      this.actvTab(tabId);
+      const cfg = this.cfgRslv ? this.cfgRslv(tabId) : {};
+      this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks, cfg);
     }
     static rootGLB(actionClasses = {}) {
       document.addEventListener("click", e => {
@@ -223,7 +228,7 @@
       document.addEventListener("input", handleInput);
     }
     static tglMulti(tgt) {
-      const cntr = tgt.closest('ob-multi-select');
+      const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');
       if (!cntr) return;
       const statePath = cntr.dataset.bind;
       const itemCbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
@@ -231,7 +236,7 @@
       if (statePath) State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
     }
     static tglAllMulti(tgt) {
-      const cntr = tgt.closest('ob-multi-select');
+      const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');
       if (!cntr) return;
       const statePath = cntr.dataset.bind;
       const itemCbs = cntr.querySelectorAll('.dataset-cb');

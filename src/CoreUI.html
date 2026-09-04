@@ -1,5 +1,181 @@
 <!-- src/CoreUI.html -->
 <script>
+  class CoreUIPatcher {
+    static initDlg(cntr) {
+      if (cntr.__dlgInit) return;
+      cntr.__dlgInit = true;
+      cntr.innerHTML = Tpl.Dialog.universal();
+      const dialogEl = cntr.querySelector('dialog');
+      const applyDlg = (dlg) => {
+        if (!dlg || !dialogEl) return;
+        if (dlg.isOpen) {
+          cntr.querySelector('.d-title').innerText = dlg.title || (dlg.type === 'toast' ? '通知' : '確認');
+          cntr.querySelector('.d-msg').innerText = dlg.msg || '';
+          const cancelBtn = cntr.querySelector('.d-cancel');
+          if (cancelBtn) cancelBtn.style.display = dlg.type === 'toast' ? 'none' : '';
+          if (!dialogEl.open) dialogEl.showModal();
+        } else {
+          if (dialogEl.open) dialogEl.close();
+        }
+      };
+      State.subscribe("GLB.dialog", applyDlg);
+      applyDlg(State.get("GLB.dialog"));
+    }
+
+    static ensureMSelectInit(el) {
+      if (!el.querySelector('.popover-content')) {
+        el.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "cb-container", el.id ? `pop_${el.id}` : null);
+      }
+    }
+
+    static patchMSelectRefs(el, vals) {
+      CoreUIPatcher.ensureMSelectInit(el);
+      const sum = el.querySelector('.popover-summary');
+      if (sum) {
+        sum.innerHTML = vals?.length
+          ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>`
+          : '<span style="color:var(--grey400)">未選択</span>';
+      }
+      const cbs = el.querySelectorAll('.dataset-cb');
+      cbs.forEach(cb => { cb.checked = Array.isArray(vals) && vals.includes(cb.value); });
+      const allCb = el.querySelector('.select-all-cb');
+      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
+    }
+
+    static patchMSelectOpts(el, arr) {
+      CoreUIPatcher.ensureMSelectInit(el);
+      const cntr = el.querySelector('.popover-content');
+      if (!cntr) return;
+      if (!arr?.length) {
+        cntr.innerHTML = '<div class="txt-btninfo">データなし</div>';
+        return;
+      }
+      const changeAll = el.dataset.changeAll;
+      const changeItem = el.dataset.changeItem;
+      cntr.innerHTML = (changeAll ? Tpl.MultiSelect.selectAll(changeAll) : '') +
+        arr.map(item => Tpl.MultiSelect.item(item, changeItem)).join('');
+      if (el.dataset.bind) {
+        const vals = State.get(el.dataset.bind);
+        if (vals !== undefined) CoreUIPatcher.patchMSelectRefs(el, vals);
+      }
+    }
+
+    static makeBinder(patchFn, getValFn) {
+      return (el, path) => {
+        if (!path) return;
+        const apply = (val) => { if (val !== undefined) patchFn(el, val); };
+        State.subscribe(path, apply);
+        apply(getValFn ? getValFn(path) : State.get(path));
+      };
+    }
+
+    static patchElementVal(el, val) {
+      if (el.type === 'checkbox') {
+        if (el.checked !== !!val) el.checked = !!val;
+      } else if (el.dataset.ui === 'mselect' || el.tagName === 'UI-MSELECT') {
+        CoreUIPatcher.patchMSelectRefs(el, val);
+      } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
+        if (el.value !== String(val ?? '')) el.value = val ?? '';
+      }
+    }
+
+    static patchStatus(el, val) {
+      if (Array.isArray(val) && val.length >= 2) {
+        if (el.dataset.status !== val[0]) el.dataset.status = val[0];
+        if (el.innerText !== val[1]) el.innerText = val[1];
+      } else {
+        el.dataset.status = "hidden";
+        el.innerText = "";
+      }
+    }
+
+    static patchOpts(el, val) {
+      if (el.dataset.ui === 'mselect' || el.tagName === 'UI-MSELECT') CoreUIPatcher.patchMSelectOpts(el, val);
+      else el.opts = val;
+    }
+
+    static patchSrc(el, val) {
+      if (el.dataset.ui === 'symbtbl' || el.tagName === 'UI-SYMBTBL') el.innerHTML = Tpl.Symbol.tbl(val);
+      else if (typeof el.src !== 'undefined' || el.tagName === 'UI-PLOT') el.src = val;
+    }
+
+    static patchErrs(el, val) {
+      el.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!val?.[idx]));
+    }
+
+    static evalPhase(prop, phase, defaultVal = false) {
+      if (prop === undefined) return defaultVal;
+      return typeof prop === 'function' ? prop(phase) : phase >= prop;
+    }
+
+    static updateVisible(el, def, curPhase) {
+      if (def.visiblePhase === undefined) return;
+      const isVisible = CoreUIPatcher.evalPhase(def.visiblePhase, curPhase);
+      el.style.display = isVisible ? '' : 'none';
+    }
+
+    static updateOpen(el, def, curPhase) {
+      if (def.openPhase === undefined || el.tagName !== 'DETAILS') return;
+      const isOpen = CoreUIPatcher.evalPhase(def.openPhase, curPhase);
+      if (isOpen !== undefined && el.open !== isOpen) {
+        if (isOpen) {
+          setTimeout(() => { el.open = true; }, 200);
+        } else {
+          el.open = false; // 閉じる時は遅延させない
+        }
+      }
+    }
+
+    static updateActiveDis(el, def, curPhase) {
+      if (def.activePhase === undefined && def.disablePhase === undefined) return;
+      const isActive = def.activePhase !== undefined 
+        ? CoreUIPatcher.evalPhase(def.activePhase, curPhase, true) 
+        : true;
+      const isDis = def.disablePhase !== undefined 
+        ? CoreUIPatcher.evalPhase(def.disablePhase, curPhase, false) 
+        : !isActive;
+
+      if (el.tagName === 'DETAILS') {
+        el.setAttribute('data-state', isActive ? 'active' : '');
+        if (isDis) el.setAttribute('data-type', 'disabled');
+        else el.removeAttribute('data-type');
+
+        // --- 下層フォーム要素への物理的な disabled 強制同期ガード ---
+        el.querySelectorAll('input, select, button, textarea, ui-mselect, [data-ui="mselect"]').forEach(child => {
+          if (child.tagName === 'UI-MSELECT' || child.dataset.ui === 'mselect') {
+            const sum = child.querySelector('.popover-summary');
+            if (sum) sum.disabled = isDis;
+          }
+          child.disabled = isDis;
+        });
+      } else {
+        el.disabled = isDis;
+      }
+    }
+
+    static updateClass(el, def, curPhase) {
+      if (def.className === undefined) return;
+      const cls = typeof def.className === 'function' ? def.className(curPhase) : def.className;
+      if (el.className !== cls) el.className = cls;
+    }
+
+    static updateText(el, def, curPhase) {
+      if (def.text === undefined) return;
+      const txt = typeof def.text === 'function' ? def.text(curPhase) : def.text;
+      if (el.innerText !== txt) el.innerText = txt;
+    }
+
+    static updateDataset(el, def, curPhase) {
+      if (def.dataset === undefined) return;
+      const ds = typeof def.dataset === 'function' ? def.dataset(curPhase) : def.dataset;
+      if (ds && typeof ds === 'object') {
+        for (const key in ds) {
+          if (el.dataset[key] !== String(ds[key])) el.dataset[key] = ds[key];
+        }
+      }
+    }
+  }
+
   class CoreUI {
     constructor(schema, stateTarget) {
       this.schema = schema;
@@ -13,69 +189,28 @@
     build() {
       this.update();
 
-      // --- 単一要素への値バインド ---
-      const bindElement = (el, path) => {
-        if (!path) return;
-        const applyBind = (val) => {
-          if (val === undefined) return;
-          if (el.type === 'checkbox') {
-            if (el.checked !== !!val) el.checked = !!val;
-          } else if (el.tagName === 'OB-MULTI-SELECT') {
-            el.refs = val; 
-          } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
-            if (el.value !== String(val ?? '')) el.value = val ?? '';
-          }
-        };
-        State.subscribe(path, applyBind);
-        applyBind(this.getVal(path));
-      };
+      // --- UIDlg パッチャー ---
+      document.querySelectorAll('[data-ui="dlg"]').forEach(cntr => CoreUIPatcher.initDlg(cntr));
+
+      // --- UIMSelect 初期化 ---
+      document.querySelectorAll('[data-ui="mselect"]').forEach(el => CoreUIPatcher.ensureMSelectInit(el));
+
+      // --- Binder Factory (高階関数) ---
+      const binder = (patchFn) => CoreUIPatcher.makeBinder(patchFn, path => this.getVal(path));
+      const bindElement = binder(CoreUIPatcher.patchElementVal);
 
       // --- バインディング属性定義とハンドラー群 ---
       const bindDefs = [
-        { key: 'bindStatus', attr: 'data-bind-status', fn: (el, path) => {
-          const applyStatus = (val) => {
-            if (Array.isArray(val) && val.length >= 2) {
-              if (el.dataset.status !== val[0]) el.dataset.status = val[0];
-              if (el.innerText !== val[1]) el.innerText = val[1];
-            } else {
-              el.dataset.status = "hidden";
-              el.innerText = "";
-            }
-          };
-          State.subscribe(path, applyStatus);
-          applyStatus(this.getVal(path));
-        }},
-        { key: 'bind', attr: 'data-bind', fn: (el, path) => bindElement(el, path) },
-        { key: 'bindOpts', attr: 'data-bind-opts', fn: (el, path) => {
-          const applyOpts = (val) => { if (val !== undefined) el.opts = val; };
-          State.subscribe(path, applyOpts);
-          applyOpts(this.getVal(path));
-        }},
-        { key: 'bindSrc', attr: 'data-bind-src', fn: (el, path) => {
-          const applySrc = (val) => { if (val !== undefined) el.src = val; };
-          State.subscribe(path, applySrc);
-          applySrc(this.getVal(path));
-        }},
-        { key: 'bindStats', attr: 'data-bind-stats', fn: (el, path) => {
-          const applyStats = (val) => { if (val !== undefined) NewDOM.buildStats(val, el); };
-          State.subscribe(path, applyStats);
-          applyStats(this.getVal(path));
-        }},
-        { key: 'bindErrs', attr: 'data-bind-errs', fn: (el, path) => {
-          const applyErrs = (val) => { if (val !== undefined) NewDOM.inputs(el, val); };
-          State.subscribe(path, applyErrs);
-          applyErrs(this.getVal(path));
-        }},
-        { key: 'bindFields', attr: 'data-bind-fields', fn: (el, path) => {
-          const applyFields = (val) => { 
-            if (val !== undefined) {
-              NewDOM.buildFormFields(val, el, true);
-              el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
-            }
-          };
-          State.subscribe(path, applyFields);
-          applyFields(this.getVal(path));
-        }}
+        { key: 'bindStatus', attr: 'data-bind-status', fn: binder(CoreUIPatcher.patchStatus) },
+        { key: 'bind', attr: 'data-bind', fn: bindElement },
+        { key: 'bindOpts', attr: 'data-bind-opts', fn: binder(CoreUIPatcher.patchOpts) },
+        { key: 'bindSrc', attr: 'data-bind-src', fn: binder(CoreUIPatcher.patchSrc) },
+        { key: 'bindStats', attr: 'data-bind-stats', fn: binder((el, val) => { el.innerHTML = Tpl.Stats.gen(val); }) },
+        { key: 'bindErrs', attr: 'data-bind-errs', fn: binder(CoreUIPatcher.patchErrs) },
+        { key: 'bindFields', attr: 'data-bind-fields', fn: binder((el, val) => {
+          el.innerHTML = Tpl.Form.fields(val);
+          el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
+        }) }
       ];
 
       // --- 単一セレクタによるDOM走査と一括バインド ---
@@ -92,73 +227,15 @@
 
     update() {
       const curPhase = State.get(`${this.stateTarget}.phase`) ?? 1;
-
       (this.schema.elements || []).forEach(def => {
-        const targetEl = document.getElementById(def.id);
-        if (!targetEl) return;
-
-        if (def.visiblePhase !== undefined) {
-          const isVisible = typeof def.visiblePhase === 'function' ? def.visiblePhase(curPhase) : curPhase >= def.visiblePhase;
-          targetEl.style.display = isVisible ? '' : 'none';
-        }
-
-        // 修正: openPhase を先に評価し、閉じる場合は即時反映させてアニメーション競合を避ける
-        if (def.openPhase !== undefined && targetEl.tagName === 'DETAILS') {
-          const isOpen = typeof def.openPhase === 'function' ? def.openPhase(curPhase) : curPhase >= def.openPhase;
-          if (isOpen !== undefined && targetEl.open !== isOpen) {
-            if (isOpen) {
-              setTimeout(() => { targetEl.open = true; }, 200);
-            } else {
-              targetEl.open = false; // 閉じる時は遅延させない
-            }
-          }
-        }
-
-        if (def.activePhase !== undefined || def.disablePhase !== undefined) {
-          const isActive = def.activePhase !== undefined 
-            ? (typeof def.activePhase === 'function' ? def.activePhase(curPhase) : curPhase >= def.activePhase) 
-            : true;
-          const isDis = def.disablePhase !== undefined 
-            ? (typeof def.disablePhase === 'function' ? def.disablePhase(curPhase) : curPhase >= def.disablePhase) 
-            : !isActive; 
-
-          if (targetEl.tagName === 'DETAILS') {
-            targetEl.setAttribute('data-state', isActive ? 'active' : '');
-            if (isDis) targetEl.setAttribute('data-type', 'disabled');
-            else targetEl.removeAttribute('data-type');
-            
-            // --- [追加] 下層フォーム要素への物理的な disabled 強制同期ガード ---
-            targetEl.querySelectorAll('input, select, button, textarea, ob-multi-select').forEach(child => {
-              if (child.tagName === 'OB-MULTI-SELECT') {
-                const sum = child.querySelector('.popover-summary');
-                if (sum) sum.disabled = isDis;
-              }
-              child.disabled = isDis;
-            });
-            // -----------------------------------------------------------------
-          } else {
-            targetEl.disabled = isDis;
-          }
-        }
-
-        if (def.className !== undefined) {
-          const cls = typeof def.className === 'function' ? def.className(curPhase) : def.className;
-          if (targetEl.className !== cls) targetEl.className = cls;
-        }
-
-        if (def.text !== undefined) {
-          const txt = typeof def.text === 'function' ? def.text(curPhase) : def.text;
-          if (targetEl.innerText !== txt) targetEl.innerText = txt;
-        }
-
-        if (def.dataset !== undefined) {
-          const ds = typeof def.dataset === 'function' ? def.dataset(curPhase) : def.dataset;
-          if (ds && typeof ds === 'object') {
-            for (const key in ds) {
-              if (targetEl.dataset[key] !== String(ds[key])) targetEl.dataset[key] = ds[key];
-            }
-          }
-        }
+        const el = document.getElementById(def.id);
+        if (!el) return;
+        CoreUIPatcher.updateVisible(el, def, curPhase);
+        CoreUIPatcher.updateOpen(el, def, curPhase);
+        CoreUIPatcher.updateActiveDis(el, def, curPhase);
+        CoreUIPatcher.updateClass(el, def, curPhase);
+        CoreUIPatcher.updateText(el, def, curPhase);
+        CoreUIPatcher.updateDataset(el, def, curPhase);
       });
     }
   }

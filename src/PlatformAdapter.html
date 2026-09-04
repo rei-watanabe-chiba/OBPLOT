@@ -6,40 +6,40 @@
   const isExcelEnv = typeof Office !== 'undefined';
 
   // --- GAS用 通信API ---
-  class GasService {
-    static #serverCall(funcName, ...args) {
+  class GasSvc {
+    static #srvCall(funcName, ...args) {
       return new Promise((resolve, reject) => {
         google.script.run
-          .withSuccessHandler(r => r?.success ? resolve(r.payload) : reject(new Error(`[${r?.errorType || 'ERR'}] ${r?.message}`)))
+          .withSuccessHandler(r => r?.success ? resolve(r.pld) : reject(new Error(`[${r?.errorType || 'ERR'}] ${r?.msg}`)))
           .withFailureHandler(e => reject(new Error(`[NET_ERR] ${e.message}`)))
           [funcName](...args);
       });
     }
-    static fetchDT(ssId, sht, qCol = null, lCol = null) { return this.#serverCall("fetchDT", ssId, sht, qCol, lCol); }
-    static writeData(ssId, sht, data, opts = "clear") { return this.#serverCall("writeData", ssId, sht, data, opts); }
-    static fetchMultiple(ssId, reqs) { return this.#serverCall("fetchMultiple", ssId, reqs); }
-    static writeMultiple(ssId, reqs) { return this.#serverCall("writeMultiple", ssId, reqs); }
-    static getReportTemplate() { return this.#serverCall("getReportTemplate"); }
-    static getWbState(ssId, targetShts = []) { return this.#serverCall("getWbState", ssId, targetShts); }
-    static buildShts(ssId, buildPlan) { return this.#serverCall("buildShts", ssId, buildPlan); }
+    static pullDT(ssId, sht, qCol = null, lCol = null) { return this.#srvCall("pullDT", ssId, sht, qCol, lCol); }
+    static pushDT(ssId, sht, data, opts = "clear") { return this.#srvCall("pushDT", ssId, sht, data, opts); }
+    static pullMult(ssId, reqs) { return this.#srvCall("pullMult", ssId, reqs); }
+    static pushMult(ssId, reqs) { return this.#srvCall("pushMult", ssId, reqs); }
+    static getReportTemplate() { return this.#srvCall("getReportTemplate"); }
+    static getWbState(ssId, targetShts = []) { return this.#srvCall("getWbState", ssId, targetShts); }
+    static genShts(ssId, buildPlan) { return this.#srvCall("genShts", ssId, buildPlan); }
   }
 
   // --- GAS用 ローカルストレージ ---
-  class LocalStorageAdapter {
+  class LocalStrg {
     static save(key, val) { localStorage.setItem(key, val); }
     static load(key) { return localStorage.getItem(key); }
     static clear(key) { localStorage.removeItem(key); }
   }
 
   // --- Excel用 通信API ---
-  class ExcelAdapter {
+  class ExcelAdpt {
     static async #run(fn) {
       try { return await Excel.run(fn); }
       catch (e) { throw new Error(`[EXCEL_ERR] ${e.message}`); }
     }
     
     // データ取得
-    static async fetchDT(ssId, shtName, qCol = null, lCol = null) {
+    static async pullDT(ssId, shtName, qCol = null, lCol = null) {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
         await ctx.sync();
@@ -51,12 +51,12 @@
         const raw = rng.values;
         if (qCol && raw[0].length < qCol) throw new Error("データ列不足");
         const data = lCol ? raw.map(r => r.slice(0, lCol)) : raw;
-        return { data, message: `取得: ${data.length} 行` };
+        return { data, msg: `取得: ${data.length} 行` };
       });
     }
 
     // データ出力
-    static async writeData(ssId, shtName, data, opts = "clear") {
+    static async pushDT(ssId, shtName, data, opts = "clear") {
       return this.#run(async (ctx) => {
         const sht = ctx.workbook.worksheets.getItemOrNullObject(shtName);
         await ctx.sync();
@@ -80,27 +80,27 @@
       });
     }
 
-    static async fetchMultiple(ssId, reqs) {
+    static async pullMult(ssId, reqs) {
       const results = [];
       for (const req of reqs) {
         try {
-          const res = await this.fetchDT(ssId, req.sht, req.qCol, req.lCol);
-          results.push({ success: true, payload: res });
+          const res = await this.pullDT(ssId, req.sht, req.qCol, req.lCol);
+          results.push({ success: true, pld: res });
         } catch (e) {
-          results.push({ success: false, message: e.message });
+          results.push({ success: false, msg: e.message });
         }
       }
       return results;
     }
 
-    static async writeMultiple(ssId, reqs) {
+    static async pushMult(ssId, reqs) {
       const results = [];
       for (const req of reqs) {
         try {
-          const res = await this.writeData(ssId, req.sht, req.data, req.opts || "clear");
-          results.push({ success: true, payload: res });
+          const res = await this.pushDT(ssId, req.sht, req.data, req.opts || "clear");
+          results.push({ success: true, pld: res });
         } catch (e) {
-          results.push({ success: false, message: e.message });
+          results.push({ success: false, msg: e.message });
         }
       }
       return results;
@@ -144,7 +144,7 @@
     }
 
     // シート動的構築とソート
-    static async buildShts(ssId, buildPlan) {
+    static async genShts(ssId, buildPlan) {
       return this.#run(async (ctx) => {
         const shts = ctx.workbook.worksheets;
         shts.load("items/name");
@@ -175,7 +175,7 @@
   }
 
   // --- Excel用 ストレージ ---
-  class OfficeStorageAdapter {
+  class OfcStrg {
     static save(key, data) {
       try {
         if (Office?.context?.document?.settings) {
@@ -198,6 +198,6 @@
   }
 
   // --- 環境に応じたDI (依存性注入) ---
-  const API = isExcelEnv ? ExcelAdapter : GasService;
-  const StorageAPI = isExcelEnv ? OfficeStorageAdapter : LocalStorageAdapter;
+  const API = isExcelEnv ? ExcelAdpt : GasSvc;
+  const StorageAPI = isExcelEnv ? OfcStrg : LocalStrg;
 </script>

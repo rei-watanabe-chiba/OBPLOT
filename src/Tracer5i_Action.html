@@ -1,101 +1,99 @@
 <!-- src/Tracer5i_Action.html -->
 <script>
-  // --- ENTAction (旧 T1Action: データ読込・抽出) ---
-  class ENTAction {
+  // --- ENTAct (旧 T1Action: データ読込・抽出) ---
+  class ENTAct {
     static get ssId() { return State.get("GLB.ssId"); }
-    static checkPref(tgt) {
+    static valdPref(tgt) {
       const mode = tgt.value;
       if (!mode) return;
       const phs = State.get("ENTST.phase"), isInit = phs === ENT_PHS.INIT, isInvalid = phs >= ENT_PHS.INVALID;
       if (isInvalid) { 
-        const errStat = ["error", "設定変更検知: リストの再生成・検証が必要です"];
-        State.set({ "ENTST.raw.status": errStat, "ENTST.raw.cachedStatus": errStat, "ENTST.extr.status": ["hidden", ""] });
+        const errSts = ["error", "設定変更検知: リストの再生成・検証が必要です"];
+        State.set({ "ENTST.RAW.status": errSts, "ENTST.RAW.cachedStatus": errSts, "ENTST.EXTR.status": ["hidden", ""] });
       }
-      State.set({ "ENTST.pref.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出対応" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "ENTST.phase": isInit ? ENT_PHS.READY : ENT_PHS.INVALID } : {}) });
+      State.set({ "ENTST.PREF.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出対応" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "ENTST.phase": isInit ? ENT_PHS.READY : ENT_PHS.INVALID } : {}) });
     }
-    static checkENTPref(tgt) { return this.checkPref(tgt); }
-    static checkT1Pref(tgt) { return this.checkPref(tgt); }
 
-    static renewRawRefs(tgt) {
-      State.set(`ENTST.raw.refs.${tgt.dataset.field}`, tgt.value);
-      ENTAction.checkRawRefs();
+    static updRawRefs(tgt) {
+      State.set(`ENTST.RAW.refs.${tgt.dataset.field}`, tgt.value);
+      ENTAct.valdRawRefs();
     }
-    static checkRawRefs() {
-      const flags = CoreMethod.Util.validateSelect(GLB.fileFields.map(f => State.get(`ENTST.raw.refs.${f.key}`) ?? ""), 3);
-      State.set({ "ENTST.raw.flags": flags, "ENTST.raw.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("ENTST.raw.cachedStatus") });
+    static valdRawRefs() {
+      const flags = CoreMethod.Util.validateSelect(GLB.fileFields.map(f => State.get(`ENTST.RAW.refs.${f.key}`) ?? ""), 3);
+      State.set({ "ENTST.RAW.flags": flags, "ENTST.RAW.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("ENTST.RAW.cachedStatus") });
     }
-    static checkExtrRefs() {
-      const isErr = !(State.get(`ENTST.extr.refs.${GLB.idx.key1}`)?.trim());
-      State.set("ENTST.extr.flags", [isErr, false, false]);
+    static valdExtrRefs() {
+      const isErr = !(State.get(`ENTST.EXTR.refs.${GLB.idx.key1}`)?.trim());
+      State.set("ENTST.EXTR.flags", [isErr, false, false]);
       if (State.get("ENTST.phase") >= ENT_PHS.VALID) {
-        State.set("ENTST.extr.status", isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""]); 
+        State.set("ENTST.EXTR.status", isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""]); 
       }
     }
     static async loadRaw() {
-      const msg = State.get("ENTST.raw.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？";
-      await CoreAction.withAsync("ENTST.raw.status", msg, async () => {
-        const { data, message } = await API.fetchDT(ENTAction.ssId, GLB.rawShts.file, 5);
+      const promptMsg = State.get("ENTST.RAW.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？";
+      await CoreAct.withAsync("ENTST.RAW.status", promptMsg, async () => {
+        const { data, msg } = await API.pullDT(ENTAct.ssId, GLB.rawShts.file, 5);
         State.set({ 
-          "ENTST.raw.data": data, 
-          "ENTST.raw.refs": Object.fromEntries(GLB.fileFields.map(f => [f.key, ""])), 
-          "ENTST.raw.flags": [true, true, true, false, false], 
-          "ENTST.raw.cachedStatus": ["success", message], 
+          "ENTST.RAW.data": data, 
+          "ENTST.RAW.refs": Object.fromEntries(GLB.fileFields.map(f => [f.key, ""])), 
+          "ENTST.RAW.flags": [true, true, true, false, false], 
+          "ENTST.RAW.cachedStatus": ["success", msg], 
           "ENTST.phase": ENT_PHS.LOAD,
-          "ENTST.extr.status": ["hidden", ""],
-          "ENTST.extr.flags": [true, false, false]
+          "ENTST.EXTR.status": ["hidden", ""],
+          "ENTST.EXTR.flags": [true, false, false]
         });
-        ENTAction.checkRawRefs(); 
-        return State.get("ENTST.raw.status"); 
+        ENTAct.valdRawRefs(); 
+        return State.get("ENTST.RAW.status"); 
       });
     }
     static async stateDI(rawDT, act = "make") {
-      const outData = Mtd.ENT.FVald.valdList(rawDT, CoreMethod.Util.buildHeader('filelist'), GLB.validModes, State.get("ENTST.pref.refs.mode"));
-      const isErr = outData.slice(1).some(r => r.at(-1) !== ""); 
+      const outDT = Mtd.ENT.valdList(rawDT, CoreMethod.Util.genHeader('filelist'), GLB.validModes, State.get("ENTST.PREF.refs.mode"));
+      const isErr = outDT.slice(1).some(r => r.at(-1) !== ""); 
       const statArr = act === "extract"
-        ? (isErr ? ["alert", "抽出中断: リストの再検証が必要です"] : State.get("ENTST.raw.cachedStatus"))
+        ? (isErr ? ["alert", "抽出中断: リストの再検証が必要です"] : State.get("ENTST.RAW.cachedStatus"))
         : [isErr ? "alert" : "success", `${act === "validate" ? "検証" : "リスト生成"}完了: err${isErr ? "あり" : "なし"}`];
       const newPhase = isErr ? ENT_PHS.INVALID : ENT_PHS.VALID;
       State.set({ 
-        "ENTST.raw.cachedStatus": statArr, 
-        "ENTST.raw.status": statArr, 
+        "ENTST.RAW.cachedStatus": statArr, 
+        "ENTST.RAW.status": statArr, 
         "ENTST.phase": newPhase, 
-        ...((isErr || act !== "extract") && { "ENTST.extr.status": ["hidden", ""] }) 
+        ...((isErr || act !== "extract") && { "ENTST.EXTR.status": ["hidden", ""] }) 
       });
-      if (!isErr && act !== "extract") ENTAction.checkExtrRefs();
-      return { isErr, outData, statArr };
+      if (!isErr && act !== "extract") ENTAct.valdExtrRefs();
+      return { isErr, outDT, statArr };
     }
-    static async makeList() {
-      ENTAction.checkRawRefs();
-      const { raw } = State.proxy.ENTST;
-      if (raw.flags.some(Boolean)) return;
-      await CoreAction.withAsync("ENTST.raw.status", "「ファイルリスト」を上書きしますか？", async () => {
-        const { statArr, outData } = await ENTAction.stateDI(CoreMethod.Util.remapArry(raw.data, GLB.fileFields.map(f => raw.refs[f.key] ? raw.data[0].indexOf(raw.refs[f.key]) : -1), CoreMethod.Util.buildHeader('rawFile')), "make");
-        await API.writeData(ENTAction.ssId, GLB.appShts.filelist, outData, "rule");
+    static async genList() {
+      ENTAct.valdRawRefs();
+      const { RAW } = State.proxy.ENTST;
+      if (RAW.flags.some(Boolean)) return;
+      await CoreAct.withAsync("ENTST.RAW.status", "「ファイルリスト」を上書きしますか？", async () => {
+        const { statArr, outDT } = await ENTAct.stateDI(CoreMethod.Util.remapArry(RAW.data, GLB.fileFields.map(f => RAW.refs[f.key] ? RAW.data[0].indexOf(RAW.refs[f.key]) : -1), CoreMethod.Util.genHeader('rawFile')), "make");
+        await API.pushDT(ENTAct.ssId, GLB.appShts.filelist, outDT, "rule");
         return statArr;
       });
     }
     static async valdList() {
-      await CoreAction.withAsync("ENTST.raw.status", "「ファイルリスト」を上書きしますか？", async () => {
-        const { data } = await API.fetchDT(ENTAction.ssId, GLB.appShts.filelist, 5, 5);
-        const { statArr, outData } = await ENTAction.stateDI(data, "validate");
-        await API.writeData(ENTAction.ssId, GLB.appShts.filelist, outData, "rule");
+      await CoreAct.withAsync("ENTST.RAW.status", "「ファイルリスト」を上書きしますか？", async () => {
+        const { data } = await API.pullDT(ENTAct.ssId, GLB.appShts.filelist, 5, 5);
+        const { statArr, outDT } = await ENTAct.stateDI(data, "validate");
+        await API.pushDT(ENTAct.ssId, GLB.appShts.filelist, outDT, "rule");
         return statArr;
       });
     }
     static async runExtr() {
-      await CoreAction.withAsync("ENTST.extr.status", "「抽出データ」を上書きしますか？", async () => {
-        const [fRes, rRes] = await API.fetchMultiple(ENTAction.ssId, [{ sht: GLB.appShts.filelist, qCol: 5, lCol: 5 }, { sht: GLB.rawShts.results }]);
-        if (!fRes.success) throw new Error(fRes.message);
-        if (!rRes.success) throw new Error(rRes.message);
-        const { isErr, outData: validFileDT } = await ENTAction.stateDI(fRes.payload.data, "extract");
+      await CoreAct.withAsync("ENTST.EXTR.status", "「抽出データ」を上書きしますか？", async () => {
+        const [fRes, rRes] = await API.pullMult(ENTAct.ssId, [{ sht: GLB.appShts.filelist, qCol: 5, lCol: 5 }, { sht: GLB.rawShts.results }]);
+        if (!fRes.success) throw new Error(fRes.msg);
+        if (!rRes.success) throw new Error(rRes.msg);
+        const { isErr, outDT: vFileDT } = await ENTAct.stateDI(fRes.pld.data, "extract");
         if (isErr) {
-          await API.writeData(ENTAction.ssId, GLB.appShts.filelist, validFileDT, "rule");
-          return State.get("ENTST.extr.status");
+          await API.pushDT(ENTAct.ssId, GLB.appShts.filelist, vFileDT, "rule");
+          return State.get("ENTST.EXTR.status");
         }
-        const extrDT = Mtd.ENT.Extr.runExtr(validFileDT, rRes.payload.data, State.get("ENTST.extr.refs"));
+        const extrDT = Mtd.ENT.genExtr(vFileDT, rRes.pld.data, State.get("ENTST.EXTR.refs"));
         if (!extrDT || extrDT.length <= 1) throw new Error("対象データなし");
-        await API.writeMultiple(ENTAction.ssId, [
-          { sht: GLB.appShts.filelist, data: validFileDT, opts: "rule" },
+        await API.pushMult(ENTAct.ssId, [
+          { sht: GLB.appShts.filelist, data: vFileDT, opts: "rule" },
           { sht: GLB.appShts.extract, data: extrDT, opts: "clear" }
         ]);
         State.set("ENTST.phase", ENT_PHS.EXTRACT); 
@@ -104,166 +102,163 @@
     }
     static async pushExtr() {
       State.set("GLB.isLocked", true);
-      State.set("ENTST.extr.status", ["loading", "データ確認中..."]);
-      let extrRes, trcRes, checkRes;
+      State.set("ENTST.EXTR.status", ["loading", "データ確認中..."]);
+      let chkRes, extDT;
       try {
-        const [eRes, tRes] = await API.fetchMultiple(ENTAction.ssId, [{ sht: GLB.appShts.extract }, { sht: GLB.rawShts.tracer5i }]);
-        if (!eRes.success) throw new Error(eRes.message);
-        extrRes = eRes.payload;
-        trcRes = tRes.success ? tRes.payload : { data: [CoreMethod.Util.buildHeader('tracer5i')] };
-        checkRes = Mtd.ENT.PVald.checkPxrf(trcRes.data, extrRes.data);
+        const [eData, tData] = await CoreAct.ensureFetch(ENTAct.ssId, [GLB.appShts.extract, GLB.rawShts.tracer5i]);
+        if (!eData || eData.length <= 1) throw new Error("抽出データ不在");
+        extDT = eData;
+        const trcDT = tData || [CoreMethod.Util.genHeader('tracer5i')];
+        chkRes = Mtd.ENT.valdPxrf(trcDT, extDT);
       } catch (e) {
-        State.set("ENTST.extr.status", ["error", e.message]);
+        State.set("ENTST.EXTR.status", ["error", e.message]);
         State.set("GLB.isLocked", false);
         return;
       }
       State.set("GLB.isLocked", false);
-      const msg = checkRes.isDup ? "重複IDがあります。上書き格納しますか？" : "tracer5iシートに格納しますか？";
-      await CoreAction.withAsync("ENTST.extr.status", msg, async () => {
-        await API.writeData(ENTAction.ssId, GLB.rawShts.tracer5i, checkRes.isDup ? checkRes.data : extrRes.data.slice(1), checkRes.isDup ? "clear" : ["append"]);
+      const msg = chkRes.isDup ? "重複IDがあります。上書き格納しますか？" : "tracer5iシートに格納しますか？";
+      await CoreAct.withAsync("ENTST.EXTR.status", msg, async () => {
+        await API.pushDT(ENTAct.ssId, GLB.rawShts.tracer5i, chkRes.isDup ? chkRes.data : extDT.slice(1), chkRes.isDup ? "clear" : ["append"]);
         State.set("ENTST.phase", ENT_PHS.OUTPUT); 
-        return `格納完了: ${extrRes.data.length - 1} 件`;
+        return `格納完了: ${extDT.length - 1} 件`;
       });
     }
   }
 
-  // --- ADPAction (旧 T2Action: グラフ作成・分析) ---
-  class ADPAction {
+  // --- ADPAct (旧 T2Action: グラフ作成・分析) ---
+  class ADPAct {
     static get ssId() { return State.get("GLB.ssId"); }
     static async loadDB() {
-      await CoreAction.withAsync("ADPST.asgn.status", async () => {
-        const [pRes, wRes, cRes] = await API.fetchMultiple(ADPAction.ssId, [{ sht: GLB.rawShts.tracer5i }, { sht: GLB.rawShts.wdxrf }, { sht: GLB.appShts.crct }]);
-        const pData = pRes.success ? pRes.payload.data : null;
-        const wData = wRes.success ? wRes.payload.data : null;
-        const cData = cRes.success ? cRes.payload.data : [];
+      await CoreAct.withAsync("ADPST.ASGN.status", async () => {
+        const [pData, wData, cData] = await CoreAct.ensureFetch(ADPAct.ssId, [GLB.rawShts.tracer5i, GLB.rawShts.wdxrf, GLB.appShts.crct]);
         if (!pData || pData.length <= 1) throw new Error("tracer5i不足");
         if (!wData || wData.length <= 1) throw new Error("WDXRF不足");
-        State.reset(['ADPST.asgn', 'ADPST.symb', 'ADPST.calb', 'ADPST.prev', 'ADPST.stdz']);
-        const { pxrfDT: wrapPXRF, wdxrfDT: wrapWDXRF, dbs } = CoreMethod.Util.buildDB(pData, wData, { mixWD: true });
-        State.set({ "ADPST.asgn.data.wrapPXRF": wrapPXRF, "ADPST.asgn.data.wrapWDXRF": wrapWDXRF, "ADPST.asgn.data.crctDT": cData, "ADPST.asgn.refs.available": dbs, "ADPST.asgn.refs.filter": dbs, "ADPST.phase": ADP_PHS.LOADED, "ADPST.calb.refs.modeMap": [...GLB.optElms], "ADPST.calb.refs.calElms": [...GLB.valElms], "ADPST.stdz.refs.modeMap": [...GLB.optElms] });
+        State.reset(['ADPST.ASGN', 'ADPST.SYMB', 'ADPST.CALB', 'ADPST.PREV', 'ADPST.STDZ']);
+        const { pxrfDT: wrapPXRF, wdxrfDT: wrapWDXRF, dbs } = CoreMethod.Util.genDB(pData, wData, { mixWD: true });
+        State.set({ "ADPST.ASGN.data.wrapPXRF": wrapPXRF, "ADPST.ASGN.data.wrapWDXRF": wrapWDXRF, "ADPST.ASGN.data.crctDT": cData || [], "ADPST.ASGN.refs.available": dbs, "ADPST.ASGN.refs.filter": dbs, "ADPST.phase": ADP_PHS.LOADED, "ADPST.CALB.refs.modeMap": [...GLB.optElms], "ADPST.CALB.refs.calElms": [...GLB.valElms], "ADPST.STDZ.refs.modeMap": [...GLB.optElms] });
         return `読込完了: database ${dbs.length}件`;
       });
     }
     static async fltrDB() {
-      await CoreAction.withAsync("ADPST.asgn.status", async () => {
-        const { asgn } = State.proxy.ADPST;
-        if (!asgn.refs.filter?.length) throw new Error("DB未選択");
-        State.reset(['ADPST.symb', 'ADPST.calb', 'ADPST.prev', 'ADPST.stdz']);
-        const { pxrfDT, wdxrfDT } = CoreMethod.Util.fltrDB(asgn.data.wrapPXRF, asgn.data.wrapWDXRF, asgn.refs.filter, true);
-        State.set({ "ADPST.asgn.data.pxrfDT": pxrfDT, "ADPST.asgn.data.wdxrfDT": wdxrfDT, "ADPST.phase": ADP_PHS.FILTERED }); return "データ更新";
+      await CoreAct.withAsync("ADPST.ASGN.status", async () => {
+        const { ASGN } = State.proxy.ADPST;
+        if (!ASGN.refs.filter?.length) throw new Error("DB未選択");
+        State.reset(['ADPST.SYMB', 'ADPST.CALB', 'ADPST.PREV', 'ADPST.STDZ']);
+        const { pxrfDT, wdxrfDT } = CoreMethod.Util.fltrDB(ASGN.data.wrapPXRF, ASGN.data.wrapWDXRF, ASGN.refs.filter, true);
+        State.set({ "ADPST.ASGN.data.pxrfDT": pxrfDT, "ADPST.ASGN.data.wdxrfDT": wdxrfDT, "ADPST.phase": ADP_PHS.FILTERED }); return "データ更新";
       });
     }
     static async setSymb() { 
-      await CoreAction.withAsync("ADPST.symb.status", async () => { 
+      await CoreAct.withAsync("ADPST.SYMB.status", async () => { 
         State.set({
           "ADPST.phase": ADP_PHS.MAPPED,
-          "ADPST.prev.status": ["message", "データと検量線のプレビュー"],
-          "ADPST.stdz.status": ["message", "検量線と標準pXRFデータの出力"]
+          "ADPST.PREV.status": ["message", "データと検量線のプレビュー"],
+          "ADPST.STDZ.status": ["message", "検量線と標準pXRFデータの出力"]
         }); 
         return "シンボル確定"; 
       }); 
     }
-    static async resetSymb() { State.reset("ADPST.symb.refs.rls"); }
-    static async checkAxis(tgtSelect) {
-      const newVal = tgtSelect.value, oldVal = State.get("ADPST.symb.refs.baseKey");
+    static async resetSymb() { State.reset("ADPST.SYMB.refs.rls"); }
+    static async valdAxis(tgtSelect) {
+      const newVal = tgtSelect.value, oldVal = State.get("ADPST.SYMB.refs.baseKey");
       if (newVal === oldVal) return;
-      const isConfirmed = await CoreAction.withAsync("ADPST.symb.status", { title: "警告", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
-        State.set({ "ADPST.symb.refs.baseKey": newVal }); 
-        State.reset("ADPST.symb.refs.rls");
+      const isConfirmed = await CoreAct.withAsync("ADPST.SYMB.status", { title: "警告", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
+        State.set({ "ADPST.SYMB.refs.baseKey": newVal }); 
+        State.reset("ADPST.SYMB.refs.rls");
         return ["hidden", ""];
       });
       if (!isConfirmed) {
         tgtSelect.value = oldVal;
       }
     }
-    static addSymb() { State.set("ADPST.symb.refs.rls", [...(State.get("ADPST.symb.refs.rls") ?? []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
+    static addSymb() { State.set("ADPST.SYMB.refs.rls", [...(State.get("ADPST.SYMB.refs.rls") ?? []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
     static removeSymb(tgtBtn) {
       const key = tgtBtn.dataset.ruleKey;
-      if (key) State.set("ADPST.symb.refs.rls", (State.get("ADPST.symb.refs.rls") ?? []).filter(r => r.key !== key));
+      if (key) State.set("ADPST.SYMB.refs.rls", (State.get("ADPST.SYMB.refs.rls") ?? []).filter(r => r.key !== key));
     }
-    static renewSymb(tgtBtn) {
+    static updSymb(tgtBtn) {
       const idx = tgtBtn.dataset.symbolIdx, type = tgtBtn.dataset.symbolType;
       if (idx == null || !type) return;
-      const rls = [...(State.get("ADPST.symb.refs.rls") ?? [])];
-      if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("ADPST.symb.refs.rls", rls); }
+      const rls = [...(State.get("ADPST.SYMB.refs.rls") ?? [])];
+      if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("ADPST.SYMB.refs.rls", rls); }
     }
-    static async buildPrev() {
-      await CoreAction.withAsync("ADPST.prev.status", async () => {
-        const { prev, calb, asgn, symb } = State.proxy.ADPST;
-        const conf = { ...prev.refs, ...calb.refs, crctDT: asgn.data.crctDT, graphType: 'calibration', calibVal: prev.refs.val }; 
-        const { prevDT, statsDT } = CHARTDT.generateChartData(asgn.data.pxrfDT, asgn.data.wdxrfDT, conf);
+    static async genPrev() {
+      await CoreAct.withAsync("ADPST.PREV.status", async () => {
+        const { PREV, CALB, ASGN, SYMB } = State.proxy.ADPST;
+        const conf = { ...PREV.refs, ...CALB.refs, crctDT: ASGN.data.crctDT, graphType: 'calibration', calbVal: PREV.refs.val }; 
+        const { prevDT, statsDT } = CHARTDT.generateChartData(ASGN.data.pxrfDT, ASGN.data.wdxrfDT, conf);
         if (!prevDT.length) throw new Error("対象データなし");
         State.set({ 
-          "ADPST.prev.data.crctLogic": statsDT, 
-          "ADPST.prev.data.statsDT": statsDT, 
-          "ADPST.prev.data.prevDT": prevDT,
-          "ADPST.prev.data.chartSrc": { prevDT, statsDT, symb: symb.refs },
+          "ADPST.PREV.data.crctLogic": statsDT, 
+          "ADPST.PREV.data.statsDT": statsDT, 
+          "ADPST.PREV.data.prevDT": prevDT,
+          "ADPST.PREV.data.chartSrc": { prevDT, statsDT, symb: SYMB.refs },
           "ADPST.phase": ADP_PHS.PREVIEWED 
         }); 
         return ["message", "データと検量線のプレビュー"];
       });
     }
-    static async saveCrct() {
-      const idxName = State.get("ADPST.stdz.refs.saveIndexName")?.trim();
-      if (!idxName) { State.set("ADPST.stdz.status", ["error", "名前が未入力です"]); return; }
-      const { asgn, stdz } = State.proxy.ADPST;
-      const isDup = asgn.data.crctDT?.slice(1).some(r => r[0] === idxName);
-      const msg = isDup ? `全対象元素の検量線を上書きしますか？\n名前：${idxName}` : `全対象元素の検量線を出力しますか？\n名前：${idxName}`;
-      await CoreAction.withAsync("ADPST.stdz.status", msg, async () => {
-        const newRow = Mtd.ADP.mgmStdz.calcAllCalib(asgn.data.pxrfDT, asgn.data.wdxrfDT, stdz.refs, idxName);
-        let updData = asgn.data.crctDT?.length ? [...asgn.data.crctDT] : [CoreMethod.Util.buildHeader('crct')];
-        if (isDup) updData[updData.findIndex(r => r[0] === idxName)] = newRow; else updData.push(newRow);
-        await API.writeData(ADPAction.ssId, GLB.appShts.crct, isDup ? updData : (asgn.data.crctDT?.length ? [newRow] : updData), (isDup || !asgn.data.crctDT?.length) ? "clear" : ["append"]);
-        State.set({ "ADPST.asgn.data.crctDT": updData, "ADPST.stdz.refs.saveIndexName": "" }); 
+    static async pushCrct() {
+      const idxNm = State.get("ADPST.STDZ.refs.saveIndexName")?.trim();
+      if (!idxNm) { State.set("ADPST.STDZ.status", ["error", "名前が未入力です"]); return; }
+      const { ASGN, STDZ } = State.proxy.ADPST;
+      const isDup = ASGN.data.crctDT?.slice(1).some(r => r[0] === idxNm);
+      const msg = isDup ? `全対象元素の検量線を上書きしますか？\n名前：${idxNm}` : `全対象元素の検量線を出力しますか？\n名前：${idxNm}`;
+      await CoreAct.withAsync("ADPST.STDZ.status", msg, async () => {
+        const newRow = Mtd.ADP.genCALB(ASGN.data.pxrfDT, ASGN.data.wdxrfDT, STDZ.refs, idxNm);
+        let updDT = ASGN.data.crctDT?.length ? [...ASGN.data.crctDT] : [CoreMethod.Util.genHeader('crct')];
+        if (isDup) updDT[updDT.findIndex(r => r[0] === idxNm)] = newRow; else updDT.push(newRow);
+        await API.pushDT(ADPAct.ssId, GLB.appShts.crct, isDup ? updDT : (ASGN.data.crctDT?.length ? [newRow] : updDT), (isDup || !ASGN.data.crctDT?.length) ? "clear" : ["append"]);
+        State.set({ "ADPST.ASGN.data.crctDT": updDT, "ADPST.STDZ.refs.saveIndexName": "" }); 
         return `補正値を${isDup ? '上書き' : '保存'}しました`;
       });
     }
     static async pushStdz() {
-      await CoreAction.withAsync("ADPST.stdz.status", "PXRFシートに出力しますか？", async () => {
-        const { asgn, stdz } = State.proxy.ADPST;
-        const outData = Mtd.ADP.mgmStdz.genNewPxrf(asgn.data.pxrfDT, stdz.refs.modeMap);
-        await API.writeData(ADPAction.ssId, GLB.appShts.pxrf, outData, "clear");
+      await CoreAct.withAsync("ADPST.STDZ.status", "PXRFシートに出力しますか？", async () => {
+        const { ASGN, STDZ } = State.proxy.ADPST;
+        const outDT = Mtd.ADP.genNewPxrf(ASGN.data.pxrfDT, STDZ.refs.modeMap);
+        await API.pushDT(ADPAct.ssId, GLB.appShts.pxrf, outDT, "clear");
         return "PXRFシートの出力を完了しました";
       });
     }
     static renewADPState() {
-      const baseDT = State.get("ADPST.asgn.data.pxrfDT");
-      const baseKey = State.get("ADPST.symb.refs.baseKey");
-      const rls = State.get("ADPST.symb.refs.rls");
+      const baseDT = State.get("ADPST.ASGN.data.pxrfDT");
+      const baseKey = State.get("ADPST.SYMB.refs.baseKey");
+      const rls = State.get("ADPST.SYMB.refs.rls");
       if (baseDT?.length) {
         const items = [...new Set(baseDT.map(d => d[GLB.idx.p1]).filter(Boolean))];
         State.set({
-          "ADPST.asgn.refs.availableItems": items,
-          "ADPST.prev.refs.itemMap": State.get("ADPST.prev.refs.itemMap")?.length ? State.get("ADPST.prev.refs.itemMap") : items,
-          "ADPST.stdz.refs.itemMap": State.get("ADPST.stdz.refs.itemMap")?.length ? State.get("ADPST.stdz.refs.itemMap") : items
+          "ADPST.ASGN.refs.availableItems": items,
+          "ADPST.PREV.refs.itemMap": State.get("ADPST.PREV.refs.itemMap")?.length ? State.get("ADPST.PREV.refs.itemMap") : items,
+          "ADPST.STDZ.refs.itemMap": State.get("ADPST.STDZ.refs.itemMap")?.length ? State.get("ADPST.STDZ.refs.itemMap") : items
         });
         const vals = [...new Set(baseDT.map(d => d[baseKey]).filter(Boolean))];
-        State.set("ADPST.symb.data.src", {
+        State.set("ADPST.SYMB.data.src", {
           rls: rls,
           optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors },
-          actsConf: { add: "ADPAction.addSymb", remove: "ADPAction.removeSymb", update: "ADPAction.renewSymb"}
+          actsConf: { add: "ADPAct.addSymb", remove: "ADPAct.removeSymb", update: "ADPAct.updSymb"}
         });
       } else {
-        State.set({ "ADPST.asgn.refs.availableItems": [], "ADPST.symb.data.src": null });
+        State.set({ "ADPST.ASGN.refs.availableItems": [], "ADPST.SYMB.data.src": null });
       }
     }
   }
 
-  window.ENTAction = ENTAction;
-  window.ADPAction = ADPAction;
+  window.ENTAct = ENTAct;
+  window.ADPAct = ADPAct;
   // 互換用エイリアス
-  window.T2Action = ADPAction; // 互換用エイリアス
+  window.T2Action = ADPAct; // 互換用エイリアス
 
-  // --- AppTracerInit ---
-  class AppTracerInit {
+  // --- TrcInit ---
+  class TrcInit {
     static async start() {
       const urlParams = new URLSearchParams(window.location.search);
-      const activeMode = window.__APP_MODE__ || urlParams.get('mode') || 'entry';
-      CoreAction.rootGLB({ CoreAction, ENTAction, ADPAction, });
-      CoreAction.configResolver = (tabId) => {
+      const actMode = window.__APP_MODE__ || urlParams.get('mode') || 'entry';
+      CoreAct.rootGLB({ CoreAct, ENTAct, ADPAct, });
+      CoreAct.cfgRslv = (tabId) => {
         return (tabId === 'ent' || tabId === 'entry')
-          ? { schemaKey: 'ent', statPath: 'ENTST.pref.status', schema: ENT_SCHEMA }
-          : { schemaKey: 'adp', statPath: 'ADPST.asgn.status', schema: ADP_SCHEMA, persistPaths: ADP_SCHEMA.persistPaths };
+          ? { schemaKey: 'ent', statPath: 'ENTST.PREF.status', schema: ENT_SCHEMA }
+          : { schemaKey: 'adp', statPath: 'ADPST.ASGN.status', schema: ADP_SCHEMA, persistPaths: ADP_SCHEMA.persistPaths };
       };
       const automatorENT = new CoreUI(ENT_SCHEMA, 'ENTST');
       const automatorADP = new CoreUI(ADP_SCHEMA, 'ADPST');
@@ -272,37 +267,37 @@
       State.subscribe("ENTST.phase", () => automatorENT.update());
       State.subscribe("ADPST.phase", () => automatorADP.update());
       // フラグ変更でUI更新
-      State.subscribe("ENTST.raw.flags", () => automatorENT.update());
-      State.subscribe("ENTST.extr.flags", () => automatorENT.update());
+      State.subscribe("ENTST.RAW.flags", () => automatorENT.update());
+      State.subscribe("ENTST.EXTR.flags", () => automatorENT.update());
       State.subscribe("GLB.isLocked", () => {
         automatorENT.update();
         automatorADP.update();
       });
       // 派生状態の自動更新
-      State.subscribe(`ENTST.extr.refs.${GLB.idx.key1}`, () => ENTAction.checkExtrRefs());
-      State.subscribe("ENTST.raw.data", data => {
-        if (data?.[0]) State.set("ENTST.raw.data.fields", GLB.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "ENTAction.renewRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })));
-        else State.set("ENTST.raw.data.fields", []);
+      State.subscribe(`ENTST.EXTR.refs.${GLB.idx.key1}`, () => ENTAct.valdExtrRefs());
+      State.subscribe("ENTST.RAW.data", data => {
+        if (data?.[0]) State.set("ENTST.RAW.data.fields", GLB.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "ENTAct.updRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })));
+        else State.set("ENTST.RAW.data.fields", []);
       });
-      State.subscribe("ADPST.asgn.data.crctDT", data => {
+      State.subscribe("ADPST.ASGN.data.crctDT", data => {
         if (!data) return;
         const opts = [{ label: "新規検量線", val: "new" }, ...data.slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
-        State.set("ADPST.calb.data.crctFields", [{ type: "select", bind: "ADPST.calb.refs.crct", hasEmpty: false, opts: opts }]);
+        State.set("ADPST.CALB.data.crctFields", [{ type: "select", bind: "ADPST.CALB.refs.crct", hasEmpty: false, opts: opts }]);
       });
-      State.subscribe("ADPST.asgn.data.pxrfDT", () => ADPAction.renewADPState());
-      State.subscribe("ADPST.symb.refs.baseKey", () => ADPAction.renewADPState());
-      State.subscribe("ADPST.symb.refs.rls", () => ADPAction.renewADPState());
+      State.subscribe("ADPST.ASGN.data.pxrfDT", () => ADPAct.renewADPState());
+      State.subscribe("ADPST.SYMB.refs.baseKey", () => ADPAct.renewADPState());
+      State.subscribe("ADPST.SYMB.refs.rls", () => ADPAct.renewADPState());
       const hooks = {
         onBeforeInit: async (isSwitch, bu) => {
           if ((State.get("GLB.activeTab") === "adp" || State.get("GLB.activeTab") === "adapter") && !isSwitch && bu) {
-             if (await CoreAction.confirm("復元", "前回の作業状態を復元しますか？")) {
-                await ADPAction.loadDB();
+             if (await CoreAct.confirm("復元", "前回の作業状態を復元しますか？")) {
+                await ADPAct.loadDB();
                 if (State.get("ADPST.phase") >= ADP_PHS.LOADED) {
-                  CoreMakeBU.restore(bu, ["ADPST.asgn.refs.*"]);
+                  CoreMakeBU.restore(bu, ["ADPST.ASGN.refs.*"]);
                   if (bu.phase >= ADP_PHS.FILTERED) {
-                     await ADPAction.fltrDB();
-                     CoreMakeBU.restore(bu, ["ADPST.symb.refs.*", "ADPST.calb.refs.*", "ADPST.prev.refs.*", "ADPST.stdz.refs.*"]);
-                     if (bu.phase >= ADP_PHS.PREVIEWED) await ADPAction.buildPrev();
+                     await ADPAct.fltrDB();
+                     CoreMakeBU.restore(bu, ["ADPST.SYMB.refs.*", "ADPST.CALB.refs.*", "ADPST.PREV.refs.*", "ADPST.STDZ.refs.*"]);
+                     if (bu.phase >= ADP_PHS.PREVIEWED) await ADPAct.genPrev();
                   }
                   CoreMakeBU.restore(bu, ["ADPST.*.status"]);
                 }
@@ -311,11 +306,11 @@
         }
       };
       const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";
-      CoreAction.activateTabUI(activeMode);
-      const initConfig = CoreAction.configResolver(activeMode);
-      await CoreAction.startSession(ssId, false, hooks, initConfig);
+      CoreAct.actvTab(actMode);
+      const initCfg = CoreAct.cfgRslv(actMode);
+      await CoreAct.startSession(ssId, false, hooks, initCfg);
     }
   }
-  if (typeof Office !== 'undefined') { Office.onReady(() => AppTracerInit.start()); } 
-  else { if (document.readyState === 'loading') { window.addEventListener("DOMContentLoaded", () => AppTracerInit.start()); } else { AppTracerInit.start(); } }
+  if (typeof Office !== 'undefined') { Office.onReady(() => TrcInit.start()); } 
+  else { if (document.readyState === 'loading') { window.addEventListener("DOMContentLoaded", () => TrcInit.start()); } else { TrcInit.start(); } }
 </script>

@@ -376,7 +376,7 @@
       &[data-status="error"], &[data-status="alert"] { --status-color: var(--main-red); }
     }
     /* --- ポップオーバー --- */
-    ob-popover {
+    ui-pop, .ui-pop {
       display: block;
       box-sizing: border-box;
       width: 100%;
@@ -406,12 +406,12 @@
       max-width: fit-content;
       max-height: calc(var(--unit) * 40);
     }
-    /* --- ob-multi-select --- */
-    ob-multi-select {
+    /* --- ui-mselect --- */
+    ui-mselect, [data-ui="mselect"] {
       display: block;
       margin: var(--unit) 0;
     }
-    ob-multi-select .popover-summary {
+    ui-mselect .popover-summary, [data-ui="mselect"] .popover-summary {
       height: var(--control-height);
       width: 100%;
       display: grid;
@@ -421,7 +421,7 @@
       font-weight: normal;
       &:hover { background-color: var(--bg-color-hover); }
     }
-    /* --- ob-symbol-table --- */
+    /* --- ui-symbtbl --- */
     .single-summary {
       height: calc(var(--unit) * 7);
       padding: var(--unit) calc(var(--unit) * 1.5);

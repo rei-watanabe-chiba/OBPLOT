@@ -1,115 +1,6 @@
 <!-- src/Component.html -->
 <script>
-  // --- DOM構築 ---
-  class NewDOM {
-    static inputs(ref, errFlags) {
-      const elm = typeof ref === "string" ? document.getElementById(ref) : ref;
-      elm?.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!errFlags?.[idx]));
-    }
-    static buildFormFields(confArr, ref, isClear = false) {
-      const cntr = typeof ref === "string" ? document.getElementById(ref) : ref;
-      if (!cntr || (!isClear && cntr.hasChildNodes())) return;
-      cntr.innerHTML = Tpl.Form.fields(confArr);
-    }
-    static buildStats(statsDT, ref) {
-      const cntr = typeof ref === "string" ? document.getElementById(ref) : ref;
-      if (!cntr) return;
-      if (!statsDT) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
-      const rows = CoreMethod.Util.buildStats(statsDT);
-      if (!rows.length) return cntr.innerHTML = '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
-      cntr.innerHTML = Tpl.Stats.cntr(rows.map(([label, val]) => Tpl.Stats.row(label, val)).join(''));
-    }
-  }
 
-  // --- ObDialog (宣言的UIダイアログ) ---
-  class ObDialog extends HTMLElement {
-    connectedCallback() {
-      this.innerHTML = Tpl.Dialog.universal();
-      State.subscribe("GLB.dialog", (dlg) => this.render(dlg));
-    }
-    render(dlg) {
-      if (!dlg) return;
-      const dialogEl = this.querySelector('dialog');
-      if (!dialogEl) return;
-      
-      if (dlg.isOpen) {
-        this.querySelector('.d-title').innerText = dlg.title || (dlg.type === 'toast' ? '通知' : '確認');
-        this.querySelector('.d-msg').innerText = dlg.message || '';
-        const cancelBtn = this.querySelector('.d-cancel');
-        if (cancelBtn) cancelBtn.style.display = dlg.type === 'toast' ? 'none' : '';
-        if (!dialogEl.open) dialogEl.showModal();
-      } else {
-        if (dialogEl.open) dialogEl.close();
-      }
-    }
-  }
-  
-  // --- ObPopover (ライフサイクル保護改修版) ---
-  class ObPopover extends HTMLElement {
-    #uid = null;
-    connectedCallback() {
-      // 既存IDまたは初回生成IDを固定保持し、再接続時のID変動を防ぐ
-      this.#uid ??= (this.id || `pop_${Math.random().toString(36).substring(2, 9)}`);
-      
-      queueMicrotask(() => {
-        const sum = this.querySelector('.popover-summary'), cnt = this.querySelector('.popover-content');
-        if (!sum || !cnt) return;
-        const anchorName = `--anchor-${this.#uid}`;
-        sum.setAttribute('popovertarget', this.#uid); sum.style.anchorName = anchorName;
-        cnt.id = this.#uid; cnt.setAttribute('popover', 'auto'); cnt.style.positionAnchor = anchorName;
-      });
-    }
-  }
-
-  // --- ObMultiSelect ---
-  class ObMultiSelect extends HTMLElement {
-    #dataChangeItem; #dataChangeAll;
-    connectedCallback() {
-      this.#dataChangeItem = this.dataset.changeItem; this.#dataChangeAll = this.dataset.changeAll;
-      this.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "cb-container");
-    }
-    set opts(arr) {
-      const cntr = this.querySelector('.popover-content');
-      if (!cntr) return;
-      if (!arr?.length) return (cntr.innerHTML = '<div class="txt-btninfo">データなし</div>');
-      cntr.innerHTML = (this.#dataChangeAll ? Tpl.MultiSelect.selectAll(this.#dataChangeAll) : '') + arr.map(item => Tpl.MultiSelect.item(item, this.#dataChangeItem)).join('');
-    }
-    set refs(vals) {
-      const sum = this.querySelector('.popover-summary');
-      if (sum) sum.innerHTML = vals?.length ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>` : '<span style="color:var(--grey400)">未選択</span>';
-      const cbs = this.querySelectorAll('.dataset-cb');
-      cbs.forEach(cb => cb.checked = Array.isArray(vals) && vals.includes(cb.value));
-      const allCb = this.querySelector('.select-all-cb');
-      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
-    }
-  }
-
-  // --- ObSymbolTable ---
-  class ObSymbolTable extends HTMLElement {
-    #src = null;
-    static #COLS = [{ key: 'target', className: 'symb-col-target', hasClr: false }, { key: 'shp', className: 'symb-col-shape', hasClr: false }, { key: 'clr', className: 'symb-col-color', hasClr: true }];
-    set src(val) { this.#src = val; this.#render(); }
-    clear() { this.#src = null; this.replaceChildren(); }
-    #buildSelectHtml(opts, curVal, type, idx, hasClr, actsConf) {
-      let curLbl = "未選択", curClr = "";
-      const itemsHtml = opts.map(opt => {
-        if (opt.val === curVal) { curLbl = opt.label; curClr = opt.val; }
-        return Tpl.Symbol.item(opt, type, idx, hasClr, actsConf.update);
-      }).join('');
-      return Tpl.Common.popover(Tpl.Symbol.sum(curLbl, curClr, hasClr, curVal), itemsHtml, "single-summary", "");
-    }
-    #render() {
-      const { rls, optsConf, actsConf } = this.#src || {};
-      if (!rls?.length || !optsConf) return this.clear();
-      this.innerHTML = [...rls, { isAddRow: true }].map((rl, idx) => {
-        if (rl.isAddRow) return Tpl.Symbol.addRow(actsConf.add, ObSymbolTable.#COLS);
-        const isDef = rl.key === "default";
-        const btnHtml = Tpl.Symbol.btn(actsConf.remove, rl.key, "-", isDef);
-        const colsHtml = ObSymbolTable.#COLS.map(col => Tpl.Symbol.col(col.className, (col.key === 'target' && isDef) ? '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>' : this.#buildSelectHtml(optsConf[col.key], rl[col.key], col.key, idx, col.hasClr, actsConf))).join('');
-        return Tpl.Symbol.row(btnHtml, colsHtml);
-      }).join('');
-    }
-  }
 
   // --- Tpl ---
   const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
@@ -150,14 +41,19 @@
       }
     };
     static Common = class {
-      static popover(sumHtml, cntHtml, sumCls = "", cntCls = "") { return html`<ob-popover><button type="button" class="popover-summary ${sumCls}">${sumHtml}</button><div class="popover-content scroll-y ${cntCls}">${cntHtml}</div></ob-popover>`; }
+      static popover(sumHtml, cntHtml, sumCls = "", cntCls = "", customId = null) {
+        const uid = customId || `pop_${Math.random().toString(36).substring(2, 9)}`;
+        const anchorName = `--anchor-${uid}`;
+        return html`<div class="ui-pop"><button type="button" class="popover-summary ${sumCls}" popovertarget="${uid}" style="anchor-name: ${anchorName};">${sumHtml}</button><div id="${uid}" popover="auto" class="popover-content scroll-y ${cntCls}" style="position-anchor: ${anchorName};">${cntHtml}</div></div>`;
+      }
       static colorBox(clr) { return clr ? html`<span class="color-box" style="background: ${clr}"></span>` : ""; }
       static badge(val) { return html`<span class="badge">${val}</span>`; }
     };
     static Dialog = class {
       static universal() { 
-        return html`<dialog class="universal-dialog"><h3 class="d-title"></h3><p class="d-msg" style="white-space: pre-wrap;"></p><div class="field-row"><button class="d-cancel outline" data-type="primary" data-action="CoreAction.closeDialog" data-result="false">キャンセル</button><button class="d-ok" data-type="primary" data-action="CoreAction.closeDialog" data-result="true">OK</button></div></dialog>`; 
+        return html`<dialog class="universal-dialog"><h3 class="d-title"></h3><p class="d-msg" style="white-space: pre-wrap;"></p><div class="field-row"><button class="d-cancel outline" data-type="primary" data-action="CoreAct.closeDlg" data-result="false">キャンセル</button><button class="d-ok" data-type="primary" data-action="CoreAct.closeDlg" data-result="true">OK</button></div></dialog>`; 
       }
+      static genHtml() { return this.universal(); }
     };
     static Toggle = class {
       static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
@@ -165,21 +61,56 @@
     static Stats = class {
       static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
       static cntr(rowsHtml) { return html`<div class="stats-container"><div class="stats-grid">${rowsHtml}</div></div>`; }
+      static gen(statsDT) {
+        if (!statsDT) return '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
+        const rows = CoreMethod.Util.buildStats(statsDT);
+        if (!rows.length) return '<div class="txt-btninfo" style="padding:16px;">有効なデータが不足しています（計算不能）</div>';
+        return this.cntr(rows.map(([label, val]) => this.row(label, val)).join(''));
+      }
     };
     static MultiSelect = class {
       static item(val, dataChange) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }
       static selectAll(dataChange) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked><span>すべて選択</span></label>`; }
     };
     static Symbol = class {
+      static COLS = [
+        { key: 'target', className: 'symb-col-target', hasClr: false },
+        { key: 'shp', className: 'symb-col-shape', hasClr: false },
+        { key: 'clr', className: 'symb-col-color', hasClr: true }
+      ];
       static sum(label, clr, hasClr, hasVal) { return html`${(hasClr && hasVal) ? Tpl.Common.colorBox(clr) : ""}${label}`; }
       static item(opt, type, idx, hasClr, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-symbol-idx="${idx}" data-symbol-type="${type}" value="${opt.val}" popovertargetaction="hide">${hasClr ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
       static btn(action, key, text, dis) { return html`<button type="button" class="icon-btn" data-action="${action}" ${key ? html`data-rule-key="${key}"` : ""} ${dis ? "disabled" : ""}>${text}</button>`; }
       static col(clsName, cntHtml) { return html`<div class="${clsName}">${cntHtml}</div>`; }
       static row(btnHtml, colsHtml) { return html`<div class="symb-table-row"><div class="symb-col-btn">${btnHtml}</div>${colsHtml}</div>`; }
       static addRow(actionAdd, colsArr) { return this.row(this.btn(actionAdd, "", "+", false), colsArr.map(c => this.col(c.className, "")).join('')); }
+      static genSel(opts, curVal, type, idx, hasClr, actsConf) {
+        let curLbl = "未選択", curClr = "";
+        const itemsHtml = (opts || []).map(opt => {
+          if (opt.val === curVal) { curLbl = opt.label; curClr = opt.val; }
+          return Tpl.Symbol.item(opt, type, idx, hasClr, actsConf.update);
+        }).join('');
+        return Tpl.Common.popover(Tpl.Symbol.sum(curLbl, curClr, hasClr, curVal), itemsHtml, "single-summary", "");
+      }
+      static tbl(src) {
+        const { rls, optsConf, actsConf } = src || {};
+        if (!rls?.length || !optsConf) return '';
+        return [...rls, { isAddRow: true }].map((rl, idx) => {
+          if (rl.isAddRow) return Tpl.Symbol.addRow(actsConf.add, Tpl.Symbol.COLS);
+          const isDef = rl.key === "default";
+          const btnHtml = Tpl.Symbol.btn(actsConf.remove, rl.key, "-", isDef);
+          const colsHtml = Tpl.Symbol.COLS.map(col => Tpl.Symbol.col(
+            col.className,
+            (col.key === 'target' && isDef)
+              ? '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>'
+              : Tpl.Symbol.genSel(optsConf[col.key], rl[col.key], col.key, idx, col.hasClr, actsConf)
+          )).join('');
+          return Tpl.Symbol.row(btnHtml, colsHtml);
+        }).join('');
+      }
     };
     static Sidebar = class {
-      static buildRows(rows) {
+      static genRows(rows) {
         if (!Array.isArray(rows)) return '';
         return rows.map(r => this.row(r)).join('\n');
       }
@@ -192,7 +123,7 @@
         }
         if (r.type === 'symbolTable') {
           return html`<div class="scroll-box">
-            <ob-symbol-table id="${r.id}" data-bind-src="${r.bindSrc}"></ob-symbol-table>
+            <div data-ui="symbtbl" id="${r.id}" data-bind-src="${r.bindSrc}"></div>
           </div>`;
         }
         if (r.type === 'toggles') {
@@ -225,7 +156,7 @@
             }).join('\n            ')}
           </div>`;
         } else if (r.type === 'multiSelect') {
-          controls = html`<div class="prop-controls"><ob-multi-select id="${r.id}" data-change-item="${r.changeItem}" data-change-all="${r.changeAll}" data-bind="${r.bind}" data-bind-opts="${r.bindOpts}"></ob-multi-select></div>`;
+          controls = html`<div class="prop-controls"><div data-ui="mselect" id="${r.id}" data-change-item="${r.changeItem}" data-change-all="${r.changeAll}" data-bind="${r.bind}" data-bind-opts="${r.bindOpts}"></div></div>`;
         } else if (r.type === 'rangeText') {
           controls = html`<div class="prop-controls">
             <input type="range" data-bind="${r.bind}" style="flex:1.8;">
@@ -246,8 +177,4 @@
       }
     };
   }
-  customElements.define('ob-popover', ObPopover);
-  customElements.define('ob-multi-select', ObMultiSelect);
-  customElements.define('ob-symbol-table', ObSymbolTable);
-  customElements.define('ob-dialog', ObDialog);
 </script>

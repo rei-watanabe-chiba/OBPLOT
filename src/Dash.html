@@ -9,28 +9,28 @@
     <?!= include("CSS"); ?>
   </head>
   <body data-theme="dash">
-    <ob-dialog></ob-dialog>
+    <div data-ui="dlg"></div>
     <nav class="nav-tabs" id="nav">
-      <button class="tab-btn active" data-action="CoreAction.switchTab" data-target="dash">ダッシュボード</button>
+      <button class="tab-btn active" data-action="CoreAct.switchTab" data-target="dash">ダッシュボード</button>
     </nav>
     <main class="scroll-y">
       <div id="dash" class="tab-content active">
         <fieldset id="dashFieldset">
-          <details id="instSec" open>
+          <details id="secINST" open>
             <summary>データ読込</summary>
             <div class="field-row">
-              <button id="btn-load-dash" data-action="DashAction.loadDB" data-type="primary">データを読込</button>
+              <button id="btnINST_load" data-action="DashAct.requestLoadDB" data-type="primary">データを読込</button>
             </div>
           </details>
-          <div id="instBar" class="status-bar" data-status="hidden" data-bind-status="DashST.inst.status"></div>
+          <div id="barINST" class="status-bar" data-status="hidden" data-bind-status="DashST.INST.status"></div>
           <hr>
-          <details id="repoSec">
+          <details id="secREPO">
             <summary>レポート作成</summary>
             <div class="field-row">
-              <button id="btn-repo" data-action="DashAction.openRepo" data-type="primary">ダッシュボードを展開</button>
+              <button id="btnREPO_open" data-action="DashAct.requestOpenRepo" data-type="primary">ダッシュボードを展開</button>
             </div>
           </details>
-          <div id="repoBar" class="status-bar" data-status="hidden" data-bind-status="DashST.repo.status"></div>
+          <div id="barREPO" class="status-bar" data-status="hidden" data-bind-status="DashST.REPO.status"></div>
           <div style="flex-grow: 1; min-height: calc(var(--unit) * 2);"></div>
         </fieldset>
       </div>

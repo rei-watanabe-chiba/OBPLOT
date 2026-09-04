@@ -48,9 +48,9 @@
     appShts: { filelist: "ファイルリスト", extract: "抽出データ", crct: "Correction", pxrf: "PXRF" },
     initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
     extrFields: [
-      { key: GLBidx.key1, label: `${GLBidx.key1} *必須`, placeholder: "データセット名", bind: `ENTST.extr.refs.${GLBidx.key1}` },
-      { key: GLBidx.p1, label: GLBidx.p1, placeholder: "計測情報", bind: `ENTST.extr.refs.${GLBidx.p1}` },
-      { key: GLBidx.p2, label: GLBidx.p2, placeholder: "計測日", bind: `ENTST.extr.refs.${GLBidx.p2}` }
+      { key: GLBidx.key1, label: `${GLBidx.key1} *必須`, placeholder: "データセット名", bind: `ENTST.EXTR.refs.${GLBidx.key1}` },
+      { key: GLBidx.p1, label: GLBidx.p1, placeholder: "計測情報", bind: `ENTST.EXTR.refs.${GLBidx.p1}` },
+      { key: GLBidx.p2, label: GLBidx.p2, placeholder: "計測日", bind: `ENTST.EXTR.refs.${GLBidx.p2}` }
     ],
     symbAxes: [{ val: GLBidx.key1, label: GLBidx.key1 }, { val: GLBidx.p1, label: GLBidx.p1 }, { val: GLBidx.wd1, label: GLBidx.wd1 }, { val: GLBidx.wd2, label: GLBidx.wd2 }],
     fileFields: [

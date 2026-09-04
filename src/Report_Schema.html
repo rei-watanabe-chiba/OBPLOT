@@ -69,19 +69,19 @@
   const SIDEBAR_PARTS = {
     'panel-config': [
       { type: "fields", label: "タイプ", labelClass: "panel", id: "boxGraphType", bindFields: "RPTST.data.graphTypeFields" },
-      { type: "section", id: "secCalibration", rows: [
-        { type: "fields", label: "対象指標", labelClass: "panel", id: "boxCalibVal", bindFields: "RPTST.data.calibValFields" }
+      { type: "section", id: "secCALB", rows: [
+        { type: "fields", label: "対象指標", labelClass: "panel", id: "boxCalbVal", bindFields: "RPTST.data.calbValFields" }
       ]},
       { type: "section", id: "secCluster", rows: [
         { type: "fields", labelHTML: 'X<span class="badge-label">項目</span>', labelClass: "panel", id: "boxClusX", bindFields: "RPTST.data.clusXFields" },
         { type: "fields", labelHTML: 'Y<span class="badge-label">項目</span>', labelClass: "panel", id: "boxClusY", bindFields: "RPTST.data.clusYFields" }
       ]},
       { type: "inputs", label: "タイトル", labelClass: "panel", inputs: [
-        { inputType: "text", apKey: "title", change: "ReportState.renewPanelRef", bind: "RPTST.data.apTitle", placeholder: "パネルタイトルを入力", className: "form-control" }
+        { inputType: "text", apKey: "title", change: "RepoSt.renewPanelRef", bind: "RPTST.data.apTitle", placeholder: "パネルタイトルを入力", className: "form-control" }
       ]},
       { type: "inputs", labelHTML: 'X/Y<span class="badge-label">ラベル</span>', labelClass: "panel", inputs: [
-        { inputType: "text", apKey: "xLabel", change: "ReportState.renewPanelRef", bind: "RPTST.data.apXLabel", className: "form-control", placeholder: "X軸" },
-        { inputType: "text", apKey: "yLabel", change: "ReportState.renewPanelRef", bind: "RPTST.data.apYLabel", className: "form-control", placeholder: "Y軸" }
+        { inputType: "text", apKey: "xLabel", change: "RepoSt.renewPanelRef", bind: "RPTST.data.apXLabel", className: "form-control", placeholder: "X軸" },
+        { inputType: "text", apKey: "yLabel", change: "RepoSt.renewPanelRef", bind: "RPTST.data.apYLabel", className: "form-control", placeholder: "Y軸" }
       ]}
     ],
     'layout-panel': [
@@ -112,13 +112,13 @@
       ]}
     ],
     'data-filters': [
-      { type: "multiSelect", label: "dataset", labelId: "lblFilterDB", labelClass: "panel", id: "boxFilterDB", changeItem: "CoreAction.tglMulti", changeAll: "CoreAction.tglAllMulti", bind: "RPTST.refs.filters.db", bindOpts: "RPTST.data.filterDBOpts" },
-      { type: "multiSelect", label: "item", labelId: "lblFilterItem", labelClass: "panel", id: "boxFilterItem", changeItem: "CoreAction.tglMulti", changeAll: "CoreAction.tglAllMulti", bind: "RPTST.refs.filters.item", bindOpts: "RPTST.data.filterItemOpts" },
-      { type: "multiSelect", label: "Group", labelId: "lblFilterGroup", labelClass: "panel", id: "boxFilterGroup", changeItem: "CoreAction.tglMulti", changeAll: "CoreAction.tglAllMulti", bind: "RPTST.refs.filters.group", bindOpts: "RPTST.data.filterGroupOpts" }
+      { type: "multiSelect", label: "dataset", labelId: "lblFilterDB", labelClass: "panel", id: "boxFilterDB", changeItem: "CoreAct.tglMulti", changeAll: "CoreAct.tglAllMulti", bind: "RPTST.refs.filters.db", bindOpts: "RPTST.data.filterDBOpts" },
+      { type: "multiSelect", label: "item", labelId: "lblFilterItem", labelClass: "panel", id: "boxFilterItem", changeItem: "CoreAct.tglMulti", changeAll: "CoreAct.tglAllMulti", bind: "RPTST.refs.filters.item", bindOpts: "RPTST.data.filterItemOpts" },
+      { type: "multiSelect", label: "Group", labelId: "lblFilterGroup", labelClass: "panel", id: "boxFilterGroup", changeItem: "CoreAct.tglMulti", changeAll: "CoreAct.tglAllMulti", bind: "RPTST.refs.filters.group", bindOpts: "RPTST.data.filterGroupOpts" }
     ],
     'data-crct': [
       { type: "fields", label: "検量線", labelClass: "panel", id: "boxGlobalCrct", bindFields: "RPTST.data.crctFields" },
-      { type: "multiSelect", label: "対象元素", labelClass: "panel", id: "boxGlobalCalElms", changeItem: "CoreAction.tglMulti", changeAll: "CoreAction.tglAllMulti", bind: "RPTST.refs.calElms", bindOpts: "RPTST.data.calElmsOpts" },
+      { type: "multiSelect", label: "対象元素", labelClass: "panel", id: "boxGlobalCalElms", changeItem: "CoreAct.tglMulti", changeAll: "CoreAct.tglAllMulti", bind: "RPTST.refs.calElms", bindOpts: "RPTST.data.calElmsOpts" },
       { type: "toggles", topMargin: "16px", toggles: [
         { label: "検量線適用", bind: "RPTST.refs.useCal" },
         { label: "LOD置換", bind: "RPTST.refs.useLOD" }
@@ -143,7 +143,7 @@
       { type: "inputs", labelHTML: '回帰線<span class="badge-label">線幅</span>', inputs: [{ inputType: "number", bind: "RPTST.refs.rawGph.lw_reg", className: "form-control", unit: "pt" }] }
     ],
     'symb': [
-      { type: "symbAxis", label: "属性選択", labelClass: "panel", marginBottom: "12px", id: "boxSymbAxis", bindFields: "RPTST.data.axisFields", resetAction: "ReportState.resetSymb" },
+      { type: "symbAxis", label: "属性選択", labelClass: "panel", marginBottom: "12px", id: "boxSymbAxis", bindFields: "RPTST.data.axisFields", resetAction: "RepoSt.resetSymb" },
       { type: "symbolTable", id: "tblSymb", bindSrc: "RPTST.data.symbSrc" }
     ]
   };

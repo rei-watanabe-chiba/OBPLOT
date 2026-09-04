@@ -1,24 +1,24 @@
 //--- src/Code.gs ---
 // --- DTO定義 ---
-class ApiResponse {
-  static success(payload) { return { success: true, payload: JSON.parse(JSON.stringify(payload)) }; }
-  static error(type, msg) { return { success: false, errorType: type, message: msg }; }
+class ApiRes {
+  static success(pld) { return { success: true, pld: JSON.parse(JSON.stringify(pld)) }; }
+  static error(type, msg) { return { success: false, errorType: type, msg }; }
 }
 const withErr = fn => {
-  try { return fn(); } catch (e) { return ApiResponse.error("SYSTEM_ERR", e.message); }
+  try { return fn(); } catch (e) { return ApiRes.error("SYSTEM_ERR", e.message); }
 };
 // --- メニュー追加 (GAS用) ---
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("OBPLOT1.0")
-    .addItem("tracer5i抽出", "showSidebarENT")
-    .addItem("検量線・標準化", "showSidebarADP")
-    .addItem("ダッシュボード", "showSidebarDash")
+    .addItem("tracer5i抽出を開く", "openSidebarENT")
+    .addItem("検量線・標準化を開く", "openSidebarADP")
+    .addItem("ダッシュボードを開く", "openSidebarDash")
     .addToUi();
 }
 // --- サイドバーの呼び出し分岐 ---
-function showSidebarENT() { openSidebar("entry", "tracer5i抽出", "Tracer5i"); }
-function showSidebarADP() { openSidebar("adapter", "検量線・標準化", "Tracer5i"); }
-function showSidebarDash() { openSidebar("dash", "ダッシュボード", "Dash"); }
+function openSidebarENT() { openSidebar("entry", "tracer5i抽出", "Tracer5i"); }
+function openSidebarADP() { openSidebar("adapter", "検量線・標準化", "Tracer5i"); }
+function openSidebarDash() { openSidebar("dash", "ダッシュボード", "Dash"); }
 
 function openSidebar(mode, title, filename) {
   const tpl = HtmlService.createTemplateFromFile(filename);
@@ -38,17 +38,17 @@ const _fetchDT = (ss, shtName, qCol, lCol) => {
   if (rawDT.length <= 1) throw new Error("データが1行以下");
   if (qCol && rawDT[0].length < qCol) throw new Error("データ列不足"); 
   const data = lCol ? rawDT.map(r => r.slice(0, lCol)) : rawDT; 
-  return { data, message: `取得: ${data.length} 行` };
+  return { data, msg: `取得: ${data.length} 行` };
 };
-function fetchDT(ssId, shtName, qCol = null, lCol = null) {
-  return withErr(() => ApiResponse.success(_fetchDT(SpreadsheetApp.openById(ssId), shtName, qCol, lCol)));
+function pullDT(ssId, shtName, qCol = null, lCol = null) {
+  return withErr(() => ApiRes.success(_fetchDT(SpreadsheetApp.openById(ssId), shtName, qCol, lCol)));
 }
-function fetchMultiple(ssId, reqs) {
+function pullMult(ssId, reqs) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
-    return ApiResponse.success(reqs.map(req => {
-      try { return { success: true, payload: _fetchDT(ss, req.sht, req.qCol, req.lCol) }; }
-      catch (e) { return { success: false, message: e.message }; }
+    return ApiRes.success(reqs.map(req => {
+      try { return { success: true, pld: _fetchDT(ss, req.sht, req.qCol, req.lCol) }; }
+      catch (e) { return { success: false, msg: e.message }; }
     }));
   });
 }
@@ -69,27 +69,27 @@ const _writeData = (ss, shtName, data, opts) => {
   }
   return "書き出し完了";
 };
-function writeData(ssId, shtName, data, opts = "clear") {
-  return withErr(() => ApiResponse.success(_writeData(SpreadsheetApp.openById(ssId), shtName, data, opts)));
+function pushDT(ssId, shtName, data, opts = "clear") {
+  return withErr(() => ApiRes.success(_writeData(SpreadsheetApp.openById(ssId), shtName, data, opts)));
 }
-function writeMultiple(ssId, reqs) {
+function pushMult(ssId, reqs) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
-    return ApiResponse.success(reqs.map(req => {
-      try { return { success: true, payload: _writeData(ss, req.sht, req.data, req.opts || "clear") }; }
-      catch (e) { return { success: false, message: e.message }; }
+    return ApiRes.success(reqs.map(req => {
+      try { return { success: true, pld: _writeData(ss, req.sht, req.data, req.opts || "clear") }; }
+      catch (e) { return { success: false, msg: e.message }; }
     }));
   });
 }
 // --- レポートテンプレート取得 ---
 function getReportTemplate() { 
-  return withErr(() => ApiResponse.success(HtmlService.createTemplateFromFile("Report").evaluate().getContent())); 
+  return withErr(() => ApiRes.success(HtmlService.createTemplateFromFile("Report").evaluate().getContent())); 
 }
 // --- ブック状態取得 ---
 function getWbState(ssId, targetShts = []) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
-    return ApiResponse.success(ss.getSheets().map(s => {
+    return ApiRes.success(ss.getSheets().map(s => {
       const name = s.getName();
       if (targetShts.length > 0 && !targetShts.includes(name)) return { name, hdr: [] };
       return { name, hdr: s.getLastColumn() ? s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0] : [] };
@@ -97,7 +97,7 @@ function getWbState(ssId, targetShts = []) {
   });
 }
 // --- シート動的構築とソート ---
-function buildShts(ssId, buildPlan) {
+function genShts(ssId, buildPlan) {
   return withErr(() => {
     const ss = SpreadsheetApp.openById(ssId);
     const setHdr = (s, hdr, lock) => {
@@ -112,6 +112,6 @@ function buildShts(ssId, buildPlan) {
       if (clr) setHdr(s, hdr, lock);
       if (idx !== undefined && s.getIndex() !== idx + 1) { ss.setActiveSheet(s); ss.moveActiveSheet(idx + 1); }
     });
-    return ApiResponse.success("構成更新完了");
+    return ApiRes.success("構成更新完了");
   });
 }

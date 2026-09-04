@@ -1,6 +1,6 @@
 <!-- src/ReportApp.html -->
 <script>
-  class ReportState {
+  class RepoSt {
     static oldSymbAxis = GLB.symbBaseKey; 
 
     static getInitRawGph() {
@@ -15,10 +15,10 @@
     }
 
     static getDefPnl() {
-      return { graphType: "calibration", calibVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" };
+      return { graphType: "calibration", calbVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" };
     }
 
-    static async setupInitialState(buObj, d) {
+    static async initSt(buObj, d) {
       const pxrf = d.pxrfDT || [];
       const exVals = (key) => {
         const vals = [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
@@ -33,7 +33,7 @@
       let refs = State.get("RPTST.refs") || {};
       let buRefs = buObj ? (buObj["RPTST.refs"] || buObj) : null;
 
-      if (buRefs && await CoreAction.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
+      if (buRefs && await CoreAct.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
         if (!buRefs.rawGph) buRefs.rawGph = this.getInitRawGph();
         else buRefs.rawGph = { ...this.getInitRawGph(), ...buRefs.rawGph };
         
@@ -65,11 +65,11 @@
         "RPTST.data.crctFields": [{ type: "select", bind: "RPTST.refs.crct", hasEmpty: false, opts: optsCorr }],
         "RPTST.data.fontEngFields": [{ type: "select", bind: "RPTST.refs.rawGph.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({label:v, val:v})) }],
         "RPTST.data.fontJpFields": [{ type: "select", bind: "RPTST.refs.rawGph.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({label:v, val:v})) }],
-        "RPTST.data.graphTypeFields": [{ type: "select", bind: "RPTST.data.apGraphType", change: "ReportState.renewPanelRef", hasEmpty: false, opts: [{label: RPT_CFG.lbl.calib, val: "calibration"}, {label: RPT_CFG.lbl.clus, val: "clusimination"}] }],
-        "RPTST.data.calibValFields": [{ type: "select", bind: "RPTST.data.apCalibVal", change: "ReportState.renewPanelRef", hasEmpty: true, opts: optValLgc }],
-        "RPTST.data.clusXFields": [{ type: "select", bind: "RPTST.data.apClusXVal", change: "ReportState.renewPanelRef", hasEmpty: true, opts: optValLgc }],
-        "RPTST.data.clusYFields": [{ type: "select", bind: "RPTST.data.apClusYVal", change: "ReportState.renewPanelRef", hasEmpty: true, opts: optValLgc }],
-        "RPTST.data.axisFields": [{ type: "select", bind: "RPTST.refs.symb.baseKey", change: "ReportState.checkSymbAxis", hasEmpty: false, opts: GLB.symbAxes }],
+        "RPTST.data.graphTypeFields": [{ type: "select", bind: "RPTST.data.apGraphType", change: "RepoSt.renewPanelRef", hasEmpty: false, opts: [{label: RPT_CFG.lbl.calib, val: "calibration"}, {label: RPT_CFG.lbl.clus, val: "clusimination"}] }],
+        "RPTST.data.calbValFields": [{ type: "select", bind: "RPTST.data.apCalbVal", change: "RepoSt.renewPanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.clusXFields": [{ type: "select", bind: "RPTST.data.apClusXVal", change: "RepoSt.renewPanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.clusYFields": [{ type: "select", bind: "RPTST.data.apClusYVal", change: "RepoSt.renewPanelRef", hasEmpty: true, opts: optValLgc }],
+        "RPTST.data.axisFields": [{ type: "select", bind: "RPTST.refs.symb.baseKey", change: "RepoSt.valdSymbAxis", hasEmpty: false, opts: GLB.symbAxes }],
         "RPTST.data.filterDBOpts": optsDB, 
         "RPTST.data.filterItemOpts": optsItem, 
         "RPTST.data.filterGroupOpts": optsGroup, 
@@ -79,13 +79,13 @@
       this.renewSymbState();
     }
 
-    static async checkSymbAxis(tgt) {
+    static async valdSymbAxis(tgt) {
       const newVal = tgt.value, oldVal = this.oldSymbAxis;
       if (newVal === oldVal) return;
-      const isConfirmed = await CoreAction.withAsync(null, { title: "確認", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
+      const isConfirmed = await CoreAct.withAsync(null, { title: "確認", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
         State.set({ "RPTST.refs.symb.baseKey": newVal, "RPTST.refs.symb.rls": [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] });
         this.oldSymbAxis = newVal;
-        ReportApp.queueSave();
+        ReportApp.qSave();
         return null;
       });
       if (!isConfirmed) {
@@ -94,16 +94,16 @@
       }
     }
 
-    static resetSymb() { State.set("RPTST.refs.symb.rls", [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); ReportApp.queueSave(); }
-    static addSymb() { State.set("RPTST.refs.symb.rls", [...State.get("RPTST.refs.symb.rls"), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); ReportApp.queueSave(); }
-    static removeSymb(btn) { State.set("RPTST.refs.symb.rls", State.get("RPTST.refs.symb.rls").filter(rw => rw.key !== btn.dataset.ruleKey)); ReportApp.queueSave(); }
-    static renewSymb(btn) {
+    static resetSymb() { State.set("RPTST.refs.symb.rls", [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); ReportApp.qSave(); }
+    static addSymb() { State.set("RPTST.refs.symb.rls", [...State.get("RPTST.refs.symb.rls"), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); ReportApp.qSave(); }
+    static removeSymb(btn) { State.set("RPTST.refs.symb.rls", State.get("RPTST.refs.symb.rls").filter(rw => rw.key !== btn.dataset.ruleKey)); ReportApp.qSave(); }
+    static updSymb(btn) {
       const i = btn.dataset.symbolIdx, t = btn.dataset.symbolType;
       if (i != null && t) { 
         const newSym = JSON.parse(JSON.stringify(State.get("RPTST.refs.symb.rls")));
         newSym[i][t] = btn.value; 
         State.set("RPTST.refs.symb.rls", newSym);
-        ReportApp.queueSave(); 
+        ReportApp.qSave(); 
       }
     }
 
@@ -111,7 +111,7 @@
       const d = State.get("RPTST.data.raw"), r = State.get("RPTST.refs");
       if (!d?.pxrfDT?.length) return;
       const vals = [...new Set(d.pxrfDT.map(pt => pt[r.symb.baseKey]).filter(Boolean))];
-      State.set("RPTST.data.symbSrc", { rls: r.symb.rls, optsConf: { target: [{ val: "", label: RPT_CFG.lbl.unsel }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "ReportState.addSymb", remove: "ReportState.removeSymb", update: "ReportState.renewSymb"} });
+      State.set("RPTST.data.symbSrc", { rls: r.symb.rls, optsConf: { target: [{ val: "", label: RPT_CFG.lbl.unsel }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors }, actsConf: { add: "RepoSt.addSymb", remove: "RepoSt.removeSymb", update: "RepoSt.updSymb"} });
     }
 
     static renewPanelRef(tgt) {
@@ -124,9 +124,9 @@
       
       if (panel) {
          panel[apKey] = val;
-         if (['graphType', 'calibVal', 'clusXVal', 'clusYVal'].includes(apKey)) {
+         if (['graphType', 'calbVal', 'clusXVal', 'clusYVal'].includes(apKey)) {
             if (panel.graphType === 'calibration') {
-              panel.title = panel.calibVal || ""; panel.xLabel = "WDXRF"; panel.yLabel = "pXRF";
+              panel.title = panel.calbVal || ""; panel.xLabel = "WDXRF"; panel.yLabel = "pXRF";
             } else if (panel.graphType === 'clusimination') {
               const xV = panel.clusXVal || "", yV = panel.clusYVal || "";
               panel.title = (xV || yV) ? `${xV} vs ${yV}` : ""; panel.xLabel = xV; panel.yLabel = yV;
@@ -134,7 +134,7 @@
          }
          State.set("RPTST.refs.panels", [...panels]);
          this.renewPanel();
-         ReportApp.queueSave();
+         ReportApp.qSave();
       }
     }
 
@@ -145,7 +145,7 @@
       
       State.set({
         "RPTST.data.apGraphType": panel?.graphType || "", 
-        "RPTST.data.apCalibVal": panel?.calibVal || "", 
+        "RPTST.data.apCalbVal": panel?.calbVal || "", 
         "RPTST.data.apClusXVal": panel?.clusXVal || "", 
         "RPTST.data.apClusYVal": panel?.clusYVal || "",
         "RPTST.data.apTitle": panel?.title || "", 
@@ -173,13 +173,13 @@
       for (let i = 0; i < r.gridRows * r.gridCols; i++) reqIds.push(`p_${i}`);
       
       let panels = State.get("RPTST.refs.panels") || [];
-      reqIds.forEach(id => { if (!panels.find(p => p.id === id)) panels.push({ id, ...ReportState.getDefPnl() }); });
+      reqIds.forEach(id => { if (!panels.find(p => p.id === id)) panels.push({ id, ...RepoSt.getDefPnl() }); });
       panels = reqIds.map(id => panels.find(p => p.id === id));
       State.set("RPTST.refs.panels", panels);
       
       if (!panels.find(p => p.id === r.activePanelId)) State.set("RPTST.refs.activePanelId", panels[0]?.id || "p_0");
 
-      ReportState.renewPanel();
+      RepoSt.renewPanel();
 
       const cont = document.getElementById('a4Container');
       cont.style.setProperty('--col-count', r.gridCols); 
@@ -201,8 +201,8 @@
       a4.style.marginBottom = `-${a4.offsetHeight * (1 - scale)}px`;
     }
 
-    static buildGph() {
-      const raw = { ...ReportState.getInitRawGph(), ...(State.get("RPTST.refs.rawGph") || {}) };
+    static genGph() {
+      const raw = { ...RepoSt.getInitRawGph(), ...(State.get("RPTST.refs.rawGph") || {}) };
       const pt2px = pt => Number(pt) * 1.33;
       const mm2px = mm => Number(mm) * 3.78; 
       const [s_title, s_stats, sym_base, lw_reg, s_tick, s_name, g_name, g_tick, sym_bw, lw_axis, lw_grid] = 
@@ -244,10 +244,10 @@
     }
 
     static drawCharts(preCalcData = null) {
-      const gph = this.buildGph();
+      const gph = this.genGph();
       this.calcPanelSize(gph);
       const r = State.get("RPTST.refs"), d = State.get("RPTST.data.raw");
-      const plots = document.getElementById('dashGrid').querySelectorAll('ob-cal-plot');
+      const plots = document.getElementById('dashGrid').querySelectorAll('ui-plot');
       
       const draw = () => {
         r.panels.forEach((p, idx) => {
@@ -256,7 +256,7 @@
             plots[idx].src = { prevDT: preCalcData[idx].prevDT, statsDT: preCalcData[idx].statsDT, symb: r.symb, gph: gph, panel: p };
           } else {
             if (!d?.pxrfDT?.length) return;
-            const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
+            const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
             const { prevDT, statsDT } = CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
             plots[idx].src = { prevDT, statsDT, symb: r.symb, gph: gph, panel: p };
           }
@@ -297,7 +297,7 @@
     static automator = null;
 
     static async init() {
-      CoreAction.rootGLB({ CoreAction, ReportApp, ReportState, ReportUI });
+      CoreAct.rootGLB({ CoreAct, ReportApp, RepoSt, ReportUI });
       ReportApp.automator = new CoreUI(REPORT_SCHEMA, 'RPTST');
 
       if (window.__IS_PRINT_TAB__) {
@@ -317,7 +317,7 @@
            div.dataset.panelId = `p_${i}`;
            div.dataset.action = 'ReportApp.setActivePanel';
            
-           const chart = document.createElement('ob-cal-plot');
+           const chart = document.createElement('ui-plot');
            chart.style.cssText = 'width: 100%; height: 100%;';
            chart.setAttribute('data-renderer', 'svg');
            
@@ -349,7 +349,7 @@
       ];
       mounts.forEach(m => {
         const el = document.getElementById(m.id);
-        if (el && SIDEBAR_PARTS[m.key]) el.innerHTML = Tpl.Sidebar.buildRows(SIDEBAR_PARTS[m.key]);
+        if (el && SIDEBAR_PARTS[m.key]) el.innerHTML = Tpl.Sidebar.genRows(SIDEBAR_PARTS[m.key]);
       });
 
       ReportApp.automator.build();
@@ -373,35 +373,35 @@
       try {
         bu = JSON.parse(StorageAPI.load("OBP_DASH_BU"));
       } catch(e) {}
-      await ReportState.setupInitialState(bu, injData);
+      await RepoSt.initSt(bu, injData);
 
       ReportUI.syncPanelDom();
       ReportUI.drawCharts();
 
       State.subscribe(['RPTST.refs.gridRows', 'RPTST.refs.gridCols', 'RPTST.refs.panelGap', 'RPTST.refs.margins'], () => {
           ReportUI.syncPanelDom();
-          this.queueSave();
+          this.qSave();
       });
       
       State.subscribe(['RPTST.refs.filters', 'RPTST.refs.useCal', 'RPTST.refs.useLOD', 'RPTST.refs.crct', 'RPTST.refs.calElms', 'RPTST.refs.symb', 'RPTST.refs.rawGph', 'RPTST.refs.panels'], () => {
-          this.queueRender();
+          this.qRend();
       });
 
       State.subscribe('RPTST.refs.activePanelId', () => {
-          ReportState.renewPanel();
-          this.queueSave();
+          RepoSt.renewPanel();
+          this.qSave();
       });
 
-      State.subscribe('RPTST.refs.symb.baseKey', () => ReportState.renewSymbState());
-      State.subscribe('RPTST.refs.symb.rls', () => ReportState.renewSymbState());
+      State.subscribe('RPTST.refs.symb.baseKey', () => RepoSt.renewSymbState());
+      State.subscribe('RPTST.refs.symb.rls', () => RepoSt.renewSymbState());
 
       window.addEventListener('resize', () => {
          clearTimeout(this.resizeTimer);
          this.resizeTimer = setTimeout(() => {
              ReportUI.fitA4Scale();
-             const gph = ReportUI.buildGph();
+             const gph = ReportUI.genGph();
              ReportUI.calcPanelSize(gph);
-             const plots = document.getElementById('dashGrid').querySelectorAll('ob-cal-plot');
+             const plots = document.getElementById('dashGrid').querySelectorAll('ui-plot');
              plots.forEach(plot => { plot.src = { ...plot.src, gph: gph }; });
          }, 100);
       });
@@ -415,27 +415,27 @@
       const r = State.get("RPTST.refs"), d = State.get("RPTST.data.raw");
       const preCalc = r.panels.map(p => {
         if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
-        const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calibVal: p.calibVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
+        const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
         return CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
       });
-      if (!preCalc.some(res => res.prevDT?.length > 0)) return CoreAction.toast("警告", "有効なグラフが一つもありません。\n標準化設定やデータを確認してください。");
+      if (!preCalc.some(res => res.prevDT?.length > 0)) return CoreAct.toast("警告", "有効なグラフが一つもありません。\n標準化設定やデータを確認してください。");
       const safeState = JSON.stringify({ RPTST: State.proxy.RPTST }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const safePreCalc = JSON.stringify(preCalc).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${safeState}; window.__PRECALC_DATA__=${safePreCalc};<\/script>`);
       window.open(URL.createObjectURL(new Blob(['<!DOCTYPE html>' + htmlStr], { type: 'text/html' })), '_blank');
     }
 
-    static queueSave() { 
+    static qSave() { 
       if (window.__IS_PRINT_TAB__) return;
       clearTimeout(this.gphTimer); 
-      this.gphTimer = setTimeout(() => StorageAPI.save("OBP_DASH_BU", JSON.stringify({ "RPTST.refs": State.get("RPTST.refs") })), 100); 
+      this.gphTimer = setTimeout(() => StorageAPI.save("OBP_DASH_BU", JSON.stringify({ "RPTST.refs": State.get("RPTST.refs") })), 250); 
     }
     
-    static queueRender() {
+    static qRend() {
       if (window.__IS_PRINT_TAB__) return;
       clearTimeout(this.renderTimer);
-      this.renderTimer = setTimeout(() => ReportUI.drawCharts(), 50);
-      this.queueSave();
+      this.renderTimer = setTimeout(() => ReportUI.drawCharts(), 250);
+      this.qSave();
     }
   }
 

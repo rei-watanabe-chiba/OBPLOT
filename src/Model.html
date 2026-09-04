@@ -5,8 +5,8 @@
   const ADP_PHS = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
   const DASH_PHS = { INIT: 1, LOADED: 2 };
   // 互換用エイリアス
-  // --- AppState ---
-  class AppState {
+  // --- AppSt ---
+  class AppSt {
     #state; #initialState; #listeners; #updating;
     // --- セクション単位のstate生成 ---
     constructor() {
@@ -14,26 +14,26 @@
       const initDef = {
         GLB: { 
           activeTab: "ent", isLocked: false, ssId: "",
-          dialog: { isOpen: false, type: "confirm", title: "", message: "" }
+          dialog: { isOpen: false, type: "confirm", title: "", msg: "" }
         },
         ENTST: {
           phase: ENT_PHS.INIT,
-          pref: createSec({ refs: { mode: "" }, data: { modeFields: [{ type: "select", opts: GLB.confMods, bind: "ENTST.pref.refs.mode", change: "ENTAction.checkPref", hasEmpty: false }] } }),
-          raw:  createSec({ flags: GLB.initFlags.raw }),
-          extr: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr, data: { extrFields: GLB.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })) } })
+          PREF: createSec({ refs: { mode: "" }, data: { modeFields: [{ type: "select", opts: GLB.confMods, bind: "ENTST.PREF.refs.mode", change: "ENTAct.valdPref", hasEmpty: false }] } }),
+          RAW:  createSec({ flags: GLB.initFlags.raw }),
+          EXTR: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr, data: { extrFields: GLB.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })) } })
         },
         ADPST: {
           phase: ADP_PHS.INIT,
-          asgn: createSec({ data: { crctDT: [], wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], filter: [] } }),
-          symb: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] }, data: { axisFields: [{ type: "select", opts: GLB.symbAxes, change: "ADPAction.checkAxis", hasEmpty: false }] } }),
-          calb: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], crct: "new", useLOD: false, useCal: false }, data: { modeOpts: GLB.optElms, calElmOpts: GLB.valElms } }),
-          prev: createSec({ refs: { itemMap: [], val: GLB.valLgc.length ? GLB.valLgc[0] : GLB.valElms[0], saveIndexName: "" }, data: { crctLogic: {}, prevDT: null, statsDT: null, chartSrc: null, valFields: [{ type: "select", bind: "ADPST.prev.refs.val", hasEmpty: false, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }] } }),
-          stdz: createSec({ refs: { itemMap: [], modeMap: [...GLB.optElms], useLOD: false, saveIndexName: "" }, data: { modeOpts: GLB.optElms } })
+          ASGN: createSec({ data: { crctDT: [], wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], filter: [] } }),
+          SYMB: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] }, data: { axisFields: [{ type: "select", opts: GLB.symbAxes, change: "ADPAct.valdAxis", hasEmpty: false }] } }),
+          CALB: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], crct: "new", useLOD: false, useCal: false }, data: { modeOpts: GLB.optElms, calElmOpts: GLB.valElms } }),
+          PREV: createSec({ refs: { itemMap: [], val: GLB.valLgc.length ? GLB.valLgc[0] : GLB.valElms[0], saveIndexName: "" }, data: { crctLogic: {}, prevDT: null, statsDT: null, chartSrc: null, valFields: [{ type: "select", bind: "ADPST.PREV.refs.val", hasEmpty: false, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }] } }),
+          STDZ: createSec({ refs: { itemMap: [], modeMap: [...GLB.optElms], useLOD: false, saveIndexName: "" }, data: { modeOpts: GLB.optElms } })
         },
         DashST: {
           phase: DASH_PHS.INIT,
-          inst: createSec({ data: { pxrfDT: null, wdxrfDT: null, crctDT: null } }),
-          repo: createSec({ refs: {} }),
+          INST: createSec({ data: { pxrfDT: null, wdxrfDT: null, crctDT: null } }),
+          REPO: createSec({ refs: {} }),
           gph: { style: GLB.defGraphStyle, gap: GLB.defGraphGap }
         },
         // 【追加】レポート専用のステートマシン
@@ -51,9 +51,9 @@
           data: {
             raw: { pxrfDT: [], wdxrfDT: [], crctDT: [] },
             crctFields: [], filterDBOpts: [], filterItemOpts: [], filterGroupOpts: [],
-            fontEngFields: [], fontJpFields: [], graphTypeFields: [], calibValFields: [], clusXFields: [], clusYFields: [],
+            fontEngFields: [], fontJpFields: [], graphTypeFields: [], calbValFields: [], clusXFields: [], clusYFields: [],
             symbSrc: null,
-            apTitle: "", apXLabel: "", apYLabel: "", apGraphType: "", apCalibVal: "", apClusXVal: "", apClusYVal: ""
+            apTitle: "", apXLabel: "", apYLabel: "", apGraphType: "", apCalbVal: "", apClusXVal: "", apClusYVal: ""
           }
         }
       };
@@ -118,6 +118,6 @@
       this.set(updates);
     }
   }
-  const State = new AppState();
+  const State = new AppSt();
   window.State = State;
 </script>
