@@ -6,7 +6,7 @@
         { id: "secPREF", activePhase: p => p === ENT_PHS.INIT, disablePhase: p => false },
         
         { id: "secRAW", activePhase: p => p >= ENT_PHS.READY, disablePhase: p => p < ENT_PHS.READY, openPhase: p => p >= ENT_PHS.READY && p < ENT_PHS.VALID },
-        { id: "btnRAW_load", disablePhase: p => false },
+        { id: "btnRAW_load", disablePhase: p => false, text: p => p <= ENT_PHS.READY ? "データを取得" : "再取得" },
         { id: "btnRAW_genList", activePhase: p => p >= ENT_PHS.READY, className: p => p === ENT_PHS.LOAD ? "" : "outline" },
         { id: "btnRAW_valdList", activePhase: p => p >= ENT_PHS.INVALID && !State.get("ENTST.RAW.flags").some(Boolean), className: p => p === ENT_PHS.INVALID ? "" : "outline" },
         { id: "secRAW_area", visiblePhase: p => p >= ENT_PHS.LOAD },
