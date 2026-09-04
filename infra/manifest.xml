@@ -37,31 +37,31 @@
                   <bt:Image size="32" resid="Icon32"/>
                   <bt:Image size="80" resid="Icon80"/>
                 </Icon>
-        <Control xsi:type="Button" id="BtnTab1">
-                  <Label resid="Btn1Label"/>
-                  <Supertip><Title resid="Btn1Title"/><Description resid="Btn1Desc"/></Supertip>
+        <Control xsi:type="Button" id="BtnENT">
+                  <Label resid="BtnENTLabel"/>
+                  <Supertip><Title resid="BtnENTTitle"/><Description resid="BtnENTDesc"/></Supertip>
                   <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>PaneT1</TaskpaneId>
-                    <SourceLocation resid="UrlTab1"/>
+                    <TaskpaneId>PaneENT</TaskpaneId>
+                    <SourceLocation resid="UrlENT"/>
                   </Action>
                 </Control>
-                <Control xsi:type="Button" id="BtnTab2">
-                  <Label resid="Btn2Label"/>
-                  <Supertip><Title resid="Btn2Title"/><Description resid="Btn2Desc"/></Supertip>
+                <Control xsi:type="Button" id="BtnADP">
+                  <Label resid="BtnADPLabel"/>
+                  <Supertip><Title resid="BtnADPTitle"/><Description resid="BtnADPDesc"/></Supertip>
                   <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>PaneT2</TaskpaneId>
-                    <SourceLocation resid="UrlTab2"/>
+                    <TaskpaneId>PaneADP</TaskpaneId>
+                    <SourceLocation resid="UrlADP"/>
                   </Action>
                 </Control>
-                <Control xsi:type="Button" id="BtnTab3">
-                  <Label resid="Btn3Label"/>
-                  <Supertip><Title resid="Btn3Title"/><Description resid="Btn3Desc"/></Supertip>
+                <Control xsi:type="Button" id="BtnDash">
+                  <Label resid="BtnDashLabel"/>
+                  <Supertip><Title resid="BtnDashTitle"/><Description resid="BtnDashDesc"/></Supertip>
                   <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>PaneT3</TaskpaneId>
-                    <SourceLocation resid="UrlTab3"/>
+                    <TaskpaneId>PaneDash</TaskpaneId>
+                    <SourceLocation resid="UrlDash"/>
                   </Action>
                 </Control>
               </Group>
@@ -79,25 +79,25 @@
         <bt:Image id="Icon80" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon80.png"/>
       </bt:Images>
       <bt:Urls>
-        <!-- ★重要：Web版Excelの強烈なキャッシュを破棄するため「&amp;v=3」を付与 -->
-        <bt:Url id="UrlTab1" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Tracer.html?mode=tab1&amp;v=3"/>
-        <bt:Url id="UrlTab2" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Tracer.html?mode=tab2&amp;v=3"/>
-        <bt:Url id="UrlTab3" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Dash.html?mode=tab3&amp;v=3"/>
+        <!-- ★重要：Web版Excelの強烈なキャッシュを破棄するため「&amp;v=4」を付与 -->
+        <bt:Url id="UrlENT" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Tracer5i.html?mode=entry&amp;v=4"/>
+        <bt:Url id="UrlADP" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Tracer5i.html?mode=adapter&amp;v=4"/>
+        <bt:Url id="UrlDash" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/Dash.html?mode=dash&amp;v=4"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="OBPLOT"/>
         <bt:String id="TabLabel" DefaultValue="OBPLOT"/>
-        <bt:String id="Btn1Label" DefaultValue="tracer5i抽出"/>
-        <bt:String id="Btn1Title" DefaultValue="データ抽出ツールを起動"/>
-        <bt:String id="Btn2Label" DefaultValue="検量線・標準化"/>
-        <bt:String id="Btn2Title" DefaultValue="簡易プレビュー＆データ標準化ツールを起動"/>
-        <bt:String id="Btn3Label" DefaultValue="ダッシュボード"/>
-        <bt:String id="Btn3Title" DefaultValue="グラフダッシュボードを起動"/>
+        <bt:String id="BtnENTLabel" DefaultValue="tracer5i抽出"/>
+        <bt:String id="BtnENTTitle" DefaultValue="データ抽出ツールを起動"/>
+        <bt:String id="BtnADPLabel" DefaultValue="検量線・標準化"/>
+        <bt:String id="BtnADPTitle" DefaultValue="簡易プレビュー＆データ標準化ツールを起動"/>
+        <bt:String id="BtnDashLabel" DefaultValue="ダッシュボード"/>
+        <bt:String id="BtnDashTitle" DefaultValue="グラフダッシュボードを起動"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="Btn1Desc" DefaultValue="tracer5iデータのモード対応抽出を行います"/>
-        <bt:String id="Btn2Desc" DefaultValue="tracer5iデータをプレビューして標準データに変換します"/>
-        <bt:String id="Btn3Desc" DefaultValue="グラフ作成・出力用ダッシュボードを作成します"/>
+        <bt:String id="BtnENTDesc" DefaultValue="tracer5iデータのモード対応抽出を行います"/>
+        <bt:String id="BtnADPDesc" DefaultValue="tracer5iデータをプレビューして標準データに変換します"/>
+        <bt:String id="BtnDashDesc" DefaultValue="グラフ作成・出力用ダッシュボードを作成します"/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
