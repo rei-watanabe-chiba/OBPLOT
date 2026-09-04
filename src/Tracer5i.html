@@ -29,7 +29,7 @@
             <summary>読込と検証</summary>
             <div class="flex-row">
               <button id="btnRAW_load" data-action="ENTAct.loadRaw" data-type="primary">データを取得</button>
-              <span class="txt-btninfo">読込シート「File」</span>
+              <span class="txt-btninfo">読込シート:<span class="badge-label">File</span></span>
             </div>
             <div id="secRAW_area">
               <!-- エラーとフォーム動的バインディング -->
@@ -46,7 +46,7 @@
             <summary>抽出と格納</summary>
             <div class="flex-row">
               <button id="btnEXTR_run" data-action="ENTAct.runExtr" data-type="primary">データを抽出</button>
-              <span class="txt-btninfo">読込シート「Results」</span>
+              <span class="txt-btninfo">読込シート:<span class="badge-label">Results</span></span>
             </div>
             <div id="secEXTR_area">
               <!-- エラーとフォーム動的バインディング -->
@@ -68,6 +68,7 @@
               <label>データセット選択</label>
               <div data-ui="mselect" data-change-item="CoreAct.tglMulti" data-change-all="CoreAct.tglAllMulti" data-bind="ADPST.ASGN.refs.filter" data-bind-opts="ADPST.ASGN.refs.available"></div>
             </div>
+            <div class="txt-btninfo">読込シート<span class="badge-label">tracer5i</span><span class="badge-label">WDXRF</span><span class="badge-label">Correction</span></div>
             <div class="field-row">
               <button id="btnASGN_load" data-action="ADPAct.loadDB" data-type="primary">データを読込</button>
               <button id="btnASGN_fltr" data-action="ADPAct.fltrDB" data-type="primary" class="outline">データを確定</button>
@@ -163,7 +164,7 @@
               <button id="btnCALB_pushCrct" data-action="ADPAct.pushCrct" data-type="primary">検量線出力</button>
             </div>
             <div class="field-row">
-              <button id="btnSTDZ_push" data-action="ADPAct.pushStdz" data-type="primary" class="outline">新PXRFシート出力</button>
+              <button id="btnSTDZ_push" data-action="ADPAct.pushStdz" data-type="primary" class="outline">PXRFシート出力</button>
             </div>
           </details>
           <div id="barSTDZ" class="status-bar" data-status="hidden" data-bind-status="ADPST.STDZ.status"></div>

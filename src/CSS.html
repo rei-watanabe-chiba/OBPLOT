@@ -20,8 +20,8 @@
       --main-blue-hover: #1F41B6;
       --main-green: #34A853;
       --main-green-hover: #1F843C;
-      --main-yellow: #FBC02D;
-      --main-yellow-hover: #F57F17;
+      --main-yellow: #E88F1A;
+      --main-yellow-hover: #DB7212;
       --main-red: #ea4335;
       --grey50: #ECEFF1;
       --grey200: #B0BEC5;
@@ -47,10 +47,13 @@
       overflow-x: hidden;
       /*user-select: none;*/
     }
-    body[data-theme="entry"],
-    body[data-theme="adapter"] {
+    body[data-theme="entry"]{
       --theme-color: var(--main-blue);
       --theme-hover: var(--main-blue-hover);
+    }
+    body[data-theme="adapter"] {
+      --theme-color: var(--main-yellow);
+      --theme-hover: var(--main-yellow-hover);
     }
     body[data-theme="dash"] {
       --theme-color: var(--main-green);
@@ -96,9 +99,18 @@
       min-width: 0;
     }
     .txt-btninfo {
+      flex: 1;
       margin-left: calc(var(--unit) * 2);
       font-size: 11px;
       color: var(--grey600);
+    }
+    .badge-label {
+      background: var(--grey50);
+      border-radius: 0.3rem;
+      margin-left: 6px;
+      padding: 0.1em 0.35em;
+      font-size: 0.6rem;
+      line-height: 1.6;
     }
     .badge {
       display: inline-block;
@@ -207,7 +219,7 @@
         --btn-bg: var(--bg-color);
         --btn-border: currentColor;
         &[data-type="primary"] { --btn-color: var(--theme-color); }
-        &:not(:disabled):hover { --btn-bg: color-mix(in srgb, currentColor 10%, var(--bg-color);); }
+        &:not(:disabled):hover { --btn-bg: color-mix(in srgb, var(--theme-hover) 7%, var(--bg-color);); }
       }
       &:disabled {
         --btn-bg: var(--grey200);

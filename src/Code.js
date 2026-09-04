@@ -9,22 +9,24 @@ const withErr = fn => {
 };
 // --- メニュー追加 (GAS用) ---
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu("OBPLOT1.0")
-    .addItem("tracer5i抽出を開く", "openSidebarENT")
-    .addItem("検量線・標準化を開く", "openSidebarADP")
-    .addItem("ダッシュボードを開く", "openSidebarDash")
+  SpreadsheetApp.getUi()
+    .createMenu("OBPLOT1.0")
+    .addItem("tracer5i抽出", "openSidebarENT")
+    .addItem("データ補正", "openSidebarADP")
+    .addSeparator()
+    .addItem("解析ボード", "openSidebarDash")
     .addToUi();
 }
 // --- サイドバーの呼び出し分岐 ---
-function openSidebarENT() { openSidebar("entry", "tracer5i抽出", "Tracer5i"); }
-function openSidebarADP() { openSidebar("adapter", "検量線・標準化", "Tracer5i"); }
-function openSidebarDash() { openSidebar("dash", "ダッシュボード", "Dash"); }
+function openSidebarENT() { openSidebar("entry", "tracer5iデータの抽出", "Tracer5i"); }
+function openSidebarADP() { openSidebar("adapter", "tracer5iのプレビューと補正", "Tracer5i"); }
+function openSidebarDash() { openSidebar("dash", "検量線・判別図ボードを展開", "Dash"); }
 
 function openSidebar(mode, title, filename) {
   const tpl = HtmlService.createTemplateFromFile(filename);
   tpl.initialSsId = SpreadsheetApp.getActiveSpreadsheet().getId();
   tpl.appMode = mode;
-  SpreadsheetApp.getUi().showSidebar(tpl.evaluate().setTitle(`OBPLOT1.0: ${title}`).setWidth(300));
+  SpreadsheetApp.getUi().showSidebar(tpl.evaluate().setTitle(`${title}`).setWidth(300));
 }
 // --- HTMLバインド ---
 function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }

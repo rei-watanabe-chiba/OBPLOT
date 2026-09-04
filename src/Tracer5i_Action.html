@@ -152,8 +152,8 @@
       await CoreAct.withAsync("ADPST.SYMB.status", async () => { 
         State.set({
           "ADPST.phase": ADP_PHS.MAPPED,
-          "ADPST.PREV.status": ["message", "データと検量線のプレビュー"],
-          "ADPST.STDZ.status": ["message", "検量線と標準pXRFデータの出力"]
+          "ADPST.PREV.status": ["message", "検量線プレビュー"],
+          "ADPST.STDZ.status": ["message", "検量線とPXRFデータの出力"]
         }); 
         return "シンボル確定"; 
       }); 
@@ -162,7 +162,7 @@
     static async valdAxis(tgtSelect) {
       const newVal = tgtSelect.value, oldVal = State.get("ADPST.SYMB.refs.baseKey");
       if (newVal === oldVal) return;
-      const isConfirmed = await CoreAct.withAsync("ADPST.SYMB.status", { title: "警告", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
+      const isConfirmed = await CoreAct.withAsync("ADPST.SYMB.status", { title: "警告", msg: "属性を変更してシンボル設定をリセットします。" }, async () => {
         State.set({ "ADPST.SYMB.refs.baseKey": newVal }); 
         State.reset("ADPST.SYMB.refs.rls");
         return ["hidden", ""];

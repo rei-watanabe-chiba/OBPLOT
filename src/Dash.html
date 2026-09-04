@@ -18,6 +18,7 @@
         <fieldset id="dashFieldset">
           <details id="secINST" open>
             <summary>データ読込</summary>
+            <div class="txt-btninfo">読込シート<span class="badge-label">PXRF</span><span class="badge-label">WDXRF</span></div>
             <div class="field-row">
               <button id="btnINST_load" data-action="DashAct.requestLoadDB" data-type="primary">データを読込</button>
             </div>
@@ -25,7 +26,7 @@
           <div id="barINST" class="status-bar" data-status="hidden" data-bind-status="DashST.INST.status"></div>
           <hr>
           <details id="secREPO">
-            <summary>レポート作成</summary>
+            <summary>ダッシュボード作成</summary>
             <div class="field-row">
               <button id="btnREPO_open" data-action="DashAct.requestOpenRepo" data-type="primary">ダッシュボードを展開</button>
             </div>
