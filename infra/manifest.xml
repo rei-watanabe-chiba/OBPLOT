@@ -98,7 +98,7 @@
         <bt:String id="BtnADPLabel" DefaultValue="PXRF出力"/>
         <bt:String id="BtnADPTitle" DefaultValue="簡易プレビュー＆PXRF出力ツールを起動"/>
         <bt:String id="BtnDashLabel" DefaultValue="グラフ出力"/>
-        <bt:String id="BtnDashTitle" DefaultValue="グラフダッシュボードを起動"/>
+        <bt:String id="BtnDashTitle" DefaultValue="グラフ出力ダッシュボードを起動"/>
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="BtnENTDesc" DefaultValue="tracer5iデータのモード対応抽出を行います"/>
