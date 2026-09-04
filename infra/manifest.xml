@@ -8,8 +8,8 @@
   <Description DefaultValue="PXRF Data Analyzer"/>
   
   <!-- 画像URLを自作の image/ フォルダへ変更 -->
-  <IconUrl DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon64.png"/>
+  <IconUrl DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/obplot32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/obplot64.png"/>
   <SupportUrl DefaultValue="https://github.com/rei-watanabe-chiba/OBPLOT"/>
 
   <AppDomains>
@@ -33,14 +33,14 @@
               <Group id="ObplotGroup">
                 <Label resid="GroupLabel"/>
                 <Icon>
-                  <bt:Image size="16" resid="Icon16"/>
-                  <bt:Image size="32" resid="Icon32"/>
-                  <bt:Image size="80" resid="Icon80"/>
+                  <bt:Image size="16" resid="obplot16"/>
+                  <bt:Image size="32" resid="obplot32"/>
+                  <bt:Image size="80" resid="obplot80"/>
                 </Icon>
         <Control xsi:type="Button" id="BtnENT">
                   <Label resid="BtnENTLabel"/>
                   <Supertip><Title resid="BtnENTTitle"/><Description resid="BtnENTDesc"/></Supertip>
-                  <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
+                  <Icon><bt:Image size="16" resid="ent16"/><bt:Image size="32" resid="ent32"/><bt:Image size="80" resid="ent80"/></Icon>
                   <Action xsi:type="ShowTaskpane">
                     <TaskpaneId>PaneENT</TaskpaneId>
                     <SourceLocation resid="UrlENT"/>
@@ -49,7 +49,7 @@
                 <Control xsi:type="Button" id="BtnADP">
                   <Label resid="BtnADPLabel"/>
                   <Supertip><Title resid="BtnADPTitle"/><Description resid="BtnADPDesc"/></Supertip>
-                  <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
+                  <Icon><bt:Image size="16" resid="adp16"/><bt:Image size="32" resid="adp32"/><bt:Image size="80" resid="adp80"/></Icon>
                   <Action xsi:type="ShowTaskpane">
                     <TaskpaneId>PaneADP</TaskpaneId>
                     <SourceLocation resid="UrlADP"/>
@@ -58,7 +58,7 @@
                 <Control xsi:type="Button" id="BtnDash">
                   <Label resid="BtnDashLabel"/>
                   <Supertip><Title resid="BtnDashTitle"/><Description resid="BtnDashDesc"/></Supertip>
-                  <Icon><bt:Image size="16" resid="Icon16"/><bt:Image size="32" resid="Icon32"/><bt:Image size="80" resid="Icon80"/></Icon>
+                  <Icon><bt:Image size="16" resid="obplot16"/><bt:Image size="32" resid="obplot32"/><bt:Image size="80" resid="obplot80"/></Icon>
                   <Action xsi:type="ShowTaskpane">
                     <TaskpaneId>PaneDash</TaskpaneId>
                     <SourceLocation resid="UrlDash"/>
@@ -74,9 +74,15 @@
     <Resources>
       <bt:Images>
         <!-- リボン用アイコン群を image/ フォルダへ変更 -->
-        <bt:Image id="Icon16" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon16.png"/>
-        <bt:Image id="Icon32" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon32.png"/>
-        <bt:Image id="Icon80" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/icon80.png"/>
+        <bt:Image id="ent16" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/ent16.png"/>
+        <bt:Image id="ent32" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/ent32.png"/>
+        <bt:Image id="ent80" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/ent80.png"/>
+	<bt:Image id="adp16" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/adp16.png"/>
+        <bt:Image id="adp32" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/adp32.png"/>
+        <bt:Image id="adp80" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/adp80.png"/>
+	<bt:Image id="obplot16" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/obplot16.png"/>
+        <bt:Image id="obplot32" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/obplot32.png"/>
+        <bt:Image id="obplot80" DefaultValue="https://rei-watanabe-chiba.github.io/OBPLOT/image/obplot80.png"/>
       </bt:Images>
       <bt:Urls>
         <!-- ★重要：Web版Excelの強烈なキャッシュを破棄するため「&amp;v=4」を付与 -->
@@ -88,10 +94,10 @@
         <bt:String id="GroupLabel" DefaultValue="OBPLOT"/>
         <bt:String id="TabLabel" DefaultValue="OBPLOT"/>
         <bt:String id="BtnENTLabel" DefaultValue="tracer5i抽出"/>
-        <bt:String id="BtnENTTitle" DefaultValue="データ抽出ツールを起動"/>
-        <bt:String id="BtnADPLabel" DefaultValue="検量線・標準化"/>
-        <bt:String id="BtnADPTitle" DefaultValue="簡易プレビュー＆データ標準化ツールを起動"/>
-        <bt:String id="BtnDashLabel" DefaultValue="ダッシュボード"/>
+        <bt:String id="BtnENTTitle" DefaultValue="計測データ抽出ツールを起動"/>
+        <bt:String id="BtnADPLabel" DefaultValue="PXRF出力"/>
+        <bt:String id="BtnADPTitle" DefaultValue="簡易プレビュー＆PXRF出力ツールを起動"/>
+        <bt:String id="BtnDashLabel" DefaultValue="グラフ出力"/>
         <bt:String id="BtnDashTitle" DefaultValue="グラフダッシュボードを起動"/>
       </bt:ShortStrings>
       <bt:LongStrings>
