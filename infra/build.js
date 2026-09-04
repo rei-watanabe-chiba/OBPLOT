@@ -42,21 +42,21 @@ const escapedReport = reportHtml
 
 const injectScript = `<script>window.__REPORT_TEMPLATE__ = \`${escapedReport}\`;<\/script>`;
 
-// Tracer.html (Sidebar_Tracer.html -> Tracer.html)
-let tracerHtml = fs.readFileSync(path.join(srcDir, 'Sidebar_Tracer.html'), 'utf-8');
+// Tracer5i.html (Tracer5i.html -> Tracer5i.html)
+let tracerHtml = fs.readFileSync(path.join(srcDir, 'Tracer5i.html'), 'utf-8');
 tracerHtml = processInclude(tracerHtml);
 tracerHtml = tracerHtml.replace('</head>', `${officeScript}\n</head>`);
-fs.writeFileSync(path.join(distDir, 'Tracer.html'), tracerHtml);
+fs.writeFileSync(path.join(distDir, 'Tracer5i.html'), tracerHtml);
 
-// Dash.html (Sidebar_Dash.html -> Dash.html)
-let dashHtml = fs.readFileSync(path.join(srcDir, 'Sidebar_Dash.html'), 'utf-8');
+// Dash.html (Dash.html -> Dash.html)
+let dashHtml = fs.readFileSync(path.join(srcDir, 'Dash.html'), 'utf-8');
 dashHtml = processInclude(dashHtml);
 dashHtml = dashHtml.replace('</head>', `${officeScript}\n${injectScript}\n</head>`);
 fs.writeFileSync(path.join(distDir, 'Dash.html'), dashHtml);
 
 // Reportはそのまま出力
 fs.writeFileSync(path.join(distDir, 'Report.html'), reportHtml);
-console.log('Build completed! Tracer.html, Dash.html and Report.html generated successfully.');
+console.log('Build completed! Tracer5i.html, Dash.html and Report.html generated successfully.');
 
 // --- GitHub Pagesデプロイ用のアセットコピー処理を追加 ---
 if (fs.existsSync(imgDir)) {
