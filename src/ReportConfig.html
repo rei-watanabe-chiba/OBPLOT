@@ -1,0 +1,80 @@
+<!-- src/ReportConfig.html -->
+<script>
+  // --- ダッシュボード用ハードコード定数 ---
+  const RPT_CFG = {
+    lbl: { newCorr: "新規検量線", calib: "検量線", clus: "判別図", useCal: "検量線適用", useLOD: "LOD置換", unsel: "未選択" },
+    rng: {
+      gridRows: { min: 1, max: 3, step: 1, unit: "" },
+      gridCols: { min: 1, max: 3, step: 1, unit: "" },
+      panelGap: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      "margins.top": { min: 0, max: 100, step: 1 },
+      "margins.bottom": { min: 0, max: 100, step: 1 },
+      "margins.left": { min: 0, max: 100, step: 1 },
+      "margins.right": { min: 0, max: 100, step: 1 },
+      p_t: { min: 0, max: 50, step: 0.5 },
+      p_b: { min: 0, max: 50, step: 0.5 },
+      p_l: { min: 0, max: 50, step: 0.5 },
+      p_r: { min: 0, max: 50, step: 0.5 },
+      g_name: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      g_tick: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      s_title: { min: 5, max: 50, step: 0.5, unit: "pt" },
+      s_name: { min: 3, max: 30, step: 0.5, unit: "pt" },
+      s_tick: { min: 3, max: 30, step: 0.5, unit: "pt" },
+      s_stats: { min: 3, max: 30, step: 0.5, unit: "pt" },
+      sym_size: { min: 1, max: 20, step: 0.5, unit: "pt" },
+      sym_bw: { min: 0, max: 5, step: 0.1, unit: "pt" },
+      lw_axis: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      lw_grid: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      lw_reg: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      c_base: { min: 0, max: 100, step: 1, unit: "%" },
+      c_axis: { min: 0, max: 100, step: 1, unit: "%" },
+      c_grid: { min: 0, max: 100, step: 1, unit: "%" }
+    },
+    defRawGph: {
+      fontEng: GLB.fontEngList.find(f => (GLB.defGraphStyle.font || "").includes(f)) || GLB.fontEngList[0],
+      fontJp: GLB.fontJpList.find(f => (GLB.defGraphStyle.font || "").includes(f)) || GLB.fontJpList[0],
+      s_title: 12, s_name: 8.5, s_tick: 7.5, s_stats: 8.5, c_base: 60, c_stats: 60, 
+      sym_size: 4.5, sym_bw: 0.8, lw_axis: 0.6, c_axis: 40, lw_grid: 0.2, c_grid: 10,
+      lw_reg: 0.5, g_name: 1.5, g_tick: 1.5, p_t: 0, p_b: 0, p_l: 0, p_r: 0
+    },
+    defPnl: { graphType: "calibration", calbVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" }
+  };
+
+  const REPORT_SCHEMA = {
+    elements: [
+      { id: "lblFilterDB", text: () => GLB.idx.key1 },
+      { id: "lblFilterItem", text: () => GLB.idx.p1 },
+      { id: "lblFilterGroup", text: () => GLB.idx.wd1 },
+      { id: "btnOutput_copyCfg", visiblePhase: () => !window.__IS_PRINT_TAB__ },
+      { 
+        id: "panelConfigSec", 
+        visiblePhase: () => !window.__IS_PRINT_TAB__ && !!State.get("RPTST.refs.panels")?.find(p => p.id === State.get("RPTST.refs.activePanelId")),
+        dataset: () => ({ graphtype: State.get("RPTST.data.apGraphType") })
+      },
+      ...["Layout", "Data", "Style", "Symb", "Output"].flatMap(t => [
+        { id: `tabBtn${t}`, className: () => State.get("RPTST.ui.activeTab") === `tab${t}` ? "tab-icon active" : "tab-icon" },
+        { id: `tab${t}`, className: () => State.get("RPTST.ui.activeTab") === `tab${t}` ? "sidebar-tab-pane active" : "sidebar-tab-pane" }
+      ]),
+      { 
+        id: "boxOutput_sts", 
+        dataset: () => ({ status: State.get("RPTST.ui.exportStatus") || "message" }),
+        text: () => State.get("RPTST.ui.exportDesc") || ""
+      },
+      {
+        id: "boxOutput_copySts",
+        dataset: () => ({ status: State.get("RPTST.ui.copyStatus") || "message" }),
+        text: () => State.get("RPTST.ui.copyDesc") || ""
+      },
+      { id: "segBtnFont", className: () => State.get("RPTST.ui.activeSub") === "subFont" ? "segment-btn active" : "segment-btn" },
+      { id: "segBtnArea", className: () => State.get("RPTST.ui.activeSub") === "subArea" ? "segment-btn active" : "segment-btn" },
+      { id: "subFont", className: () => State.get("RPTST.ui.activeSub") === "subFont" ? "sub-pane active" : "sub-pane" },
+      { id: "subArea", className: () => State.get("RPTST.ui.activeSub") === "subArea" ? "sub-pane active" : "sub-pane" },
+      ...Array.from({ length: 9 }, (_, i) => ({
+        id: `p_${i}`,
+        visiblePhase: () => { const r = State.get("RPTST.refs"); return r && i < (r.gridRows * r.gridCols); },
+        className: () => (!window.__IS_PRINT_TAB__ && State.get("RPTST.refs.activePanelId") === `p_${i}`) ? "grid-panel active" : "grid-panel"
+      }))
+    ],
+    persistPaths: ["RPTST.refs"]
+  };
+</script>

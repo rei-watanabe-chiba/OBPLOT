@@ -116,6 +116,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     &.panel { flex: 0 0 60px; }
+    &.inline{
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
   }
   .prop-controls {
     flex: 1;
@@ -268,4 +274,54 @@
       height: 100% !important;
     }
   }
+
+  /* --- 4方向インライン入力 (Linked Inputs) --- */
+  .link-toggle-inline {
+    flex: none;
+    background: transparent; 
+    border: 1px solid var(--grey300);
+    border-radius: 20px;
+    padding: 2px 8px;
+    margin-left: 8px;
+    height: fit-content;
+    cursor: pointer; color: var(--grey400);
+    transition: 0.2s;
+    display: inline-block; align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .link-toggle-inline:hover { border-color: var(--grey400); color: var(--text-main); }
+  .link-toggle-inline.active { 
+    color: #fff;
+    background: color-mix(in srgb, var(--theme-color) 70%, transparent);
+    border-color: transparent;
+  }
+  .link-toggle-inline .material-symbols-outlined { font-size: 14px; }
+  .linked-inputs-row { display: flex; gap: 4px; width: 100%; }
+  .linked-input-cell { position: relative; flex: 1; min-width: 0; }
+  .inline-icon-input { width: 100%; padding: 4px 2px 4px 20px; text-align: center; }
+  .linked-input-cell .inside-icon {
+    position: absolute;
+    z-index: 1;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: var(--grey400);
+    pointer-events: none;
+    transition: color 0.2s;
+  }
+  .linked-input-cell:focus-within .inside-icon { color: var(--primary); }
+
+  .linked-inputs-container { margin-bottom: 8px; }
+  #tabLayout .linked-inputs-container { margin-bottom: 4px; }
+  #tabLayout .prop-row { margin-bottom: 4px; }
+
+  /* --- 単位自動付与ラッパー --- */
+  .with-unit { position: relative; display: flex; width: 100%; }
+  .with-unit::after {
+    content: attr(data-unit);
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; color: var(--grey400); pointer-events: none;
+  }
+  .with-unit input { padding-right: 22px !important; }
 </style>

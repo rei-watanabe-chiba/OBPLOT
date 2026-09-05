@@ -182,16 +182,17 @@
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
       const plotDT = validPoints.map(d => {
         const rl = rls.find(r => r.target !== "" && r.target === d[baseKey]) || defRl;
-        const rawShp = rl.shp || 'circle';
+        const rawShp = rl?.shp || 'circle';
         const isEmpty = rawShp === 'emptyCircle' && !d._forceClr;
         const shp = rawShp === 'emptyCircle' ? 'circle' : rawShp; 
-        const bClr = CSSToken.get(d._forceClr || rl.clr);
+        const bClr = CSSToken.get(d._forceClr || rl?.clr);
         return {
           value: [d.x, d.y], '計測ID': d['計測ID'], [GLB.idx.key1]: d[GLB.idx.key1], [GLB.idx.key2]: d[GLB.idx.key2], [GLB.idx.p1]: d[GLB.idx.p1], [GLB.idx.p2]: d[GLB.idx.p2], [GLB.idx.wd1]: d[GLB.idx.wd1], [GLB.idx.wd2]: d[GLB.idx.wd2],
           symbol: shp, symbolSize: shp.startsWith('path://') ? STYLE.symbol.pathSize : STYLE.symbol.baseSize,
-          itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW }
+          itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW },
+          _isDef: rl === defRl
         };
-      });
+      }).sort((a, b) => (b._isDef ? 1 : 0) - (a._isDef ? 1 : 0));
       const series = [{ type: 'scatter', data: plotDT, animation: false }];
       if (statsDT?.slope != null && statsDT?.intercept != null) {
         const { slope, intercept } = statsDT;
@@ -202,6 +203,7 @@
         });
       }
       const graphics = [
+        { type: 'rect', z: 1, silent: true, shape: { x: gridLeft, y: gridTop, width: plotSize, height: plotSize }, style: { fill: 'none', stroke: STYLE.lineC.axis, lineWidth: STYLE.lineW.axis } },
         { type: 'text', left: gridLeft + STYLE.fontS.tick, top: gridTop + STYLE.fontS.tick, style: { text: graphText, fontFamily: STYLE.font, fontSize: STYLE.fontS.stats, fill: STYLE.fontC.stats } }
       ];
       if (titleText) {
@@ -215,7 +217,7 @@
       const opt = {
         animation: false,
         textStyle: { fontFamily: STYLE.font },
-        grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSize, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: STYLE.lineW.axis },
+        grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSize, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: 0 },
         tooltip: { formatter: p => p.componentSubType === 'line' ? '' : GLB.tooltipKeys.map(k => `${k}: ${p.data[k] || '-'}`).join('<br/>'), backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
         xAxis: {
           type: 'value', name: panel?.xLabel || 'WDXRF', nameLocation: 'middle',

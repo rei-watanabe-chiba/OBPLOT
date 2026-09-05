@@ -24,7 +24,7 @@
 
     <?!= include('Component'); ?>
     <?!= include('Chart'); ?>
-    <?!= include('Report_Schema'); ?>
+    <?!= include('ReportConfig'); ?>
     <?!= include('CoreUI'); ?>
     <?!= include('CoreAction'); ?> <!-- 【追加】ルーター・パイプラインの読み込み -->
     
@@ -34,7 +34,41 @@
         <!-- 固定: 選択中パネル -->
         <div class="panel-context" id="panelConfigSec" style="display: none;">
           <h4 class="pane-title">選択中のパネル設定</h4>
-          <div id="mount-panel-config"></div>
+          <div id="mount-panel-config">
+            <div class="prop-row">
+              <label class="prop-label panel">タイプ</label>
+              <div class="prop-controls" id="boxGraphType" data-bind-fields="RPTST.data.graphTypeFields"></div>
+            </div>
+            <div id="secCALB">
+              <div class="prop-row">
+                <label class="prop-label panel">対象指標</label>
+                <div class="prop-controls" id="boxCalbVal" data-bind-fields="RPTST.data.calbValFields"></div>
+              </div>
+            </div>
+            <div id="secCluster">
+              <div class="prop-row">
+                <label class="prop-label panel">X<span class="badge-label">項目</span></label>
+                <div class="prop-controls" id="boxClusX" data-bind-fields="RPTST.data.clusXFields"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
+                <div class="prop-controls" id="boxClusY" data-bind-fields="RPTST.data.clusYFields"></div>
+              </div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label panel">タイトル</label>
+              <div class="prop-controls">
+                <input type="text" data-ap-key="title" data-change="RepoSt.renewPanelRef" data-bind="RPTST.data.apTitle" placeholder="パネルタイトルを入力" class="form-control">
+              </div>
+            </div>
+            <div class="prop-row">
+              <label class="prop-label panel">X/Y<span class="badge-label">ラベル</span></label>
+              <div class="prop-controls">
+                <input type="text" data-ap-key="xLabel" data-change="RepoSt.renewPanelRef" data-bind="RPTST.data.apXLabel" class="form-control" placeholder="X軸">
+                <input type="text" data-ap-key="yLabel" data-change="RepoSt.renewPanelRef" data-bind="RPTST.data.apYLabel" class="form-control" placeholder="Y軸">
+              </div>
+            </div>
+          </div>
         </div>
         <nav class="sidebar-tabs">
           <button id="tabBtnLayout" class="tab-icon active" data-action="RepoAct.actvTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
@@ -65,16 +99,133 @@
           <!-- タブ: tabLayout -->
           <div id="tabLayout" class="sidebar-tab-pane active">
             <h5 class="pane-title" style="margin-bottom:8px;">パネル操作</h5>
-            <div id="mount-layout-panel"></div>
+            <div id="mount-layout-panel">
+              <div class="prop-row" style="margin-bottom:16px;">
+                <label class="prop-label">行数 / 列数</label>
+                <div class="prop-controls">
+                  <input type="number" data-bind="RPTST.refs.gridRows" class="form-control" title="行数">
+                  <input type="number" data-bind="RPTST.refs.gridCols" class="form-control" title="列数">
+                </div>
+              </div>
+            </div>
             <h5 class="pane-title" style="margin-bottom:8px;">余白設定</h5>
-            <div id="mount-layout-margins"></div>
+            <div id="mount-layout-margins">
+              <div class="linked-inputs-container">
+                <label class="prop-label inline" style="margin-bottom: 4px;">
+                  <span>キャンバス余白<span class="badge-label">mm</span></span>
+                  <button type="button" class="link-toggle-inline" data-action="RepoAct.toggleMarginLink" data-link-bind="RPTST.ui.linkCanvasMargin" title="連動">
+                    <span class="material-symbols-outlined">link_off</span>
+                  </button>
+                </label>
+                <div class="prop-controls linked-inputs-row" style="width: 100%;">
+                  <div class="linked-input-cell">
+                    <span class="material-symbols-outlined inside-icon">border_left</span>
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.margins.left" data-link-bind="RPTST.ui.linkCanvasMargin" data-sync-binds="RPTST.refs.margins.left,RPTST.refs.margins.top,RPTST.refs.margins.bottom,RPTST.refs.margins.right" data-change="RepoAct.syncMargin" title="左">
+                  </div>
+                  <div class="linked-input-cell">
+                    <span class="material-symbols-outlined inside-icon">border_top</span>
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.margins.top" data-link-bind="RPTST.ui.linkCanvasMargin" data-sync-binds="RPTST.refs.margins.left,RPTST.refs.margins.top,RPTST.refs.margins.bottom,RPTST.refs.margins.right" data-change="RepoAct.syncMargin" title="上">
+                  </div>
+                  <div class="linked-input-cell">
+                    <span class="material-symbols-outlined inside-icon">border_bottom</span>
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.margins.bottom" data-link-bind="RPTST.ui.linkCanvasMargin" data-sync-binds="RPTST.refs.margins.left,RPTST.refs.margins.top,RPTST.refs.margins.bottom,RPTST.refs.margins.right" data-change="RepoAct.syncMargin" title="下">
+                  </div>
+                  <div class="linked-input-cell">
+                    <span class="material-symbols-outlined inside-icon">border_right</span>
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.margins.right" data-link-bind="RPTST.ui.linkCanvasMargin" data-sync-binds="RPTST.refs.margins.left,RPTST.refs.margins.top,RPTST.refs.margins.bottom,RPTST.refs.margins.right" data-change="RepoAct.syncMargin" title="右">
+                  </div>
+                </div>
+              </div>
+              <div class="linked-inputs-container">
+                <label class="prop-label inline" style="margin-bottom: 4px;">
+                  <span>パネル内余白<span class="badge-label">mm</span></span>
+                  <button type="button" class="link-toggle-inline" data-action="RepoAct.toggleMarginLink" data-link-bind="RPTST.ui.linkPanelMargin" title="連動">
+                    <span class="material-symbols-outlined">link_off</span>
+                  </button>
+                </label>
+                <div class="prop-controls linked-inputs-row" style="width: 100%;">
+                  <div class="linked-input-cell">
+                    <span class="material-symbols-outlined inside-icon">border_left</span>
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_l" data-link-bind="RPTST.ui.linkPanelMargin" data-sync-binds="RPTST.refs.rawGph.p_l,RPTST.refs.rawGph.p_t,RPTST.refs.rawGph.p_b,RPTST.refs.rawGph.p_r" data-change="RepoAct.syncMargin" title="左">
+                  </div>
+                  <div class="linked-input-cell">
+                    <span class="material-symbols-outlined inside-icon">border_top</span>
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_t" data-link-bind="RPTST.ui.linkPanelMargin" data-sync-binds="RPTST.refs.rawGph.p_l,RPTST.refs.rawGph.p_t,RPTST.refs.rawGph.p_b,RPTST.refs.rawGph.p_r" data-change="RepoAct.syncMargin" title="上">
+                  </div>
+                  <div class="linked-input-cell">
+                    <span class="material-symbols-outlined inside-icon">border_bottom</span>
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_b" data-link-bind="RPTST.ui.linkPanelMargin" data-sync-binds="RPTST.refs.rawGph.p_l,RPTST.refs.rawGph.p_t,RPTST.refs.rawGph.p_b,RPTST.refs.rawGph.p_r" data-change="RepoAct.syncMargin" title="下">
+                  </div>
+                  <div class="linked-input-cell">
+                    <span class="material-symbols-outlined inside-icon">border_right</span>
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_r" data-link-bind="RPTST.ui.linkPanelMargin" data-sync-binds="RPTST.refs.rawGph.p_l,RPTST.refs.rawGph.p_t,RPTST.refs.rawGph.p_b,RPTST.refs.rawGph.p_r" data-change="RepoAct.syncMargin" title="右">
+                  </div>
+                </div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">パネル間隔</label>
+                <div class="prop-controls">
+                  <input type="number" data-bind="RPTST.refs.panelGap" class="form-control">
+                </div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">軸ラベル余白</label>
+                <div class="prop-controls">
+                  <input type="number" data-bind="RPTST.refs.rawGph.g_name" class="form-control">
+                </div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label">目盛余白</label>
+                <div class="prop-controls">
+                  <input type="number" data-bind="RPTST.refs.rawGph.g_tick" class="form-control">
+                </div>
+              </div>
+            </div>
           </div>
           <!-- タブ: tabData -->
           <div id="tabData" class="sidebar-tab-pane">
             <h5 class="pane-title" style="margin-bottom:8px;">データフィルター</h5>
-            <div id="mount-data-filters"></div>
+            <div id="mount-data-filters">
+              <div class="prop-row">
+                <label class="prop-label panel" id="lblFilterDB">dataset</label>
+                <div class="prop-controls">
+                  <div data-ui="mselect" id="boxFilterDB" data-change-item="CoreAct.tglMulti" data-change-all="CoreAct.tglAllMulti" data-bind="RPTST.refs.filters.db" data-bind-opts="RPTST.data.filterDBOpts"></div>
+                </div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label panel" id="lblFilterItem">item</label>
+                <div class="prop-controls">
+                  <div data-ui="mselect" id="boxFilterItem" data-change-item="CoreAct.tglMulti" data-change-all="CoreAct.tglAllMulti" data-bind="RPTST.refs.filters.item" data-bind-opts="RPTST.data.filterItemOpts"></div>
+                </div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label panel" id="lblFilterGroup">Group</label>
+                <div class="prop-controls">
+                  <div data-ui="mselect" id="boxFilterGroup" data-change-item="CoreAct.tglMulti" data-change-all="CoreAct.tglAllMulti" data-bind="RPTST.refs.filters.group" data-bind-opts="RPTST.data.filterGroupOpts"></div>
+                </div>
+              </div>
+            </div>
             <h5 class="pane-title" style="margin-top:16px; margin-bottom:8px;">データ補正</h5>
-            <div id="mount-data-crct"></div>
+            <div id="mount-data-crct">
+              <div class="prop-row">
+                <label class="prop-label panel">検量線</label>
+                <div class="prop-controls" id="boxGlobalCrct" data-bind-fields="RPTST.data.crctFields"></div>
+              </div>
+              <div class="prop-row">
+                <label class="prop-label panel">対象元素</label>
+                <div class="prop-controls">
+                  <div data-ui="mselect" id="boxGlobalCalElms" data-change-item="CoreAct.tglMulti" data-change-all="CoreAct.tglAllMulti" data-bind="RPTST.refs.calElms" data-bind-opts="RPTST.data.calElmsOpts"></div>
+                </div>
+              </div>
+              <div class="prop-row" style="margin-top:16px;">
+                <div class="prop-controls">
+                  <div class="toggle-row"><span class="toggle-label">検量線適用</span><label class="toggle-switch"><input type="checkbox" data-bind="RPTST.refs.useCal"><span class="toggle-slider"></span></label></div>
+                </div>
+                <div class="prop-controls">
+                  <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-bind="RPTST.refs.useLOD"><span class="toggle-slider"></span></label></div>
+                </div>
+              </div>
+            </div>
           </div>
           <!-- タブ: tabStyle -->
           <div id="tabStyle" class="sidebar-tab-pane">
@@ -83,15 +234,111 @@
               <button id="segBtnArea" class="segment-btn" data-action="RepoAct.actvSub" data-target="subArea">グラフエリア</button>
             </div>
             <div id="subFont" class="sub-pane active">
-              <div id="mount-style-font"></div>
+              <div id="mount-style-font">
+                <div class="prop-row">
+                  <label class="prop-label">欧文スタイル</label>
+                  <div class="prop-controls" id="boxFontEng" data-bind-fields="RPTST.data.fontEngFields"></div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">和文スタイル</label>
+                  <div class="prop-controls" id="boxFontJp" data-bind-fields="RPTST.data.fontJpFields"></div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">カラー<span class="badge-label">K</span></label>
+                  <div class="prop-controls">
+                    <input type="range" data-bind="RPTST.refs.rawGph.c_base" style="flex:1.8;">
+                    <input type="text" data-bind="RPTST.refs.rawGph.c_base" class="form-control" style="flex:1.2;text-align:center;">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">タイトル</label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.s_title" class="form-control">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">軸名</label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.s_name" class="form-control">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">目盛</label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.s_tick" class="form-control">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">回帰式</label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.s_stats" class="form-control">
+                  </div>
+                </div>
+              </div>
             </div>
             <div id="subArea" class="sub-pane">
-              <div id="mount-style-area"></div>
+              <div id="mount-style-area">
+                <div class="prop-row">
+                  <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.sym_size" class="form-control">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">シンボル<span class="badge-label">線幅</span></label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.sym_bw" class="form-control">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">軸線<span class="badge-label">線幅</span></label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.lw_axis" class="form-control">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">軸線<span class="badge-label">K</span></label>
+                  <div class="prop-controls">
+                    <input type="range" data-bind="RPTST.refs.rawGph.c_axis" style="flex:1.8;">
+                    <input type="text" data-bind="RPTST.refs.rawGph.c_axis" class="form-control" style="flex:1.2;text-align:center;">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">グリッド<span class="badge-label">線幅</span></label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.lw_grid" class="form-control">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">グリッド<span class="badge-label">K</span></label>
+                  <div class="prop-controls">
+                    <input type="range" data-bind="RPTST.refs.rawGph.c_grid" style="flex:1.8;">
+                    <input type="text" data-bind="RPTST.refs.rawGph.c_grid" class="form-control" style="flex:1.2;text-align:center;">
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">回帰線<span class="badge-label">線幅</span></label>
+                  <div class="prop-controls">
+                    <input type="number" data-bind="RPTST.refs.rawGph.lw_reg" class="form-control">
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <!-- タブ: tabSymb -->
           <div id="tabSymb" class="sidebar-tab-pane">
-            <div id="mount-symb"></div>
+            <div id="mount-symb">
+              <div class="prop-row" style="margin-bottom:12px;">
+                <label class="prop-label panel">属性選択</label>
+                <div class="prop-controls">
+                  <div id="boxSymbAxis" data-bind-fields="RPTST.data.axisFields" style="flex:1;"></div>
+                  <button data-action="RepoSt.resetSymb" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
+                </div>
+              </div>
+              <div class="scroll-box">
+                <div data-ui="symbtbl" id="tblSymb" data-bind-src="RPTST.data.symbSrc"></div>
+              </div>
+            </div>
           </div>
         </div>
       </aside>

@@ -3,21 +3,6 @@
   class RepoSt {
     static oldSymbAxis = GLB.symbBaseKey; 
 
-    static getInitRawGph() {
-      const fts = (GLB.defGraphStyle.font || "").split(',').map(s => s.trim().replace(/['"]/g, ''));
-      return {
-        fontEng: GLB.fontEngList.find(f => f.includes(fts[0])) || GLB.fontEngList[0],
-        fontJp: GLB.fontJpList.find(f => f.includes(fts[1])) || GLB.fontJpList[0],
-        s_title: 12, s_name: 8.5, s_tick: 7.5, s_stats: 8.5, c_base: 60, c_stats: 60, 
-        sym_size: 4.5, sym_bw: 0.8, lw_axis: 0.6, c_axis: 40, lw_grid: 0.2, c_grid: 10,
-        lw_reg: 0.5, g_name: 4, g_tick: 4, p_t: 0, p_b: 0, p_l: 0, p_r: 0
-      };
-    }
-
-    static getDefPnl() {
-      return { graphType: "calibration", calbVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" };
-    }
-
     static async initSt(favObj, d) {
       const pxrf = d.pxrfDT || [];
       const exVals = (key) => {
@@ -34,8 +19,8 @@
       let favRefs = favObj ? (favObj["RPTST.refs"] || favObj) : null;
 
       if (favRefs) {
-        if (!favRefs.rawGph) favRefs.rawGph = this.getInitRawGph();
-        else favRefs.rawGph = { ...this.getInitRawGph(), ...favRefs.rawGph };
+        if (!favRefs.rawGph) favRefs.rawGph = { ...RPT_CFG.defRawGph };
+        else favRefs.rawGph = { ...RPT_CFG.defRawGph, ...favRefs.rawGph };
         
         if (favRefs.panelGap === undefined || favRefs.panelGap === 16 || favRefs.panelGap === 12) favRefs.panelGap = 4;
         if (!favRefs.calElms || favRefs.calElms.length === 0) favRefs.calElms = [...GLB.valElms]; 
@@ -47,13 +32,13 @@
           favRefs.filters.group = initFltr(favRefs.filters.group, optsGroup);
         }
         if (favRefs.useLOD === undefined) favRefs.useLOD = false;
-        favRefs.panels = (favRefs.panels || []).map(p => ({ ...this.getDefPnl(), ...p }));
+        favRefs.panels = (favRefs.panels || []).map(p => ({ ...RPT_CFG.defPnl, ...p }));
         
         State.set("RPTST.refs", structuredClone(favRefs));
       } else { 
         refs.filters = { db: optsDB, item: optsItem, group: optsGroup };
-        refs.rawGph = this.getInitRawGph();
-        refs.panels = (refs.panels || []).map(p => ({ ...this.getDefPnl(), ...p }));
+        refs.rawGph = { ...RPT_CFG.defRawGph };
+        refs.panels = (refs.panels || []).map(p => ({ ...RPT_CFG.defPnl, ...p }));
         State.set("RPTST.refs", structuredClone(refs));
       }
       this.oldSymbAxis = State.get("RPTST.refs.symb.baseKey") || GLB.symbBaseKey;
@@ -155,9 +140,6 @@
 
   class RepoAct {
     static automator = null;
-    static resizeTimer = null;
-    static renderTimer = null;
-    static _printListenerSet = false;
 
     // --- タブ・パネル操作 ---
     static actvTab(btn) {
@@ -174,6 +156,39 @@
       State.set("RPTST.refs.activePanelId", btn.dataset.panelId);
     }
 
+    // --- 出力中継・委譲 ---
+    static updExportDesc(tgt) { RepoExport.updExportDesc(tgt); }
+    static requestExport() { RepoExport.requestExport(); }
+    static requestCopyConfig() { RepoExport.requestCopyConfig(); }
+    static syncPanelDom() { RepoRend.syncPanelDom(); }
+
+    // --- 余白一括同期・リンク ---
+    static toggleMarginLink(btn) {
+      const linkBind = btn.dataset.linkBind;
+      if (!linkBind) return;
+      const isLinked = !State.get(linkBind);
+      State.set(linkBind, isLinked);
+      btn.classList.toggle('active', isLinked);
+      const icon = btn.querySelector('.material-symbols-outlined') || btn;
+      icon.textContent = isLinked ? 'link' : 'link_off';
+      btn.title = isLinked ? '連動解除' : '4方向連動';
+    }
+
+    static syncMargin(inp) {
+      const linkBind = inp.dataset.linkBind;
+      if (!linkBind || !State.get(linkBind)) return;
+      const curBind = inp.dataset.bind;
+      const syncBinds = (inp.dataset.syncBinds || '').split(',').filter(b => b && b !== curBind);
+      const val = State.get(curBind) ?? Number(inp.value);
+      syncBinds.forEach(b => State.set(b, val));
+      RepoAct.automator.build();
+    }
+  }
+
+  class RepoRend {
+    static resizeTimer = null;
+    static renderTimer = null;
+
     // --- DOM・レイアウト同期 ---
     static syncPanelDom() {
       const r = State.get("RPTST.refs");
@@ -181,7 +196,7 @@
       for (let i = 0; i < r.gridRows * r.gridCols; i++) reqIds.push(`p_${i}`);
       
       let panels = State.get("RPTST.refs.panels") || [];
-      reqIds.forEach(id => { if (!panels.find(p => p.id === id)) panels.push({ id, ...RepoSt.getDefPnl() }); });
+      reqIds.forEach(id => { if (!panels.find(p => p.id === id)) panels.push({ id, ...RPT_CFG.defPnl }); });
       panels = reqIds.map(id => panels.find(p => p.id === id));
       State.set("RPTST.refs.panels", panels);
       
@@ -195,7 +210,7 @@
       cont.style.setProperty('--panel-gap', `${(r.panelGap !== undefined ? Number(r.panelGap) : 4)}mm`);
       ['top','right','bottom','left'].forEach(p => cont.style.setProperty(`--margin-${p}`, `${r.margins[p]}mm`));
       
-      this.automator.update();
+      RepoAct.automator.update();
       this.fitA4Scale();
       if (!window.__EXPORT_CFG__) this.genCharts();
     }
@@ -210,12 +225,12 @@
     }
 
     static genGph() {
-      const raw = { ...RepoSt.getInitRawGph(), ...(State.get("RPTST.refs.rawGph") || {}) };
+      const raw = { ...RPT_CFG.defRawGph, ...(State.get("RPTST.refs.rawGph") || {}) };
       const pt2px = pt => Number(pt) * 1.33;
       const mm2px = mm => Number(mm) * 3.78; 
-      const [s_title, s_stats, sym_base, lw_reg, s_tick, s_name, g_name, g_tick, sym_bw, lw_axis, lw_grid] = 
-        [raw.s_title, raw.s_stats, raw.sym_size, raw.lw_reg, raw.s_tick, raw.s_name, raw.g_name, raw.g_tick, raw.sym_bw, raw.lw_axis, raw.lw_grid].map(pt2px);
-      const [p_t, p_b, p_l, p_r] = [raw.p_t, raw.p_b, raw.p_l, raw.p_r].map(mm2px);
+      const [s_title, s_stats, sym_base, lw_reg, s_tick, s_name, sym_bw, lw_axis, lw_grid] = 
+        [raw.s_title, raw.s_stats, raw.sym_size, raw.lw_reg, raw.s_tick, raw.s_name, raw.sym_bw, raw.lw_axis, raw.lw_grid].map(pt2px);
+      const [p_t, p_b, p_l, p_r, g_name, g_tick] = [raw.p_t, raw.p_b, raw.p_l, raw.p_r, raw.g_name, raw.g_tick].map(mm2px);
       let finalPadR = p_r < s_tick ? p_r + s_tick : p_r;
       return {
         style: {
@@ -311,8 +326,11 @@
       clearTimeout(this.renderTimer);
       this.renderTimer = setTimeout(() => this.genCharts(), 250);
     }
+  }
 
-    // --- 出力・エクスポート ---
+  class RepoExport {
+    static _printListenerSet = false;
+
     static getFormattedDate() {
       const d = new Date();
       return `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}`;
@@ -336,7 +354,7 @@
         State.set("RPTST.ui.exportDesc", '解析ボードHTMLをダウンロードします。');
       }
       State.set("RPTST.ui.exportStatus", "message");
-      this.automator.update();
+      RepoAct.automator.update();
     }
 
     static setupPrintListener() {
@@ -356,6 +374,71 @@
       this._printListenerSet = true;
     }
 
+    static _prepData() {
+      const r = State.get("RPTST.refs"), d = State.get("RPTST.data.raw");
+      const pCalcDT = r.panels.map(p => {
+        if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
+        const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
+        return CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+      });
+      if (!pCalcDT.some(res => res.prevDT?.length > 0)) {
+        CoreAct.toast("警告", "有効なグラフがありません。\nデータフィルターを確認してください。");
+        return null;
+      }
+      return pCalcDT;
+    }
+
+    static _buildHTML(type, pCalcDT = null) {
+      const ttl = `OBPLOT_${type.toUpperCase()}_${this.getFormattedDate()}`;
+      const esc = s => s.replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      let hStr = '';
+      if (type === 'app') {
+        const sDT = esc(JSON.stringify(State.get("RPTST.data.raw")));
+        const sFav = esc(JSON.stringify({ "RPTST.refs": State.get("RPTST.refs") }));
+        const scrTag = `<title>${ttl}</title><script>window.__INJECTED_DATA__=${sDT}; window.__INJECTED_FAVORITE__=${sFav};<\/script></head>`;
+        hStr = '<!DOCTYPE html>' + document.documentElement.outerHTML.replace('</head>', scrTag);
+      } else {
+        const sSt = esc(JSON.stringify({ RPTST: State.proxy.RPTST }));
+        const sCalc = esc(JSON.stringify(pCalcDT));
+        const cfg = JSON.stringify({ autoPrint: type === 'pdf' });
+        hStr = '<!DOCTYPE html>' + document.documentElement.outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${sSt}; window.__PRECALC_DATA__=${sCalc};<\/script>`);
+      }
+      return { ttl, hStr };
+    }
+
+    static genPDF() {
+      const pCalcDT = this._prepData();
+      if (!pCalcDT) return false;
+      const { hStr } = this._buildHTML('pdf', pCalcDT);
+      
+      this.setupPrintListener();
+      const frm = document.createElement('iframe');
+      frm.className = 'pdf-generator';
+      frm.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:210mm; height:297mm; border:none; z-index:-1;';
+      document.body.appendChild(frm);
+      
+      const doc = frm.contentWindow.document;
+      doc.open();
+      doc.write(hStr);
+      doc.close();
+      
+      CoreAct.toast("処理中", "印刷用PDFを生成しています...", "info");
+      return true;
+    }
+
+    static genStaticHTML() {
+      const pCalcDT = this._prepData();
+      if (!pCalcDT) return false;
+      const { ttl, hStr } = this._buildHTML('html', pCalcDT);
+      this.downloadFile(`${ttl}.html`, hStr);
+      return true;
+    }
+
+    static genApp() {
+      const { ttl, hStr } = this._buildHTML('app');
+      this.downloadFile(`${ttl}.html`, hStr);
+    }
+
     static requestExport() {
       const btn = document.getElementById('btnOutput_exec');
       const type = document.querySelector('input[name="exportType"]:checked')?.value;
@@ -365,7 +448,7 @@
         "RPTST.ui.exportStatus": "loading",
         "RPTST.ui.exportDesc": "処理中..."
       });
-      this.automator.update();
+      RepoAct.automator.update();
 
       setTimeout(() => {
         const restoreUI = () => {
@@ -389,69 +472,6 @@
       }, 50);
     }
 
-    static genPDF() {
-      const r = State.get("RPTST.refs"), d = State.get("RPTST.data.raw");
-      const pCalcDT = r.panels.map(p => {
-        if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
-        const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
-        return CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
-      });
-      if (!pCalcDT.some(res => res.prevDT?.length > 0)) {
-        CoreAct.toast("警告", "有効なグラフがありません。\nデータフィルターを確認してください。");
-        return false;
-      }
-      const sSt = JSON.stringify({ RPTST: State.proxy.RPTST }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-      const sCalc = JSON.stringify(pCalcDT).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-      const ttl = `OBPLOT_PDF_${this.getFormattedDate()}`;
-      const cfg = JSON.stringify({ autoPrint: true });
-      const hStr = document.documentElement.outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${sSt}; window.__PRECALC_DATA__=${sCalc};<\/script>`);
-      
-      this.setupPrintListener();
-      const frm = document.createElement('iframe');
-      frm.className = 'pdf-generator';
-      frm.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:210mm; height:297mm; border:none; z-index:-1;';
-      document.body.appendChild(frm);
-      
-      const doc = frm.contentWindow.document;
-      doc.open();
-      doc.write('<!DOCTYPE html>' + hStr);
-      doc.close();
-      
-      CoreAct.toast("処理中", "印刷用PDFを生成しています...", "info");
-      return true;
-    }
-
-    static genStaticHTML() {
-      const r = State.get("RPTST.refs"), d = State.get("RPTST.data.raw");
-      const pCalcDT = r.panels.map(p => {
-        if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
-        const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
-        return CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
-      });
-      if (!pCalcDT.some(res => res.prevDT?.length > 0)) {
-        CoreAct.toast("警告", "有効なグラフがありません。\nデータフィルターを確認してください。");
-        return false;
-      }
-      const sSt = JSON.stringify({ RPTST: State.proxy.RPTST }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-      const sCalc = JSON.stringify(pCalcDT).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-      const ttl = `OBPLOT_HTML_${this.getFormattedDate()}`;
-      const cfg = JSON.stringify({ autoPrint: false });
-      const hStr = document.documentElement.outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${sSt}; window.__PRECALC_DATA__=${sCalc};<\/script>`);
-      this.downloadFile(`${ttl}.html`, '<!DOCTYPE html>' + hStr);
-      return true;
-    }
-
-    static genApp() {
-      const rawDT = State.get("RPTST.data.raw");
-      const refs = State.get("RPTST.refs");
-      const sDT = JSON.stringify(rawDT).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-      const sFav = JSON.stringify({"RPTST.refs": refs}).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-      const ttl = `OBPLOT_APP_${this.getFormattedDate()}`;
-      const scrTag = `<title>${ttl}</title><script>window.__INJECTED_DATA__=${sDT}; window.__INJECTED_FAVORITE__=${sFav};<\/script></head>`;
-      const hStr = document.documentElement.outerHTML.replace('</head>', scrTag);
-      this.downloadFile(`${ttl}.html`, '<!DOCTYPE html>' + hStr);
-    }
-
     static async requestCopyConfig() {
       const refs = State.get("RPTST.refs");
       const jsonStr = JSON.stringify({ "RPTST.refs": refs }, null, 2);
@@ -462,7 +482,7 @@
       if (txt) txt.style.display = 'none';
 
       State.set({ "RPTST.ui.copyStatus": "loading", "RPTST.ui.copyDesc": "コピー中..." });
-      this.automator.update();
+      RepoAct.automator.update();
 
       let copied = false;
       try {
@@ -476,15 +496,15 @@
       
       if (copied) {
         State.set({ "RPTST.ui.copyStatus": "success", "RPTST.ui.copyDesc": "クリップボードにコピーしました" });
-        this.automator.update();
+        RepoAct.automator.update();
         setTimeout(() => {
           if (btn) btn.disabled = false;
           State.set({ "RPTST.ui.copyStatus": "message", "RPTST.ui.copyDesc": "設定項目をクリップボードにコピーします。" });
-          this.automator.update();
+          RepoAct.automator.update();
         }, 3000);
       } else {
         State.set({ "RPTST.ui.copyStatus": "alert", "RPTST.ui.copyDesc": "アクセス拒否。手動コピーしてください。" });
-        this.automator.update();
+        RepoAct.automator.update();
         if (txt) {
           txt.style.display = 'block';
           txt.value = jsonStr;
@@ -498,7 +518,7 @@
 
   class RepoInit {
     static async init() {
-      CoreAct.rootGLB({ CoreAct, RepoAct, RepoSt, RepoInit });
+      CoreAct.rootGLB({ CoreAct, RepoAct, RepoSt, RepoRend, RepoExport, RepoInit });
       RepoAct.automator = new CoreUI(REPORT_SCHEMA, 'RPTST');
 
       if (window.__EXPORT_CFG__) {
@@ -529,9 +549,9 @@
          RepoAct.automator.build();
          
          requestAnimationFrame(() => {
-           RepoAct.syncPanelDom();
+           RepoRend.syncPanelDom();
            void document.body.offsetHeight;
-           RepoAct.genCharts(window.__PRECALC_DATA__);
+           RepoRend.genCharts(window.__PRECALC_DATA__);
          });
          return;
       }
@@ -539,27 +559,14 @@
       State.set({
         "RPTST.ui.activeTab": "tabLayout", 
         "RPTST.ui.activeSub": "subFont",
+        "RPTST.ui.linkCanvasMargin": false,
+        "RPTST.ui.linkPanelMargin": false,
         "RPTST.ui.exportStatus": "message",
         "RPTST.ui.exportDesc": "ブラウザ機能を使用してPDFを出力します。",
         "RPTST.ui.copyStatus": "message",
         "RPTST.ui.copyDesc": "設定項目をクリップボードにコピーします。"
       });
       
-      const mounts = [
-        { id: 'mount-panel-config', key: 'panel-config' },
-        { id: 'mount-layout-panel', key: 'layout-panel' },
-        { id: 'mount-layout-margins', key: 'layout-margins' },
-        { id: 'mount-data-filters', key: 'data-filters' },
-        { id: 'mount-data-crct', key: 'data-crct' },
-        { id: 'mount-style-font', key: 'style-font' },
-        { id: 'mount-style-area', key: 'style-area' },
-        { id: 'mount-symb', key: 'symb' }
-      ];
-      mounts.forEach(m => {
-        const el = document.getElementById(m.id);
-        if (el && SIDEBAR_PARTS[m.key]) el.innerHTML = Tpl.Sidebar.genRows(SIDEBAR_PARTS[m.key]);
-      });
-
       RepoAct.automator.build();
 
       const initDataRaw = window.__INJECTED_DATA__;
@@ -571,9 +578,21 @@
         if (!bindPath) return;
         const cfgKey = Object.keys(RPT_CFG.rng).find(k => bindPath.endsWith(k));
         if (cfgKey && RPT_CFG.rng[cfgKey]) {
-          el.setAttribute('min', RPT_CFG.rng[cfgKey].min);
-          el.setAttribute('max', RPT_CFG.rng[cfgKey].max);
-          el.setAttribute('step', RPT_CFG.rng[cfgKey].step);
+          const rng = RPT_CFG.rng[cfgKey];
+          el.setAttribute('min', rng.min);
+          el.setAttribute('max', rng.max);
+          el.setAttribute('step', rng.step);
+          
+          if (rng.unit && el.type === 'number') {
+            const parent = el.parentElement;
+            if (parent && !parent.classList.contains('with-unit')) {
+              const wrap = document.createElement('div');
+              wrap.className = 'with-unit';
+              wrap.dataset.unit = rng.unit;
+              el.parentNode.insertBefore(wrap, el);
+              wrap.appendChild(el);
+            }
+          }
         }
       });
 
@@ -585,14 +604,14 @@
       }
       await RepoSt.initSt(fav, injData);
 
-      RepoAct.syncPanelDom();
+      RepoRend.syncPanelDom();
 
       State.subscribe(['RPTST.refs.gridRows', 'RPTST.refs.gridCols', 'RPTST.refs.panelGap', 'RPTST.refs.margins'], () => {
-          RepoAct.syncPanelDom();
+          RepoRend.syncPanelDom();
       });
       
       State.subscribe(['RPTST.refs.filters', 'RPTST.refs.useCal', 'RPTST.refs.useLOD', 'RPTST.refs.crct', 'RPTST.refs.calElms', 'RPTST.refs.symb', 'RPTST.refs.rawGph', 'RPTST.refs.panels'], () => {
-          RepoAct.qRend();
+          RepoRend.qRend();
       });
 
       State.subscribe('RPTST.refs.activePanelId', () => {
@@ -603,11 +622,11 @@
       State.subscribe('RPTST.refs.symb.rls', () => RepoSt.renewSymbState());
 
       window.addEventListener('resize', () => {
-         clearTimeout(RepoAct.resizeTimer);
-         RepoAct.resizeTimer = setTimeout(() => {
-             RepoAct.fitA4Scale();
-             const gph = RepoAct.genGph();
-             RepoAct.calcPanelSize(gph);
+         clearTimeout(RepoRend.resizeTimer);
+         RepoRend.resizeTimer = setTimeout(() => {
+             RepoRend.fitA4Scale();
+             const gph = RepoRend.genGph();
+             RepoRend.calcPanelSize(gph);
              const plots = document.getElementById('dashGrid').querySelectorAll('ui-plot');
              plots.forEach(plot => { plot.src = { ...plot.src, gph: gph }; });
          }, 100);
@@ -620,6 +639,8 @@
   window.RepoAct = RepoAct;
   window.RepoInit = RepoInit;
   window.RepoSt = RepoSt;
+  window.RepoRend = RepoRend;
+  window.RepoExport = RepoExport;
 
   if (document.readyState === 'loading') {
     window.addEventListener("DOMContentLoaded", () => RepoInit.init());
