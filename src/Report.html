@@ -13,14 +13,6 @@
   </head>
   <body data-theme="report">
     <div data-ui="dlg"></div>
-    <dialog id="dlgExportCopy" class="universal-dialog">
-      <h3 class="d-title">設定のコピー</h3>
-      <p class="d-msg">クリップボードの自動コピーが制限されています。<br>以下の設定JSONを手動でコピー（Ctrl+C）してください：</p>
-      <textarea id="txtExportJson" class="form-control" readonly style="width: 100%; height: 140px; margin: 8px 0; font-family: monospace; font-size: 11px;"></textarea>
-      <div class="field-row">
-        <button class="outline" data-type="primary" onclick="document.getElementById('dlgExportCopy').close()">閉じる</button>
-      </div>
-    </dialog>
     <script>
       window.__INJECTED_DATA__ = 'INJECT_TARGET';
       window.__INJECTED_FAVORITE__ = 'INJECT_FAVORITE_TARGET';
@@ -45,29 +37,30 @@
           <div id="mount-panel-config"></div>
         </div>
         <nav class="sidebar-tabs">
-          <button id="tabBtnLayout" class="tab-icon active" data-action="ReportUI.switchTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
-          <button id="tabBtnData" class="tab-icon" data-action="ReportUI.switchTab" data-tab="tabData" title="データ設定"><span class="material-symbols-outlined">database</span></button>
-          <button id="tabBtnStyle" class="tab-icon" data-action="ReportUI.switchTab" data-tab="tabStyle" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
-          <button id="tabBtnSymb" class="tab-icon" data-action="ReportUI.switchTab" data-tab="tabSymb" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
-          <button id="tabBtnOutput" class="tab-icon" data-action="ReportUI.switchTab" data-tab="tabOutput" title="出力"><span class="material-symbols-outlined">output</span></button>
+          <button id="tabBtnLayout" class="tab-icon active" data-action="RepoAct.actvTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
+          <button id="tabBtnData" class="tab-icon" data-action="RepoAct.actvTab" data-tab="tabData" title="データ設定"><span class="material-symbols-outlined">database</span></button>
+          <button id="tabBtnStyle" class="tab-icon" data-action="RepoAct.actvTab" data-tab="tabStyle" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
+          <button id="tabBtnSymb" class="tab-icon" data-action="RepoAct.actvTab" data-tab="tabSymb" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
+          <button id="tabBtnOutput" class="tab-icon" data-action="RepoAct.actvTab" data-tab="tabOutput" title="出力"><span class="material-symbols-outlined">output</span></button>
         </nav>
         <div class="tab-content-area">
           <!-- タブ: tabOutput -->
           <div id="tabOutput" class="sidebar-tab-pane">
-            <h5 class="pane-title" style="margin-bottom:8px;">出力・エクスポート</h5>
-            <div class="field-row" style="display:flex; gap:8px; margin-bottom:8px;">
-              <label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;"><input type="radio" name="exportType" value="pdf" data-action="ReportApp.updateExportDesc" checked>PDF</label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;"><input type="radio" name="exportType" value="html" data-action="ReportApp.updateExportDesc">HTML</label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;"><input type="radio" name="exportType" value="app" data-action="ReportApp.updateExportDesc">HTMLアプリ</label>
+            <h5 class="pane-title" style="margin-bottom:8px;">グラフ・設定出力</h5>
+            <div class="radio-group" style="margin-bottom:12px;">
+              <label class="radio-item"><input type="radio" name="exportType" value="pdf" data-action="RepoAct.updExportDesc" checked>PDF</label>
+              <label class="radio-item"><input type="radio" name="exportType" value="html" data-action="RepoAct.updExportDesc">HTML</label>
+              <label class="radio-item"><input type="radio" name="exportType" value="app" data-action="RepoAct.updExportDesc">HTMLアプリ</label>
             </div>
-            <div id="exportStatus" style="font-size: 11px; margin-bottom: 8px;">ブラウザの印刷機能を使用してPDFを出力します。</div>
-            <div class="prop-row" style="margin-bottom: 8px;">
-              <button id="btnExecuteExport" data-action="ReportApp.executeExport" data-type="primary" style="width:100%;">出力実行</button>
-            </div>
-            <hr style="margin: 12px 0; border: none; border-top: 1px solid var(--grey200);">
             <div class="prop-row">
-              <button id="btnExportConfigTop" data-action="ReportApp.copyConfig" class="outline" data-type="primary" style="width:100%;">現在の設定JSONをコピー</button>
+              <button id="btnOutput_exec" data-action="RepoAct.requestExport" data-type="primary" style="width:100%;">出力実行</button>
             </div>
+            <div id="boxOutput_sts" class="status-bar" style="margin: 8px 0; font-size: 11px;"></div>
+            <div class="prop-row">
+              <button id="btnOutput_copyCfg" data-action="RepoAct.requestCopyConfig" class="outline" data-type="primary" style="width:100%;">設定JSONをコピー</button>
+            </div>
+            <div id="boxOutput_copySts" class="status-bar" style="margin: 8px 0; font-size: 11px;"></div>
+            <textarea id="txtOutput_fallback" class="form-control" style="display:none; width:100%; height:80px; margin-top:8px; font-size:10px; resize:none;" readonly></textarea>
           </div>
           <!-- タブ: tabLayout -->
           <div id="tabLayout" class="sidebar-tab-pane active">
@@ -86,8 +79,8 @@
           <!-- タブ: tabStyle -->
           <div id="tabStyle" class="sidebar-tab-pane">
             <div class="segment-ctrl">
-              <button id="segBtnFont" class="segment-btn active" data-action="ReportUI.switchSub" data-target="subFont">フォント</button>
-              <button id="segBtnArea" class="segment-btn" data-action="ReportUI.switchSub" data-target="subArea">グラフエリア</button>
+              <button id="segBtnFont" class="segment-btn active" data-action="RepoAct.actvSub" data-target="subFont">フォント</button>
+              <button id="segBtnArea" class="segment-btn" data-action="RepoAct.actvSub" data-target="subArea">グラフエリア</button>
             </div>
             <div id="subFont" class="sub-pane active">
               <div id="mount-style-font"></div>
@@ -106,15 +99,15 @@
       <main class="dash-main">
         <div class="a4-container" id="a4Container">
           <div class="dash-grid" id="dashGrid">
-            <div id="p_0" class="grid-panel" data-panel-id="p_0" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div id="p_1" class="grid-panel" data-panel-id="p_1" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div id="p_2" class="grid-panel" data-panel-id="p_2" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div id="p_3" class="grid-panel" data-panel-id="p_3" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div id="p_4" class="grid-panel" data-panel-id="p_4" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div id="p_5" class="grid-panel" data-panel-id="p_5" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div id="p_6" class="grid-panel" data-panel-id="p_6" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div id="p_7" class="grid-panel" data-panel-id="p_7" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div id="p_8" class="grid-panel" data-panel-id="p_8" data-action="ReportApp.setActivePanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_0" class="grid-panel" data-panel-id="p_0" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_1" class="grid-panel" data-panel-id="p_1" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_2" class="grid-panel" data-panel-id="p_2" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_3" class="grid-panel" data-panel-id="p_3" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_4" class="grid-panel" data-panel-id="p_4" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_5" class="grid-panel" data-panel-id="p_5" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_6" class="grid-panel" data-panel-id="p_6" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_7" class="grid-panel" data-panel-id="p_7" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
+            <div id="p_8" class="grid-panel" data-panel-id="p_8" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
           </div>
         </div>
       </main>

@@ -35,8 +35,7 @@
       { id: "lblFilterDB", text: () => GLB.idx.key1 },
       { id: "lblFilterItem", text: () => GLB.idx.p1 },
       { id: "lblFilterGroup", text: () => GLB.idx.wd1 },
-      { id: "btnExportConfig", visiblePhase: () => !window.__IS_PRINT_TAB__ },
-      { id: "btnExportConfigTop", visiblePhase: () => !window.__IS_PRINT_TAB__ },
+      { id: "btnOutput_copyCfg", visiblePhase: () => !window.__IS_PRINT_TAB__ },
       { 
         id: "panelConfigSec", 
         visiblePhase: () => !window.__IS_PRINT_TAB__ && !!State.get("RPTST.refs.panels")?.find(p => p.id === State.get("RPTST.refs.activePanelId")),
@@ -46,11 +45,24 @@
       { id: "tabBtnData", className: () => State.get("RPTST.ui.activeTab") === "tabData" ? "tab-icon active" : "tab-icon" },
       { id: "tabBtnStyle", className: () => State.get("RPTST.ui.activeTab") === "tabStyle" ? "tab-icon active" : "tab-icon" },
       { id: "tabBtnSymb", className: () => State.get("RPTST.ui.activeTab") === "tabSymb" ? "tab-icon active" : "tab-icon" },
+      { id: "tabBtnOutput", className: () => State.get("RPTST.ui.activeTab") === "tabOutput" ? "tab-icon active" : "tab-icon" },
       { id: "tabLayout", className: () => State.get("RPTST.ui.activeTab") === "tabLayout" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
       { id: "tabData", className: () => State.get("RPTST.ui.activeTab") === "tabData" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
       { id: "tabStyle", className: () => State.get("RPTST.ui.activeTab") === "tabStyle" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
       { id: "tabSymb", className: () => State.get("RPTST.ui.activeTab") === "tabSymb" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
+      { id: "tabOutput", className: () => State.get("RPTST.ui.activeTab") === "tabOutput" ? "sidebar-tab-pane active" : "sidebar-tab-pane" },
       
+      { 
+        id: "boxOutput_sts", 
+        dataset: () => ({ status: State.get("RPTST.ui.exportStatus") || "message" }),
+        text: () => State.get("RPTST.ui.exportDesc") || ""
+      },
+      {
+        id: "boxOutput_copySts",
+        dataset: () => ({ status: State.get("RPTST.ui.copyStatus") || "message" }),
+        text: () => State.get("RPTST.ui.copyDesc") || ""
+      },
+
       { id: "segBtnFont", className: () => State.get("RPTST.ui.activeSub") === "subFont" ? "segment-btn active" : "segment-btn" },
       { id: "segBtnArea", className: () => State.get("RPTST.ui.activeSub") === "subArea" ? "segment-btn active" : "segment-btn" },
       { id: "subFont", className: () => State.get("RPTST.ui.activeSub") === "subFont" ? "sub-pane active" : "sub-pane" },

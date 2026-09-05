@@ -207,27 +207,23 @@
     overflow-y: auto;
   }
   
-  /* --- 出力タブ関連 --- */
-  #tabOutput input[type="radio"] {
+  /* --- 汎用コンポーネント（ラジオ・ステータス等） --- */
+  .radio-group {
+    display: flex;
+    gap: 8px;
+  }
+  .radio-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .radio-item input[type="radio"] {
     width: 14px;
     height: 14px;
     margin: 0;
-  }
-  #exportStatus {
-    background-color: var(--grey50);
-    padding: 8px;
-    border-radius: 4px;
-    color: var(--grey600);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 24px;
-  }
-  .spin {
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin {
-    100% { transform: rotate(360deg); }
+    accent-color: var(--primary, var(--theme-color));
   }
   .print-loading {
     position: fixed;
