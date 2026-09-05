@@ -12,7 +12,7 @@
     <div data-ui="dlg"></div>
     <dialog id="dlgFavPaste" class="universal-dialog">
       <h3 class="d-title">設定の貼り付け</h3>
-      <p class="d-msg">ブラウザの自動読取が制限されています。<br>ここに Ctrl+V で設定JSONを貼り付けてください：</p>
+      <p class="d-msg">ブラウザの自動読取が制限されています。<br>ここに設定JSONを貼り付けてください：</p>
       <textarea id="txtFavPaste" class="form-control" style="width: 100%; height: 140px; margin: 8px 0; font-family: monospace; font-size: 11px;" placeholder="{ &quot;RPTST.refs&quot;: ... }"></textarea>
       <div class="field-row">
         <button class="outline" data-type="primary" id="btnFavPasteCancel">キャンセル</button>
@@ -36,15 +36,17 @@
           <hr>
           <details id="secREPO">
             <summary>ダッシュボード作成</summary>
-            <label>ユーザーグラフ設定</label>
-            <div class="fav-table-cntr scroll-y">
-              <div id="tblFAV" data-ui="table" data-bind-src="DashST.REPO.data.favTableSrc"></div>
+            <label>ユーザー設定選択</label>
+            <div class="field-row" style="margin-top: var(--unit)">
+              <div class="fav-table-cntr scroll-y">
+                <div id="tblFAV" data-ui="table" data-bind-src="DashST.REPO.data.favTableSrc"></div>
+              </div>
             </div>
-            <div class="field-row">
+            <label>設定JSON登録</label>
+            <div class="field-row" style="margin-top: var(--unit)">
               <input type="text" id="iptFAV_name" placeholder="設定名を入力" data-bind="DashST.REPO.refs.favInputName" data-bind-invalid="DashST.REPO.data.favInputInvalid" data-change="DashAct.onFavNameChange">
-              <button id="btnFAV_save" data-action="DashAct.addFavFromClipboard" data-type="primary" class="outline" style="width: 100%;" data-bind="DashST.REPO.data.favBtnText">新規登録</button>
+              <button id="btnFAV_save" data-action="DashAct.addFavFromClipboard" data-type="primary" class="outline" style="flex: 0.5;" data-bind="DashST.REPO.data.favBtnText">新規登録</button>
             </div>
-            <hr>
             <div class="field-row">
               <button id="btnREPO_open" data-action="DashAct.requestOpenRepo" data-type="primary">ダッシュボードを展開</button>
             </div>

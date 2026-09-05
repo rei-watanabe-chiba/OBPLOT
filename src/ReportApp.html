@@ -82,7 +82,7 @@
     static async valdSymbAxis(tgt) {
       const newVal = tgt.value, oldVal = this.oldSymbAxis;
       if (newVal === oldVal) return;
-      const isConfirmed = await CoreAct.withAsync(null, { title: "確認", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
+      const isConfirmed = await CoreAct.withAsync(null, { title: "確認", msg: "属性を変更してシンボル設定をリセットします" }, async () => {
         State.set({ "RPTST.refs.symb.baseKey": newVal, "RPTST.refs.symb.rls": [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] });
         this.oldSymbAxis = newVal;
         return null;
@@ -415,7 +415,7 @@
         const conf = { useCal: r.useCal, calElms: r.calElms, crct: r.crct, crctDT: d.crctDT, useLOD: r.useLOD, filters: r.filters, graphType: p.graphType, calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
         return CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
       });
-      if (!preCalc.some(res => res.prevDT?.length > 0)) return CoreAct.toast("警告", "有効なグラフが一つもありません。\n標準化設定やデータを確認してください。");
+      if (!preCalc.some(res => res.prevDT?.length > 0)) return CoreAct.toast("警告", "有効なグラフがありません。\nデータフィルターを確認してください。");
       const safeState = JSON.stringify({ RPTST: State.proxy.RPTST }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const safePreCalc = JSON.stringify(preCalc).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       const htmlStr = document.documentElement.outerHTML.replace('<head>', `<head><script>window.__IS_PRINT_TAB__=true; window.__PRINT_STATE__=${safeState}; window.__PRECALC_DATA__=${safePreCalc};<\/script>`);
@@ -435,7 +435,7 @@
         copied = false;
       }
       if (copied) {
-        CoreAct.toast("コピー完了", "現在の設定をクリップボードにコピーしました。\nサイドバー（ダッシュボード）の設定画面に貼り付けて保存してください。");
+        CoreAct.toast("コピー完了", "現在の設定JSONをクリップボードにコピーしました。\n本体サイドバーで登録してください。");
       } else {
         const dlg = document.getElementById("dlgExportCopy");
         const txt = document.getElementById("txtExportJson");

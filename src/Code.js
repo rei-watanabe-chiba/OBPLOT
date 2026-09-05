@@ -19,8 +19,8 @@ function onOpen() {
 }
 // --- サイドバーの呼び出し分岐 ---
 function openSidebarENT() { openSidebar("entry", "tracer5iデータの抽出", "Tracer5i"); }
-function openSidebarADP() { openSidebar("adapter", "tracer5iのプレビューと補正", "Tracer5i"); }
-function openSidebarDash() { openSidebar("dash", "検量線・判別図ボードを展開", "Dash"); }
+function openSidebarADP() { openSidebar("adapter", "データのプレビューと補正", "Tracer5i"); }
+function openSidebarDash() { openSidebar("dash", "検量線・判別図解析ボード", "Dash"); }
 
 function openSidebar(mode, title, filename) {
   const tpl = HtmlService.createTemplateFromFile(filename);

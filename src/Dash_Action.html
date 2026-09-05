@@ -18,7 +18,7 @@
           "DashST.INST.data.wdxrfDT": wdxrfDT, 
           "DashST.INST.data.crctDT": crctDT, 
           "DashST.phase": DASH_PHS.LOADED,
-          "DashST.REPO.status": ["message", "グラフ展開用HTMLを作成"] 
+          "DashST.REPO.status": ["message", "解析用HTMLを表示"] 
         });
         return `データ構築完了: PXRF ${pxrfDT.length}件`;
       });
@@ -77,7 +77,7 @@
           return cls.join(' ');
         },
         rowAttrsFn: (r) => `data-action="DashAct.selectFavItem" data-name="${r.name}"`,
-        emptyText: '登録された設定はありません'
+        emptyText: '登録設定がありません'
       });
     }
 
@@ -173,7 +173,7 @@
       try {
         parsed = JSON.parse(text.trim());
       } catch (e) {
-        State.set("DashST.REPO.status", ["alert", "エラー: 貼り付けられたデータが有効なJSON形式ではありません。"]);
+        State.set("DashST.REPO.status", ["alert", "エラー: 貼り付けデータが有効形式ではありません。"]);
         return;
       }
       
@@ -229,14 +229,14 @@
         const ipt = document.getElementById("iptFAV_name");
         if (ipt) ipt.value = "";
         DashAct.updFavTableSrc();
-        return `お気に入り「${name}」を保存しました`;
+        return `設定「${name}」を保存しました`;
       });
     }
 
     static async delFavItem(tgt) {
       const name = tgt.dataset.name || tgt.dataset.key;
       if (!name) return;
-      const ok = await CoreAct.confirm("削除確認", `お気に入り「${name}」を削除しますか？`);
+      const ok = await CoreAct.confirm("確認", `設定「${name}」を削除しますか？`);
       if (!ok) return;
 
       await CoreAct.withAsync("DashST.REPO.status", async () => {
@@ -259,7 +259,7 @@
         }
         State.set(updates);
         DashAct.updFavTableSrc();
-        return `お気に入り「${name}」を削除しました`;
+        return `設定「${name}」を削除しました`;
       });
     }
 

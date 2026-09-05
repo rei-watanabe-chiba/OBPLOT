@@ -11,7 +11,7 @@
     <?!= include("CSS"); ?>
     <?!= include("ReportCSS"); ?>
   </head>
-  <body data-theme="adp">
+  <body data-theme="report">
     <div data-ui="dlg"></div>
     <dialog id="dlgExportCopy" class="universal-dialog">
       <h3 class="d-title">設定のコピー</h3>
@@ -48,7 +48,7 @@
           <button data-action="ReportApp.printPDF" data-type="primary">PDF出力（印刷用ページ生成）</button>
         </div>
         <div class="prop-row" style="margin-top:4px;">
-          <button id="btnExportConfigTop" data-action="ReportApp.copyConfig" class="outline" data-type="primary">現在の設定をコピー</button>
+          <button id="btnExportConfigTop" data-action="ReportApp.copyConfig" class="outline" data-type="primary">現在の設定JSONをコピー</button>
         </div>
         <!-- タブナビゲーション -->
         <nav class="sidebar-tabs">
