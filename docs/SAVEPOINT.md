@@ -15,7 +15,7 @@
   - `Chart.html`: [Component] グラフ描画 (`<ui-plot>` / ECharts保護用 Web Component維持)
   - `CSS.html`: [Style] 共通スタイルシート
 - **[B:Tab1/Tab2 特化モジュール]**: `Tracer5i.html`, `Tracer5i_Schema.html`, `Tracer5i_Action.html`, `Tracer5i_Method.html`
-- **[C:Tab3/Report 特化モジュール]**: `Dash.html`, `Dash_Schema.html`, `Dash_Action.html`, `Report.html`, `Report_Schema.html`, `ReportApp.html`, `ReportCSS.html`
+- **[C:Tab3/Report 特化モジュール]**: `Dash.html`, `Dash_Schema.html`, `Dash_Action.html`, `Report.html`, `ReportCSS.html`, `Report_App.html`, `Report_Schema.html`,
 
 ### 2. フェーズ・ステートマシン（状態遷移定義）
 - **Tab 1 (データ抽出)**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
@@ -53,7 +53,7 @@
 
 ### 6. 開発状況と次ステップ
 - **現状**: UIコンポーネントにおけるWeb Components方式を撤廃してStateless Patcherパラダイムへの移行を完了。同時に、名前空間のフラット化、高階関数によるロジックの極小化、およびリアクティビティに伴うスタッター解消（デバウンス適正化）を実施。強固な単方向アーキテクチャが完成し、安定動作を確認済。
-- **次ステップ**: ユーザーの指示に基づく新機能の開発、または別プラットフォーム連携などの拡張。
+- **次ステップ**: Rport.htmlのグラフ描画ロジックにおける検量線と判別図の分離
 
 ---
 
