@@ -44,20 +44,31 @@
           <h4 class="pane-title">選択中のパネル設定</h4>
           <div id="mount-panel-config"></div>
         </div>
-        <div class="prop-row" style="margin-top:4px;">
-          <button data-action="ReportApp.printPDF" data-type="primary">PDF出力（印刷用ページ生成）</button>
-        </div>
-        <div class="prop-row" style="margin-top:4px;">
-          <button id="btnExportConfigTop" data-action="ReportApp.copyConfig" class="outline" data-type="primary">現在の設定JSONをコピー</button>
-        </div>
-        <!-- タブナビゲーション -->
         <nav class="sidebar-tabs">
           <button id="tabBtnLayout" class="tab-icon active" data-action="ReportUI.switchTab" data-tab="tabLayout" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
           <button id="tabBtnData" class="tab-icon" data-action="ReportUI.switchTab" data-tab="tabData" title="データ設定"><span class="material-symbols-outlined">database</span></button>
           <button id="tabBtnStyle" class="tab-icon" data-action="ReportUI.switchTab" data-tab="tabStyle" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
           <button id="tabBtnSymb" class="tab-icon" data-action="ReportUI.switchTab" data-tab="tabSymb" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
+          <button id="tabBtnOutput" class="tab-icon" data-action="ReportUI.switchTab" data-tab="tabOutput" title="出力"><span class="material-symbols-outlined">output</span></button>
         </nav>
         <div class="tab-content-area">
+          <!-- タブ: tabOutput -->
+          <div id="tabOutput" class="sidebar-tab-pane">
+            <h5 class="pane-title" style="margin-bottom:8px;">出力・エクスポート</h5>
+            <div class="field-row" style="display:flex; gap:8px; margin-bottom:8px;">
+              <label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;"><input type="radio" name="exportType" value="pdf" data-action="ReportApp.updateExportDesc" checked>PDF</label>
+              <label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;"><input type="radio" name="exportType" value="html" data-action="ReportApp.updateExportDesc">HTML</label>
+              <label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;"><input type="radio" name="exportType" value="app" data-action="ReportApp.updateExportDesc">HTMLアプリ</label>
+            </div>
+            <div id="exportStatus" style="font-size: 11px; margin-bottom: 8px;">ブラウザの印刷機能を使用してPDFを出力します。</div>
+            <div class="prop-row" style="margin-bottom: 8px;">
+              <button id="btnExecuteExport" data-action="ReportApp.executeExport" data-type="primary" style="width:100%;">出力実行</button>
+            </div>
+            <hr style="margin: 12px 0; border: none; border-top: 1px solid var(--grey200);">
+            <div class="prop-row">
+              <button id="btnExportConfigTop" data-action="ReportApp.copyConfig" class="outline" data-type="primary" style="width:100%;">現在の設定JSONをコピー</button>
+            </div>
+          </div>
           <!-- タブ: tabLayout -->
           <div id="tabLayout" class="sidebar-tab-pane active">
             <h5 class="pane-title" style="margin-bottom:8px;">パネル操作</h5>

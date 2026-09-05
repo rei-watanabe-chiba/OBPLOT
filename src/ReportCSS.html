@@ -17,7 +17,7 @@
       .dash-sidebar { display: none; }
       .dash-main { padding: 0; display: block; height: auto; overflow: visible; }
       .a4-container { width: 210mm; height: 297mm; transform: none !important; margin: 0 !important; max-height: none; box-shadow: none; }
-      .grid-panel { border-color: transparent; }
+      .grid-panel, .grid-panel.active { border: none !important; }
     }
   }
   .dash-layout {
@@ -205,6 +205,29 @@
     padding: 4px;
     margin-bottom: 12px;
     overflow-y: auto;
+  }
+  
+  /* --- 出力タブ関連 --- */
+  #tabOutput input[type="radio"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+  }
+  #exportStatus {
+    background-color: var(--grey50);
+    padding: 8px;
+    border-radius: 4px;
+    color: var(--grey600);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+  }
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    100% { transform: rotate(360deg); }
   }
   .print-loading {
     position: fixed;
