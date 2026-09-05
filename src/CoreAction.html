@@ -1,60 +1,5 @@
 <!-- src/CoreAction.html -->
 <script>
-  // --- CoreMakeBU ---
-  class CoreMakeBU {
-    static #K = "OBP_BU";
-    static #isQ = false;
-    static #getActCfg() {
-      const activeTab = State.get("GLB.activeTab");
-      return CoreAct.cfgRslv ? CoreAct.cfgRslv(activeTab) : null;
-    }
-    static init() { State.subscribe('*', () => this.#queue()); }
-    static #queue() {
-      if (this.#isQ) return;
-      this.#isQ = true;
-      queueMicrotask(() => { this.save(); this.#isQ = false; });
-    }
-    static save() {
-      const config = this.#getActCfg();
-      if (!config) return;
-      const statePrefix = config.statePrefix || (config.statPath ? config.statPath.split('.')[0] : null);
-      if (!statePrefix) return;
-      const paths = config.persistPaths || config.schema?.persistPaths || [];
-      if (!paths.length) return;
-      const phase = State.get(`${statePrefix}.phase`);
-      const minPhase = config.minSavePhase ?? 2;
-      if (phase == null || phase < minPhase) {
-        this.clear();
-        return;
-      }
-      const data = { phase };
-      paths.forEach(p => { data[p] = State.get(p); });
-      StorageAPI.save(this.#K, JSON.stringify(data));
-    }
-    static restore(bu, matchPaths = null) {
-      if (!bu) return;
-      const stateObj = {};
-      const keys = Object.keys(bu).filter(k => k !== "phase");
-      const config = this.#getActCfg();
-      const defaultPaths = config?.persistPaths || config?.schema?.persistPaths || [];
-      const patterns = matchPaths || (defaultPaths.length ? defaultPaths : null);
-      if (patterns) {
-        patterns.forEach(pattern => {
-          const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*/g, ".*") + "$");
-          keys.forEach(k => {
-            if (regex.test(k)) stateObj[k] = bu[k];
-          });
-        });
-      } else {
-        keys.forEach(k => { stateObj[k] = bu[k]; });
-      }
-      if (Object.keys(stateObj).length > 0) State.set(stateObj);
-    }
-    static load() {
-      try { return JSON.parse(StorageAPI.load(this.#K)); } catch (e) { return null; } 
-    }
-    static clear() { StorageAPI.clear(this.#K); }
-  }
   // --- CoreIdlTm ---
   class CoreIdlTm {
     static #MS = 5 * 60000;
@@ -173,9 +118,8 @@
         if (!isConnected) return; 
         this.#isInit = true;
       }
-      if (hooks.onBeforeInit) await hooks.onBeforeInit(isSwitch, CoreMakeBU.load());
+      if (hooks.onBeforeInit) await hooks.onBeforeInit(isSwitch);
       if (!isSwitch) {
-        CoreMakeBU.init();
         CoreIdlTm.init();
       }
       State.set("GLB.isLocked", false);

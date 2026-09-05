@@ -33,7 +33,17 @@
         DashST: {
           phase: DASH_PHS.INIT,
           INST: createSec({ data: { pxrfDT: null, wdxrfDT: null, crctDT: null } }),
-          REPO: createSec({ refs: {} }),
+          REPO: createSec({ 
+            refs: { useFav: false, selectedFav: "", favInputName: "" },
+            data: { 
+              favList: [], 
+              favInputInvalid: false, 
+              favOverwriteTarget: "", 
+              favSuccessTarget: "",
+              favBtnText: "クリップボードから新規登録",
+              favTableSrc: null
+            } 
+          }),
           gph: { style: GLB.defGraphStyle, gap: GLB.defGraphGap }
         },
         // 【追加】レポート専用のステートマシン

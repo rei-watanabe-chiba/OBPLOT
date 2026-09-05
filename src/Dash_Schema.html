@@ -6,6 +6,8 @@
       { id: "secINST", activePhase: p => true, disablePhase: p => false, openPhase: p => p < DASH_PHS.LOADED },
       { id: "btnINST_load", activePhase: p => true, disablePhase: p => false },
       { id: "secREPO", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED, openPhase: p => p >= DASH_PHS.LOADED ? true : false },
+      { id: "iptFAV_name", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED },
+      { id: "btnFAV_save", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED },
       { id: "btnREPO_open", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED }
     ]
   };

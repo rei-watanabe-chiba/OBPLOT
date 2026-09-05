@@ -117,3 +117,22 @@ function genShts(ssId, buildPlan) {
     return ApiRes.success("構成更新完了");
   });
 }
+// --- ユーザープロパティ (永続化) ---
+function saveUserProp(key, val) {
+  return withErr(() => {
+    PropertiesService.getUserProperties().setProperty(key, val);
+    return ApiRes.success(true);
+  });
+}
+function loadUserProp(key) {
+  return withErr(() => {
+    const val = PropertiesService.getUserProperties().getProperty(key);
+    return ApiRes.success(val);
+  });
+}
+function deleteUserProp(key) {
+  return withErr(() => {
+    PropertiesService.getUserProperties().deleteProperty(key);
+    return ApiRes.success(true);
+  });
+}

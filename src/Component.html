@@ -72,6 +72,43 @@
       static item(val, dataChange) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }
       static selectAll(dataChange) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked><span>すべて選択</span></label>`; }
     };
+    static Elements = class {
+      static btn(text, action, cls = '', attrs = '') {
+        return html`<button type="button" class="${cls}" data-action="${action}" ${attrs}>${text}</button>`;
+      }
+      static iconBtn(text, action, key = '', dis = false, cls = 'icon-btn', attrs = '') {
+        return html`<button type="button" class="${cls}" data-action="${action}" ${key ? html`data-rule-key="${key}" data-key="${key}"` : ''} ${dis ? 'disabled' : ''} ${attrs}>${text}</button>`;
+      }
+      static cell(cntHtml, cls = '', attrs = '') {
+        return html`<div class="${cls}" ${attrs}>${cntHtml}</div>`;
+      }
+      static row(cellsHtml, cls = 'table-row', attrs = '') {
+        return html`<div class="${cls}" ${attrs}>${cellsHtml}</div>`;
+      }
+    };
+    static Table = class {
+      static build(cfg) {
+        if (!cfg) return '';
+        const { rows = [], cols = [], rowClass = 'table-row', rowClassFn = null, rowAttrsFn = null, emptyText = '' } = cfg;
+        if (!rows.length) return emptyText ? `<div class="txt-btninfo" style="padding: 8px 0;">${emptyText}</div>` : '';
+        return rows.map((r, rIdx) => {
+          const dynCls = rowClassFn ? rowClassFn(r, rIdx) : (r.rowClass || '');
+          const fullRowCls = [rowClass, dynCls].filter(Boolean).join(' ');
+          const rowAttrs = rowAttrsFn ? rowAttrsFn(r, rIdx) : (r.rowAttrs || '');
+          const cellsHtml = cols.map((col, cIdx) => {
+            let cnt = '';
+            if (typeof col.render === 'function') {
+              cnt = col.render(r[col.key], r, rIdx);
+            } else {
+              cnt = r[col.key] ?? '';
+            }
+            const cellCls = col.className || `col-${col.key || cIdx}`;
+            return Tpl.Elements.cell(cnt, cellCls);
+          }).join('');
+          return Tpl.Elements.row(cellsHtml, fullRowCls, rowAttrs);
+        }).join('');
+      }
+    };
     static Symbol = class {
       static COLS = [
         { key: 'target', className: 'symb-col-target', hasClr: false },
@@ -80,9 +117,9 @@
       ];
       static sum(label, clr, hasClr, hasVal) { return html`${(hasClr && hasVal) ? Tpl.Common.colorBox(clr) : ""}${label}`; }
       static item(opt, type, idx, hasClr, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-symbol-idx="${idx}" data-symbol-type="${type}" value="${opt.val}" popovertargetaction="hide">${hasClr ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
-      static btn(action, key, text, dis) { return html`<button type="button" class="icon-btn" data-action="${action}" ${key ? html`data-rule-key="${key}"` : ""} ${dis ? "disabled" : ""}>${text}</button>`; }
-      static col(clsName, cntHtml) { return html`<div class="${clsName}">${cntHtml}</div>`; }
-      static row(btnHtml, colsHtml) { return html`<div class="symb-table-row"><div class="symb-col-btn">${btnHtml}</div>${colsHtml}</div>`; }
+      static btn(action, key, text, dis) { return Tpl.Elements.iconBtn(text, action, key, dis); }
+      static col(clsName, cntHtml) { return Tpl.Elements.cell(cntHtml, clsName); }
+      static row(btnHtml, colsHtml) { return Tpl.Elements.row(`${Tpl.Elements.cell(btnHtml, 'symb-col-btn')}${colsHtml}`, 'symb-table-row'); }
       static addRow(actionAdd, colsArr) { return this.row(this.btn(actionAdd, "", "+", false), colsArr.map(c => this.col(c.className, "")).join('')); }
       static genSel(opts, curVal, type, idx, hasClr, actsConf) {
         let curLbl = "未選択", curClr = "";
@@ -95,18 +132,28 @@
       static tbl(src) {
         const { rls, optsConf, actsConf } = src || {};
         if (!rls?.length || !optsConf) return '';
-        return [...rls, { isAddRow: true }].map((rl, idx) => {
-          if (rl.isAddRow) return Tpl.Symbol.addRow(actsConf.add, Tpl.Symbol.COLS);
-          const isDef = rl.key === "default";
-          const btnHtml = Tpl.Symbol.btn(actsConf.remove, rl.key, "-", isDef);
-          const colsHtml = Tpl.Symbol.COLS.map(col => Tpl.Symbol.col(
-            col.className,
-            (col.key === 'target' && isDef)
-              ? '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>'
-              : Tpl.Symbol.genSel(optsConf[col.key], rl[col.key], col.key, idx, col.hasClr, actsConf)
-          )).join('');
-          return Tpl.Symbol.row(btnHtml, colsHtml);
-        }).join('');
+        const rows = [...rls, { isAddRow: true }];
+        const cols = [
+          {
+            key: 'btn',
+            className: 'symb-col-btn',
+            render: (v, rl) => rl.isAddRow
+              ? Tpl.Elements.iconBtn('+', actsConf.add)
+              : Tpl.Elements.iconBtn('-', actsConf.remove, rl.key, rl.key === 'default')
+          },
+          ...Tpl.Symbol.COLS.map(col => ({
+            key: col.key,
+            className: col.className,
+            render: (v, rl, idx) => {
+              if (rl.isAddRow) return '';
+              if (col.key === 'target' && rl.key === 'default') {
+                return '<div style="padding: 4px; font-size: 12px; color: var(--grey400);">Default</div>';
+              }
+              return Tpl.Symbol.genSel(optsConf[col.key], rl[col.key], col.key, idx, col.hasClr, actsConf);
+            }
+          }))
+        ];
+        return Tpl.Table.build({ rows, cols, rowClass: 'symb-table-row' });
       }
     };
     static Sidebar = class {
@@ -119,6 +166,14 @@
         if (r.type === 'section') {
           return html`<div id="${r.id}">
             ${r.rows.map(sr => this.row(sr)).join('\n            ')}
+          </div>`;
+        }
+        if (r.type === 'button') {
+          const btnCls = r.className ? ` ${r.className}` : '';
+          const idAttr = r.id ? ` id="${r.id}"` : '';
+          const style = r.marginBottom ? ` style="margin-bottom:${r.marginBottom};"` : (r.marginTop ? ` style="margin-top:${r.marginTop};"` : '');
+          return html`<div class="prop-row"${style}>
+            <button${idAttr} data-action="${r.action}" class="outline${btnCls}" data-type="primary" style="width:100%;">${r.text}</button>
           </div>`;
         }
         if (r.type === 'symbolTable') {

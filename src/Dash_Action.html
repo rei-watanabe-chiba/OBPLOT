@@ -27,10 +27,21 @@
     static async requestOpenRepo() {
       await CoreAct.withAsync("DashST.REPO.status", async () => {
         let template = await API.getReportTemplate();
-        const { INST } = State.proxy.DashST;
+        const { INST, REPO } = State.proxy.DashST;
         const injectData = { pxrfDT: INST.data.pxrfDT || [], wdxrfDT: INST.data.wdxrfDT || [], crctDT: INST.data.crctDT || [] };
         const safeJson = JSON.stringify(injectData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
         template = template.replace("'INJECT_TARGET'", () => safeJson);
+
+        let favData = null;
+        if (REPO.refs?.useFav && REPO.refs?.selectedFav) {
+          try {
+            const favStr = await StorageAPI.load(`OBP_FAV_${REPO.refs.selectedFav}`);
+            if (favStr) favData = JSON.parse(favStr);
+          } catch (e) {}
+        }
+        const safeFavJson = favData ? JSON.stringify(favData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') : 'null';
+        template = template.replace("'INJECT_FAVORITE_TARGET'", () => safeFavJson);
+
         const blob = new Blob([template], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         
@@ -44,32 +55,249 @@
         }
       });
     }
+
+    static updFavTableSrc() {
+      const favList = State.get("DashST.REPO.data.favList") || [];
+      const selectedFav = State.get("DashST.REPO.refs.selectedFav") || "";
+      const overwriteTarget = State.get("DashST.REPO.data.favOverwriteTarget") || "";
+      const successTarget = State.get("DashST.REPO.data.favSuccessTarget") || "";
+
+      State.set("DashST.REPO.data.favTableSrc", {
+        rows: favList.map(name => ({ name })),
+        cols: [
+          { key: 'name', className: 'fav-col-name', render: name => `<span style="user-select:none;">${name}</span>` },
+          { key: 'name', className: 'fav-col-btn', render: name => Tpl.Elements.iconBtn('×', 'DashAct.delFavItem', name, false, 'icon-btn', `data-name="${name}" title="削除"`) }
+        ],
+        rowClass: 'table-row',
+        rowClassFn: (r) => {
+          const cls = [];
+          if (r.name === overwriteTarget) cls.push('has-error');
+          if (r.name === successTarget) cls.push('has-success');
+          if (r.name === selectedFav) cls.push('selected');
+          return cls.join(' ');
+        },
+        rowAttrsFn: (r) => `data-action="DashAct.selectFavItem" data-name="${r.name}"`,
+        emptyText: '登録された設定はありません'
+      });
+    }
+
+    static selectFavItem(tgt) {
+      const name = tgt.dataset.name;
+      if (!name) return;
+      const cur = State.get("DashST.REPO.refs.selectedFav");
+      if (cur === name) {
+        State.set({
+          "DashST.REPO.refs.selectedFav": "",
+          "DashST.REPO.refs.useFav": false,
+          "DashST.REPO.data.favSuccessTarget": "",
+          "DashST.REPO.status": ["hidden", ""]
+        });
+      } else {
+        State.set({
+          "DashST.REPO.refs.selectedFav": name,
+          "DashST.REPO.refs.useFav": true,
+          "DashST.REPO.data.favSuccessTarget": "",
+          "DashST.REPO.status": ["message", `設定「${name}」を選択中`]
+        });
+      }
+      DashAct.updFavTableSrc();
+      if (window.automatorDash) window.automatorDash.update();
+    }
+
+    static onFavNameChange(tgt) {
+      const val = (tgt.value || "").trim();
+      State.set("DashST.REPO.refs.favInputName", val);
+      if (State.get("DashST.REPO.data.favInputInvalid")) {
+        State.set("DashST.REPO.data.favInputInvalid", false);
+      }
+      const overwriteTarget = State.get("DashST.REPO.data.favOverwriteTarget");
+      if (overwriteTarget && overwriteTarget !== val) {
+        State.set({
+          "DashST.REPO.data.favOverwriteTarget": "",
+          "DashST.REPO.data.favBtnText": "新規登録",
+          "DashST.REPO.status": ["hidden", ""]
+        });
+        DashAct.updFavTableSrc();
+      }
+    }
+
+    static promptPasteDialog() {
+      return new Promise(resolve => {
+        const dlg = document.getElementById("dlgFavPaste");
+        const txt = document.getElementById("txtFavPaste");
+        const btnOk = document.getElementById("btnFavPasteOk");
+        const btnCancel = document.getElementById("btnFavPasteCancel");
+        if (!dlg || !txt) {
+          const res = prompt("ここにコピーした設定JSONを貼り付けてください：");
+          return resolve(res);
+        }
+        txt.value = "";
+        const cleanUp = () => {
+          if (btnOk) btnOk.onclick = null;
+          if (btnCancel) btnCancel.onclick = null;
+          dlg.close();
+        };
+        if (btnOk) btnOk.onclick = () => {
+          const val = txt.value;
+          cleanUp();
+          resolve(val);
+        };
+        if (btnCancel) btnCancel.onclick = () => {
+          cleanUp();
+          resolve(null);
+        };
+        dlg.showModal();
+        txt.focus();
+      });
+    }
+
+    static async addFavFromClipboard() {
+      let text = "";
+      let success = false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          text = await navigator.clipboard.readText();
+          if (text && text.trim()) success = true;
+        }
+      } catch (e) {
+        success = false;
+      }
+      
+      if (!success) {
+        text = await this.promptPasteDialog();
+      }
+      
+      if (!text || !text.trim()) return;
+      
+      let parsed = null;
+      try {
+        parsed = JSON.parse(text.trim());
+      } catch (e) {
+        State.set("DashST.REPO.status", ["alert", "エラー: 貼り付けられたデータが有効なJSON形式ではありません。"]);
+        return;
+      }
+      
+      const refs = parsed["RPTST.refs"] || parsed;
+      if (!refs || typeof refs !== 'object') {
+        State.set("DashST.REPO.status", ["alert", "エラー: ダッシュボード設定（refs）が見つかりません。"]);
+        return;
+      }
+      
+      const rawName = State.get("DashST.REPO.refs.favInputName") || document.getElementById('iptFAV_name')?.value || "";
+      const name = rawName.trim();
+      if (!name) {
+        State.set({
+          "DashST.REPO.data.favInputInvalid": true,
+          "DashST.REPO.status": ["alert", "エラー: 設定名を入力してください。"]
+        });
+        return;
+      }
+
+      const favList = State.get("DashST.REPO.data.favList") || [];
+      const isDuplicate = favList.includes(name);
+      const overwriteTarget = State.get("DashST.REPO.data.favOverwriteTarget");
+
+      if (isDuplicate && overwriteTarget !== name) {
+        State.set({
+          "DashST.REPO.data.favInputInvalid": false,
+          "DashST.REPO.data.favOverwriteTarget": name,
+          "DashST.REPO.data.favSuccessTarget": "",
+          "DashST.REPO.data.favBtnText": "上書き",
+          "DashST.REPO.status": ["alert", `エラー: 設定名「${name}」が重複しています。`]
+        });
+        DashAct.updFavTableSrc();
+        return;
+      }
+      
+      await CoreAct.withAsync("DashST.REPO.status", async () => {
+        await StorageAPI.save(`OBP_FAV_${name}`, JSON.stringify({ "RPTST.refs": refs }));
+        let nextList = [...favList];
+        if (!isDuplicate) {
+          nextList.push(name);
+          await StorageAPI.save("OBP_FAV_INDEX", JSON.stringify(nextList));
+        }
+        State.set({
+          "DashST.REPO.data.favList": nextList,
+          "DashST.REPO.refs.selectedFav": name,
+          "DashST.REPO.refs.useFav": true,
+          "DashST.REPO.refs.favInputName": "",
+          "DashST.REPO.data.favInputInvalid": false,
+          "DashST.REPO.data.favOverwriteTarget": "",
+          "DashST.REPO.data.favSuccessTarget": name,
+          "DashST.REPO.data.favBtnText": "新規登録"
+        });
+        const ipt = document.getElementById("iptFAV_name");
+        if (ipt) ipt.value = "";
+        DashAct.updFavTableSrc();
+        return `お気に入り「${name}」を保存しました`;
+      });
+    }
+
+    static async delFavItem(tgt) {
+      const name = tgt.dataset.name || tgt.dataset.key;
+      if (!name) return;
+      const ok = await CoreAct.confirm("削除確認", `お気に入り「${name}」を削除しますか？`);
+      if (!ok) return;
+
+      await CoreAct.withAsync("DashST.REPO.status", async () => {
+        await StorageAPI.clear(`OBP_FAV_${name}`);
+        const curList = State.get("DashST.REPO.data.favList") || [];
+        const nextList = curList.filter(n => n !== name);
+        await StorageAPI.save("OBP_FAV_INDEX", JSON.stringify(nextList));
+
+        const updates = { "DashST.REPO.data.favList": nextList };
+        if (State.get("DashST.REPO.refs.selectedFav") === name) {
+          updates["DashST.REPO.refs.selectedFav"] = "";
+          updates["DashST.REPO.refs.useFav"] = false;
+        }
+        if (State.get("DashST.REPO.data.favOverwriteTarget") === name) {
+          updates["DashST.REPO.data.favOverwriteTarget"] = "";
+          updates["DashST.REPO.data.favBtnText"] = "新規登録";
+        }
+        if (State.get("DashST.REPO.data.favSuccessTarget") === name) {
+          updates["DashST.REPO.data.favSuccessTarget"] = "";
+        }
+        State.set(updates);
+        DashAct.updFavTableSrc();
+        return `お気に入り「${name}」を削除しました`;
+      });
+    }
+
+    static async initFavList() {
+      let indexStr = null;
+      try { indexStr = await StorageAPI.load("OBP_FAV_INDEX"); } catch (e) {}
+      let list = [];
+      try { list = indexStr ? JSON.parse(indexStr) : []; } catch (e) { list = []; }
+      State.set("DashST.REPO.data.favList", list);
+      DashAct.updFavTableSrc();
+    }
   }
 
   window.DashAct = DashAct;
 
   class DashInit {
     static async start() {
-      CoreAct.rootGLB({ CoreAct, DashAct, });
+      CoreAct.rootGLB({ CoreAct, DashAct });
 
       CoreAct.cfgRslv = (tabId) => {
         return { schemaKey: 'dash', statPath: 'DashST.INST.status', schema: DASH_SIDEBAR_SCHEMA };
       };
 
-      const automatorDash = new CoreUI(DASH_SIDEBAR_SCHEMA, 'DashST');
-      automatorDash.build();
+      window.automatorDash = new CoreUI(DASH_SIDEBAR_SCHEMA, 'DashST');
+      window.automatorDash.build();
 
-      State.subscribe("DashST.phase", () => automatorDash.update());
-      
-      State.subscribe("GLB.isLocked", () => {
-        automatorDash.update();
-      });
+      State.subscribe("DashST.phase", () => window.automatorDash?.update());
+      State.subscribe("GLB.isLocked", () => window.automatorDash?.update());
+      State.subscribe("DashST.REPO.refs.useFav", () => window.automatorDash?.update());
+      State.subscribe("DashST.REPO.refs.selectedFav", () => window.automatorDash?.update());
 
       const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";
       CoreAct.actvTab('dash');
       
       const initCfg = CoreAct.cfgRslv('dash');
       await CoreAct.startSession(ssId, false, {}, initCfg);
+
+      await DashAct.initFavList();
     }
   }
 

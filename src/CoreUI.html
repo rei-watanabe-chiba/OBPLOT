@@ -76,6 +76,8 @@
         CoreUIPatcher.patchMSelectRefs(el, val);
       } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
         if (el.value !== String(val ?? '')) el.value = val ?? '';
+      } else if (el.tagName === 'BUTTON') {
+        if (el.innerText !== String(val ?? '')) el.innerText = val ?? '';
       }
     }
 
@@ -96,6 +98,7 @@
 
     static patchSrc(el, val) {
       if (el.dataset.ui === 'symbtbl' || el.tagName === 'UI-SYMBTBL') el.innerHTML = Tpl.Symbol.tbl(val);
+      else if (el.dataset.ui === 'table' || el.tagName === 'UI-TABLE') el.innerHTML = Tpl.Table.build(val);
       else if (typeof el.src !== 'undefined' || el.tagName === 'UI-PLOT') el.src = val;
     }
 
@@ -207,6 +210,7 @@
         { key: 'bindSrc', attr: 'data-bind-src', fn: binder(CoreUIPatcher.patchSrc) },
         { key: 'bindStats', attr: 'data-bind-stats', fn: binder((el, val) => { el.innerHTML = Tpl.Stats.gen(val); }) },
         { key: 'bindErrs', attr: 'data-bind-errs', fn: binder(CoreUIPatcher.patchErrs) },
+        { key: 'bindInvalid', attr: 'data-bind-invalid', fn: binder((el, val) => el.classList.toggle('has-error', !!val)) },
         { key: 'bindFields', attr: 'data-bind-fields', fn: binder((el, val) => {
           el.innerHTML = Tpl.Form.fields(val);
           el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));

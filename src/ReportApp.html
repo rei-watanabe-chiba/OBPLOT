@@ -18,7 +18,7 @@
       return { graphType: "calibration", calbVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF" };
     }
 
-    static async initSt(buObj, d) {
+    static async initSt(favObj, d) {
       const pxrf = d.pxrfDT || [];
       const exVals = (key) => {
         const vals = [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
@@ -31,29 +31,29 @@
       const initFltr = (buVal, opts) => Array.isArray(buVal) ? buVal.map(String) : opts;
 
       let refs = State.get("RPTST.refs") || {};
-      let buRefs = buObj ? (buObj["RPTST.refs"] || buObj) : null;
+      let favRefs = favObj ? (favObj["RPTST.refs"] || favObj) : null;
 
-      if (buRefs && await CoreAct.confirm("復元", "前回のダッシュボード状態を復元しますか？")) {
-        if (!buRefs.rawGph) buRefs.rawGph = this.getInitRawGph();
-        else buRefs.rawGph = { ...this.getInitRawGph(), ...buRefs.rawGph };
+      if (favRefs) {
+        if (!favRefs.rawGph) favRefs.rawGph = this.getInitRawGph();
+        else favRefs.rawGph = { ...this.getInitRawGph(), ...favRefs.rawGph };
         
-        if (buRefs.panelGap === undefined || buRefs.panelGap === 16 || buRefs.panelGap === 12) buRefs.panelGap = 4;
-        if (!buRefs.calElms || buRefs.calElms.length === 0) buRefs.calElms = [...GLB.valElms]; 
+        if (favRefs.panelGap === undefined || favRefs.panelGap === 16 || favRefs.panelGap === 12) favRefs.panelGap = 4;
+        if (!favRefs.calElms || favRefs.calElms.length === 0) favRefs.calElms = [...GLB.valElms]; 
         
-        if (!buRefs.filters || Array.isArray(buRefs.filters)) buRefs.filters = { db: optsDB, item: optsItem, group: optsGroup };
+        if (!favRefs.filters || Array.isArray(favRefs.filters)) favRefs.filters = { db: optsDB, item: optsItem, group: optsGroup };
         else {
-          buRefs.filters.db = initFltr(buRefs.filters.db, optsDB);
-          buRefs.filters.item = initFltr(buRefs.filters.item, optsItem);
-          buRefs.filters.group = initFltr(buRefs.filters.group, optsGroup);
+          favRefs.filters.db = initFltr(favRefs.filters.db, optsDB);
+          favRefs.filters.item = initFltr(favRefs.filters.item, optsItem);
+          favRefs.filters.group = initFltr(favRefs.filters.group, optsGroup);
         }
-        if (buRefs.useLOD === undefined) buRefs.useLOD = false;
-        buRefs.panels = (buRefs.panels || []).map(p => ({ ...this.getDefPnl(), ...p }));
+        if (favRefs.useLOD === undefined) favRefs.useLOD = false;
+        favRefs.panels = (favRefs.panels || []).map(p => ({ ...this.getDefPnl(), ...p }));
         
-        CoreMakeBU.restore({ "RPTST.refs": buRefs }, ["RPTST.refs"]);
+        State.set("RPTST.refs", structuredClone(favRefs));
       } else { 
-        StorageAPI.clear("OBP_DASH_BU");
         refs.filters = { db: optsDB, item: optsItem, group: optsGroup };
         refs.rawGph = this.getInitRawGph();
+        refs.panels = (refs.panels || []).map(p => ({ ...this.getDefPnl(), ...p }));
         State.set("RPTST.refs", structuredClone(refs));
       }
       this.oldSymbAxis = State.get("RPTST.refs.symb.baseKey") || GLB.symbBaseKey;
@@ -85,7 +85,6 @@
       const isConfirmed = await CoreAct.withAsync(null, { title: "確認", msg: "属性を変更するとシンボル設定がリセットされます。よろしいですか？" }, async () => {
         State.set({ "RPTST.refs.symb.baseKey": newVal, "RPTST.refs.symb.rls": [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] });
         this.oldSymbAxis = newVal;
-        ReportApp.qSave();
         return null;
       });
       if (!isConfirmed) {
@@ -94,16 +93,15 @@
       }
     }
 
-    static resetSymb() { State.set("RPTST.refs.symb.rls", [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); ReportApp.qSave(); }
-    static addSymb() { State.set("RPTST.refs.symb.rls", [...State.get("RPTST.refs.symb.rls"), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); ReportApp.qSave(); }
-    static removeSymb(btn) { State.set("RPTST.refs.symb.rls", State.get("RPTST.refs.symb.rls").filter(rw => rw.key !== btn.dataset.ruleKey)); ReportApp.qSave(); }
+    static resetSymb() { State.set("RPTST.refs.symb.rls", [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
+    static addSymb() { State.set("RPTST.refs.symb.rls", [...State.get("RPTST.refs.symb.rls"), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
+    static removeSymb(btn) { State.set("RPTST.refs.symb.rls", State.get("RPTST.refs.symb.rls").filter(rw => rw.key !== btn.dataset.ruleKey)); }
     static updSymb(btn) {
       const i = btn.dataset.symbolIdx, t = btn.dataset.symbolType;
       if (i != null && t) { 
         const newSym = JSON.parse(JSON.stringify(State.get("RPTST.refs.symb.rls")));
         newSym[i][t] = btn.value; 
         State.set("RPTST.refs.symb.rls", newSym);
-        ReportApp.qSave(); 
       }
     }
 
@@ -134,7 +132,6 @@
          }
          State.set("RPTST.refs.panels", [...panels]);
          this.renewPanel();
-         ReportApp.qSave();
       }
     }
 
@@ -369,18 +366,19 @@
         }
       });
 
-      let bu = null;
-      try {
-        bu = JSON.parse(StorageAPI.load("OBP_DASH_BU"));
-      } catch(e) {}
-      await RepoSt.initSt(bu, injData);
+      let fav = null;
+      if (typeof window.__INJECTED_FAVORITE__ === 'object' && window.__INJECTED_FAVORITE__ !== null) {
+        fav = window.__INJECTED_FAVORITE__;
+      } else if (typeof window.__INJECTED_FAVORITE__ === 'string' && window.__INJECTED_FAVORITE__ !== 'INJECT_FAVORITE_TARGET' && window.__INJECTED_FAVORITE__ !== 'null') {
+        try { fav = JSON.parse(window.__INJECTED_FAVORITE__); } catch (e) {}
+      }
+      await RepoSt.initSt(fav, injData);
 
       ReportUI.syncPanelDom();
       ReportUI.drawCharts();
 
       State.subscribe(['RPTST.refs.gridRows', 'RPTST.refs.gridCols', 'RPTST.refs.panelGap', 'RPTST.refs.margins'], () => {
           ReportUI.syncPanelDom();
-          this.qSave();
       });
       
       State.subscribe(['RPTST.refs.filters', 'RPTST.refs.useCal', 'RPTST.refs.useLOD', 'RPTST.refs.crct', 'RPTST.refs.calElms', 'RPTST.refs.symb', 'RPTST.refs.rawGph', 'RPTST.refs.panels'], () => {
@@ -389,7 +387,6 @@
 
       State.subscribe('RPTST.refs.activePanelId', () => {
           RepoSt.renewPanel();
-          this.qSave();
       });
 
       State.subscribe('RPTST.refs.symb.baseKey', () => RepoSt.renewSymbState());
@@ -425,17 +422,38 @@
       window.open(URL.createObjectURL(new Blob(['<!DOCTYPE html>' + htmlStr], { type: 'text/html' })), '_blank');
     }
 
-    static qSave() { 
-      if (window.__IS_PRINT_TAB__) return;
-      clearTimeout(this.gphTimer); 
-      this.gphTimer = setTimeout(() => StorageAPI.save("OBP_DASH_BU", JSON.stringify({ "RPTST.refs": State.get("RPTST.refs") })), 250); 
+    static async copyConfig() {
+      const refs = State.get("RPTST.refs");
+      const jsonStr = JSON.stringify({ "RPTST.refs": refs }, null, 2);
+      let copied = false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(jsonStr);
+          copied = true;
+        }
+      } catch (e) {
+        copied = false;
+      }
+      if (copied) {
+        CoreAct.toast("コピー完了", "現在の設定をクリップボードにコピーしました。\nサイドバー（ダッシュボード）の設定画面に貼り付けて保存してください。");
+      } else {
+        const dlg = document.getElementById("dlgExportCopy");
+        const txt = document.getElementById("txtExportJson");
+        if (dlg && txt) {
+          txt.value = jsonStr;
+          dlg.showModal();
+          txt.focus();
+          txt.select();
+        } else {
+          prompt("以下の設定JSONをコピー（Ctrl+C）してください：", jsonStr);
+        }
+      }
     }
-    
+
     static qRend() {
       if (window.__IS_PRINT_TAB__) return;
       clearTimeout(this.renderTimer);
       this.renderTimer = setTimeout(() => ReportUI.drawCharts(), 250);
-      this.qSave();
     }
   }
 

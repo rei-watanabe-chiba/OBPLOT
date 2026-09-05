@@ -466,6 +466,51 @@
       border-radius: var(--unit);
       padding: var(--unit) calc(var(--unit) * 2);
     }
+    /* --- テーブル行・動的ステータス --- */
+    .table-row, .symb-table-row {
+      &.has-error {
+        background-color: color-mix(in srgb, var(--main-red) 12%, transparent);
+      }
+      &.has-success {
+        background-color: color-mix(in srgb, var(--main-green) 12%, transparent);
+      }
+      &.selected {
+        background-color: color-mix(in srgb, var(--theme-color) 12%, transparent);
+        font-weight: 500;
+      }
+    }
+    .table-row {
+      display: flex;
+      align-items: center;
+      gap: var(--unit);
+      padding: calc(var(--unit) * 1.2) calc(var(--unit) * 1.5);
+      border-bottom: 1px solid var(--grey200);
+      transition: background-color var(--transition-speed);
+      cursor: pointer;
+      &:hover:not(.selected) {
+        background-color: var(--bg-color-hover);
+      }
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+    .fav-table-cntr {
+      max-height: calc(var(--unit) * 35);
+      border: 1px solid var(--grey200);
+      border-radius: var(--unit);
+      background-color: var(--bg-color);
+    }
+    .fav-col-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+    .fav-col-btn {
+      flex: none;
+    }
     .symb-table-row {
       display: flex;
       align-items: center;

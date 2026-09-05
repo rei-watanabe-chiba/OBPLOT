@@ -287,24 +287,7 @@
       State.subscribe("ADPST.ASGN.data.pxrfDT", () => ADPAct.renewADPState());
       State.subscribe("ADPST.SYMB.refs.baseKey", () => ADPAct.renewADPState());
       State.subscribe("ADPST.SYMB.refs.rls", () => ADPAct.renewADPState());
-      const hooks = {
-        onBeforeInit: async (isSwitch, bu) => {
-          if ((State.get("GLB.activeTab") === "adp" || State.get("GLB.activeTab") === "adapter") && !isSwitch && bu) {
-             if (await CoreAct.confirm("復元", "前回の作業状態を復元しますか？")) {
-                await ADPAct.loadDB();
-                if (State.get("ADPST.phase") >= ADP_PHS.LOADED) {
-                  CoreMakeBU.restore(bu, ["ADPST.ASGN.refs.*"]);
-                  if (bu.phase >= ADP_PHS.FILTERED) {
-                     await ADPAct.fltrDB();
-                     CoreMakeBU.restore(bu, ["ADPST.SYMB.refs.*", "ADPST.CALB.refs.*", "ADPST.PREV.refs.*", "ADPST.STDZ.refs.*"]);
-                     if (bu.phase >= ADP_PHS.PREVIEWED) await ADPAct.genPrev();
-                  }
-                  CoreMakeBU.restore(bu, ["ADPST.*.status"]);
-                }
-             } else { CoreMakeBU.clear(); }
-          }
-        }
-      };
+      const hooks = {};
       const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";
       CoreAct.actvTab(actMode);
       const initCfg = CoreAct.cfgRslv(actMode);

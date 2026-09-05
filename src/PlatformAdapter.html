@@ -22,13 +22,16 @@
     static getReportTemplate() { return this.#srvCall("getReportTemplate"); }
     static getWbState(ssId, targetShts = []) { return this.#srvCall("getWbState", ssId, targetShts); }
     static genShts(ssId, buildPlan) { return this.#srvCall("genShts", ssId, buildPlan); }
+    static saveUserProp(key, val) { return this.#srvCall("saveUserProp", key, val); }
+    static loadUserProp(key) { return this.#srvCall("loadUserProp", key); }
+    static deleteUserProp(key) { return this.#srvCall("deleteUserProp", key); }
   }
 
-  // --- GAS用 ローカルストレージ ---
-  class LocalStrg {
-    static save(key, val) { localStorage.setItem(key, val); }
-    static load(key) { return localStorage.getItem(key); }
-    static clear(key) { localStorage.removeItem(key); }
+  // --- GAS用 プロパティストレージ ---
+  class GasPropsStrg {
+    static async save(key, val) { return GasSvc.saveUserProp(key, val); }
+    static async load(key) { return GasSvc.loadUserProp(key); }
+    static async clear(key) { return GasSvc.deleteUserProp(key); }
   }
 
   // --- Excel用 通信API ---
@@ -176,28 +179,36 @@
 
   // --- Excel用 ストレージ ---
   class OfcStrg {
-    static save(key, data) {
-      try {
-        if (Office?.context?.document?.settings) {
-          Office.context.document.settings.set(key, data);
-          Office.context.document.settings.saveAsync();
-        }
-      } catch (e) {}
+    static async save(key, data) {
+      return new Promise((resolve) => {
+        try {
+          if (Office?.context?.document?.settings) {
+            Office.context.document.settings.set(key, data);
+            Office.context.document.settings.saveAsync(r => resolve(r?.status === Office.AsyncResultStatus.Succeeded));
+            return;
+          }
+        } catch (e) {}
+        resolve(false);
+      });
     }
-    static load(key) {
+    static async load(key) {
       try { return Office?.context?.document?.settings?.get(key) || null; } catch (e) { return null; }
     }
-    static clear(key) {
-      try {
-        if (Office?.context?.document?.settings) {
-          Office.context.document.settings.remove(key);
-          Office.context.document.settings.saveAsync();
-        }
-      } catch (e) {}
+    static async clear(key) {
+      return new Promise((resolve) => {
+        try {
+          if (Office?.context?.document?.settings) {
+            Office.context.document.settings.remove(key);
+            Office.context.document.settings.saveAsync(r => resolve(r?.status === Office.AsyncResultStatus.Succeeded));
+            return;
+          }
+        } catch (e) {}
+        resolve(false);
+      });
     }
   }
 
   // --- 環境に応じたDI (依存性注入) ---
   const API = isExcelEnv ? ExcelAdpt : GasSvc;
-  const StorageAPI = isExcelEnv ? OfcStrg : LocalStrg;
+  const StorageAPI = isExcelEnv ? OfcStrg : GasPropsStrg;
 </script>

@@ -13,7 +13,18 @@
   </head>
   <body data-theme="adp">
     <div data-ui="dlg"></div>
-    <script>window.__INJECTED_DATA__ = 'INJECT_TARGET';</script>
+    <dialog id="dlgExportCopy" class="universal-dialog">
+      <h3 class="d-title">設定のコピー</h3>
+      <p class="d-msg">クリップボードの自動コピーが制限されています。<br>以下の設定JSONを手動でコピー（Ctrl+C）してください：</p>
+      <textarea id="txtExportJson" class="form-control" readonly style="width: 100%; height: 140px; margin: 8px 0; font-family: monospace; font-size: 11px;"></textarea>
+      <div class="field-row">
+        <button class="outline" data-type="primary" onclick="document.getElementById('dlgExportCopy').close()">閉じる</button>
+      </div>
+    </dialog>
+    <script>
+      window.__INJECTED_DATA__ = 'INJECT_TARGET';
+      window.__INJECTED_FAVORITE__ = 'INJECT_FAVORITE_TARGET';
+    </script>
     <?!= include('Global'); ?>
     <?!= include('PlatformAdapter'); ?>
     <?!= include('Model'); ?>
@@ -35,6 +46,9 @@
         </div>
         <div class="prop-row" style="margin-top:4px;">
           <button data-action="ReportApp.printPDF" data-type="primary">PDF出力（印刷用ページ生成）</button>
+        </div>
+        <div class="prop-row" style="margin-top:4px;">
+          <button id="btnExportConfigTop" data-action="ReportApp.copyConfig" class="outline" data-type="primary">現在の設定をコピー</button>
         </div>
         <!-- タブナビゲーション -->
         <nav class="sidebar-tabs">

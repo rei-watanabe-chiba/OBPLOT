@@ -35,6 +35,8 @@
       { id: "lblFilterDB", text: () => GLB.idx.key1 },
       { id: "lblFilterItem", text: () => GLB.idx.p1 },
       { id: "lblFilterGroup", text: () => GLB.idx.wd1 },
+      { id: "btnExportConfig", visiblePhase: () => !window.__IS_PRINT_TAB__ },
+      { id: "btnExportConfigTop", visiblePhase: () => !window.__IS_PRINT_TAB__ },
       { 
         id: "panelConfigSec", 
         visiblePhase: () => !window.__IS_PRINT_TAB__ && !!State.get("RPTST.refs.panels")?.find(p => p.id === State.get("RPTST.refs.activePanelId")),
@@ -88,7 +90,8 @@
       { type: "inputs", label: "行数 / 列数", marginBottom: "16px", inputs: [
         { inputType: "number", bind: "RPTST.refs.gridRows", className: "form-control", title: "行数" },
         { inputType: "number", bind: "RPTST.refs.gridCols", className: "form-control", title: "列数" }
-      ]}
+      ]},
+      { type: "button", id: "btnExportConfig", text: "現在の設定をコピー", action: "ReportApp.copyConfig", className: "outline" }
     ],
     'layout-margins': [
       { type: "inputs", label: "パネル間隔", inputs: [
