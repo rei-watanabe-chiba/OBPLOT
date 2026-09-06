@@ -81,7 +81,8 @@
         "RPTST.panels": panels,
         "RPTST.ui.activePanelId": panels[0]?.id || "p_0"
       });
-      RepoSt.updateBaseScales(this.getSt(), 'all');
+      const _allMetrics = [...new Set([...GLB.valElms, ...(GLB.valLgc || [])])];
+      RepoSt.updateBaseScales(this.getSt(), 'all', _allMetrics);
       RepoAct.oldSymbAxis = config.symbology.baseKey || GLB.symbBaseKey;
       const optsCorr = [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.crctDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
       const optValLgc = [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v }));
@@ -234,12 +235,12 @@
       }
       if (['calbVal', 'clusXVal', 'clusYVal'].includes(key)) {
         panel.tickUnit = ""; panel.tickUnitX = ""; panel.tickUnitY = "";
-        if (boardMode === 'calib') {
-          panel.title = panel.calbVal || ""; panel.xLabel = "WDXRF"; panel.yLabel = "pXRF";
-        } else {
-          const xV = panel.clusXVal || "", yV = panel.clusYVal || "";
-          panel.title = (xV || yV) ? `${xV} vs ${yV}` : ""; panel.xLabel = xV; panel.yLabel = yV;
-        }
+        State.set("RPTST.panels", [...panels]);
+        const newSt = RepoSt.getSt();
+        const changedMetric = val;
+        if (changedMetric) RepoSt.updateBaseScales(newSt, 'metric', [changedMetric]);
+        RepoSt.renewPanel(newSt);
+        return;
       }
       State.set("RPTST.panels", [...panels]);
     }

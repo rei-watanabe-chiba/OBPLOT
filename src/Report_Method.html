@@ -11,7 +11,6 @@
         else if (unit === 'pt') px[k] = pt2px(v);
         else px[k] = v;
       });
-      let finalPadR = px.p_r < px.s_tick ? px.p_r + px.s_tick : px.p_r;
 
       return {
         style: {
@@ -23,7 +22,7 @@
           lineC: { axis: `hsl(0, 0%, ${100 - raw.c_axis}%)`, grid: `hsl(0, 0%, ${100 - raw.c_grid}%)`, reg: `hsl(0, 0%, ${100 - raw.c_base}%)` },
           bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
         },
-        gap: { name: px.g_name, tick: px.g_tick, padT: px.p_t, padB: px.p_b, padL: px.p_l, padR: finalPadR }
+        gap: { name: px.g_name, tick: px.g_tick, padT: px.p_t, padB: px.p_b, padL: px.p_l, padR: px.p_r }
       };
     }
 
@@ -31,11 +30,11 @@
       const maxW = (gw - (gridCols - 1) * gapPx) / gridCols, maxH = (gh - (gridRows - 1) * gapPx) / gridRows;
       const style = gph.style, gap = gph.gap;
       const charWidth = style.fontS.tick * 0.6;
-      const requiredPadT = Math.max(style.fontS.tick, hasTitle ? titleSizePx + gap.tick : 0);
-      const gridTop = (gap.padT < requiredPadT ? gap.padT + requiredPadT : gap.padT) + ((4 * charWidth) / 2);
+      const titleSpace = hasTitle ? (titleSizePx + gap.tick) : gap.tick;
+      const gridTop = gap.padT + titleSpace + style.fontS.tick + (charWidth * 2);
+      const gridRight  = gap.padR + gap.tick + style.fontS.tick + (charWidth * 2);
       const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridLeft = gap.padL + ((2 * charWidth) / 2) + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridRight = (gap.padR < style.fontS.tick ? gap.padR + style.fontS.tick : gap.padR) + ((2 * charWidth) / 2);
+      const gridLeft   = gap.padL + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
       const plotLen = Math.max(10, Math.min(maxW - (gridLeft + gridRight), maxH - (gridTop + gridBottom)));
       return {
         panelW: plotLen + gridLeft + gridRight,
@@ -51,11 +50,11 @@
     static calculatePanelMetricsAspect(gw, gh, gridCols, gridRows, gapPx, gph, hasTitle, titleSizePx, rowAspects) {
       const style = gph.style, gap = gph.gap;
       const charWidth = style.fontS.tick * 0.6;
-      const requiredPadT = Math.max(style.fontS.tick, hasTitle ? titleSizePx + gap.tick : 0);
-      const gridTop    = (gap.padT < requiredPadT ? gap.padT + requiredPadT : gap.padT) + ((4 * charWidth) / 2);
+      const titleSpace = hasTitle ? (titleSizePx + gap.tick) : 0;
+      const gridTop = gap.padT + titleSpace + style.fontS.tick + (charWidth * 2);
+      const gridRight  = gap.padR + gap.tick + style.fontS.tick + (charWidth * 2);
       const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridLeft   = gap.padL + ((2 * charWidth) / 2) + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridRight  = (gap.padR < style.fontS.tick ? gap.padR + style.fontS.tick : gap.padR) + ((2 * charWidth) / 2);
+      const gridLeft   = gap.padL + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
 
       // 各行の固定マージン合計（top + bottom）
       const fixedH = gridTop + gridBottom;
@@ -63,7 +62,7 @@
 
       // 利用可能な最大幅・最大高さ（ギャップ込み）
       const maxW = (gw - (gridCols - 1) * gapPx) / gridCols;
-      const maxHTotal = gh - (gridRows - 1) * gapPx; // 全行合計の利用可能高さ
+      const maxHTotal = gh - (gridRows - 1) * gapPx;
 
       // rowAspects を行数に合わせてパディング（不足分は 1.0 で補完）
       const aspects = Array.from({ length: gridRows }, (_, i) => rowAspects[i] ?? 1.0);
@@ -75,7 +74,6 @@
       const wConstraint = maxW - fixedW;
       const hConstraint = (maxHTotal - gridRows * fixedH) / kSum;
       const plotW = Math.max(10, Math.min(wConstraint, hConstraint));
-
       const plotH = aspects.map(k => Math.max(10, k * plotW));
       const panelH = plotH.map(ph => ph + fixedH);
       const panelW = plotW + fixedW;
