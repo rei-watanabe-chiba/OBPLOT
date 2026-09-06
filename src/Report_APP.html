@@ -1,52 +1,49 @@
 <!-- src/Report_APP.html -->
 <script>
+  // --- RptTpl ---
   class RptTpl {
+    // --- rowAspectCtrl ---
     static rowAspectCtrl(row, aspect) {
-      return `<button type="button" class="row-lbl-btn" popovertarget="pop_aspect_${row}" title="アスペクト比を変更">r${row + 1} ⚙️</button><div popover id="pop_aspect_${row}" class="row-aspect-popover"><div class="pop-header">r${row + 1} 縦横比 (W1.0 : H)</div><div class="pop-body"><input type="number" class="form-control" min="0.1" max="2.0" step="0.1" data-aspect-idx="${row}" value="${aspect}"></div></div>`;
+      return `<div class="linked-input-cell aspect-ctrl-inp" title="アスペクト比">
+        <div class="inside-icon aspect-icon-wrap">
+          <span class="material-symbols-outlined">aspect_ratio</span>
+          <span>H:</span>
+        </div>
+        <input type="number" class="form-control inline-icon-input" min="0.1" max="2.0" step="0.1" data-aspect-idx="${row}" value="${aspect}">
+      </div>`;
     }
   }
 
+  // --- RepoSt ---
   class RepoSt {
+    // --- getSt ---
     static getSt() {
-      const o = {
-        ui: State.get('RPTST.ui') || {},
-        config: State.get('RPTST.config') || {},
-        dataset: State.get('RPTST.dataset') || {},
-        panels: State.get('RPTST.panels') || []
+      const ui = State.get('RPTST.ui') || {}, cfg = State.get('RPTST.config') || {}, ds = State.get('RPTST.dataset') || {}, pnls = State.get('RPTST.panels') || [];
+      const actId = ui.activePanelId, lyt = cfg.layout || { gridRows: 1, gridCols: 1, panelGap: 4 };
+      return {
+        ui, config: cfg, dataset: ds, panels: pnls, activeId: actId, layout: lyt,
+        theme: cfg.theme || {}, symbology: cfg.symbology || {}, baseScales: ds.baseScales || { auto: {}, fixed: {} },
+        d: ds.raw || {}, rowPlotH: ds.rowPlotH, panel: pnls.find(p => p.id === actId) ?? null,
+        boardMode: cfg.boardMode || 'calib', rowAspect: lyt.rowAspect || [1.0, 1.0, 1.0]
       };
-      o.activeId = o.ui.activePanelId;
-      o.layout = o.config.layout || { gridRows: 1, gridCols: 1, panelGap: 4 };
-      o.theme = o.config.theme || {};
-      o.symbology = o.config.symbology || {};
-      o.baseScales = o.dataset.baseScales || { auto: {}, fixed: {} };
-      o.d = o.dataset.raw || {};
-      o.rowPlotH = o.dataset.rowPlotH;
-      o.panel = o.panels.find(p => p.id === o.activeId) ?? null;
-      o.boardMode = o.config.boardMode || 'calib';
-      o.rowAspect = o.layout.rowAspect || [1.0, 1.0, 1.0];
-      return o;
     }
+    // --- update ---
     static update() { RepoAct.automator?.update(); }
+    // --- finalizePanel ---
     static finalizePanel() {
       document.querySelectorAll('form[data-bind-ctx]').forEach(f => CoreUIPatcher.syncFormCtx(f));
       this.update();
     }
-
+    // --- initSt ---
     static async initSt(favObj, d) {
       const pxrf = d.pxrfDT || [];
-      const exVals = (key) => {
-        const vals = [...new Set(pxrf.map(r => (r[key] == null) ? "" : String(r[key]).trim()).filter(v => v !== ""))];
-        return vals.length > 0 ? vals : null; 
+      const exVals = k => {
+        const v = [...new Set(pxrf.map(r => r[k] == null ? "" : String(r[k]).trim()).filter(Boolean))];
+        return v.length ? v : null;
       };
-      
-      const optsDB = exVals(GLB.idx.key1) || [];
-      const optsItem = exVals(GLB.idx.p1) || [];
-      const optsGroup = exVals(GLB.idx.wd1) || [];
+      const optsDB = exVals(GLB.idx.key1) || [], optsItem = exVals(GLB.idx.p1) || [], optsGroup = exVals(GLB.idx.wd1) || [];
       const initFltr = (buVal, opts) => Array.isArray(buVal) ? buVal.map(String) : opts;
-
-      let fav = favObj ? (favObj["RPTST.refs"] || favObj) : null;
-
-      // --- 4層分離 State の初期化・マイグレーション ---
+      const fav = favObj ? (favObj["RPTST.refs"] || favObj) : null;
       const dataset = {
         raw: d,
         filters: {
@@ -60,12 +57,10 @@
         useLOD: fav?.useLOD ?? fav?.dataset?.useLOD ?? false,
         baseScales: { auto: {}, fixed: {} }
       };
-
       const boardMode = fav?.boardMode || fav?.config?.boardMode || RPT_CFG.defLayout.boardMode || "calib";
       document.body.setAttribute('data-board-mode', boardMode);
-
       const config = {
-        boardMode: boardMode,
+        boardMode,
         layout: {
           gridRows: fav?.gridRows || fav?.config?.layout?.gridRows || 1,
           gridCols: fav?.gridCols || fav?.config?.layout?.gridCols || 1,
@@ -78,34 +73,23 @@
           rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]
         }
       };
-
       const rawPanels = fav?.panels || [];
-      const panels = (rawPanels.length > 0 ? rawPanels : [{ id: "p_0" }]).map((p, i) => ({
-        ...RPT_CFG.defPnl,
-        ...p,
-        id: p.id || `p_${i}`
-      }));
-
+      const panels = (rawPanels.length ? rawPanels : [{ id: "p_0" }]).map((p, i) => ({ ...RPT_CFG.defPnl, ...p, id: p.id || `p_${i}` }));
       State.set({
         "RPTST.dataset": dataset,
         "RPTST.config": config,
         "RPTST.panels": panels,
         "RPTST.ui.activePanelId": panels[0]?.id || "p_0"
       });
-
-      // --- BaseScale 計算 ---
       RepoSt.updateBaseScales(this.getSt(), 'all');
-
       RepoAct.oldSymbAxis = config.symbology.baseKey || GLB.symbBaseKey;
-
       const optsCorr = [{ label: RPT_CFG.lbl.newCorr, val: "new" }, ...(d.crctDT || []).slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
       const optValLgc = [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v }));
-
       State.set({
         "RPTST.ui.optFields": {
           crctFields: [{ type: "select", bind: "RPTST.dataset.crct", hasEmpty: false, opts: optsCorr }],
-          fontEngFields: [{ type: "select", bind: "RPTST.config.theme.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({label:v, val:v})) }],
-          fontJpFields: [{ type: "select", bind: "RPTST.config.theme.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({label:v, val:v})) }],
+          fontEngFields: [{ type: "select", bind: "RPTST.config.theme.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({ label: v, val: v })) }],
+          fontJpFields: [{ type: "select", bind: "RPTST.config.theme.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({ label: v, val: v })) }],
           calbValFields: [{ type: "select", bind: "RPTST.panels.$active.calbVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }],
           clusXFields: [{ type: "select", bind: "RPTST.panels.$active.clusXVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }],
           clusYFields: [{ type: "select", bind: "RPTST.panels.$active.clusYVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }],
@@ -113,25 +97,19 @@
           clusTickXFields: [{ type: "select", bind: "RPTST.panels.$active.tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: [{ label: "自動", val: "" }] }],
           clusTickYFields: [{ type: "select", bind: "RPTST.panels.$active.tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: [{ label: "自動", val: "" }] }],
           axisFields: [{ type: "select", bind: "RPTST.config.symbology.baseKey", change: "RepoAct.valdSymbAxis", hasEmpty: false, opts: GLB.symbAxes }],
-          filterDBOpts: optsDB, 
-          filterItemOpts: optsItem, 
-          filterGroupOpts: optsGroup, 
-          calElmsOpts: GLB.valElms
+          filterDBOpts: optsDB, filterItemOpts: optsItem, filterGroupOpts: optsGroup, calElmsOpts: GLB.valElms
         }
       });
-      
       this.renewSymbState(this.getSt());
     }
-
+    // --- updateBaseScales ---
     static updateBaseScales(st, triggerType, metricsToUpdate = null) {
       const { config, dataset, d, panels, boardMode } = st;
-      if (!d || !d.pxrfDT || !d.wdxrfDT) return;
+      if (!d?.pxrfDT || !d?.wdxrfDT) return;
       const bMode = boardMode || config?.boardMode || 'calib';
-      
       const targetMetrics = new Set();
       if (metricsToUpdate) {
-        if (Array.isArray(metricsToUpdate)) metricsToUpdate.forEach(m => targetMetrics.add(m));
-        else targetMetrics.add(metricsToUpdate);
+        (Array.isArray(metricsToUpdate) ? metricsToUpdate : [metricsToUpdate]).forEach(m => targetMetrics.add(m));
       } else {
         panels.forEach(p => {
           if (bMode === 'calib' && p.calbVal) targetMetrics.add(p.calbVal);
@@ -141,50 +119,43 @@
           }
         });
       }
-      if (targetMetrics.size === 0) return;
-
+      if (!targetMetrics.size) return;
       const baseScales = st.baseScales || { auto: {}, fixed: {} };
-      if (!baseScales.auto) baseScales.auto = {};
-      if (!baseScales.fixed) baseScales.fixed = {};
-
+      baseScales.auto = baseScales.auto || {};
+      baseScales.fixed = baseScales.fixed || {};
       const calcForMetrics = (mode, filters) => {
-         const conf = { useCal: dataset.useCal, crctDT: d.crctDT, useLOD: dataset.useLOD };
-         let pDT = d.pxrfDT, wDT = d.wdxrfDT;
-         if (filters) {
-           const { db, item, group } = filters;
-           if (Array.isArray(db) && db.length > 0) {
-             pDT = pDT.filter(row => db.includes(String(row[GLB.idx.key1])));
-             wDT = wDT.filter(row => db.includes(String(row[GLB.idx.key1])));
-           }
-           if (Array.isArray(item) && item.length > 0) pDT = pDT.filter(row => item.includes(String(row[GLB.idx.p1])));
-           if (Array.isArray(group) && group.length > 0) {
-             pDT = pDT.filter(row => group.includes(String(row[GLB.idx.wd1])));
-             wDT = wDT.filter(row => group.includes(String(row[GLB.idx.wd1])));
-           }
-         }
-         
-         const filteredCalibBase = CHARTDT.genPrev(pDT, wDT, { ...conf, val: GLB.valElms[0] });
-         
-         targetMetrics.forEach(metric => {
-            const wVals = wDT.map(w => CoreMethod.Calc.evaluate(metric, w)).filter(v => v != null && !isNaN(v));
-            const pVals = filteredCalibBase.map(p => CoreMethod.Calc.evaluate(metric, p)).filter(v => v != null && !isNaN(v));
-            const combined = [...wVals, ...pVals];
-            if (combined.length > 0) {
-              const sc = CoreMethod.Util.calcScale(combined, combined);
-              const units = CoreMethod.Util.calcNiceTickUnits(combined);
-              baseScales[mode][metric] = { niceMin: sc.niceMin, niceMax: sc.niceMax, ticks: sc.niceTicks.map(t=>t.v), units };
-            } else {
-              baseScales[mode][metric] = null;
-            }
-         });
+        const conf = { useCal: dataset.useCal, crctDT: d.crctDT, useLOD: dataset.useLOD };
+        let pDT = d.pxrfDT, wDT = d.wdxrfDT;
+        if (filters) {
+          const { db, item, group } = filters;
+          if (db?.length) {
+            pDT = pDT.filter(r => db.includes(String(r[GLB.idx.key1])));
+            wDT = wDT.filter(r => db.includes(String(r[GLB.idx.key1])));
+          }
+          if (item?.length) pDT = pDT.filter(r => item.includes(String(r[GLB.idx.p1])));
+          if (group?.length) {
+            pDT = pDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
+            wDT = wDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
+          }
+        }
+        const filteredCalibBase = CHARTDT.genPrev(pDT, wDT, { ...conf, val: GLB.valElms[0] });
+        targetMetrics.forEach(metric => {
+          const wVals = wDT.map(w => CoreMethod.Calc.evaluate(metric, w)).filter(v => v != null && !isNaN(v));
+          const pVals = filteredCalibBase.map(p => CoreMethod.Calc.evaluate(metric, p)).filter(v => v != null && !isNaN(v));
+          const combined = [...wVals, ...pVals];
+          if (combined.length) {
+            const sc = CoreMethod.Util.calcScale(combined, combined);
+            baseScales[mode][metric] = { niceMin: sc.niceMin, niceMax: sc.niceMax, ticks: sc.niceTicks.map(t => t.v), units: CoreMethod.Util.calcNiceTickUnits(combined) };
+          } else {
+            baseScales[mode][metric] = null;
+          }
+        });
       };
-
       if (['all', 'db', 'metric'].includes(triggerType)) calcForMetrics('fixed', { db: dataset.filters?.db || [] });
       if (['all', 'item', 'group', 'db', 'calib', 'lod', 'metric'].includes(triggerType)) calcForMetrics('auto', dataset.filters);
-
       State.set("RPTST.dataset.baseScales", baseScales);
     }
-
+    // --- renewSymbState ---
     static renewSymbState(st) {
       const d = st.d, symb = st.symbology;
       if (!d?.pxrfDT?.length || !symb) return;
@@ -192,35 +163,26 @@
       State.set("RPTST.ui.optFields.symbSrc", {
         rls: symb.rls,
         optsConf: { target: [{ val: "", label: RPT_CFG.lbl.unsel }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors },
-        actsConf: { add: "RepoAct.addSymb", remove: "RepoAct.removeSymb", update: "RepoAct.updSymb"}
+        actsConf: { add: "RepoAct.addSymb", remove: "RepoAct.removeSymb", update: "RepoAct.updSymb" }
       });
     }
-
+    // --- renewPanel ---
     static renewPanel(st) {
       const { panel, boardMode, baseScales } = st;
-      const isManual = panel?.scaleMode === 'manual';
-      const targetScales = isManual ? baseScales.fixed : baseScales.auto;
-
-      let tickOpts = [{ label: "自動", val: "" }];
-      let tickXOpts = [{ label: "自動", val: "" }];
-      let tickYOpts = [{ label: "自動", val: "" }];
-
+      const targetScales = (panel?.scaleMode === 'manual') ? baseScales.fixed : baseScales.auto;
+      let tickOpts = [{ label: "自動", val: "" }], tickXOpts = [{ label: "自動", val: "" }], tickYOpts = [{ label: "自動", val: "" }];
       if (panel) {
-          if (boardMode === 'calib' && panel.calbVal && targetScales[panel.calbVal]) {
-             const units = targetScales[panel.calbVal].units || [];
-             tickOpts = [{ label: "自動", val: "" }, ...units.map(u => ({ label: String(u), val: String(u) }))];
-          } else if (boardMode === 'clus') {
-             if (panel.clusXVal && targetScales[panel.clusXVal]) {
-                const units = targetScales[panel.clusXVal].units || [];
-                tickXOpts = [{ label: "自動", val: "" }, ...units.map(u => ({ label: String(u), val: String(u) }))];
-             }
-             if (panel.clusYVal && targetScales[panel.clusYVal]) {
-                const units = targetScales[panel.clusYVal].units || [];
-                tickYOpts = [{ label: "自動", val: "" }, ...units.map(u => ({ label: String(u), val: String(u) }))];
-             }
+        if (boardMode === 'calib' && panel.calbVal && targetScales[panel.calbVal]) {
+          tickOpts = [{ label: "自動", val: "" }, ...(targetScales[panel.calbVal].units || []).map(u => ({ label: String(u), val: String(u) }))];
+        } else if (boardMode === 'clus') {
+          if (panel.clusXVal && targetScales[panel.clusXVal]) {
+            tickXOpts = [{ label: "自動", val: "" }, ...(targetScales[panel.clusXVal].units || []).map(u => ({ label: String(u), val: String(u) }))];
           }
+          if (panel.clusYVal && targetScales[panel.clusYVal]) {
+            tickYOpts = [{ label: "自動", val: "" }, ...(targetScales[panel.clusYVal].units || []).map(u => ({ label: String(u), val: String(u) }))];
+          }
+        }
       }
-
       const ensureOpt = (opts, curVal) => {
         if (curVal != null && curVal !== "" && !opts.some(o => String(o.val) === String(curVal))) {
           opts.push({ label: `${curVal}`, val: String(curVal) });
@@ -229,101 +191,63 @@
       ensureOpt(tickOpts, panel?.tickUnit);
       ensureOpt(tickXOpts, panel?.tickUnitX);
       ensureOpt(tickYOpts, panel?.tickUnitY);
-
       State.set({
         "RPTST.ui.activePanelScaleMode": panel?.scaleMode || "auto",
         "RPTST.ui.optFields.tickUnitFields": [{ type: "select", bind: "RPTST.panels.$active.tickUnit", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnit", opts: tickOpts }],
         "RPTST.ui.optFields.clusTickXFields": [{ type: "select", bind: "RPTST.panels.$active.tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: tickXOpts }],
         "RPTST.ui.optFields.clusTickYFields": [{ type: "select", bind: "RPTST.panels.$active.tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: tickYOpts }]
       });
-
       this.finalizePanel();
     }
-
-    // --- 互換用エイリアス (RepoAct への委譲) ---
-    static resetSymb() { RepoAct.resetSymb(); }
-    static valdSymbAxis(tgt) { return RepoAct.valdSymbAxis(tgt); }
-    static addSymb() { RepoAct.addSymb(); }
-    static removeSymb(btn) { RepoAct.removeSymb(btn); }
-    static updSymb(btn) { RepoAct.updSymb(btn); }
-    static renewPanelRef(tgt) { RepoAct.changePanelRef(tgt); }
   }
 
+  // --- RepoAct ---
   class RepoAct {
     static automator = null;
     static oldSymbAxis = GLB.symbBaseKey;
-
-    // --- ボード設定操作 ---
+    // --- setBoardMode ---
     static setBoardMode(btn, arg) {
       const mode = arg || btn?.dataset?.arg || btn?.dataset?.target || 'calib';
-      const curMode = State.get("RPTST.config.boardMode");
-      if (curMode === mode) return;
-
+      if (State.get("RPTST.config.boardMode") === mode) return;
       document.body.setAttribute('data-board-mode', mode);
-
-      State.set("RPTST.config.boardMode", mode);
-      State.set("RPTST.config.layout.gridRows", 1);
-      State.set("RPTST.config.layout.gridCols", 1);
-
+      State.set({
+        "RPTST.config.boardMode": mode,
+        "RPTST.config.layout.gridRows": 1,
+        "RPTST.config.layout.gridCols": 1
+      });
       const newPanel = {
-        id: "p_0",
-        title: "",
-        xLabel: mode === 'calib' ? 'WDXRF' : '',
-        yLabel: mode === 'calib' ? 'pXRF' : '',
-        tickUnit: "",
-        tickUnitX: "",
-        tickUnitY: "",
-        calbVal: "",
-        clusXVal: "",
-        clusYVal: "",
-        scaleMode: "auto"
+        id: "p_0", title: "", xLabel: mode === 'calib' ? 'WDXRF' : '', yLabel: mode === 'calib' ? 'pXRF' : '',
+        tickUnit: "", tickUnitX: "", tickUnitY: "", calbVal: "", clusXVal: "", clusYVal: "", scaleMode: "auto"
       };
       State.set("RPTST.panels", [newPanel]);
       State.set("RPTST.ui.activePanelId", newPanel.id);
     }
-
-    static onLayoutChange() {}
-
-    static onThemeChange() {}
-
-    static onActivePanelFormChange() {}
-
+    // --- changePanelRef ---
     static changePanelRef(tgt) {
       const key = tgt.dataset.apKey || tgt.dataset.field || tgt.name || tgt.dataset.bind?.split('.').pop();
       const val = tgt.value ?? tgt.dataset.arg ?? tgt.dataset.target;
       const { panel, panels, boardMode } = RepoSt.getSt();
-      
-      if (panel) {
-         if (['tickUnit', 'tickUnitX', 'tickUnitY'].includes(key)) {
-           panel[key] = (val === "" || isNaN(Number(val))) ? null : Number(val);
-         } else {
-           panel[key] = val;
-         }
-         if (key === 'scaleMode') {
-           panel.tickUnit = "";
-           panel.tickUnitX = "";
-           panel.tickUnitY = "";
-         }
-
-         if (['calbVal', 'clusXVal', 'clusYVal'].includes(key)) {
-            panel.tickUnit = "";
-            panel.tickUnitX = "";
-            panel.tickUnitY = "";
-            if (boardMode === 'calib') {
-              panel.title = panel.calbVal || ""; panel.xLabel = "WDXRF"; panel.yLabel = "pXRF";
-            } else {
-              const xV = panel.clusXVal || "", yV = panel.clusYVal || "";
-              panel.title = (xV || yV) ? `${xV} vs ${yV}` : ""; panel.xLabel = xV; panel.yLabel = yV;
-            }
-         }
-         State.set("RPTST.panels", [...panels]);
+      if (!panel) return;
+      panel[key] = ['tickUnit', 'tickUnitX', 'tickUnitY'].includes(key) ? (val === "" || isNaN(Number(val)) ? null : Number(val)) : val;
+      if (key === 'scaleMode') {
+        panel.tickUnit = ""; panel.tickUnitX = ""; panel.tickUnitY = "";
       }
+      if (['calbVal', 'clusXVal', 'clusYVal'].includes(key)) {
+        panel.tickUnit = ""; panel.tickUnitX = ""; panel.tickUnitY = "";
+        if (boardMode === 'calib') {
+          panel.title = panel.calbVal || ""; panel.xLabel = "WDXRF"; panel.yLabel = "pXRF";
+        } else {
+          const xV = panel.clusXVal || "", yV = panel.clusYVal || "";
+          panel.title = (xV || yV) ? `${xV} vs ${yV}` : ""; panel.xLabel = xV; panel.yLabel = yV;
+        }
+      }
+      State.set("RPTST.panels", [...panels]);
     }
-
+    // --- valdSymbAxis ---
     static async valdSymbAxis(tgt) {
       const newVal = tgt.value, oldVal = this.oldSymbAxis;
       if (newVal === oldVal) return;
-      const isConfirmed = await CoreAct.withAsync(null, { title: "確認", msg: "属性を変更してシンボル設定をリセットします" }, async () => {
+      const ok = await CoreAct.withAsync(null, { title: "確認", msg: "属性を変更してシンボル設定をリセットします" }, async () => {
         State.set({
           "RPTST.config.symbology.baseKey": newVal,
           "RPTST.config.symbology.rls": [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]
@@ -331,32 +255,35 @@
         this.oldSymbAxis = newVal;
         return null;
       });
-      if (!isConfirmed) {
+      if (!ok) {
         tgt.value = oldVal;
         State.set("RPTST.config.symbology.baseKey", oldVal);
       }
     }
-
+    // --- resetSymb ---
     static resetSymb() {
       State.set("RPTST.config.symbology.rls", [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]);
     }
+    // --- addSymb ---
     static addSymb() {
       const rls = State.get("RPTST.config.symbology.rls") || [];
       State.set("RPTST.config.symbology.rls", [...rls, { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]);
     }
+    // --- removeSymb ---
     static removeSymb(btn) {
       const rls = State.get("RPTST.config.symbology.rls") || [];
       State.set("RPTST.config.symbology.rls", rls.filter(rw => rw.key !== btn.dataset.ruleKey));
     }
+    // --- updSymb ---
     static updSymb(btn) {
       const i = btn.dataset.symbolIdx, t = btn.dataset.symbolType;
-      if (i != null && t) { 
+      if (i != null && t) {
         const newSym = JSON.parse(JSON.stringify(State.get("RPTST.config.symbology.rls") || []));
-        newSym[i][t] = btn.value; 
+        newSym[i][t] = btn.value;
         State.set("RPTST.config.symbology.rls", newSym);
       }
     }
-
+    // --- setActiveScaleMode ---
     static setActiveScaleMode(btn, arg) {
       const mode = arg || btn?.dataset?.arg;
       if (!mode) return;
@@ -368,57 +295,32 @@
         State.set("RPTST.ui.activePanelScaleMode", mode);
       }
     }
-
+    // --- changeRowAspect ---
     static changeRowAspect(inp) {
       const idx = Number(inp.dataset.aspectIdx);
       let val = Number(inp.value);
-      if (isNaN(val) || val < 0.1) val = 0.1;
-      if (val > 2.0) val = 2.0;
-      val = Math.round(val * 10) / 10;
+      val = isNaN(val) || val < 0.1 ? 0.1 : (val > 2.0 ? 2.0 : Math.round(val * 10) / 10);
       inp.value = val;
-      const rowAspect = [...(State.get("RPTST.config.layout.rowAspect") || [1.0, 1.0, 1.0])];
-      rowAspect[idx] = val;
-      State.set("RPTST.config.layout.rowAspect", rowAspect);
+      const lyt = { ...(State.get("RPTST.config.layout") || {}) };
+      lyt.rowAspect = [...(lyt.rowAspect || [1.0, 1.0, 1.0])];
+      lyt.rowAspect[idx] = val;
+      State.set("RPTST.config.layout", lyt);
     }
-
-    // --- タブ・パネル操作 ---
-    static actvTab(btn, arg) {
-      const tab = arg || btn.dataset.arg || btn.dataset.tab;
-      State.set("RPTST.ui.activeTab", tab);
-      document.querySelectorAll('[data-part="tab-icon"]').forEach(b => {
-        const isCur = (b.dataset.arg === tab || b.dataset.tab === tab);
-        b.setAttribute('aria-selected', isCur ? 'true' : 'false');
-      });
-      document.querySelectorAll('[data-part="tab-pane"]').forEach(p => {
-        const isCur = p.dataset.tab === tab;
-        p.setAttribute('aria-selected', isCur ? 'true' : 'false');
-      });
-    }
-
-    static actvSub(btn, arg) {
-      const sub = arg || btn.dataset.arg || btn.dataset.target;
-      State.set("RPTST.ui.activeSub", sub);
-      document.querySelectorAll('[data-part="sub-pane"]').forEach(p => {
-        const isCur = p.dataset.sub === sub;
-        p.setAttribute('aria-selected', isCur ? 'true' : 'false');
-      });
-    }
-
-    static actvPanel(btn) {
-      const panelId = btn.dataset.panelId;
-      State.set("RPTST.ui.activePanelId", panelId);
-      document.querySelectorAll('[data-panel-id]').forEach(p => {
-        p.setAttribute('aria-selected', p.dataset.panelId === panelId ? 'true' : 'false');
-      });
-    }
-
-    // --- 出力中継・委譲 ---
+    // --- actvTab ---
+    static actvTab(btn, arg) { State.set("RPTST.ui.activeTab", arg || btn.dataset.arg || btn.dataset.tab); }
+    // --- actvSub ---
+    static actvSub(btn, arg) { State.set("RPTST.ui.activeSub", arg || btn.dataset.arg || btn.dataset.target); }
+    // --- actvPanel ---
+    static actvPanel(btn) { State.set("RPTST.ui.activePanelId", btn.dataset.panelId); }
+    // --- updExportDesc ---
     static updExportDesc(tgt) { RepoExport.updExportDesc(tgt); }
+    // --- requestExport ---
     static requestExport() { RepoExport.requestExport(); }
+    // --- requestCopyConfig ---
     static requestCopyConfig() { RepoExport.requestCopyConfig(); }
+    // --- syncPanelDom ---
     static syncPanelDom() { RepoRend.syncPanelDom(RepoSt.getSt()); }
-
-    // --- 余白一括同期・リンク ---
+    // --- toggleMarginLink ---
     static toggleMarginLink(btn) {
       const group = btn.dataset.syncGroup;
       if (!group) return;
@@ -430,24 +332,24 @@
       icon.textContent = isLinked ? 'link' : 'link_off';
       btn.title = isLinked ? '連動解除' : '4方向連動';
     }
-
+    // --- syncMargin ---
     static syncMargin(inp) {
       const group = inp.dataset.syncGroup;
       if (!group) return;
       const linkBind = `RPTST.ui.link${group.charAt(0).toUpperCase() + group.slice(1)}Margin`;
       if (!State.get(linkBind)) return;
-      
-      const keys = group === 'canvas' ? ['bd_l','bd_t','bd_b','bd_r'] : ['p_l','p_t','p_b','p_r'];
+      const keys = group === 'canvas' ? ['bd_l', 'bd_t', 'bd_b', 'bd_r'] : ['p_l', 'p_t', 'p_b', 'p_r'];
       const val = Number(inp.value);
       keys.forEach(k => State.set(`RPTST.config.theme.${k}`, val));
       document.querySelectorAll('form[data-bind-ctx]').forEach(f => CoreUIPatcher.syncFormCtx(f));
     }
   }
 
+  // --- RepoRend ---
   class RepoRend {
     static resizeTimer = null;
     static renderTimer = null;
-
+    // --- _applyPanelLabels ---
     static _applyPanelLabels(idx, st) {
       const el = document.querySelector(`[data-panel-id="p_${idx}"]`);
       if (!el) return;
@@ -456,68 +358,56 @@
       const cols = layout?.gridCols || 1;
       const row = Math.floor(idx / cols);
       const col = idx % cols;
+      
       if (row === 0) el.setAttribute('data-col-lbl', `c${col + 1}`);
       else el.removeAttribute('data-col-lbl');
-      const existingCtrl = el.querySelector('.row-aspect-ctrl');
-      if (existingCtrl) existingCtrl.remove();
+      
+      el.querySelector('.row-aspect-ctrl')?.remove();
+      
       if (col === 0) {
+        el.setAttribute('data-row-lbl', `r${row + 1}`);
+        
         if (bMode === 'clus') {
-          el.removeAttribute('data-row-lbl');
           const ctrl = document.createElement('div');
           ctrl.className = 'row-aspect-ctrl';
           ctrl.innerHTML = RptTpl.rowAspectCtrl(row, layout.rowAspect?.[row] || 1.0);
           ctrl.querySelector('input').addEventListener('change', e => RepoAct.changeRowAspect(e.target));
           el.appendChild(ctrl);
-        } else {
-          el.setAttribute('data-row-lbl', `r${row + 1}`);
         }
       } else {
         el.removeAttribute('data-row-lbl');
       }
     }
-
-    // --- DOM・レイアウト同期 ---
+    // --- syncPanelDom ---
     static syncPanelDom(st) {
       const { layout, panels: curPanels, activeId } = st;
-      const reqIds = [];
-      for (let i = 0; i < layout.gridRows * layout.gridCols; i++) reqIds.push(`p_${i}`);
-      
+      const reqIds = Array.from({ length: layout.gridRows * layout.gridCols }, (_, i) => `p_${i}`);
       let panels = [...curPanels];
       reqIds.forEach(id => { if (!panels.find(p => p.id === id)) panels.push({ id, ...RPT_CFG.defPnl }); });
       panels = reqIds.map(id => panels.find(p => p.id === id));
       State.set("RPTST.panels", panels);
-      
       if (!panels.find(p => p.id === activeId)) {
         State.set("RPTST.ui.activePanelId", panels[0]?.id || "p_0");
       }
-
       RepoSt.renewPanel(st);
-
       const cont = document.querySelector('[data-part="a4Container"]');
       if (cont) {
-        cont.style.setProperty('--col-count', layout.gridCols); 
+        cont.style.setProperty('--col-count', layout.gridCols);
         cont.style.setProperty('--row-count', layout.gridRows);
         cont.style.setProperty('--panel-gap', `${(layout.panelGap !== undefined ? Number(layout.panelGap) : 4)}mm`);
       }
-
-      const curActive = st.activeId;
       for (let i = 0; i < 9; i++) {
         const el = document.querySelector(`[data-panel-id="p_${i}"]`);
         if (!el) continue;
-        el.setAttribute('aria-selected', `p_${i}` === curActive ? 'true' : 'false');
-        if (i < layout.gridRows * layout.gridCols) {
-          this._applyPanelLabels(i, st);
-        } else {
-          el.removeAttribute('data-col-lbl');
-          el.removeAttribute('data-row-lbl');
-        }
+        el.setAttribute('aria-selected', `p_${i}` === (st.activeId || "p_0") ? 'true' : 'false'); // アクティブ枠強制同期
+        if (i < layout.gridRows * layout.gridCols) this._applyPanelLabels(i, st);
+        else { el.removeAttribute('data-col-lbl'); el.removeAttribute('data-row-lbl'); }
       }
-      
       RepoSt.update();
       this.fitA4Scale();
       if (!window.__EXPORT_CFG__) this.genCharts(st);
     }
-
+    // --- fitA4Scale ---
     static fitA4Scale() {
       if (window.__EXPORT_CFG__) return;
       const main = document.querySelector('.dash-main'), a4 = document.querySelector('[data-part="a4Container"]');
@@ -525,57 +415,41 @@
       a4.style.transform = 'none';
       const scale = Math.min((main.clientWidth - 48) / a4.offsetWidth, (main.clientHeight - 48) / a4.offsetHeight, 1);
       a4.style.transform = `scale(${scale})`;
+      a4.style.setProperty('--current-scale', scale);
       a4.style.marginBottom = `-${a4.offsetHeight * (1 - scale)}px`;
     }
-
+    // --- genGph ---
     static genGph(st = null) {
       const snap = st || RepoSt.getSt();
       const theme = { ...RPT_CFG.defTheme, ...(snap.theme || {}) };
       const gphProps = ReportMethod.buildGraphStyle(theme, RPT_CFG.rng);
-
       const cont = document.querySelector('[data-part="a4Container"]');
       if (cont) {
-        const dirs = [{p:'top', k:'bd_t'}, {p:'right', k:'bd_r'}, {p:'bottom', k:'bd_b'}, {p:'left', k:'bd_l'}];
-        dirs.forEach(({p, k}) => {
-          const unit = RPT_CFG.rng[k]?.unit || 'mm';
-          cont.style.setProperty(`--margin-${p}`, `${theme[k]}${unit}`);
+        [{ p: 'top', k: 'bd_t' }, { p: 'right', k: 'bd_r' }, { p: 'bottom', k: 'bd_b' }, { p: 'left', k: 'bd_l' }].forEach(({ p, k }) => {
+          cont.style.setProperty(`--margin-${p}`, `${theme[k]}${RPT_CFG.rng[k]?.unit || 'mm'}`);
         });
       }
-
       return gphProps;
     }
-
+    // --- calcPanelSize ---
     static calcPanelSize(gph, st) {
       const grid = document.querySelector('[data-part="dashGrid"]');
       if (!grid) return;
       const snap = st || RepoSt.getSt();
       const { layout, panels, theme, boardMode } = snap;
-
-      grid.style.removeProperty('--panel-w'); grid.style.removeProperty('--panel-h');
-
-      let gw, gh;
-      if (window.__EXPORT_CFG__) {
-        const MM2PX = 3.7795275591;
-        const usableW = (210 - (theme.bd_l || 15) - (theme.bd_r || 15)) * MM2PX;
-        const usableH = (297 - (theme.bd_t || 15) - (theme.bd_b || 15)) * MM2PX;
-        gw = usableW;
-        gh = usableH;
-      } else {
-        gw = grid.clientWidth;
-        gh = grid.clientHeight;
-      }
-
-      if (gw === 0 || gh === 0) return;
-
+      grid.style.removeProperty('--panel-w');
+      grid.style.removeProperty('--panel-h');
+      const MM2PX = 3.7795275591;
+      const gw = window.__EXPORT_CFG__ ? (210 - (theme.bd_l || 15) - (theme.bd_r || 15)) * MM2PX : grid.clientWidth;
+      const gh = window.__EXPORT_CFG__ ? (297 - (theme.bd_t || 15) - (theme.bd_b || 15)) * MM2PX : grid.clientHeight;
+      if (!gw || !gh) return;
       const gapPx = (layout.panelGap !== undefined ? Number(layout.panelGap) : 4) * 3.78;
       const hasTitle = panels.some(p => p.title);
       const titleSizePx = (theme.s_title || 12) * 1.33;
-
       if (boardMode === 'clus' && layout.rowAspect?.length && (layout.gridRows || 1) > 0) {
         const rowCount = layout.gridRows || 1;
-        const aspects = (layout.rowAspect || []).slice(0, rowCount);
         const metrics = ReportMethod.calculatePanelMetricsAspect(
-          gw, gh, layout.gridCols || 1, rowCount, gapPx, gph, hasTitle, titleSizePx, aspects
+          gw, gh, layout.gridCols || 1, rowCount, gapPx, gph, hasTitle, titleSizePx, (layout.rowAspect || []).slice(0, rowCount)
         );
         grid.style.setProperty('--panel-w', `${metrics.panelW}px`);
         grid.style.gridTemplateRows = metrics.panelH.map(h => `${h}px`).join(' ');
@@ -589,7 +463,7 @@
       }
       void grid.offsetHeight;
     }
-
+    // --- genCharts ---
     static genCharts(st, pCalcDT = null) {
       const snap = st || RepoSt.getSt();
       const gph = this.genGph(snap);
@@ -597,63 +471,47 @@
       const { dataset, d, config, panels, rowPlotH, baseScales, layout, boardMode } = snap;
       const lyt = layout || config?.layout || { gridRows: 1, gridCols: 1 };
       const plots = document.querySelectorAll('[data-part="dashGrid"] ui-plot');
-      
       const draw = () => {
         panels.forEach((p, idx) => {
           this._applyPanelLabels(idx, snap);
           if (!plots[idx]) return;
           const row = Math.floor(idx / lyt.gridCols);
           const plotH = rowPlotH?.[row] ?? null;
-          
-          const isManual = p.scaleMode === 'manual';
-          const srcScales = isManual ? baseScales.fixed : baseScales.auto;
-
+          const srcScales = (p.scaleMode === 'manual') ? baseScales.fixed : baseScales.auto;
           const scaleFixed = {
             x: p.clusXVal ? srcScales?.[p.clusXVal] : srcScales?.[p.calbVal],
             y: p.clusYVal ? srcScales?.[p.clusYVal] : srcScales?.[p.calbVal]
           };
-
           if (pCalcDT?.[idx]) {
-            plots[idx].src = { prevDT: pCalcDT[idx].prevDT, statsDT: pCalcDT[idx].statsDT, symb: config.symbology, gph: gph, panel: p, plotH, scaleFixed };
+            plots[idx].src = { prevDT: pCalcDT[idx].prevDT, statsDT: pCalcDT[idx].statsDT, symb: config.symbology, gph, panel: p, plotH, scaleFixed };
           } else {
             if (!d?.pxrfDT?.length) return;
-            const graphType = boardMode || config.boardMode || 'calib';
-            const conf = { useCal: dataset.useCal, calElms: dataset.calElms, crct: dataset.crct, crctDT: d.crctDT, useLOD: dataset.useLOD, filters: dataset.filters, graphType: graphType, calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
+            const conf = { useCal: dataset.useCal, calElms: dataset.calElms, crct: dataset.crct, crctDT: d.crctDT, useLOD: dataset.useLOD, filters: dataset.filters, graphType: boardMode || config.boardMode || 'calib', calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
             const { prevDT, statsDT } = CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
-            plots[idx].src = { prevDT, statsDT, symb: config.symbology, gph: gph, panel: p, plotH, scaleFixed };
+            plots[idx].src = { prevDT, statsDT, symb: config.symbology, gph, panel: p, plotH, scaleFixed };
           }
         });
       };
-
       if (window.__EXPORT_CFG__) {
-         let finishedCount = 0, printFired = false;
-         const variableDelay = Math.min(5000, (lyt.gridRows * lyt.gridCols) * (d?.pxrfDT?.length || 0) * 0.15);
-         const waitTime = 500 + variableDelay;
-         const fallbackTime = Math.max(8000, waitTime + 4000);
-
-         const executePrint = () => { 
-           if (printFired) return; 
-           printFired = true; 
-           const loader = document.querySelector('[data-part="print-loading"], .print-loading');
-           if (loader) loader.style.display = 'none';
-           if (window.__EXPORT_CFG__.autoPrint) {
-             requestAnimationFrame(() => {
-               requestAnimationFrame(() => {
-                 setTimeout(() => { 
-                   window.parent.postMessage('PRINT_READY', '*');
-                 }, waitTime);
-               });
-             });
-           }
-         };
-         plots.forEach(plot => { plot.addEventListener('render-finished', () => { finishedCount++; if (finishedCount === lyt.gridRows * lyt.gridCols) executePrint(); }, { once: true }); });
-         setTimeout(executePrint, fallbackTime);
-         requestAnimationFrame(draw);
+        let finishedCount = 0, printFired = false;
+        const waitTime = 500 + Math.min(5000, (lyt.gridRows * lyt.gridCols) * (d?.pxrfDT?.length || 0) * 0.15);
+        const executePrint = () => {
+          if (printFired) return;
+          printFired = true;
+          const loader = document.querySelector('[data-part="print-loading"], .print-loading');
+          if (loader) loader.style.display = 'none';
+          if (window.__EXPORT_CFG__.autoPrint) {
+            requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => window.parent.postMessage('PRINT_READY', '*'), waitTime)));
+          }
+        };
+        plots.forEach(plot => plot.addEventListener('render-finished', () => { if (++finishedCount === lyt.gridRows * lyt.gridCols) executePrint(); }, { once: true }));
+        setTimeout(executePrint, Math.max(8000, waitTime + 4000));
+        requestAnimationFrame(draw);
       } else {
-         requestAnimationFrame(draw);
+        requestAnimationFrame(draw);
       }
     }
-
+    // --- qRend ---
     static qRend(st) {
       if (window.__EXPORT_CFG__) return;
       clearTimeout(this.renderTimer);
@@ -661,113 +519,97 @@
     }
   }
 
+  // --- RepoExport ---
   class RepoExport {
     static _printListenerSet = false;
-
+    // --- _buildFavObj ---
     static _buildFavObj(st) {
       const snap = st || RepoSt.getSt();
       const { config, dataset, panels, boardMode, layout, theme, symbology } = snap;
       return {
         boardMode: boardMode || config.boardMode,
-        gridRows:  layout?.gridRows ?? config.layout?.gridRows,
-        gridCols:  layout?.gridCols ?? config.layout?.gridCols,
-        panelGap:  layout?.panelGap ?? config.layout?.panelGap,
+        gridRows: layout?.gridRows ?? config.layout?.gridRows,
+        gridCols: layout?.gridCols ?? config.layout?.gridCols,
+        panelGap: layout?.panelGap ?? config.layout?.panelGap,
         rowAspect: layout?.rowAspect ?? config.layout?.rowAspect,
-        rawGph:    theme || config.theme,
-        symb:      symbology || config.symbology,
-        filters:   dataset.filters,
-        crct:      dataset.crct,
-        calElms:   dataset.calElms,
-        useCal:    dataset.useCal,
-        useLOD:    dataset.useLOD,
+        rawGph: theme || config.theme,
+        symb: symbology || config.symbology,
+        filters: dataset.filters,
+        crct: dataset.crct,
+        calElms: dataset.calElms,
+        useCal: dataset.useCal,
+        useLOD: dataset.useLOD,
         panels
       };
     }
-
+    // --- getFormattedDate ---
     static getFormattedDate() {
       const d = new Date();
-      return `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}`;
+      return `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}`;
     }
-
+    // --- downloadFile ---
     static downloadFile(filename, content) {
-      const blob = new Blob([content], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([content], { type: 'text/html' }));
+      a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
     }
-
+    // --- updExportDesc ---
     static updExportDesc(tgt) {
       if (!tgt) return;
-      const type = tgt.value;
-      if (type === 'pdf') {
-        State.set("RPTST.ui.exportDesc", 'ブラウザ機能を使用してPDFを出力します。');
-      } else if (type === 'html') {
-        State.set("RPTST.ui.exportDesc", '静的HTMLをダウンロードします。');
-      } else if (type === 'app') {
-        State.set("RPTST.ui.exportDesc", '解析ボードHTMLをダウンロードします。');
-      }
+      const descs = { pdf: 'ブラウザ機能を使用してPDFを出力します。', html: '静的HTMLをダウンロードします。', app: '解析ボードHTMLをダウンロードします。' };
+      State.set("RPTST.ui.exportDesc", descs[tgt.value] || '');
       State.set("RPTST.ui.exportStatus", "message");
       RepoSt.update();
     }
-
+    // --- setupPrintListener ---
     static setupPrintListener() {
       if (this._printListenerSet) return;
-      window.addEventListener('message', (e) => {
+      window.addEventListener('message', e => {
         if (e.data === 'PRINT_READY') {
           const iframe = document.querySelector('iframe.pdf-generator');
-          if (iframe) {
-            iframe.contentWindow.print();
-            iframe.remove();
-          }
+          if (iframe) { iframe.contentWindow.print(); iframe.remove(); }
           CoreAct.toast("完了", "PDFを出力しました。", "success");
-          const btn = document.querySelector('[data-part="btnOutput_exec"]');
-          if (btn) btn.disabled = false;
+          document.querySelector('[data-part="btnOutput_exec"]')?.removeAttribute('disabled');
           State.set("RPTST.ui.exportStatus", "message");
           this.updExportDesc(document.querySelector('input[name="exportType"]:checked'));
         }
       });
       this._printListenerSet = true;
     }
-
+    // --- _prepData ---
     static _prepData(st) {
       const snap = st || RepoSt.getSt();
       const { dataset, d, config, panels, boardMode } = snap;
-      const graphType = boardMode || config.boardMode || 'calib';
       const pCalcDT = panels.map(p => {
         if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
-        const conf = { useCal: dataset.useCal, calElms: dataset.calElms, crct: dataset.crct, crctDT: d.crctDT, useLOD: dataset.useLOD, filters: dataset.filters, graphType: graphType, calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
+        const conf = { useCal: dataset.useCal, calElms: dataset.calElms, crct: dataset.crct, crctDT: d.crctDT, useLOD: dataset.useLOD, filters: dataset.filters, graphType: boardMode || config.boardMode || 'calib', calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
         return CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
       });
-      if (!pCalcDT.some(res => res.prevDT?.length > 0)) {
+      if (!pCalcDT.some(res => res.prevDT?.length)) {
         CoreAct.toast("警告", "有効なグラフがありません。\nデータフィルターを確認してください。");
         return null;
       }
       return pCalcDT;
     }
-
+    // --- _buildHTML ---
     static _buildHTML(type, pCalcDT = null, st = null) {
       const snap = st || RepoSt.getSt();
-      const dateStr = this.getFormattedDate();
-      const outerHTML = document.documentElement.outerHTML;
-      const data = {
-        raw: snap.d,
-        fav: {
-          "RPTST.refs": this._buildFavObj(snap)
-        },
-        state: { RPTST: State.proxy.RPTST },
-        pCalcDT: pCalcDT
-      };
-      return ReportMethod.generateExportHTML(type, outerHTML, dateStr, data);
+      const ttl = `OBPLOT_${type.toUpperCase()}_${this.getFormattedDate()}`;
+      const esc = s => s.replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      if (type === 'app') {
+        const scrTag = `<title>${ttl}</title><script>window.__INJECTED_DATA__=${esc(JSON.stringify(snap.d))}; window.__INJECTED_FAVORITE__=${esc(JSON.stringify({ "RPTST.refs": this._buildFavObj(snap) }))};<\/script></head>`;
+        return { ttl, hStr: `<!DOCTYPE html>${document.documentElement.outerHTML.replace('</head>', scrTag)}` };
+      }
+      const cfg = JSON.stringify({ autoPrint: type === 'pdf' });
+      return { ttl, hStr: `<!DOCTYPE html>${document.documentElement.outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${esc(JSON.stringify({ RPTST: State.proxy.RPTST }))}; window.__PRECALC_DATA__=${esc(JSON.stringify(pCalcDT))};<\/script>`)}` };
     }
-
+    // --- genPDF ---
     static genPDF() {
-      const st = RepoSt.getSt();
-      const pCalcDT = this._prepData(st);
+      const st = RepoSt.getSt(), pCalcDT = this._prepData(st);
       if (!pCalcDT) return false;
       const { hStr } = this._buildHTML('pdf', pCalcDT, st);
-      
       this.setupPrintListener();
-      
       const iframe = document.createElement('iframe');
       iframe.className = 'pdf-generator';
       iframe.style.cssText = 'position:fixed; top:-9999px; left:-9999px; width:210mm; height:297mm; border:none; opacity:0; pointer-events:none;';
@@ -775,83 +617,61 @@
       iframe.contentDocument.open();
       iframe.contentDocument.write(hStr);
       iframe.contentDocument.close();
-      
       return true;
     }
-
+    // --- genStaticHTML ---
     static genStaticHTML() {
-      const st = RepoSt.getSt();
-      const pCalcDT = this._prepData(st);
+      const st = RepoSt.getSt(), pCalcDT = this._prepData(st);
       if (!pCalcDT) return false;
       const { ttl, hStr } = this._buildHTML('html', pCalcDT, st);
       this.downloadFile(`${ttl}.html`, hStr);
       return true;
     }
-
+    // --- genApp ---
     static genApp() {
       const st = RepoSt.getSt();
       const { ttl, hStr } = this._buildHTML('app', null, st);
       this.downloadFile(`${ttl}.html`, hStr);
+      return true;
     }
-
-    static requestExport() {
+    // --- requestExport ---
+    static async requestExport() {
       const btn = document.querySelector('[data-part="btnOutput_exec"]');
       const type = document.querySelector('input[name="exportType"]:checked')?.value;
-      
       if (btn) btn.disabled = true;
-      State.set({
-        "RPTST.ui.exportStatus": "loading",
-        "RPTST.ui.exportDesc": "処理中..."
-      });
+      State.set({ "RPTST.ui.exportStatus": "loading", "RPTST.ui.exportDesc": "処理中..." });
       RepoSt.update();
-
+      const restoreUI = () => {
+        if (btn) btn.disabled = false;
+        State.set("RPTST.ui.exportStatus", "message");
+        this.updExportDesc(document.querySelector('input[name="exportType"]:checked'));
+      };
       setTimeout(() => {
-        const restoreUI = () => {
-          if (btn) btn.disabled = false;
-          State.set("RPTST.ui.exportStatus", "message");
-          this.updExportDesc(document.querySelector('input[name="exportType"]:checked'));
-        };
-
-        if (type === 'pdf') {
-          if (this.genPDF() === false) restoreUI();
-        } else if (type === 'html') {
-          if (this.genStaticHTML() === false) {
-            restoreUI();
-          } else {
-            setTimeout(restoreUI, 3000);
-          }
-        } else if (type === 'app') {
-          this.genApp();
-          setTimeout(restoreUI, 3000);
-        }
+        let ok = false;
+        if (type === 'pdf') ok = this.genPDF();
+        else if (type === 'html') ok = this.genStaticHTML();
+        else if (type === 'app') ok = this.genApp();
+        if (ok && type !== 'pdf') setTimeout(restoreUI, 3000);
+        else if (!ok) restoreUI();
       }, 50);
     }
-
+    // --- requestCopyConfig ---
     static async requestCopyConfig() {
       const st = RepoSt.getSt();
-      const exportObj = {
-        "RPTST.refs": this._buildFavObj(st)
-      };
-      const jsonStr = JSON.stringify(exportObj, null, 2);
-      
+      const jsonStr = JSON.stringify({ "RPTST.refs": this._buildFavObj(st) }, null, 2);
       const btn = document.querySelector('[data-part="btnOutput_copyCfg"]');
       const txt = document.querySelector('[data-part="txtOutput_fallback"]');
       if (btn) btn.disabled = true;
       if (txt) txt.style.display = 'none';
-
       State.set({ "RPTST.ui.copyStatus": "loading", "RPTST.ui.copyDesc": "コピー中..." });
       RepoSt.update();
-
       let copied = false;
       try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
+        if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(jsonStr);
           copied = true;
         }
-      } catch (e) {
-        copied = false;
-      }
-      
+      } catch (e) { copied = false; }
       if (copied) {
         State.set({ "RPTST.ui.copyStatus": "success", "RPTST.ui.copyDesc": "クリップボードにコピーしました" });
         RepoSt.update();
@@ -863,87 +683,82 @@
       } else {
         State.set({ "RPTST.ui.copyStatus": "alert", "RPTST.ui.copyDesc": "アクセス拒否。手動コピーしてください。" });
         RepoSt.update();
-        if (txt) {
-          txt.style.display = 'block';
-          txt.value = jsonStr;
-          txt.focus();
-          txt.select();
-        }
+        if (txt) { txt.style.display = 'block'; txt.value = jsonStr; txt.focus(); txt.select(); }
         if (btn) btn.disabled = false;
       }
     }
   }
 
+  // --- RepoReact ---
   class RepoReact {
     static timers = {};
+    // --- debounce ---
     static debounce(key, fn, delay = 10) {
       clearTimeout(this.timers[key]);
       this.timers[key] = setTimeout(() => fn(RepoSt.getSt()), delay);
     }
-
+    // --- setup ---
     static setup() {
-      State.subscribe(['RPTST.config.layout.gridRows', 'RPTST.config.layout.gridCols', 'RPTST.config.layout.panelGap'], () => this.debounce('layout', st => RepoRend.syncPanelDom(st)));
+      const syncAria = (sel, attr, val) => document.querySelectorAll(sel).forEach(el => el.setAttribute('aria-selected', el.dataset[attr] === val ? 'true' : 'false'));
+      State.subscribe('RPTST.ui.activeTab', v => { syncAria('[data-part="tab-icon"]', 'arg', v); syncAria('[data-part="tab-pane"]', 'tab', v); });
+      State.subscribe('RPTST.ui.activeSub', v => syncAria('[data-part="sub-pane"]', 'sub', v));
+      State.subscribe('RPTST.ui.activePanelId', v => syncAria('[data-panel-id]', 'panelId', v));
+      State.subscribe(['RPTST.config.layout', 'RPTST.config.layout.gridRows', 'RPTST.config.layout.gridCols', 'RPTST.config.layout.panelGap', 'RPTST.config.layout.rowAspect'], () => this.debounce('layout', st => RepoRend.syncPanelDom(st))); // layout再計算
       State.subscribe('RPTST.config.boardMode', () => this.debounce('boardMode', st => { RepoSt.updateBaseScales(st, 'metric'); RepoSt.update(); RepoSt.renewPanel(st); }));
       State.subscribe(['RPTST.dataset.filters', 'RPTST.dataset.useCal', 'RPTST.dataset.useLOD', 'RPTST.dataset.crct', 'RPTST.dataset.calElms'], () => this.debounce('dataset', st => { RepoSt.updateBaseScales(st, 'all'); RepoSt.renewPanel(st); RepoRend.qRend(st); }));
-      State.subscribe(['RPTST.config.symbology', 'RPTST.config.theme', 'RPTST.panels', 'RPTST.config.layout.rowAspect'], () => this.debounce('config', st => RepoRend.qRend(st)));
+      State.subscribe(['RPTST.config.symbology', 'RPTST.config.theme', 'RPTST.panels'], () => this.debounce('config', st => RepoRend.qRend(st)));
       State.subscribe('RPTST.ui.activePanelId', () => this.debounce('activePanel', st => RepoSt.renewPanel(st)));
       State.subscribe(['RPTST.config.symbology.baseKey', 'RPTST.config.symbology.rls'], () => this.debounce('symb', st => RepoSt.renewSymbState(st)));
     }
   }
 
+  // --- RepoInit ---
   class RepoInit {
+    // --- init ---
     static async init() {
       CoreAct.rootGLB({ CoreAct, RepoAct, RepoSt, RepoRend, RepoExport, RepoInit, RepoReact });
       RepoAct.automator = new CoreUI(REPORT_SCHEMA, 'RPTST');
-
       if (window.__EXPORT_CFG__) {
-         State.set(window.__PRINT_STATE__);
-         document.body.setAttribute('data-state', 'printing');
-         const loading = document.createElement('div');
-         loading.setAttribute('data-part', 'print-loading');
-         loading.textContent = window.__EXPORT_CFG__.autoPrint ? '印刷用PDF生成中...' : '静的HTML生成中...';
-         document.body.appendChild(loading);
-         
-         const grid = document.querySelector('[data-part="dashGrid"]');
-         grid.innerHTML = ''; 
-         
-         for (let i = 0; i < 9; i++) {
-           const div = document.createElement('div');
-           div.setAttribute('data-part', `panel-${i}`);
-           div.className = 'grid-panel';
-           div.dataset.panelId = `p_${i}`;
-           div.dataset.action = 'RepoAct.actvPanel';
-           
-           const chart = document.createElement('ui-plot');
-           chart.style.cssText = 'width: 100%; height: 100%;';
-           chart.setAttribute('data-renderer', 'svg');
-           
-           div.appendChild(chart);
-           grid.appendChild(div);
-         }
-         
-         RepoAct.automator.build();
-         
-         requestAnimationFrame(() => {
-           const st = RepoSt.getSt();
-           RepoRend.syncPanelDom(st);
-           void document.body.offsetHeight;
-           RepoRend.genCharts(st, window.__PRECALC_DATA__);
-         });
-         return;
+        State.set(window.__PRINT_STATE__);
+        document.body.setAttribute('data-state', 'printing');
+        const loading = document.createElement('div');
+        loading.setAttribute('data-part', 'print-loading');
+        loading.textContent = window.__EXPORT_CFG__.autoPrint ? '印刷用PDF生成中...' : '静的HTML生成中...';
+        document.body.appendChild(loading);
+        const grid = document.querySelector('[data-part="dashGrid"]');
+        grid.innerHTML = '';
+        for (let i = 0; i < 9; i++) {
+          const div = document.createElement('div');
+          div.setAttribute('data-part', `panel-${i}`);
+          div.className = 'grid-panel';
+          div.dataset.panelId = `p_${i}`;
+          div.dataset.action = 'RepoAct.actvPanel';
+          const chart = document.createElement('ui-plot');
+          chart.style.cssText = 'width: 100%; height: 100%;';
+          chart.setAttribute('data-renderer', 'svg');
+          div.appendChild(chart);
+          grid.appendChild(div);
+        }
+        RepoAct.automator.build();
+        requestAnimationFrame(() => {
+          const st = RepoSt.getSt();
+          RepoRend.syncPanelDom(st);
+          void document.body.offsetHeight;
+          RepoRend.genCharts(st, window.__PRECALC_DATA__);
+        });
+        return;
       }
-
       State.set({
+        "RPTST.ui.activeTab": "tabLayout",
+        "RPTST.ui.activeSub": "subFont",
         "RPTST.ui.linkCanvasMargin": false,
         "RPTST.ui.linkPanelMargin": false,
         "RPTST.ui.exportDesc": "ブラウザ機能を使用してPDFを出力します。",
         "RPTST.ui.copyDesc": "設定項目をクリップボードにコピーします。"
       });
-      
       const initDataRaw = window.__INJECTED_DATA__;
       const injData = (typeof initDataRaw === 'object' && initDataRaw !== null) ? initDataRaw : { pxrfDT: [], wdxrfDT: [], crctDT: [] };
       State.set("RPTST.dataset.raw", injData);
-
       document.querySelectorAll('input[type="number"], input[type="range"]').forEach(el => {
         const key = el.name || el.dataset.bind?.split('.').pop();
         if (key && RPT_CFG.rng[key]) {
@@ -953,9 +768,7 @@
           el.setAttribute('step', rng.step);
         }
       });
-      
       RepoAct.automator.build();
-
       let fav = null;
       if (typeof window.__INJECTED_FAVORITE__ === 'object' && window.__INJECTED_FAVORITE__ !== null) {
         fav = window.__INJECTED_FAVORITE__;
@@ -963,27 +776,22 @@
         try { fav = JSON.parse(window.__INJECTED_FAVORITE__); } catch (e) {}
       }
       await RepoSt.initSt(fav, injData);
-
       const st = RepoSt.getSt();
       RepoRend.syncPanelDom(st);
       RepoSt.renewPanel(st);
-
-      // --- 4層 State の購読設定 ---
       RepoReact.setup();
-
       window.addEventListener('resize', () => {
-         clearTimeout(RepoRend.resizeTimer);
-         RepoRend.resizeTimer = setTimeout(() => {
-             RepoRend.fitA4Scale();
-             const st = RepoSt.getSt();
-             const gph = RepoRend.genGph(st);
-             RepoRend.calcPanelSize(gph, st);
-             const plots = document.querySelectorAll('[data-part="dashGrid"] ui-plot');
-             plots.forEach(plot => { plot.src = { ...plot.src, gph: gph }; });
-         }, 100);
+        clearTimeout(RepoRend.resizeTimer);
+        RepoRend.resizeTimer = setTimeout(() => {
+          RepoRend.fitA4Scale();
+          const curSt = RepoSt.getSt();
+          const gph = RepoRend.genGph(curSt);
+          RepoRend.calcPanelSize(gph, curSt);
+          document.querySelectorAll('[data-part="dashGrid"] ui-plot').forEach(plot => { plot.src = { ...plot.src, gph }; });
+        }, 100);
       });
     }
-
+    // --- start ---
     static start() { return this.init(); }
   }
 

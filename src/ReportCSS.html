@@ -83,10 +83,10 @@
               content: attr(data-col-lbl);
               position: absolute;
               bottom: 100%;
-              margin-bottom: 4mm;
+              margin-bottom: calc(4mm / var(--current-scale, 1));
               left: 50%;
               transform: translateX(-50%);
-              font-size: 15pt;
+              font-size: calc(12pt / var(--current-scale, 1));
               font-weight: 500;
               color: var(--theme-color, var(--text-main));
               pointer-events: none;
@@ -98,10 +98,10 @@
               content: attr(data-row-lbl);
               position: absolute;
               right: 100%;
-              margin-right: 4mm;
+              margin-right: calc(4mm / var(--current-scale, 1));
               top: 50%;
               transform: translateY(-50%);
-              font-size: 15pt;
+              font-size: calc(12pt / var(--current-scale, 1));
               font-weight: 500;
               color: var(--theme-color, var(--text-main));
               pointer-events: none;
@@ -109,49 +109,11 @@
               line-height: 1;
             }
             &:not([data-row-lbl])::after { display: none; }
-            .row-aspect-ctrl {
-              position: absolute;
-              right: 100%;
-              margin-right: 4mm;
-              top: 50%;
-              transform: translateY(-50%);
-              z-index: 10;
-              .row-lbl-btn {
-                background: none;
-                border: 1px solid transparent;
-                padding: 2px 4px;
-                font-size: 7pt;
-                font-weight: 500;
-                color: var(--theme-color, var(--text-main));
-                cursor: pointer;
-                border-radius: 4px;
-                transition: background 0.2s, border-color 0.2s;
-                &:hover {
-                  background: var(--grey100);
-                  border-color: var(--border);
-                }
-              }
-            }
           }
         }
       }
     }
   }
-
-  /* --- アスペクト比変更 Popover --- */
-  .row-aspect-popover {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 12px;
-    background: var(--bg-main, #fff);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    color: var(--text-main, #333);
-    font-size: 11px;
-  }
-  .row-aspect-popover::backdrop { background: rgba(0,0,0,0.1); }
-  .row-aspect-popover .pop-header { font-weight: 600; margin-bottom: 8px; color: var(--text-light); }
-  .row-aspect-popover .pop-body { display: flex; align-items: center; }
-  .row-aspect-popover .pop-body input { width: 70px; height: 26px; font-size: 12px; }
 
   /* --- ボード設定UI --- */
   .board-mode-sec {
@@ -344,6 +306,45 @@
     font-weight: bold;
     z-index: 9999;
   }
+
+  .row-aspect-ctrl {
+    position: absolute;
+    right: 100%;
+    margin-right: calc((4mm + 30px) / var(--current-scale, 1));
+    top: 50%;
+    transform: translateY(-50%) scale(calc(1 / var(--current-scale, 1)));
+    transform-origin: right center;
+    z-index: 10;
+    .aspect-ctrl-inp {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      width: 80px;
+      .aspect-icon-wrap {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        left: 6px;
+        width: max-content;
+        .material-symbols-outlined {
+          font-size: 14px;
+        }
+        span:not(.material-symbols-outlined) {
+          font-size: 10px;
+          font-weight: 500;
+          font-family: sans-serif;
+          line-height: 1;
+        }
+      }
+      input {
+        background: transparent;
+        padding-left: 30px;
+        padding-right: 2px;
+        font-size: 11px;
+      }
+    }
+  }
+
   @media print {
     @page { size: A4 portrait; margin: 0; }
     body, html { margin: 0; padding: 0; background-color: #fff; height: 100%; }
@@ -367,7 +368,7 @@
     .grid-panel, .grid-panel.active, .grid-panel[aria-selected="true"] { 
       border: none !important; 
     }
-    .row-aspect-ctrl { display: none !important; }
+    .row-aspect-ctrl { display: none !important; }  
   }
 
   /* --- 4方向インライン入力 (Linked Inputs) --- */

@@ -26,7 +26,7 @@
     <?!= include('Chart'); ?>
     <?!= include('Report_Schema'); ?>
     <?!= include('CoreUI'); ?>
-    <?!= include('CoreAction'); ?> <!-- 【追加】ルーター・パイプラインの読み込み -->
+    <?!= include('CoreAction'); ?> 
     
     <div class="dash-layout">
       <!-- 左サイドバー -->
@@ -76,7 +76,7 @@
                 </div>
               </div>
             </div>
-            <form data-bind-ctx="RPTST.panels.$active" data-change="RepoAct.onActivePanelFormChange">
+            <form data-bind-ctx="RPTST.panels.$active">
               <div class="prop-row">
                 <label class="prop-label panel">タイトル</label>
                 <div class="prop-controls">
@@ -104,18 +104,18 @@
           <!-- タブ: tabLayout -->
           <div data-part="tab-pane" data-tab="tabLayout" class="sidebar-tab-pane" aria-selected="true">
             <h5 class="pane-title" style="margin-bottom:8px;">ボード設定</h5>
-              <form data-bind-ctx="RPTST.config.layout" data-change="RepoAct.onLayoutChange">
+              <form data-bind-ctx="RPTST.config.layout">
                 <div class="prop-row">
                   <label class="prop-label panel">行数 / 列数</label>
                   <div class="prop-controls">
                     <input type="number" name="gridRows" data-part="inpGridRows" class="form-control" title="行数" min="1" max="3" step="1">
-                    <input type="number" name="gridCols" data-part="inpGridCols" data-change="RepoAct.changeGridCols" class="form-control" title="列数" min="1" max="3" step="1">
+                    <input type="number" name="gridCols" data-part="inpGridCols" class="form-control" title="列数" min="1" max="3" step="1">
                   </div>
                 </div>
               </form>
             <h5 class="pane-title" style="margin-bottom:8px;">余白設定</h5>
             <div data-part="mount-layout-margins">
-              <form data-bind-ctx="RPTST.config.theme" data-change="RepoAct.syncMargin">
+              <form data-bind-ctx="RPTST.config.theme">
                 <div class="linked-inputs-container">
                   <label class="prop-label inline" style="margin-bottom: 4px;">
                     <span>キャンバス余白<span class="badge-label">mm</span></span>
@@ -181,7 +181,7 @@
                   </div>
                 </div>
               </form>
-              <form data-bind-ctx="RPTST.config.layout" data-change="RepoAct.onLayoutChange">
+              <form data-bind-ctx="RPTST.config.layout">
                 <div class="prop-row">
                   <label class="prop-label">パネル間隔</label>
                   <div class="prop-controls">
@@ -252,7 +252,7 @@
                   <label class="prop-label">和文スタイル</label>
                   <div class="prop-controls" data-part="boxFontJp" data-bind-fields="RPTST.ui.optFields.fontJpFields"></div>
                 </div>
-                <form data-bind-ctx="RPTST.config.theme" data-change="RepoAct.onThemeChange">
+                <form data-bind-ctx="RPTST.config.theme">
                   <div class="prop-row">
                     <label class="prop-label">カラー<span class="badge-label">K</span></label>
                     <div class="prop-controls">
@@ -289,7 +289,7 @@
             </div>
             <div data-part="sub-pane" data-sub="subArea" class="sub-pane" aria-selected="false">
               <div data-part="mount-style-area">
-                <form data-bind-ctx="RPTST.config.theme" data-change="RepoAct.onThemeChange">
+                <form data-bind-ctx="RPTST.config.theme">
                   <div class="prop-row">
                     <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
                     <div class="prop-controls">
@@ -345,7 +345,7 @@
                 <label class="prop-label panel">属性選択</label>
                 <div class="prop-controls">
                   <div data-part="boxSymbAxis" data-bind-fields="RPTST.ui.optFields.axisFields" style="flex:1;"></div>
-                  <button data-action="RepoSt.resetSymb" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
+                  <button data-action="RepoAct.resetSymb" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
                 </div>
               </div>
               <div class="scroll-box">
