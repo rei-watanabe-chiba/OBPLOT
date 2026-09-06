@@ -24,25 +24,72 @@
 
     <?!= include('Component'); ?>
     <?!= include('Chart'); ?>
-    <?!= include('ReportConfig'); ?>
+    <?!= include('_Report_Schema'); ?>
     <?!= include('CoreUI'); ?>
     <?!= include('CoreAction'); ?> <!-- 【追加】ルーター・パイプラインの読み込み -->
     
     <div class="dash-layout">
       <!-- 左サイドバー -->
       <aside class="dash-sidebar" id="dashSidebar">
+        <!-- ボード設定 -->
+        <div id="cfgBoard" class="board-mode-sec">
+          <h4 class="pane-title">ボード設定</h4>
+          <div class="segment-ctrl" data-ui="segment" data-bind="RPTST.refs.boardMode">
+            <button type="button" class="segment-btn" data-action="RepoAct.setBoardMode" data-target="calib">検量線</button>
+            <button type="button" class="segment-btn" data-action="RepoAct.setBoardMode" data-target="clus">判別図</button>
+          </div>
+          <div class="prop-row">
+            <label class="prop-label panel">行数 / 列数</label>
+            <div class="prop-controls">
+              <input type="number" id="inpGridRows" data-bind="RPTST.refs.gridRows" class="form-control" title="行数" min="1" max="3" step="1">
+              <input type="number" id="inpGridCols" data-bind="RPTST.refs.gridCols" data-change="RepoAct.changeGridCols" class="form-control" title="列数" min="1" max="3" step="1">
+            </div>
+          </div>
+          <div id="boxRowAspect" class="row-aspect-box" style="display: none;">
+            <div class="prop-row row-aspect-item" id="rowAspect_0">
+              <label class="prop-label panel">r1 縦横比</label>
+              <div class="prop-controls">
+                <span class="txt-btninfo">W: 1.0（固定） : H</span>
+                <input type="number" id="inpAspect_0" class="form-control aspect-input" min="0.1" max="2.0" step="0.1" data-bind="RPTST.refs.rowAspect.0" data-aspect-idx="0" data-change="RepoAct.changeRowAspect">
+              </div>
+            </div>
+            <div class="prop-row row-aspect-item" id="rowAspect_1">
+              <label class="prop-label panel">r1 縦横比</label>
+              <div class="prop-controls">
+                <span class="txt-btninfo">W: 1.0（固定） : H</span>
+                <input type="number" id="inpAspect_1" class="form-control aspect-input" min="0.1" max="2.0" step="0.1" data-bind="RPTST.refs.rowAspect.1" data-aspect-idx="1" data-change="RepoAct.changeRowAspect">
+              </div>
+            </div>
+            <div class="prop-row row-aspect-item" id="rowAspect_2">
+              <label class="prop-label panel">r1 縦横比</label>
+              <div class="prop-controls">
+                <span class="txt-btninfo">W: 1.0（固定） : H</span>
+                <input type="number" id="inpAspect_2" class="form-control aspect-input" min="0.1" max="2.0" step="0.1" data-bind="RPTST.refs.rowAspect.2" data-aspect-idx="2" data-change="RepoAct.changeRowAspect">
+              </div>
+            </div>
+          </div>
+        </div>
         <!-- 固定: 選択中パネル -->
         <div class="panel-context" id="panelConfigSec" style="display: none;">
           <h4 class="pane-title">選択中のパネル設定</h4>
           <div id="mount-panel-config">
             <div class="prop-row">
-              <label class="prop-label panel">タイプ</label>
-              <div class="prop-controls" id="boxGraphType" data-bind-fields="RPTST.data.graphTypeFields"></div>
+              <label class="prop-label panel">スケール</label>
+              <div class="prop-controls">
+                <div class="segment-ctrl" data-ui="segment" data-bind="RPTST.data.apScaleMode" style="margin-bottom:0;">
+                  <button type="button" class="segment-btn" data-action="RepoSt.renewPanelRef" data-target="auto" data-ap-key="scaleMode">Auto</button>
+                  <button type="button" class="segment-btn" data-action="RepoSt.renewPanelRef" data-target="manual" data-ap-key="scaleMode">固定</button>
+                </div>
+              </div>
             </div>
             <div id="secCALB">
               <div class="prop-row">
                 <label class="prop-label panel">対象指標</label>
                 <div class="prop-controls" id="boxCalbVal" data-bind-fields="RPTST.data.calbValFields"></div>
+              </div>
+              <div class="prop-row" id="boxCalibTick">
+                <label class="prop-label panel">目盛単位</label>
+                <div class="prop-controls" id="boxTickUnit" data-bind-fields="RPTST.data.tickUnitFields"></div>
               </div>
             </div>
             <div id="secCluster">
@@ -53,6 +100,13 @@
               <div class="prop-row">
                 <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
                 <div class="prop-controls" id="boxClusY" data-bind-fields="RPTST.data.clusYFields"></div>
+              </div>
+              <div class="prop-row" id="boxClusTick">
+                <label class="prop-label panel">X/Y<span class="badge-label">目盛</span></label>
+                <div class="prop-controls">
+                  <div id="boxClusTickX" data-bind-fields="RPTST.data.clusTickXFields" style="flex:1;"></div>
+                  <div id="boxClusTickY" data-bind-fields="RPTST.data.clusTickYFields" style="flex:1;"></div>
+                </div>
               </div>
             </div>
             <div class="prop-row">
@@ -98,67 +152,57 @@
           </div>
           <!-- タブ: tabLayout -->
           <div id="tabLayout" class="sidebar-tab-pane active">
-            <h5 class="pane-title" style="margin-bottom:8px;">パネル操作</h5>
-            <div id="mount-layout-panel">
-              <div class="prop-row" style="margin-bottom:16px;">
-                <label class="prop-label">行数 / 列数</label>
-                <div class="prop-controls">
-                  <input type="number" data-bind="RPTST.refs.gridRows" class="form-control" title="行数">
-                  <input type="number" data-bind="RPTST.refs.gridCols" class="form-control" title="列数">
-                </div>
-              </div>
-            </div>
             <h5 class="pane-title" style="margin-bottom:8px;">余白設定</h5>
             <div id="mount-layout-margins">
               <div class="linked-inputs-container">
                 <label class="prop-label inline" style="margin-bottom: 4px;">
                   <span>キャンバス余白<span class="badge-label">mm</span></span>
-                  <button type="button" class="link-toggle-inline" data-action="RepoAct.toggleMarginLink" data-link-bind="RPTST.ui.linkCanvasMargin" title="連動">
+                  <button type="button" class="link-toggle-inline" data-action="RepoAct.toggleMarginLink" data-sync-group="canvas" title="連動">
                     <span class="material-symbols-outlined">link_off</span>
                   </button>
                 </label>
                 <div class="prop-controls linked-inputs-row" style="width: 100%;">
                   <div class="linked-input-cell">
                     <span class="material-symbols-outlined inside-icon">border_left</span>
-                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.margins.left" data-link-bind="RPTST.ui.linkCanvasMargin" data-sync-binds="RPTST.refs.margins.left,RPTST.refs.margins.top,RPTST.refs.margins.bottom,RPTST.refs.margins.right" data-change="RepoAct.syncMargin" title="左">
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.bd_l" data-sync-group="canvas" data-change="RepoAct.syncMargin" title="左">
                   </div>
                   <div class="linked-input-cell">
                     <span class="material-symbols-outlined inside-icon">border_top</span>
-                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.margins.top" data-link-bind="RPTST.ui.linkCanvasMargin" data-sync-binds="RPTST.refs.margins.left,RPTST.refs.margins.top,RPTST.refs.margins.bottom,RPTST.refs.margins.right" data-change="RepoAct.syncMargin" title="上">
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.bd_t" data-sync-group="canvas" data-change="RepoAct.syncMargin" title="上">
                   </div>
                   <div class="linked-input-cell">
                     <span class="material-symbols-outlined inside-icon">border_bottom</span>
-                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.margins.bottom" data-link-bind="RPTST.ui.linkCanvasMargin" data-sync-binds="RPTST.refs.margins.left,RPTST.refs.margins.top,RPTST.refs.margins.bottom,RPTST.refs.margins.right" data-change="RepoAct.syncMargin" title="下">
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.bd_b" data-sync-group="canvas" data-change="RepoAct.syncMargin" title="下">
                   </div>
                   <div class="linked-input-cell">
                     <span class="material-symbols-outlined inside-icon">border_right</span>
-                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.margins.right" data-link-bind="RPTST.ui.linkCanvasMargin" data-sync-binds="RPTST.refs.margins.left,RPTST.refs.margins.top,RPTST.refs.margins.bottom,RPTST.refs.margins.right" data-change="RepoAct.syncMargin" title="右">
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.bd_r" data-sync-group="canvas" data-change="RepoAct.syncMargin" title="右">
                   </div>
                 </div>
               </div>
               <div class="linked-inputs-container">
                 <label class="prop-label inline" style="margin-bottom: 4px;">
                   <span>パネル内余白<span class="badge-label">mm</span></span>
-                  <button type="button" class="link-toggle-inline" data-action="RepoAct.toggleMarginLink" data-link-bind="RPTST.ui.linkPanelMargin" title="連動">
+                  <button type="button" class="link-toggle-inline" data-action="RepoAct.toggleMarginLink" data-sync-group="panel" title="連動">
                     <span class="material-symbols-outlined">link_off</span>
                   </button>
                 </label>
                 <div class="prop-controls linked-inputs-row" style="width: 100%;">
                   <div class="linked-input-cell">
                     <span class="material-symbols-outlined inside-icon">border_left</span>
-                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_l" data-link-bind="RPTST.ui.linkPanelMargin" data-sync-binds="RPTST.refs.rawGph.p_l,RPTST.refs.rawGph.p_t,RPTST.refs.rawGph.p_b,RPTST.refs.rawGph.p_r" data-change="RepoAct.syncMargin" title="左">
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_l" data-sync-group="panel" data-change="RepoAct.syncMargin" title="左">
                   </div>
                   <div class="linked-input-cell">
                     <span class="material-symbols-outlined inside-icon">border_top</span>
-                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_t" data-link-bind="RPTST.ui.linkPanelMargin" data-sync-binds="RPTST.refs.rawGph.p_l,RPTST.refs.rawGph.p_t,RPTST.refs.rawGph.p_b,RPTST.refs.rawGph.p_r" data-change="RepoAct.syncMargin" title="上">
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_t" data-sync-group="panel" data-change="RepoAct.syncMargin" title="上">
                   </div>
                   <div class="linked-input-cell">
                     <span class="material-symbols-outlined inside-icon">border_bottom</span>
-                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_b" data-link-bind="RPTST.ui.linkPanelMargin" data-sync-binds="RPTST.refs.rawGph.p_l,RPTST.refs.rawGph.p_t,RPTST.refs.rawGph.p_b,RPTST.refs.rawGph.p_r" data-change="RepoAct.syncMargin" title="下">
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_b" data-sync-group="panel" data-change="RepoAct.syncMargin" title="下">
                   </div>
                   <div class="linked-input-cell">
                     <span class="material-symbols-outlined inside-icon">border_right</span>
-                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_r" data-link-bind="RPTST.ui.linkPanelMargin" data-sync-binds="RPTST.refs.rawGph.p_l,RPTST.refs.rawGph.p_t,RPTST.refs.rawGph.p_b,RPTST.refs.rawGph.p_r" data-change="RepoAct.syncMargin" title="右">
+                    <input type="number" class="form-control inline-icon-input" data-bind="RPTST.refs.rawGph.p_r" data-sync-group="panel" data-change="RepoAct.syncMargin" title="右">
                   </div>
                 </div>
               </div>
@@ -229,9 +273,9 @@
           </div>
           <!-- タブ: tabStyle -->
           <div id="tabStyle" class="sidebar-tab-pane">
-            <div class="segment-ctrl">
-              <button id="segBtnFont" class="segment-btn active" data-action="RepoAct.actvSub" data-target="subFont">フォント</button>
-              <button id="segBtnArea" class="segment-btn" data-action="RepoAct.actvSub" data-target="subArea">グラフエリア</button>
+            <div class="segment-ctrl" data-ui="segment" data-bind="RPTST.ui.activeSub">
+              <button type="button" class="segment-btn" data-action="RepoAct.actvSub" data-target="subFont">フォント</button>
+              <button type="button" class="segment-btn" data-action="RepoAct.actvSub" data-target="subArea">グラフエリア</button>
             </div>
             <div id="subFont" class="sub-pane active">
               <div id="mount-style-font">
@@ -359,6 +403,7 @@
         </div>
       </main>
     </div>
-    <?!= include("ReportApp"); ?>
+    <?!= include("Report_Method"); ?>
+    <?!= include("Report_APP"); ?>
   </body>
 </html>

@@ -1,0 +1,104 @@
+<!-- src/Report_Method.html -->
+<script>
+  class ReportMethod {
+    static buildGraphStyle(raw, rng) {
+      const pt2px = pt => Number(pt) * 1.33;
+      const mm2px = mm => Number(mm) * 3.78;
+      const px = {};
+      Object.entries(raw).forEach(([k, v]) => {
+        const unit = rng[k]?.unit;
+        if (unit === 'mm') px[k] = mm2px(v);
+        else if (unit === 'pt') px[k] = pt2px(v);
+        else px[k] = v;
+      });
+      let finalPadR = px.p_r < px.s_tick ? px.p_r + px.s_tick : px.p_r;
+
+      return {
+        style: {
+          font: `${raw.fontEng}, ${raw.fontJp}, sans-serif`,
+          fontS: { title: px.s_title, tick: px.s_tick, name: px.s_name, stats: px.s_stats, tip: px.s_stats },
+          fontC: { base: `hsl(0, 0%, ${100 - raw.c_base}%)`, stats: `hsl(0, 0%, ${100 - raw.c_stats}%)`, tip: 'var(--text-main)' },
+          symbol: { baseSize: px.sym_size, pathSize: px.sym_size * 1.2, borderW: px.sym_bw },
+          lineW: { axis: px.lw_axis, grid: px.lw_grid, regW: px.lw_reg, regD: Number(raw.lw_reg) <= 0.4 ? [3, 3] : [5, 5] },
+          lineC: { axis: `hsl(0, 0%, ${100 - raw.c_axis}%)`, grid: `hsl(0, 0%, ${100 - raw.c_grid}%)`, reg: `hsl(0, 0%, ${100 - raw.c_base}%)` },
+          bgPlot: 'transparent', bgOuter: 'transparent', bgTip: 'rgba(255,255,255,0.95)'
+        },
+        gap: { name: px.g_name, tick: px.g_tick, padT: px.p_t, padB: px.p_b, padL: px.p_l, padR: finalPadR }
+      };
+    }
+
+    static calculatePanelMetrics(gw, gh, gridCols, gridRows, gapPx, gph, hasTitle, titleSizePx) {
+      const maxW = (gw - (gridCols - 1) * gapPx) / gridCols, maxH = (gh - (gridRows - 1) * gapPx) / gridRows;
+      const style = gph.style, gap = gph.gap;
+      const charWidth = style.fontS.tick * 0.6;
+      const requiredPadT = Math.max(style.fontS.tick, hasTitle ? titleSizePx + gap.tick : 0);
+      const gridTop = (gap.padT < requiredPadT ? gap.padT + requiredPadT : gap.padT) + ((4 * charWidth) / 2);
+      const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      const gridLeft = gap.padL + ((2 * charWidth) / 2) + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      const gridRight = (gap.padR < style.fontS.tick ? gap.padR + style.fontS.tick : gap.padR) + ((2 * charWidth) / 2);
+      const plotLen = Math.max(10, Math.min(maxW - (gridLeft + gridRight), maxH - (gridTop + gridBottom)));
+      return {
+        panelW: plotLen + gridLeft + gridRight,
+        panelH: plotLen + gridTop + gridBottom
+      };
+    }
+
+    /**
+     * 判別図専用: 行単位アスペクト比を考慮したパネルメトリクス計算
+     * @param {number[]} rowAspects - 各行のアスペクト比配列 k_r = plotH/plotW
+     * @returns {{ panelW: number, panelH: number[], plotW: number, plotH: number[] }}
+     */
+    static calculatePanelMetricsAspect(gw, gh, gridCols, gridRows, gapPx, gph, hasTitle, titleSizePx, rowAspects) {
+      const style = gph.style, gap = gph.gap;
+      const charWidth = style.fontS.tick * 0.6;
+      const requiredPadT = Math.max(style.fontS.tick, hasTitle ? titleSizePx + gap.tick : 0);
+      const gridTop    = (gap.padT < requiredPadT ? gap.padT + requiredPadT : gap.padT) + ((4 * charWidth) / 2);
+      const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      const gridLeft   = gap.padL + ((2 * charWidth) / 2) + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      const gridRight  = (gap.padR < style.fontS.tick ? gap.padR + style.fontS.tick : gap.padR) + ((2 * charWidth) / 2);
+
+      // 各行の固定マージン合計（top + bottom）
+      const fixedH = gridTop + gridBottom;
+      const fixedW = gridLeft + gridRight;
+
+      // 利用可能な最大幅・最大高さ（ギャップ込み）
+      const maxW = (gw - (gridCols - 1) * gapPx) / gridCols;
+      const maxHTotal = gh - (gridRows - 1) * gapPx; // 全行合計の利用可能高さ
+
+      // rowAspects を行数に合わせてパディング（不足分は 1.0 で補完）
+      const aspects = Array.from({ length: gridRows }, (_, i) => rowAspects[i] ?? 1.0);
+      const kSum = aspects.reduce((s, k) => s + k, 0);
+
+      // plotW の二重制約
+      //   幅制約: plotW <= maxW - fixedW
+      //   高さ制約: plotW * kSum <= maxHTotal - gridRows * fixedH
+      const wConstraint = maxW - fixedW;
+      const hConstraint = (maxHTotal - gridRows * fixedH) / kSum;
+      const plotW = Math.max(10, Math.min(wConstraint, hConstraint));
+
+      const plotH = aspects.map(k => Math.max(10, k * plotW));
+      const panelH = plotH.map(ph => ph + fixedH);
+      const panelW = plotW + fixedW;
+
+      return { panelW, panelH, plotW, plotH };
+    }
+
+    static generateExportHTML(type, outerHTML, dateStr, data) {
+      const ttl = `OBPLOT_${type.toUpperCase()}_${dateStr}`;
+      const esc = s => s.replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      let hStr = '';
+      if (type === 'app') {
+        const sDT = esc(JSON.stringify(data.raw));
+        const sFav = esc(JSON.stringify(data.fav));
+        const scrTag = `<title>${ttl}</title><script>window.__INJECTED_DATA__=${sDT}; window.__INJECTED_FAVORITE__=${sFav};<\/script></head>`;
+        hStr = '<!DOCTYPE html>' + outerHTML.replace('</head>', scrTag);
+      } else {
+        const sSt = esc(JSON.stringify(data.state));
+        const sCalc = esc(JSON.stringify(data.pCalcDT));
+        const cfg = JSON.stringify({ autoPrint: type === 'pdf' });
+        hStr = '<!DOCTYPE html>' + outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${sSt}; window.__PRECALC_DATA__=${sCalc};<\/script>`);
+      }
+      return { ttl, hStr };
+    }
+  }
+</script>

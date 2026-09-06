@@ -52,7 +52,7 @@
           refs: {
             crct: "new", useCal: false, useLOD: false, calElms: [...GLB.valElms], 
             filters: { db: [], item: [], group: [] }, gridRows: 1, gridCols: 1, panelGap: 4,
-            margins: { top: 15, bottom: 15, left: 15, right: 15 },
+            modeSec: { graphType: "calibration" },
             activePanelId: "p_0",
             symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
             rawGph: {},
@@ -61,9 +61,12 @@
           data: {
             raw: { pxrfDT: [], wdxrfDT: [], crctDT: [] },
             crctFields: [], filterDBOpts: [], filterItemOpts: [], filterGroupOpts: [],
-            fontEngFields: [], fontJpFields: [], graphTypeFields: [], calbValFields: [], clusXFields: [], clusYFields: [],
+            fontEngFields: [], fontJpFields: [], calbValFields: [], clusXFields: [], clusYFields: [],
+            tickUnitFields: [], clusTickXFields: [], clusTickYFields: [],
             symbSrc: null,
-            apTitle: "", apXLabel: "", apYLabel: "", apGraphType: "", apCalbVal: "", apClusXVal: "", apClusYVal: ""
+            apTitle: "", apXLabel: "", apYLabel: "", apGraphType: "", apCalbVal: "", apClusXVal: "", apClusYVal: "",
+            apTickUnit: "", apTickUnitX: "", apTickUnitY: "", apScaleMode: "auto",
+            rowPlotH: null
           }
         }
       };

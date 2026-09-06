@@ -74,6 +74,11 @@
         if (el.checked !== !!val) el.checked = !!val;
       } else if (el.dataset.ui === 'mselect' || el.tagName === 'UI-MSELECT') {
         CoreUIPatcher.patchMSelectRefs(el, val);
+      } else if (el.dataset.ui === 'segment') {
+        el.querySelectorAll('.segment-btn').forEach(btn => {
+          if (btn.dataset.target === String(val)) btn.classList.add('active');
+          else btn.classList.remove('active');
+        });
       } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
         if (el.value !== String(val ?? '')) el.value = val ?? '';
       } else if (el.tagName === 'BUTTON') {

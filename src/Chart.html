@@ -106,6 +106,7 @@
       this.#box = document.createElement('div');
       this.#box.style.cssText = 'width: 100%; position: relative;';
       this.#observer = new ResizeObserver(() => {
+        if (window.__EXPORT_CFG__) return;
         const curW = this.clientWidth;
         if (curW > 0 && curW !== this.#lastW && this.#src) {
           this.#lastW = curW;
@@ -138,7 +139,7 @@
       this.dispatchEvent(new CustomEvent('render-finished'));
     }
     #render() {
-      const { prevDT, statsDT, symb, gph, panel } = this.#src || {};
+      const { prevDT, statsDT, symb, gph, panel, plotH, scaleFixed } = this.#src || {};
       if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
       const containerWidth = this.clientWidth;
       if (containerWidth === 0) return;
@@ -162,7 +163,10 @@
       const gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridRight = safePadR + overX;
-      const plotSize = containerWidth - gridLeft - gridRight, containerHeight = plotSize + gridTop + gridBottom;
+      const plotSize = containerWidth - gridLeft - gridRight;
+      // plotH が指定された場合（判別図の行単位アスペクト比）はそれを使用、未指定は正方形
+      const plotSizeH = (plotH != null && plotH > 0) ? plotH : plotSize;
+      const containerHeight = plotSizeH + gridTop + gridBottom;
       this.#box.style.display = 'block';
       this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
       this.#box.style.backgroundColor = STYLE.bgOuter;
@@ -175,9 +179,69 @@
       }
       this.#chart.resize({ width: containerWidth, height: containerHeight });
       const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
-      const { niceMin, niceMax, niceTicks } = CoreMethod.Util.calcScale(validPoints.map(d => d.x), validPoints.map(d => d.y));
-      const itv = niceTicks.length >= 2 ? (niceTicks[1].v - niceTicks[0].v) : undefined;
-      const fmtTick = v => { const tck = niceTicks.find(t => Math.abs(t.v - v) < 1e-8); return tck ? tck.f : v; };
+      const xVals = validPoints.map(d => d.x), yVals = validPoints.map(d => d.y);
+      const defScale = CoreMethod.Util.calcScale(xVals, yVals);
+      const defItv = defScale.niceTicks.length >= 2 ? (defScale.niceTicks[1].v - defScale.niceTicks[0].v) : undefined;
+      const defFmt = v => { const t = defScale.niceTicks.find(tck => Math.abs(tck.v - v) < 1e-8); return t ? t.f : v; };
+      let scaleX = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
+      let scaleY = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
+
+      // scaleFixed が指定された場合（scaleMode === 'manual'）: フィルター非依存スケールで上書き
+      const applyFixed = (sc) => {
+        if (!sc) return null;
+        const interval = sc.ticks?.length >= 2 ? (sc.ticks[1] - sc.ticks[0]) : undefined;
+        const fmt = v => { const t = sc.ticks?.find(tk => Math.abs(tk - v) < 1e-8); return t != null ? t : v; };
+        return { min: sc.niceMin, max: sc.niceMax, interval, fmtTick: fmt };
+      };
+      if (scaleFixed?.x) scaleX = applyFixed(scaleFixed.x) ?? scaleX;
+      if (scaleFixed?.y) scaleY = applyFixed(scaleFixed.y) ?? scaleY;
+
+      if (panel) {
+        const makeCustomScale = (rawMin, rawMax, unit) => {
+          const u = Number(unit);
+          if (isNaN(u) || u <= 0) return null;
+          const minVal = rawMin >= 0 ? 0 : Math.floor(rawMin / u) * u;
+          const maxVal = rawMin >= 0 ? Math.max(u, Math.ceil(rawMax / u) * u) : Math.ceil(rawMax / u) * u;
+          const count = Math.round((maxVal - minVal) / u);
+          if (count > 200 || count <= 0) return null;
+          const decimals = (u.toString().split('.')[1] || '').length;
+          const ticks = Array.from({ length: count + 1 }, (_, i) => {
+            const v = Number((minVal + i * u).toFixed(Math.min(decimals, 10)));
+            return { v, f: Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : (decimals > 0 ? v.toFixed(decimals) : v.toLocaleString()) };
+          });
+          const fmt = v => { const t = ticks.find(tck => Math.abs(tck.v - v) < (u * 1e-4 || 1e-8)); return t ? t.f : v; };
+          return { min: minVal, max: maxVal, interval: u, fmtTick: fmt };
+        };
+
+        const resolveUnit = (specifiedUnit) => {
+          if (specifiedUnit != null && specifiedUnit !== '' && !isNaN(Number(specifiedUnit)) && Number(specifiedUnit) > 0) {
+            return Number(specifiedUnit);
+          }
+          return null; // 自動（未指定）の場合は上書きせず null を返す
+        };
+
+        if (panel.graphType === 'clusimination') {
+          const uX = resolveUnit(panel.tickUnitX);
+          if (uX) {
+            const cX = makeCustomScale(scaleX.min, scaleX.max, uX);
+            if (cX) scaleX = cX;
+          }
+          const uY = resolveUnit(panel.tickUnitY);
+          if (uY) {
+            const cY = makeCustomScale(scaleY.min, scaleY.max, uY);
+            if (cY) scaleY = cY;
+          }
+        } else {
+          const minAll = Math.min(scaleX.min, scaleY.min);
+          const maxAll = Math.max(scaleX.max, scaleY.max);
+          const u = resolveUnit(panel.tickUnit);
+          if (u) {
+            const c = makeCustomScale(minAll, maxAll, u);
+            if (c) { scaleX = c; scaleY = c; }
+          }
+        }
+      }
+
       const graphText = statsDT ? CoreMethod.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
       const plotDT = validPoints.map(d => {
@@ -197,13 +261,13 @@
       if (statsDT?.slope != null && statsDT?.intercept != null) {
         const { slope, intercept } = statsDT;
         series.push({
-          type: 'line', data: [[niceMin, slope * niceMin + intercept], [niceMax, slope * niceMax + intercept]],
+          type: 'line', data: [[scaleX.min, slope * scaleX.min + intercept], [scaleX.max, slope * scaleX.max + intercept]],
           symbol: 'none', lineStyle: { color: STYLE.lineC.reg, width: STYLE.lineW.regW, type: STYLE.lineW.regD, opacity: 0.5 },
           animation: false, silent: true
         });
       }
       const graphics = [
-        { type: 'rect', z: 1, silent: true, shape: { x: gridLeft, y: gridTop, width: plotSize, height: plotSize }, style: { fill: 'none', stroke: STYLE.lineC.axis, lineWidth: STYLE.lineW.axis } },
+        { type: 'rect', z: 1, silent: true, shape: { x: gridLeft, y: gridTop, width: plotSize, height: plotSizeH }, style: { fill: 'none', stroke: STYLE.lineC.axis, lineWidth: STYLE.lineW.axis } },
         { type: 'text', left: gridLeft + STYLE.fontS.tick, top: gridTop + STYLE.fontS.tick, style: { text: graphText, fontFamily: STYLE.font, fontSize: STYLE.fontS.stats, fill: STYLE.fontC.stats } }
       ];
       if (titleText) {
@@ -217,13 +281,13 @@
       const opt = {
         animation: false,
         textStyle: { fontFamily: STYLE.font },
-        grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSize, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: 0 },
+        grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSizeH, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: 0 },
         tooltip: { formatter: p => p.componentSubType === 'line' ? '' : GLB.tooltipKeys.map(k => `${k}: ${p.data[k] || '-'}`).join('<br/>'), backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
         xAxis: {
           type: 'value', name: panel?.xLabel || 'WDXRF', nameLocation: 'middle',
           nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },
-          min: niceMin, max: niceMax, interval: itv,
-          axisLabel: { margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => fmtTick(v) },
+          min: scaleX.min, max: scaleX.max, interval: scaleX.interval,
+          axisLabel: { margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => scaleX.fmtTick(v) },
           splitLine: { show: true, lineStyle: { color: STYLE.lineC.grid, type: 'solid', width: STYLE.lineW.grid } },
           axisLine: { show: true, onZero: false, lineStyle: { color: STYLE.lineC.axis, width: STYLE.lineW.axis } },
           axisTick: { show: false, inside: true }
@@ -231,8 +295,8 @@
         yAxis: {
           type: 'value', name: panel?.yLabel || 'pXRF', nameLocation: 'middle',
           nameGap: GAP.tick + STYLE.fontS.tick + GAP.name, nameTextStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.name, color: STYLE.fontC.base },
-          min: niceMin, max: niceMax, interval: itv,
-          axisLabel: { rotate: 90, margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => (Math.abs(v - niceMin) < 1e-8) ? '' : fmtTick(v) },
+          min: scaleY.min, max: scaleY.max, interval: scaleY.interval,
+          axisLabel: { rotate: 90, margin: GAP.tick, fontSize: STYLE.fontS.tick, color: STYLE.fontC.base, formatter: v => (Math.abs(v - scaleY.min) < 1e-8) ? '' : scaleY.fmtTick(v) },
           splitLine: { show: true, lineStyle: { color: STYLE.lineC.grid, type: 'solid', width: STYLE.lineW.grid } },
           axisLine: { show: true, onZero: false, lineStyle: { color: STYLE.lineC.axis, width: STYLE.lineW.axis } },
           axisTick: { show: false, inside: true }
