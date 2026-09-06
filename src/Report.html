@@ -49,34 +49,34 @@
                 </div>
               </div>
             </div>
-            <div data-part="secCALB">
-              <div class="prop-row">
-                <label class="prop-label panel">対象指標</label>
-                <div class="prop-controls" data-part="boxCalbVal" data-bind-fields="RPTST.ui.optFields.calbValFields"></div>
-              </div>
-              <div class="prop-row" data-part="boxCalibTick">
-                <label class="prop-label panel">目盛単位</label>
-                <div class="prop-controls" data-part="boxTickUnit" data-bind-fields="RPTST.ui.optFields.tickUnitFields"></div>
-              </div>
-            </div>
-            <div data-part="secCluster">
-              <div class="prop-row">
-                <label class="prop-label panel">X<span class="badge-label">項目</span></label>
-                <div class="prop-controls" data-part="boxClusX" data-bind-fields="RPTST.ui.optFields.clusXFields"></div>
-              </div>
-              <div class="prop-row">
-                <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
-                <div class="prop-controls" data-part="boxClusY" data-bind-fields="RPTST.ui.optFields.clusYFields"></div>
-              </div>
-              <div class="prop-row" data-part="boxClusTick">
-                <label class="prop-label panel">X/Y<span class="badge-label">目盛</span></label>
-                <div class="prop-controls">
-                  <div data-part="boxClusTickX" data-bind-fields="RPTST.ui.optFields.clusTickXFields" style="flex:1;"></div>
-                  <div data-part="boxClusTickY" data-bind-fields="RPTST.ui.optFields.clusTickYFields" style="flex:1;"></div>
+            <form data-bind-ctx="RPTST.panels.$active">
+              <div data-part="secCALB">
+                <div class="prop-row">
+                  <label class="prop-label panel">対象指標</label>
+                  <div class="prop-controls" data-part="boxCalbVal" data-bind-fields="RPTST.ui.optFields.calbValFields"></div>
+                </div>
+                <div class="prop-row" data-part="boxCalibTick">
+                  <label class="prop-label panel">目盛単位</label>
+                  <div class="prop-controls" data-part="boxTickUnit" data-bind-fields="RPTST.ui.optFields.tickUnitFields"></div>
                 </div>
               </div>
-            </div>
-            <form data-bind-ctx="RPTST.panels.$active">
+              <div data-part="secCluster">
+                <div class="prop-row">
+                  <label class="prop-label panel">X<span class="badge-label">項目</span></label>
+                  <div class="prop-controls" data-part="boxClusX" data-bind-fields="RPTST.ui.optFields.clusXFields"></div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
+                  <div class="prop-controls" data-part="boxClusY" data-bind-fields="RPTST.ui.optFields.clusYFields"></div>
+                </div>
+                <div class="prop-row" data-part="boxClusTick">
+                  <label class="prop-label panel">X/Y<span class="badge-label">目盛</span></label>
+                  <div class="prop-controls">
+                    <div data-part="boxClusTickX" data-bind-fields="RPTST.ui.optFields.clusTickXFields" style="flex:1;"></div>
+                    <div data-part="boxClusTickY" data-bind-fields="RPTST.ui.optFields.clusTickYFields" style="flex:1;"></div>
+                  </div>
+                </div>
+              </div>
               <div class="prop-row">
                 <label class="prop-label panel">タイトル</label>
                 <div class="prop-controls">
