@@ -306,7 +306,6 @@
       icon.textContent = isLinked ? 'link' : 'link_off';
       btn.title = isLinked ? '連動解除' : '4方向連動';
     }
-  }
     // --- syncMargin ---
     static syncMargin(inp) {
       const group = inp.dataset.syncGroup;
@@ -319,7 +318,6 @@
       document.querySelectorAll('form[data-bind-ctx]').forEach(f => CoreUIPatcher.syncFormCtx(f));
     }
   }
-
   // --- RepoRend ---
   class RepoRend {
     static resizeTimer = null;
