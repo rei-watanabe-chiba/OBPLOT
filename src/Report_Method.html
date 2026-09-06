@@ -109,7 +109,7 @@
         }
         
         // 基準データ生成
-        const filteredCalibBase = CHARTDT.genPrev(pDT, wDT, { ...conf, val: GLB.valElms[0] });
+        const filteredCalibBase = CHARTDT.genBaseDT(pDT, wDT, { ...conf, val: GLB.valElms[0] });
         
         targetMetrics.forEach(metric => {
           const wVals = wDT.map(w => CoreMethod.Calc.evaluate(metric, w)).filter(v => v != null && !isNaN(v));
@@ -170,7 +170,7 @@
         clusYVal: panel.clusYVal 
       };
 
-      const { prevDT, statsDT } = CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+      const { prevDT, statsDT } = CHARTDT.genChartDB(d.pxrfDT, d.wdxrfDT, conf);
 
       let aspectMode = 'square';
       let aspectRatio = null;

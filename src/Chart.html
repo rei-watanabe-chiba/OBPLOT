@@ -1,5 +1,6 @@
 <!-- src/Chart.html -->
 <script>
+  // --- CSSトークン変換 ---
   class CSSToken {
     static #cache = new Map();
     static get(varStr) {
@@ -11,14 +12,16 @@
       return this.#cache.get(key);
     }
   }
-
+  // --- グラフ用データ変換 ---
   class CHARTDT {
+    // --- 計測値取得 ---
     static _getVal(r, elm, conf) {
       if (r[elm] !== undefined) return { val: r[elm], err: r[`${elm}_Err`] };
       const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
       return { val: r[`${pfx}_${elm}`], err: r[`${pfx}_${elm}_Err`] };
     }
-    static generateChartData(pxrfDT, wdxrfDT, conf) {
+    // --- データ抽出と統計計算 ---
+    static genChartDB(pxrfDT, wdxrfDT, conf) {
       let pDT = pxrfDT, wDT = wdxrfDT;
       if (conf.filters) {
         const { db, item, group } = conf.filters;
@@ -36,17 +39,18 @@
       }
       let prevDT = [], statsDT = null;
       if (conf.graphType === 'calib' && (conf.calbVal || conf.calibVal)) {
-         prevDT = this.genPrev(pDT, wDT, { ...conf, val: conf.calbVal || conf.calibVal });
+         prevDT = this.genBaseDT(pDT, wDT, { ...conf, val: conf.calbVal || conf.calibVal });
          statsDT = CoreMethod.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), CoreMethod.Util.getValidNums(prevDT.map(pt => pt.err)));
       } else if (conf.graphType === 'clus' && conf.clusXVal && conf.clusYVal) {
          const useCal = conf.useCal !== undefined ? conf.useCal : false;
-         const calibBase = this.genPrev(pDT, wDT, { ...conf, val: GLB.valElms[0], useCal });
+         const calibBase = this.genBaseDT(pDT, wDT, { ...conf, val: GLB.valElms[0], useCal });
          const mapPts = (wList, pList) => [...wList.map(w => ({ ...w, x: CoreMethod.Calc.evaluate(conf.clusXVal, w), y: CoreMethod.Calc.evaluate(conf.clusYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pList.map(p => ({ ...p, x: CoreMethod.Calc.evaluate(conf.clusXVal, p), y: CoreMethod.Calc.evaluate(conf.clusYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
          prevDT = mapPts(wDT, calibBase);
       }
       return { prevDT, statsDT };
     }
-    static genPrev(pxrfDT, wdxrfDT, conf) {
+    // --- 基礎データ生成 ---
+    static genBaseDT(pxrfDT, wdxrfDT, conf) {
       if (!pxrfDT?.length || !wdxrfDT?.length) return [];
       const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
       const wMap = new Map(wdxrfDT.map(w => [`${String(w[k1])}_${String(w[k2])}`, w]));
@@ -115,7 +119,7 @@
         bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
       const GAP = { ...(gph?.gap || GLB.defGraphGap) };
-      // 1. 余白(Grid Padding)計算
+      // 余白計算
       const charWidth = STYLE.fontS.tick * 0.6;
       const overY = (2 * charWidth);
       const overX = (2 * charWidth);
@@ -128,8 +132,7 @@
       const gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridRight = safePadR + overX;
-
-      // 2. プロットサイズ確定計算
+      // プロットサイズ計算
       let plotW = containerW - gridLeft - gridRight;
       let plotH = containerH > 0 ? (containerH - gridTop - gridBottom) : plotW;
       if (layout?.aspectMode === 'square') {
@@ -148,7 +151,7 @@
       }
       const renderHeight = plotH + gridTop + gridBottom;
       const renderWidth = plotW + gridLeft + gridRight;
-      // 3. スケール計算 (scaleFixed判定)
+      // スケール計算
       const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
       const applyFixed = (sc) => {
         if (!sc) return null;
@@ -164,7 +167,7 @@
 
       let scaleX = applyFixed(scaleFixed?.x);
       let scaleY = applyFixed(scaleFixed?.y);
-      // scaleFixedが無い場合自動計算
+      // !scaleFixed = 自動計算
       if (!scaleX || !scaleY) {
         const xVals = validPoints.map(d => d.x), yVals = validPoints.map(d => d.y);
         const defScale = CoreMethod.Util.calcScale(xVals, yVals);
@@ -174,7 +177,7 @@
         if (!scaleX) scaleX = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
         if (!scaleY) scaleY = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
       }
-      // 4. データとスタイルのマッピング
+      // データとスタイルのマッピング
       const graphText = statsDT ? CoreMethod.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
       const plotDT = validPoints.map(d => {
@@ -211,7 +214,7 @@
           style: { text: titleText, fontFamily: STYLE.font, fontSize: titleSizePx, fill: STYLE.fontC.base }
         });
       }
-      // 5. ECharts Option返却
+      // ECharts返却
       return {
         _calculated: { width: renderWidth, height: renderHeight, bgOuter: STYLE.bgOuter },
         animation: false,
@@ -288,7 +291,6 @@
       if (!this.#config?.data?.prevDT?.length || typeof echarts === 'undefined') return this.clear();
       const containerWidth = this.clientWidth;
       const containerHeight = this.clientHeight;
-      // 幅が0の場合は描画不可。高さ0は自動計算に任せる
       if (containerWidth === 0) return;
       this.#lastW = containerWidth;
       this.#lastH = containerHeight;
@@ -305,7 +307,6 @@
       this.#box.style.width = `${option._calculated.width}px`;
       this.#box.style.height = `${option._calculated.height}px`;
       this.#box.style.backgroundColor = option._calculated.bgOuter;
-      // 計算された高さをEChartsに通知
       this.#chart.resize({ width: containerWidth, height: option._calculated.height });
       delete option._calculated;
       this.#chart.setOption(option);
