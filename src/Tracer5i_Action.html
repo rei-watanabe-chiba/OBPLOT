@@ -188,11 +188,25 @@
         const conf = { ...PREV.refs, ...CALB.refs, crctDT: ASGN.data.crctDT, graphType: 'calib', calbVal: PREV.refs.val }; 
         const { prevDT, statsDT } = CHARTDT.generateChartData(ASGN.data.pxrfDT, ASGN.data.wdxrfDT, conf);
         if (!prevDT.length) throw new Error("対象データなし");
+
+        const chartConfig = {
+          data: { prevDT, statsDT },
+          symb: SYMB.refs,
+          panel: {
+            title: "",
+            xLabel: "WDXRF",
+            yLabel: "pXRF",
+            graphType: "calib"
+          },
+          gph: { style: GLB.defGraphStyle, gap: GLB.defGraphGap },
+          layout: { aspectMode: 'square' }
+        };
+
         State.set({ 
           "ADPST.PREV.data.crctLogic": statsDT, 
           "ADPST.PREV.data.statsDT": statsDT, 
           "ADPST.PREV.data.prevDT": prevDT,
-          "ADPST.PREV.data.chartSrc": { prevDT, statsDT, symb: SYMB.refs },
+          "ADPST.PREV.data.chartSrc": chartConfig,
           "ADPST.phase": ADP_PHS.PREVIEWED 
         }); 
         return ["message", "データと検量線のプレビュー"];
@@ -244,11 +258,6 @@
     }
   }
 
-  window.ENTAct = ENTAct;
-  window.ADPAct = ADPAct;
-  // 互換用エイリアス
-  window.T2Action = ADPAct; // 互換用エイリアス
-
   // --- TrcInit ---
   class TrcInit {
     static async start() {
@@ -266,14 +275,12 @@
       automatorADP.build();
       State.subscribe("ENTST.phase", () => automatorENT.update());
       State.subscribe("ADPST.phase", () => automatorADP.update());
-      // フラグ変更でUI更新
       State.subscribe("ENTST.RAW.flags", () => automatorENT.update());
       State.subscribe("ENTST.EXTR.flags", () => automatorENT.update());
       State.subscribe("GLB.isLocked", () => {
         automatorENT.update();
         automatorADP.update();
       });
-      // 派生状態の自動更新
       State.subscribe(`ENTST.EXTR.refs.${GLB.idx.key1}`, () => ENTAct.valdExtrRefs());
       State.subscribe("ENTST.RAW.data", data => {
         if (data?.[0]) State.set("ENTST.RAW.data.fields", GLB.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "ENTAct.updRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })));

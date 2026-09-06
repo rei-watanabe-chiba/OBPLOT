@@ -11,6 +11,7 @@
       return this.#cache.get(key);
     }
   }
+
   class CHARTDT {
     static _getVal(r, elm, conf) {
       if (r[elm] !== undefined) return { val: r[elm], err: r[`${elm}_Err`] };
@@ -99,51 +100,12 @@
       }).filter(([, v]) => v));
     }
   }
-  class UIPlot extends HTMLElement {
-    #box; #chart = null; #observer; #src = null; #lastW = 0;
-    constructor() {
-      super();
-      this.#box = document.createElement('div');
-      this.#box.style.cssText = 'width: 100%; position: relative;';
-      this.#observer = new ResizeObserver(() => {
-        if (window.__EXPORT_CFG__) return;
-        const curW = this.clientWidth;
-        if (curW > 0 && curW !== this.#lastW && this.#src) {
-          this.#lastW = curW;
-          if (this.#chart) this.#chart.resize();
-          this.#render();
-        }
-      });
-    }
-    connectedCallback() {
-      this.replaceChildren();
-      this.style.display = 'grid';
-      this.style.gridTemplateColumns = 'minmax(0, 1fr)';
-      this.style.width = '100%';
-      this.appendChild(this.#box);
-      this.#observer.observe(this.#box);
-    }
-    disconnectedCallback() {
-      this.#observer.disconnect();
-      if (this.#chart) { this.#chart.dispose(); this.#chart = null; }
-    }
-    set src(data) {
-      this.#src = data;
-      this.#render();
-    }
-    clear() {
-      this.#src = null;
-      if (this.#chart) this.#chart.clear();
-      this.#box.style.height = '0px';
-      this.#box.style.display = 'none';
-      this.dispatchEvent(new CustomEvent('render-finished'));
-    }
-    #render() {
-      const { prevDT, statsDT, symb, gph, panel, plotH, scaleFixed } = this.#src || {};
-      if (!prevDT?.length || typeof echarts === 'undefined') return this.clear();
-      const containerWidth = this.clientWidth;
-      if (containerWidth === 0) return;
-      this.#lastW = containerWidth;
+
+  class ChartRenderer {
+    static buildOption(containerW, containerH, config) {
+      const { data: { prevDT, statsDT }, symb, panel, scaleFixed, gph, layout } = config;
+      if (!prevDT?.length) return null;
+
       const rS = gph?.style || GLB.defGraphStyle;
       const STYLE = {
         font: rS.font, fontS: { ...rS.fontS },
@@ -153,40 +115,57 @@
         bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
       const GAP = { ...(gph?.gap || GLB.defGraphGap) };
-      const charWidth = STYLE.fontS.tick * 0.6, overY = (4 * charWidth) / 2, overX = (2 * charWidth) / 2;
+
+      // 1. 余白(Grid Padding)計算
+      const charWidth = STYLE.fontS.tick * 0.6;
+      const overY = (4 * charWidth) / 2;
+      const overX = (2 * charWidth) / 2;
       const titleText = panel?.title || "";
       const titleSizePx = STYLE.fontS.title || (12 * 1.33);
+      
       const requiredPadT = Math.max(STYLE.fontS.tick, titleText ? titleSizePx + GAP.tick : 0);
-      const safePadT = GAP.padT < requiredPadT ? GAP.padT + requiredPadT : GAP.padT;
-      const safePadR = GAP.padR < STYLE.fontS.tick ? GAP.padR + STYLE.fontS.tick : GAP.padR;
+      const safePadT = Math.max(GAP.padT, requiredPadT);
+      const safePadR = Math.max(GAP.padR, STYLE.fontS.tick);
+
       const gridTop = safePadT + overY;
       const gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridRight = safePadR + overX;
-      const plotSize = containerWidth - gridLeft - gridRight;
-      // plotH が指定された場合（判別図の行単位アスペクト比）はそれを使用、未指定は正方形
-      const plotSizeH = (plotH != null && plotH > 0) ? plotH : plotSize;
-      const containerHeight = plotSizeH + gridTop + gridBottom;
-      this.#box.style.display = 'block';
-      this.#box.style.width = `${containerWidth}px`; this.#box.style.height = `${containerHeight}px`;
-      this.#box.style.backgroundColor = STYLE.bgOuter;
-      if (!this.#chart) {
-        const renderer = this.getAttribute('data-renderer') || 'canvas';
-        this.#chart = echarts.init(this.#box, null, { renderer });
-        this.#chart.on('finished', () => {
-          this.dispatchEvent(new CustomEvent('render-finished'));
-        });
+
+      // 2. プロットサイズ確定計算
+      let plotW = containerW - gridLeft - gridRight;
+      // containerH が 0 (height: auto等) の場合は、とりあえず幅と同じプロット高さを仮置きする
+      let plotH = containerH > 0 ? (containerH - gridTop - gridBottom) : plotW;
+
+      if (layout?.aspectMode === 'square') {
+        // 高さ指定がない(0)なら幅(plotW)を基準に正方形を作る
+        const minSize = containerH > 0 ? Math.max(10, Math.min(plotW, plotH)) : Math.max(10, plotW);
+        plotW = minSize;
+        plotH = minSize;
+      } else if (layout?.aspectMode === 'custom' && layout.aspectRatio) {
+        const ratio = layout.aspectRatio;
+        if (plotW * ratio <= plotH) plotH = plotW * ratio;
+        else plotW = plotH / ratio;
+        plotW = Math.max(10, plotW);
+        plotH = Math.max(10, plotH);
+      } else {
+        plotW = Math.max(10, plotW);
+        plotH = Math.max(10, plotH);
       }
-      this.#chart.resize({ width: containerWidth, height: containerHeight });
+      
+      const renderHeight = plotH + gridTop + gridBottom;
+      const renderWidth = plotW + gridLeft + gridRight;
+
+      // 3. スケール計算
       const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
       const xVals = validPoints.map(d => d.x), yVals = validPoints.map(d => d.y);
       const defScale = CoreMethod.Util.calcScale(xVals, yVals);
       const defItv = defScale.niceTicks.length >= 2 ? (defScale.niceTicks[1].v - defScale.niceTicks[0].v) : undefined;
       const defFmt = v => { const t = defScale.niceTicks.find(tck => Math.abs(tck.v - v) < 1e-8); return t ? t.f : v; };
+      
       let scaleX = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
       let scaleY = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
 
-      // scaleFixed が指定された場合（scaleMode === 'manual'）: フィルター非依存スケールで上書き
       const applyFixed = (sc) => {
         if (!sc) return null;
         const interval = sc.ticks?.length >= 2 ? (sc.ticks[1] - sc.ticks[0]) : undefined;
@@ -217,7 +196,7 @@
           if (specifiedUnit != null && specifiedUnit !== '' && !isNaN(Number(specifiedUnit)) && Number(specifiedUnit) > 0) {
             return Number(specifiedUnit);
           }
-          return null; // 自動（未指定）の場合は上書きせず null を返す
+          return null;
         };
 
         if (panel.graphType === 'clus') {
@@ -242,6 +221,7 @@
         }
       }
 
+      // 4. データとスタイルのマッピング
       const graphText = statsDT ? CoreMethod.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
       const plotDT = validPoints.map(d => {
@@ -257,6 +237,7 @@
           _isDef: rl === defRl
         };
       }).sort((a, b) => (b._isDef ? 1 : 0) - (a._isDef ? 1 : 0));
+
       const series = [{ type: 'scatter', data: plotDT, animation: false }];
       if (statsDT?.slope != null && statsDT?.intercept != null) {
         const { slope, intercept } = statsDT;
@@ -266,8 +247,9 @@
           animation: false, silent: true
         });
       }
+
       const graphics = [
-        { type: 'rect', z: 1, silent: true, shape: { x: gridLeft, y: gridTop, width: plotSize, height: plotSizeH }, style: { fill: 'none', stroke: STYLE.lineC.axis, lineWidth: STYLE.lineW.axis } },
+        { type: 'rect', z: 1, silent: true, shape: { x: gridLeft, y: gridTop, width: plotW, height: plotH }, style: { fill: 'none', stroke: STYLE.lineC.axis, lineWidth: STYLE.lineW.axis } },
         { type: 'text', left: gridLeft + STYLE.fontS.tick, top: gridTop + STYLE.fontS.tick, style: { text: graphText, fontFamily: STYLE.font, fontSize: STYLE.fontS.stats, fill: STYLE.fontC.stats } }
       ];
       if (titleText) {
@@ -278,10 +260,13 @@
           style: { text: titleText, fontFamily: STYLE.font, fontSize: titleSizePx, fill: STYLE.fontC.base }
         });
       }
-      const opt = {
+
+      // 5. ECharts Option返却
+      return {
+        _calculated: { width: renderWidth, height: renderHeight, bgOuter: STYLE.bgOuter },
         animation: false,
         textStyle: { fontFamily: STYLE.font },
-        grid: { left: gridLeft, top: gridTop, width: plotSize, height: plotSizeH, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: 0 },
+        grid: { left: gridLeft, top: gridTop, width: plotW, height: plotH, show: true, backgroundColor: STYLE.bgPlot, borderColor: STYLE.lineC.axis, borderWidth: 0 },
         tooltip: { formatter: p => p.componentSubType === 'line' ? '' : GLB.tooltipKeys.map(k => `${k}: ${p.data[k] || '-'}`).join('<br/>'), backgroundColor: STYLE.bgTip, textStyle: { fontFamily: STYLE.font, fontSize: STYLE.fontS.tip, color: STYLE.fontC.tip } },
         xAxis: {
           type: 'value', name: panel?.xLabel || 'WDXRF', nameLocation: 'middle',
@@ -304,8 +289,91 @@
         graphic: graphics,
         series: series
       };
-      this.#chart.setOption(opt);
     }
   }
+
+  class UIPlot extends HTMLElement {
+    #box; #chart = null; #observer; #config = null; #lastW = 0; #lastH = 0;
+    
+    constructor() {
+      super();
+      this.#box = document.createElement('div');
+      this.#box.style.cssText = 'width: 100%; position: relative;';
+      this.#observer = new ResizeObserver(() => {
+        if (window.__EXPORT_CFG__) return;
+        const curW = this.clientWidth;
+        const curH = this.clientHeight;
+        // height が 0 であっても、width さえあれば自動計算可能とする
+        if (curW > 0 && (curW !== this.#lastW || curH !== this.#lastH) && this.#config) {
+          this.#lastW = curW;
+          this.#lastH = curH;
+          if (this.#chart) this.#chart.resize();
+          this.#render();
+        }
+      });
+    }
+
+    connectedCallback() {
+      this.replaceChildren();
+      this.style.display = 'grid';
+      this.style.gridTemplateColumns = 'minmax(0, 1fr)';
+      this.style.width = '100%';
+      this.appendChild(this.#box);
+      this.#observer.observe(this.#box);
+    }
+
+    disconnectedCallback() {
+      this.#observer.disconnect();
+      if (this.#chart) { this.#chart.dispose(); this.#chart = null; }
+    }
+
+    set src(data) {
+      this.#config = data;
+      this.#render();
+    }
+
+    clear() {
+      this.#config = null;
+      if (this.#chart) this.#chart.clear();
+      this.#box.style.height = '0px';
+      this.#box.style.display = 'none';
+      this.dispatchEvent(new CustomEvent('render-finished'));
+    }
+
+    #render() {
+      if (!this.#config?.data?.prevDT?.length || typeof echarts === 'undefined') return this.clear();
+      const containerWidth = this.clientWidth;
+      const containerHeight = this.clientHeight;
+      
+      // 幅が0の場合は描画不可。高さ0は自動計算に任せる
+      if (containerWidth === 0) return;
+      
+      this.#lastW = containerWidth;
+      this.#lastH = containerHeight;
+
+      if (!this.#chart) {
+        const renderer = this.getAttribute('data-renderer') || 'canvas';
+        this.#chart = echarts.init(this.#box, null, { renderer });
+        this.#chart.on('finished', () => {
+          this.dispatchEvent(new CustomEvent('render-finished'));
+        });
+      }
+
+      const option = ChartRenderer.buildOption(containerWidth, containerHeight, this.#config);
+      if (!option) return this.clear();
+
+      this.#box.style.display = 'block';
+      this.#box.style.width = `${option._calculated.width}px`;
+      this.#box.style.height = `${option._calculated.height}px`;
+      this.#box.style.backgroundColor = option._calculated.bgOuter;
+      
+      // 計算された高さをEChartsに通知
+      this.#chart.resize({ width: containerWidth, height: option._calculated.height });
+      
+      delete option._calculated;
+      this.#chart.setOption(option);
+    }
+  }
+  
   customElements.define('ui-plot', UIPlot);
 </script>
