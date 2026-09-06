@@ -27,34 +27,32 @@
       };
     }
 
+    // --- 共通パディング ---
+    static getPanelOffsets(gph, hasTitle, titleSizePx) {
+      const style = gph.style, gap = gph.gap;
+      const titleSpace = hasTitle ? (titleSizePx + gap.tick) : gap.tick;
+      const gridTop = gap.padT + titleSpace + style.fontS.tick;
+      const gridRight = gap.padR + gap.tick + style.fontS.tick;
+      const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      const gridLeft = gap.padL + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      return {
+        gridTop, gridRight, gridBottom, gridLeft,
+        fixedW: gridLeft + gridRight, fixedH: gridTop + gridBottom
+      };
+    }
+
     // --- calculatePanelMetrics ---
     static calculatePanelMetrics(gw, gh, gridCols, gridRows, gapPx, gph, hasTitle, titleSizePx) {
-      const maxW = (gw - (gridCols - 1) * gapPx) / gridCols, maxH = (gh - (gridRows - 1) * gapPx) / gridRows;
-      const style = gph.style, gap = gph.gap;
-      const charWidth = style.fontS.tick * 0.6;
-      const titleSpace = hasTitle ? (titleSizePx + gap.tick) : gap.tick;
-      const gridTop = gap.padT + titleSpace + style.fontS.tick + (charWidth * 2);
-      const gridRight  = gap.padR + gap.tick + style.fontS.tick + (charWidth * 2);
-      const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridLeft   = gap.padL + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const plotLen = Math.max(10, Math.min(maxW - (gridLeft + gridRight), maxH - (gridTop + gridBottom)));
-      return {
-        panelW: plotLen + gridLeft + gridRight,
-        panelH: plotLen + gridTop + gridBottom
-      };
+      const { fixedW, fixedH } = this.getPanelOffsets(gph, hasTitle, titleSizePx);
+      const maxW = (gw - (gridCols - 1) * gapPx) / gridCols;
+      const maxH = (gh - (gridRows - 1) * gapPx) / gridRows;
+      const plotLen = Math.max(10, Math.min(maxW - fixedW, maxH - fixedH));
+      return { panelW: plotLen + fixedW, panelH: plotLen + fixedH };
     }
 
     // --- calculatePanelMetricsAspect ---
     static calculatePanelMetricsAspect(gw, gh, gridCols, gridRows, gapPx, gph, hasTitle, titleSizePx, rowAspects) {
-      const style = gph.style, gap = gph.gap;
-      const charWidth = style.fontS.tick * 0.6;
-      const titleSpace = hasTitle ? (titleSizePx + gap.tick) : 0;
-      const gridTop = gap.padT + titleSpace + style.fontS.tick + (charWidth * 2);
-      const gridRight  = gap.padR + gap.tick + style.fontS.tick + (charWidth * 2);
-      const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridLeft   = gap.padL + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const fixedH = gridTop + gridBottom;
-      const fixedW = gridLeft + gridRight;
+      const { fixedW, fixedH } = this.getPanelOffsets(gph, hasTitle, titleSizePx);
       const maxW = (gw - (gridCols - 1) * gapPx) / gridCols;
       const maxHTotal = gh - (gridRows - 1) * gapPx;
       const aspects = Array.from({ length: gridRows }, (_, i) => rowAspects[i] ?? 1.0);

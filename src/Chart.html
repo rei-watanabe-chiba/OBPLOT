@@ -117,8 +117,8 @@
       const GAP = { ...(gph?.gap || GLB.defGraphGap) };
       // 1. 余白(Grid Padding)計算
       const charWidth = STYLE.fontS.tick * 0.6;
-      const overY = (4 * charWidth) / 2;
-      const overX = (2 * charWidth) / 2;
+      const overY = (2 * charWidth);
+      const overX = (2 * charWidth);
       const titleText = panel?.title || "";
       const titleSizePx = STYLE.fontS.title || (12 * 1.33);
       const requiredPadT = Math.max(STYLE.fontS.tick, titleText ? titleSizePx + GAP.tick : 0);
@@ -126,7 +126,7 @@
       const safePadR = Math.max(GAP.padR, STYLE.fontS.tick);
       const gridTop = safePadT + overY;
       const gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
-      const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
+      const gridLeft = GAP.padL + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridRight = safePadR + overX;
 
       // 2. プロットサイズ確定計算
