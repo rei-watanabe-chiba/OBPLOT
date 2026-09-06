@@ -9,7 +9,7 @@
     height: 100vh;
     overflow: hidden;
 
-    &.is-print {
+    &.is-print, &[data-state="printing"] {
       display: block;
       overflow: visible;
       background-color: #fff;
@@ -17,7 +17,7 @@
       .dash-sidebar { display: none; }
       .dash-main { padding: 0; display: block; height: auto; overflow: visible; }
       .a4-container { width: 210mm; height: 297mm; transform: none !important; margin: 0 !important; max-height: none; box-shadow: none; }
-      .grid-panel, .grid-panel.active { border: none !important; }
+      .grid-panel, .grid-panel.active, .grid-panel[aria-selected="true"] { border: none !important; }
       .grid-panel::before, .grid-panel::after { display: none; }
     }
   }
@@ -78,15 +78,15 @@
             display: flex;
             flex-direction: column;
             box-sizing: border-box;
-            &.active { border: 2px solid var(--theme-color); }
+            &.active, &[aria-selected="true"] { border: 2px solid var(--theme-color); }
             &::before {
               content: attr(data-col-lbl);
               position: absolute;
               bottom: 100%;
-              margin-bottom: 2mm;
+              margin-bottom: 4mm;
               left: 50%;
               transform: translateX(-50%);
-              font-size: 6pt;
+              font-size: 15pt;
               font-weight: 500;
               color: var(--theme-color, var(--text-main));
               pointer-events: none;
@@ -98,10 +98,10 @@
               content: attr(data-row-lbl);
               position: absolute;
               right: 100%;
-              margin-right: 2mm;
+              margin-right: 4mm;
               top: 50%;
               transform: translateY(-50%);
-              font-size: 6pt;
+              font-size: 15pt;
               font-weight: 500;
               color: var(--theme-color, var(--text-main));
               pointer-events: none;
@@ -109,11 +109,49 @@
               line-height: 1;
             }
             &:not([data-row-lbl])::after { display: none; }
+            .row-aspect-ctrl {
+              position: absolute;
+              right: 100%;
+              margin-right: 4mm;
+              top: 50%;
+              transform: translateY(-50%);
+              z-index: 10;
+              .row-lbl-btn {
+                background: none;
+                border: 1px solid transparent;
+                padding: 2px 4px;
+                font-size: 7pt;
+                font-weight: 500;
+                color: var(--theme-color, var(--text-main));
+                cursor: pointer;
+                border-radius: 4px;
+                transition: background 0.2s, border-color 0.2s;
+                &:hover {
+                  background: var(--grey100);
+                  border-color: var(--border);
+                }
+              }
+            }
           }
         }
       }
     }
   }
+
+  /* --- アスペクト比変更 Popover --- */
+  .row-aspect-popover {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    background: var(--bg-main, #fff);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    color: var(--text-main, #333);
+    font-size: 11px;
+  }
+  .row-aspect-popover::backdrop { background: rgba(0,0,0,0.1); }
+  .row-aspect-popover .pop-header { font-weight: 600; margin-bottom: 8px; color: var(--text-light); }
+  .row-aspect-popover .pop-body { display: flex; align-items: center; }
+  .row-aspect-popover .pop-body input { width: 70px; height: 26px; font-size: 12px; }
 
   /* --- ボード設定UI --- */
   .board-mode-sec {
@@ -143,6 +181,9 @@
   }
 
   /* --- インスペクタUI --- */
+  body[data-board-mode="calib"] [data-part="secCluster"] { display: none; }
+  body[data-board-mode="clus"] [data-part="secCALB"] { display: none; }
+
   .panel-context {
     background-color: color-mix(in srgb, var(--theme-color) 5%, transparent);
     border: 1px solid var(--theme-color);
@@ -151,8 +192,8 @@
     margin-bottom: 16px;
     color: var(--text-main);
     font-weight: 500;
-    &[data-graphtype="calibration"] #secCluster { display: none; }
-    &[data-graphtype="clusimination"] #secCALB { display: none; }
+    &[data-graphtype="calibration"] [data-part="secCluster"] { display: none; }
+    &[data-graphtype="clusimination"] [data-part="secCALB"] { display: none; }
   }
   .pane-title {
     font-size: 13px;
@@ -231,10 +272,10 @@
     transition: all 0.2s;
     border-radius: 0;
     &:hover { color: var(--theme-color); }
-    &.active { color: var(--theme-color); border-bottom-color: var(--theme-color); }
+    &.active, &[aria-selected="true"] { color: var(--theme-color); border-bottom-color: var(--theme-color); }
   }
   .sidebar-tab-pane { display: none; }
-  .sidebar-tab-pane.active { display: block; }
+  .sidebar-tab-pane.active, .sidebar-tab-pane[aria-selected="true"] { display: block; }
 
   /* --- セグメントトグル --- */
   .segment-ctrl {
@@ -257,10 +298,10 @@
     font-weight: 500;
     transition: all 0.2s;
     &:hover { background: color-mix(in srgb, var(--grey200) 20%, transparent); }
-    &.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: var(--theme-color); font-weight: 600; }
+    &.active, &[aria-selected="true"] { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: var(--theme-color); font-weight: 600; }
   }
   .sub-pane { display: none; }
-  .sub-pane.active { display: block; }
+  .sub-pane.active, .sub-pane[aria-selected="true"] { display: block; }
 
   /* --- 汎用 --- */
   .scroll-box {
@@ -323,9 +364,10 @@
       height: 297mm !important; 
       max-height: none !important; 
     }
-    .grid-panel, .grid-panel.active { 
+    .grid-panel, .grid-panel.active, .grid-panel[aria-selected="true"] { 
       border: none !important; 
     }
+    .row-aspect-ctrl { display: none !important; }
   }
 
   /* --- 4方向インライン入力 (Linked Inputs) --- */
@@ -343,7 +385,7 @@
     line-height: 1;
   }
   .link-toggle-inline:hover { border-color: var(--grey400); color: var(--text-main); }
-  .link-toggle-inline.active { 
+  .link-toggle-inline.active, .link-toggle-inline[aria-selected="true"] { 
     color: #fff;
     background: color-mix(in srgb, var(--theme-color) 70%, transparent);
     border-color: transparent;

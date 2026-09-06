@@ -126,15 +126,21 @@
       if (hooks.onAfterInit) hooks.onAfterInit();
     }
     static actvTab(tabId) {
-      document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-      document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
-      document.getElementById(tabId)?.classList.add("active");
-      document.querySelector(`[data-target="${tabId}"]`)?.classList.add("active");
+      document.querySelectorAll('[data-part="tab-content"], .tab-content').forEach(el => {
+        const isCur = (el.dataset.tab === tabId || el.dataset.ref === tabId || el.id === tabId);
+        el.setAttribute('aria-hidden', isCur ? 'false' : 'true');
+        if (isCur) el.setAttribute('data-state', 'active');
+        else el.removeAttribute('data-state');
+      });
+      document.querySelectorAll('[data-part="tab-btn"], .tab-btn').forEach(el => {
+        const isCur = (el.dataset.arg === tabId || el.dataset.target === tabId);
+        el.setAttribute('aria-selected', isCur ? 'true' : 'false');
+      });
       document.body.setAttribute('data-theme', tabId);
       State.set("GLB.activeTab", tabId);
     }
     static switchTab(btnOrId, hooks = {}) {
-      const tabId = typeof btnOrId === 'string' ? btnOrId : btnOrId.dataset.target;
+      const tabId = typeof btnOrId === 'string' ? btnOrId : (btnOrId.dataset.arg || btnOrId.dataset.target);
       this.actvTab(tabId);
       const cfg = this.cfgRslv ? this.cfgRslv(tabId) : {};
       this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks, cfg);
@@ -144,18 +150,21 @@
         const btn = e.target.closest('[data-action]');
         if (!btn || btn.disabled) return;
         const [ns, method] = btn.dataset.action.split('.');
-        if (actionClasses[ns]?.[method]) actionClasses[ns][method](btn);
-        else if (window[ns]?.[method]) window[ns][method](btn);
+        const arg = btn.dataset.arg || btn.dataset.target;
+        if (actionClasses[ns]?.[method]) actionClasses[ns][method](btn, arg);
+        else if (window[ns]?.[method]) window[ns][method](btn, arg);
       });
       const handleInput = e => {
-        const tgt = e.target.closest('[data-bind], [data-change]') || e.target;
+        const tgt = e.target.closest('[data-bind], [data-change], form[data-bind-ctx] input, form[data-bind-ctx] select, form[data-bind-ctx] textarea') || e.target;
         if (!tgt) return;
-        const bindPath = tgt.dataset.bind, changePath = tgt.dataset.change;
-        const isLiveInput = e.type === 'input' && tgt.tagName === 'INPUT' && !['checkbox', 'radio'].includes(tgt.type);
+        const formCtx = tgt.closest('form[data-bind-ctx]');
+        const bindPath = tgt.dataset.bind || (formCtx && tgt.name ? `${CoreUIPatcher.resolveBindCtx(formCtx.dataset.bindCtx)}.${tgt.name}` : null);
+        const changePath = tgt.dataset.change || formCtx?.dataset?.change;
+        const isLiveInput = e.type === 'input' && ['INPUT', 'TEXTAREA'].includes(tgt.tagName) && !['checkbox', 'radio'].includes(tgt.type);
         const isChange = e.type === 'change';
         if (bindPath && (isLiveInput || isChange)) {
-          let val = tgt.type === "checkbox" ? tgt.checked : (['number', 'range'].includes(tgt.type) ? Number(tgt.value) : tgt.value);
-          if (['number', 'range'].includes(tgt.type)) {
+          let val = tgt.type === "checkbox" ? tgt.checked : (['number', 'range'].includes(tgt.type) ? (tgt.value === '' ? '' : Number(tgt.value)) : tgt.value);
+          if (['number', 'range'].includes(tgt.type) && typeof val === 'number') {
             if (tgt.hasAttribute('min') && val < Number(tgt.getAttribute('min'))) val = Number(tgt.getAttribute('min'));
             if (tgt.hasAttribute('max') && val > Number(tgt.getAttribute('max'))) val = Number(tgt.getAttribute('max'));
             tgt.value = val;
@@ -164,8 +173,8 @@
         }
         if (changePath && (isLiveInput || isChange)) {
           const [ns, method] = changePath.split('.');
-          if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt);
-          else if (window[ns]?.[method]) window[ns][method](tgt);
+          if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt, formCtx);
+          else if (window[ns]?.[method]) window[ns][method](tgt, formCtx);
         }
       };
       document.addEventListener("change", handleInput);

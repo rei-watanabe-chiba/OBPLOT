@@ -49,24 +49,36 @@
         // 【追加】レポート専用のステートマシン
         RPTST: {
           phase: 1,
-          refs: {
-            crct: "new", useCal: false, useLOD: false, calElms: [...GLB.valElms], 
-            filters: { db: [], item: [], group: [] }, gridRows: 1, gridCols: 1, panelGap: 4,
-            modeSec: { graphType: "calibration" },
-            activePanelId: "p_0",
-            symb: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] },
-            rawGph: {},
-            panels: []
-          },
-          data: {
+          dataset: {
             raw: { pxrfDT: [], wdxrfDT: [], crctDT: [] },
-            crctFields: [], filterDBOpts: [], filterItemOpts: [], filterGroupOpts: [],
-            fontEngFields: [], fontJpFields: [], calbValFields: [], clusXFields: [], clusYFields: [],
-            tickUnitFields: [], clusTickXFields: [], clusTickYFields: [],
-            symbSrc: null,
-            apTitle: "", apXLabel: "", apYLabel: "", apGraphType: "", apCalbVal: "", apClusXVal: "", apClusYVal: "",
-            apTickUnit: "", apTickUnitX: "", apTickUnitY: "", apScaleMode: "auto",
+            filters: { db: [], item: [], group: [] },
+            crct: "new",
+            calElms: [...GLB.valElms],
+            useCal: false,
+            useLOD: false,
+            baseScales: { auto: {}, fixed: {} },
             rowPlotH: null
+          },
+          config: {
+            boardMode: "calib",
+            modeSec: { graphType: "calibration" },
+            layout: { gridRows: 1, gridCols: 1, panelGap: 4, rowAspect: [1.0, 1.0, 1.0] },
+            theme: {},
+            symbology: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] }
+          },
+          panels: [],
+          ui: {
+            activeTab: "tabLayout",
+            activeSub: "subFont",
+            activePanelId: "p_0",
+            activePanelScaleMode: "auto",
+            linkCanvasMargin: false,
+            linkPanelMargin: false,
+            exportStatus: "message",
+            exportDesc: "",
+            copyStatus: "message",
+            copyDesc: "",
+            optFields: {}
           }
         }
       };

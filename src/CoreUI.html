@@ -9,9 +9,11 @@
       const applyDlg = (dlg) => {
         if (!dlg || !dialogEl) return;
         if (dlg.isOpen) {
-          cntr.querySelector('.d-title').innerText = dlg.title || (dlg.type === 'toast' ? '通知' : '確認');
-          cntr.querySelector('.d-msg').innerText = dlg.msg || '';
-          const cancelBtn = cntr.querySelector('.d-cancel');
+          const titleEl = cntr.querySelector('[data-part="title"], .d-title');
+          if (titleEl) titleEl.innerText = dlg.title || (dlg.type === 'toast' ? '通知' : '確認');
+          const msgEl = cntr.querySelector('[data-part="msg"], .d-msg');
+          if (msgEl) msgEl.innerText = dlg.msg || '';
+          const cancelBtn = cntr.querySelector('[data-part="cancel"], .d-cancel');
           if (cancelBtn) cancelBtn.style.display = dlg.type === 'toast' ? 'none' : '';
           if (!dialogEl.open) dialogEl.showModal();
         } else {
@@ -22,15 +24,112 @@
       applyDlg(State.get("GLB.dialog"));
     }
 
+    static promptDialog(dlgOrPart) {
+      return new Promise(resolve => {
+        const dlg = typeof dlgOrPart === 'string'
+          ? (document.querySelector(`dialog[data-part="${dlgOrPart}"], dialog#${dlgOrPart}`))
+          : dlgOrPart;
+        if (!dlg) return resolve(null);
+        const onClose = () => {
+          dlg.removeEventListener('close', onClose);
+          if (!dlg.returnValue || dlg.returnValue === 'cancel') {
+            resolve(null);
+          } else {
+            const form = dlg.querySelector('form');
+            if (form) {
+              const fd = new FormData(form);
+              const data = Object.fromEntries(fd.entries());
+              const keys = Object.keys(data);
+              resolve(keys.length === 1 ? data[keys[0]] : data);
+            } else {
+              resolve(dlg.returnValue);
+            }
+          }
+        };
+        dlg.addEventListener('close', onClose, { once: true });
+        dlg.showModal();
+        const firstInput = dlg.querySelector('input, textarea, select');
+        if (firstInput) {
+          firstInput.value = '';
+          firstInput.focus();
+        }
+      });
+    }
+
+    static resolveBindCtx(ctx) {
+      if (!ctx) return ctx;
+      if (ctx.includes('$active')) {
+        const activeId = State.get("RPTST.ui.activePanelId") || State.get("RPTST.refs.activePanelId") || "p_0";
+        const panels = State.get("RPTST.panels") || State.get("RPTST.refs.panels") || [];
+        const idx = panels.findIndex(p => p.id === activeId);
+        const root = ctx.replace('.$active', '');
+        return idx !== -1 ? `${root}.${idx}` : `${root}.0`;
+      }
+      return ctx;
+    }
+
+    static syncFormCtx(form) {
+      const rawCtx = form.dataset.bindCtx;
+      if (!rawCtx) return;
+      const ctx = CoreUIPatcher.resolveBindCtx(rawCtx);
+      form.querySelectorAll('input[name], select[name], textarea[name]').forEach(ctrl => {
+        const name = ctrl.name;
+        const val = State.get(`${ctx}.${name}`);
+        if (ctrl.type === 'checkbox') {
+          ctrl.checked = !!val;
+        } else if (ctrl.type === 'radio') {
+          ctrl.checked = String(ctrl.value) === String(val);
+        } else {
+          ctrl.value = val ?? '';
+        }
+      });
+    }
+
+    static bindFormCtx(form) {
+      if (form.__boundCtx) {
+        CoreUIPatcher.syncFormCtx(form);
+        return;
+      }
+      form.__boundCtx = true;
+      const rawCtx = form.dataset.bindCtx;
+      if (!rawCtx) return;
+
+      CoreUIPatcher.syncFormCtx(form);
+
+      // $active が含まれる場合、アクティブパネル変更時にフォームを自動再同期
+      if (rawCtx.includes('$active')) {
+        const onActiveChange = () => CoreUIPatcher.syncFormCtx(form);
+        State.subscribe("RPTST.ui.activePanelId", onActiveChange);
+        State.subscribe("RPTST.refs.activePanelId", onActiveChange);
+      }
+
+      form.querySelectorAll('input[name], select[name], textarea[name]').forEach(ctrl => {
+        const name = ctrl.name;
+        // 個別State値の変更も購読
+        State.subscribe(() => {
+          const currentCtx = CoreUIPatcher.resolveBindCtx(rawCtx);
+          return `${currentCtx}.${name}`;
+        }, (newVal) => {
+          if (ctrl.type === 'checkbox') {
+            if (ctrl.checked !== !!newVal) ctrl.checked = !!newVal;
+          } else if (ctrl.type === 'radio') {
+            ctrl.checked = String(ctrl.value) === String(newVal);
+          } else {
+            if (ctrl.value !== String(newVal ?? '')) ctrl.value = newVal ?? '';
+          }
+        });
+      });
+    }
+
     static ensureMSelectInit(el) {
-      if (!el.querySelector('.popover-content')) {
+      if (!el.querySelector('[data-part="popover-content"], .popover-content')) {
         el.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "cb-container", el.id ? `pop_${el.id}` : null);
       }
     }
 
     static patchMSelectRefs(el, vals) {
       CoreUIPatcher.ensureMSelectInit(el);
-      const sum = el.querySelector('.popover-summary');
+      const sum = el.querySelector('[data-part="popover-summary"], .popover-summary');
       if (sum) {
         sum.innerHTML = vals?.length
           ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>`
@@ -44,7 +143,7 @@
 
     static patchMSelectOpts(el, arr) {
       CoreUIPatcher.ensureMSelectInit(el);
-      const cntr = el.querySelector('.popover-content');
+      const cntr = el.querySelector('[data-part="popover-content"], .popover-content');
       if (!cntr) return;
       if (!arr?.length) {
         cntr.innerHTML = '<div class="txt-btninfo">データなし</div>';
@@ -76,8 +175,12 @@
         CoreUIPatcher.patchMSelectRefs(el, val);
       } else if (el.dataset.ui === 'segment') {
         el.querySelectorAll('.segment-btn').forEach(btn => {
-          if (btn.dataset.target === String(val)) btn.classList.add('active');
-          else btn.classList.remove('active');
+          const targetVal = btn.dataset.arg || btn.dataset.target;
+          if (targetVal === String(val)) {
+            btn.setAttribute('aria-selected', 'true');
+          } else {
+            btn.setAttribute('aria-selected', 'false');
+          }
         });
       } else if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
         if (el.value !== String(val ?? '')) el.value = val ?? '';
@@ -108,7 +211,10 @@
     }
 
     static patchErrs(el, val) {
-      el.querySelectorAll('select, input').forEach((s, idx) => s.classList.toggle('has-error', !!val?.[idx]));
+      el.querySelectorAll('select, input').forEach((s, idx) => {
+        if (val?.[idx]) s.setAttribute('aria-invalid', 'true');
+        else s.removeAttribute('aria-invalid');
+      });
     }
 
     static evalPhase(prop, phase, defaultVal = false) {
@@ -129,7 +235,7 @@
         if (isOpen) {
           setTimeout(() => { el.open = true; }, 200);
         } else {
-          el.open = false; // 閉じる時は遅延させない
+          el.open = false;
         }
       }
     }
@@ -148,7 +254,6 @@
         if (isDis) el.setAttribute('data-type', 'disabled');
         else el.removeAttribute('data-type');
 
-        // --- 下層フォーム要素への物理的な disabled 強制同期ガード ---
         el.querySelectorAll('input, select, button, textarea, ui-mselect, [data-ui="mselect"]').forEach(child => {
           if (child.tagName === 'UI-MSELECT' || child.dataset.ui === 'mselect') {
             const sum = child.querySelector('.popover-summary');
@@ -203,6 +308,9 @@
       // --- UIMSelect 初期化 ---
       document.querySelectorAll('[data-ui="mselect"]').forEach(el => CoreUIPatcher.ensureMSelectInit(el));
 
+      // --- <form data-bind-ctx> の自動バインド ---
+      document.querySelectorAll('form[data-bind-ctx]').forEach(form => CoreUIPatcher.bindFormCtx(form));
+
       // --- Binder Factory (高階関数) ---
       const binder = (patchFn) => CoreUIPatcher.makeBinder(patchFn, path => this.getVal(path));
       const bindElement = binder(CoreUIPatcher.patchElementVal);
@@ -215,7 +323,10 @@
         { key: 'bindSrc', attr: 'data-bind-src', fn: binder(CoreUIPatcher.patchSrc) },
         { key: 'bindStats', attr: 'data-bind-stats', fn: binder((el, val) => { el.innerHTML = Tpl.Stats.gen(val); }) },
         { key: 'bindErrs', attr: 'data-bind-errs', fn: binder(CoreUIPatcher.patchErrs) },
-        { key: 'bindInvalid', attr: 'data-bind-invalid', fn: binder((el, val) => el.classList.toggle('has-error', !!val)) },
+        { key: 'bindInvalid', attr: 'data-bind-invalid', fn: binder((el, val) => {
+          if (val) el.setAttribute('aria-invalid', 'true');
+          else el.removeAttribute('aria-invalid');
+        }) },
         { key: 'bindFields', attr: 'data-bind-fields', fn: binder((el, val) => {
           el.innerHTML = Tpl.Form.fields(val);
           el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
@@ -224,20 +335,23 @@
 
       // --- 単一セレクタによるDOM走査と一括バインド ---
       const selector = bindDefs.map(d => `[${d.attr}^="${this.stateTarget}"]`).join(',');
-      document.querySelectorAll(selector).forEach(el => {
-        bindDefs.forEach(def => {
-          const path = el.dataset[def.key];
-          if (path && path.startsWith(this.stateTarget)) {
-            def.fn(el, path);
-          }
+      if (selector) {
+        document.querySelectorAll(selector).forEach(el => {
+          bindDefs.forEach(def => {
+            const path = el.dataset[def.key];
+            if (path && path.startsWith(this.stateTarget)) {
+              def.fn(el, path);
+            }
+          });
         });
-      });
+      }
     }
 
     update() {
       const curPhase = State.get(`${this.stateTarget}.phase`) ?? 1;
       (this.schema.elements || []).forEach(def => {
-        const el = document.getElementById(def.id);
+        const targetKey = def.part || def.id;
+        const el = document.querySelector(`[data-part="${targetKey}"], #${targetKey}`);
         if (!el) return;
         CoreUIPatcher.updateVisible(el, def, curPhase);
         CoreUIPatcher.updateOpen(el, def, curPhase);

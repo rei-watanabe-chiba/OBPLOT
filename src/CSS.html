@@ -147,7 +147,7 @@
   @layer components {
     /* --- タブナビ --- */
     .nav-tabs { display: none; }
-    .tab-content { display: none; &.active { display: block; } }
+    .tab-content { display: none; &.active, &[aria-selected="true"], &[data-state="active"], &[aria-hidden="false"] { display: block; } }
     /* --- フォーム --- */
     label {
       display: block;
@@ -176,7 +176,7 @@
         outline: none;
         border-color: var(--theme-color);
       }
-      &.has-error {
+      &.has-error, &[aria-invalid="true"] {
         background-color: color-mix(in srgb, var(--main-red) 10%, #fff);
         border-color: var(--main-red);
       }
@@ -469,13 +469,13 @@
     }
     /* --- テーブル行・動的ステータス --- */
     .table-row, .symb-table-row {
-      &.has-error {
+      &.has-error, &[aria-invalid="true"] {
         background-color: color-mix(in srgb, var(--main-red) 12%, transparent);
       }
-      &.has-success {
+      &.has-success, &[data-state="success"] {
         background-color: color-mix(in srgb, var(--main-green) 12%, transparent);
       }
-      &.selected {
+      &.selected, &[aria-selected="true"] {
         background-color: color-mix(in srgb, var(--theme-color) 12%, transparent);
         font-weight: 500;
       }

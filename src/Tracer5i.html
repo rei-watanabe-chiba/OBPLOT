@@ -11,12 +11,12 @@
   <body data-theme="entry">
     <div data-ui="dlg"></div>
     <nav class="nav-tabs" id="nav">
-      <button class="tab-btn active" data-action="CoreAct.switchTab" data-target="entry">データ抽出</button>
-      <button class="tab-btn" data-action="CoreAct.switchTab" data-target="adapter">検量線・標準化</button>
+      <button data-part="tab-btn" class="tab-btn" data-action="CoreAct.switchTab" data-arg="entry" aria-selected="true">データ抽出</button>
+      <button data-part="tab-btn" class="tab-btn" data-action="CoreAct.switchTab" data-arg="adapter" aria-selected="false">検量線・標準化</button>
     </nav>
     <main class="scroll-y">
       <!-- ENT (旧 Tab1) -->
-      <div id="entry" class="tab-content active">
+      <div data-part="tab-content" id="entry" class="tab-content" aria-hidden="false" data-state="active">
         <fieldset id="entFieldset">
           <details id="secPREF" open>
             <summary>抽出設定</summary>
@@ -60,7 +60,7 @@
         </fieldset>
       </div>
       <!-- ADP (旧 Tab2) -->
-      <div id="adapter" class="tab-content">
+      <div data-part="tab-content" id="adapter" class="tab-content" aria-hidden="true">
         <fieldset id="adpFieldset">
           <details id="secASGN" open>
             <summary>データ読込・選択</summary>
@@ -176,7 +176,7 @@
       window.__APP_MODE__ = "<?= typeof appMode !== 'undefined' ? appMode : 'entry' ?>";
     </script>
     <?!= include('Global'); ?>
-    <?!= include('PlatformAdapter'); ?>
+    <?!= include('Adapter'); ?>
     <?!= include('Model'); ?>
     <?!= include('CoreMethod'); ?>
     <?!= include('Tracer5i_Method'); ?>

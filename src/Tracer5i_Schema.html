@@ -43,7 +43,7 @@ const ADP_SCHEMA = {
         { id: "secPREV", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined },
         { id: "btnPREV_genPrev", activePhase: p => p >= ADP_PHS.MAPPED },
 
-        { id: "secCALB", activePhase: p => p >= ADP_PHS.MAPPED, openPhase: p => p === ADP_PHS.MAPPED ? true : (p >= ADP_PHS.PREVIEWED ? false : undefined) },
+        { id: "secCALB", activePhase: p => p >= ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED? false : undefined },
 
         { id: "secSTDZ", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined }
       ]

@@ -10,48 +10,50 @@
   </head>
   <body data-theme="dash">
     <div data-ui="dlg"></div>
-    <dialog id="dlgFavPaste" class="universal-dialog">
-      <h3 class="d-title">設定の貼り付け</h3>
-      <p class="d-msg">ブラウザの自動読取が制限されています。<br>ここに設定JSONを貼り付けてください：</p>
-      <textarea id="txtFavPaste" class="form-control" style="width: 100%; height: 140px; margin: 8px 0; font-family: monospace; font-size: 11px;" placeholder="{ &quot;RPTST.refs&quot;: ... }"></textarea>
-      <div class="field-row">
-        <button class="outline" data-type="primary" id="btnFavPasteCancel">キャンセル</button>
-        <button data-type="primary" id="btnFavPasteOk">OK</button>
-      </div>
+    <dialog data-part="dlgFavPaste" class="universal-dialog">
+      <form method="dialog">
+        <h3 data-part="title" class="d-title">設定の貼り付け</h3>
+        <p data-part="msg" class="d-msg">ブラウザの自動読取が制限されています。<br>ここに設定JSONを貼り付けてください：</p>
+        <textarea name="favPaste" data-part="txtFavPaste" class="form-control" style="width: 100%; height: 140px; margin: 8px 0; font-family: monospace; font-size: 11px;" placeholder="{ &quot;RPTST.refs&quot;: ... }"></textarea>
+        <div class="field-row">
+          <button type="submit" value="cancel" class="outline" data-type="primary">キャンセル</button>
+          <button type="submit" value="ok" data-type="primary">OK</button>
+        </div>
+      </form>
     </dialog>
-    <nav class="nav-tabs" id="nav">
-      <button class="tab-btn active" data-action="CoreAct.switchTab" data-target="dash">ダッシュボード</button>
+    <nav class="nav-tabs" data-part="nav">
+      <button class="tab-btn" data-part="tab-btn" aria-selected="true" data-action="CoreAct.switchTab" data-arg="dash">ダッシュボード</button>
     </nav>
     <main class="scroll-y">
-      <div id="dash" class="tab-content active">
-        <fieldset id="dashFieldset">
-          <details id="secINST" open>
+      <div data-part="tab-content" data-tab="dash" class="tab-content" aria-hidden="false" data-state="active">
+        <fieldset data-part="dashFieldset">
+          <details data-part="secINST" open>
             <summary>データ読込</summary>
             <div class="txt-btninfo">読込シート<span class="badge-label">PXRF</span><span class="badge-label">WDXRF</span></div>
             <div class="field-row">
-              <button id="btnINST_load" data-action="DashAct.requestLoadDB" data-type="primary">データを読込</button>
+              <button data-part="btnINST_load" data-action="DashAct.requestLoadDB" data-type="primary">データを読込</button>
             </div>
           </details>
-          <div id="barINST" class="status-bar" data-status="hidden" data-bind-status="DashST.INST.status"></div>
+          <div data-part="barINST" class="status-bar" data-status="hidden" data-bind-status="DashST.INST.status"></div>
           <hr>
-          <details id="secREPO">
+          <details data-part="secREPO">
             <summary>ダッシュボード作成</summary>
             <label>ユーザー設定選択</label>
             <div class="field-row" style="margin-top: var(--unit)">
               <div class="fav-table-cntr scroll-y">
-                <div id="tblFAV" data-ui="table" data-bind-src="DashST.REPO.data.favTableSrc"></div>
+                <div data-part="tblFAV" data-ui="table" data-bind-src="DashST.REPO.data.favTableSrc"></div>
               </div>
             </div>
             <label>設定JSON登録</label>
             <div class="field-row" style="margin-top: var(--unit)">
-              <input type="text" id="iptFAV_name" placeholder="設定名を入力" data-bind="DashST.REPO.refs.favInputName" data-bind-invalid="DashST.REPO.data.favInputInvalid" data-change="DashAct.onFavNameChange">
-              <button id="btnFAV_save" data-action="DashAct.addFavFromClipboard" data-type="primary" class="outline" style="flex: 0.5;" data-bind="DashST.REPO.data.favBtnText">新規登録</button>
+              <input type="text" data-part="iptFAV_name" placeholder="設定名を入力" data-bind="DashST.REPO.refs.favInputName" data-bind-invalid="DashST.REPO.data.favInputInvalid" data-change="DashAct.onFavNameChange">
+              <button data-part="btnFAV_save" data-action="DashAct.addFavFromClipboard" data-type="primary" class="outline" style="flex: 0.5;" data-bind="DashST.REPO.data.favBtnText">新規登録</button>
             </div>
             <div class="field-row">
-              <button id="btnREPO_open" data-action="DashAct.requestOpenRepo" data-type="primary">ダッシュボードを展開</button>
+              <button data-part="btnREPO_open" data-action="DashAct.requestOpenRepo" data-type="primary">ダッシュボードを展開</button>
             </div>
           </details>
-          <div id="barREPO" class="status-bar" data-status="hidden" data-bind-status="DashST.REPO.status"></div>
+          <div data-part="barREPO" class="status-bar" data-status="hidden" data-bind-status="DashST.REPO.status"></div>
           <div style="flex-grow: 1; min-height: calc(var(--unit) * 2);"></div>
         </fieldset>
       </div>
@@ -61,7 +63,7 @@
       window.__APP_MODE__ = "<?= typeof appMode !== 'undefined' ? appMode : 'dash' ?>";
     </script>
     <?!= include('Global'); ?>
-    <?!= include('PlatformAdapter'); ?>
+    <?!= include('Adapter'); ?>
     <?!= include('Model'); ?>
     <?!= include('CoreMethod'); ?>
 

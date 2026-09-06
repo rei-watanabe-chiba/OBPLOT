@@ -69,14 +69,13 @@
           { key: 'name', className: 'fav-col-btn', render: name => Tpl.Elements.iconBtn('×', 'DashAct.delFavItem', name, false, 'icon-btn', `data-name="${name}" title="削除"`) }
         ],
         rowClass: 'table-row',
-        rowClassFn: (r) => {
-          const cls = [];
-          if (r.name === overwriteTarget) cls.push('has-error');
-          if (r.name === successTarget) cls.push('has-success');
-          if (r.name === selectedFav) cls.push('selected');
-          return cls.join(' ');
+        rowAttrsFn: (r) => {
+          let attrs = `data-action="DashAct.selectFavItem" data-name="${r.name}"`;
+          if (r.name === selectedFav) attrs += ' aria-selected="true"';
+          if (r.name === overwriteTarget) attrs += ' aria-invalid="true"';
+          if (r.name === successTarget) attrs += ' data-state="success"';
+          return attrs;
         },
-        rowAttrsFn: (r) => `data-action="DashAct.selectFavItem" data-name="${r.name}"`,
         emptyText: '登録設定がありません'
       });
     }
@@ -121,34 +120,9 @@
       }
     }
 
-    static promptPasteDialog() {
-      return new Promise(resolve => {
-        const dlg = document.getElementById("dlgFavPaste");
-        const txt = document.getElementById("txtFavPaste");
-        const btnOk = document.getElementById("btnFavPasteOk");
-        const btnCancel = document.getElementById("btnFavPasteCancel");
-        if (!dlg || !txt) {
-          const res = prompt("ここにコピーした設定JSONを貼り付けてください：");
-          return resolve(res);
-        }
-        txt.value = "";
-        const cleanUp = () => {
-          if (btnOk) btnOk.onclick = null;
-          if (btnCancel) btnCancel.onclick = null;
-          dlg.close();
-        };
-        if (btnOk) btnOk.onclick = () => {
-          const val = txt.value;
-          cleanUp();
-          resolve(val);
-        };
-        if (btnCancel) btnCancel.onclick = () => {
-          cleanUp();
-          resolve(null);
-        };
-        dlg.showModal();
-        txt.focus();
-      });
+    static async promptPasteDialog() {
+      const res = await CoreUIPatcher.promptDialog('dlgFavPaste');
+      return res;
     }
 
     static async addFavFromClipboard() {
@@ -183,7 +157,7 @@
         return;
       }
       
-      const rawName = State.get("DashST.REPO.refs.favInputName") || document.getElementById('iptFAV_name')?.value || "";
+      const rawName = State.get("DashST.REPO.refs.favInputName") || "";
       const name = rawName.trim();
       if (!name) {
         State.set({
@@ -226,8 +200,6 @@
           "DashST.REPO.data.favSuccessTarget": name,
           "DashST.REPO.data.favBtnText": "新規登録"
         });
-        const ipt = document.getElementById("iptFAV_name");
-        if (ipt) ipt.value = "";
         DashAct.updFavTableSrc();
         return `設定「${name}」を保存しました`;
       });
