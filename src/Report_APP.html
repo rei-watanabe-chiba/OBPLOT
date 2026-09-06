@@ -167,9 +167,9 @@
       ensureOpt(tickYOpts, panel?.tickUnitY);
       State.set({
         "RPTST.ui.activePanelScaleMode": panel?.scaleMode || "auto",
-        "RPTST.ui.optFields.tickUnitFields": [{ type: "select", name: "tickUnit", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnit", opts: tickOpts }],
-        "RPTST.ui.optFields.clusTickXFields": [{ type: "select", name: "tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: tickXOpts }],
-        "RPTST.ui.optFields.clusTickYFields": [{ type: "select", name: "tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: tickYOpts }]
+        "RPTST.ui.optFields.tickUnitFields": [{ type: "select", name: "tickUnit", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnit", opts: tickOpts }], // name属性指定
+        "RPTST.ui.optFields.clusTickXFields": [{ type: "select", name: "tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: tickXOpts }], // name属性指定
+        "RPTST.ui.optFields.clusTickYFields": [{ type: "select", name: "tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: tickYOpts }]  // name属性指定
       });
       this.finalizePanel(); // フォーム再同期を実行
     }
@@ -318,6 +318,7 @@
       document.querySelectorAll('form[data-bind-ctx]').forEach(f => CoreUIPatcher.syncFormCtx(f));
     }
   }
+
   // --- RepoRend ---
   class RepoRend {
     static resizeTimer = null;
@@ -693,8 +694,7 @@
       State.subscribe(['RPTST.config.symbology', 'RPTST.config.theme', 'RPTST.panels'], () => this.debounce('config', st => RepoRend.qRend(st)));
       State.subscribe('RPTST.ui.activePanelId', () => this.debounce('activePanel', st => RepoSt.renewPanel(st)));
       State.subscribe(['RPTST.config.symbology.baseKey', 'RPTST.config.symbology.rls'], () => this.debounce('symb', st => RepoSt.renewSymbState(st)));
-
-      // --- 連動ロジック ---
+      // --- input連動ロジック ---
       const setupMarginSync = (group, keys) => {
         const linkBind = `RPTST.ui.link${group.charAt(0).toUpperCase() + group.slice(1)}Margin`;
         const statePaths = keys.map(k => `RPTST.config.theme.${k}`);

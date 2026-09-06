@@ -118,7 +118,7 @@
           
           if (combined.length) {
             const sc = CoreMethod.Util.calcScale(combined, combined);
-            baseScales[mode][metric] = { niceMin: sc.niceMin, niceMax: sc.niceMax, ticks: sc.niceTicks.map(t => t.v), tickFmts: sc.niceTicks.map(t => t.f),  units: CoreMethod.Util.calcNiceTickUnits(combined) };
+            baseScales[mode][metric] = { niceMin: sc.niceMin, niceMax: sc.niceMax, ticks: sc.niceTicks.map(t => t.v), units: CoreMethod.Util.calcNiceTickUnits(combined) };
           } else {
             baseScales[mode][metric] = null;
           }

@@ -157,18 +157,13 @@
         if (!sc) return null;
         const interval = sc.interval ?? (sc.ticks?.length >= 2 ? (sc.ticks[1] - sc.ticks[0]) : undefined);
         let fmt = sc.fmtTick;
-        if (!fmt) {
-          fmt = v => {
-            const i = sc.ticks?.findIndex(tk => Math.abs(tk - v) < 1e-8);
-            if (i != null && i >= 0 && sc.tickFmts?.[i] != null) {
-              return sc.tickFmts[i];
-            const t = sc.ticks?.find(tk => Math.abs(tk - v) < 1e-8);
-            return t != null ? t : v;
-          };
+        if (!fmt && sc.ticks) {
+          fmt = v => { const t = sc.ticks.find(tk => Math.abs(tk - v) < 1e-8); return t != null ? t : v; };
+        } else if (!fmt) {
+          fmt = v => v; // Fallback
         }
         return { min: sc.min ?? sc.niceMin, max: sc.max ?? sc.niceMax, interval, fmtTick: fmt };
       };
-      
 
       let scaleX = applyFixed(scaleFixed?.x);
       let scaleY = applyFixed(scaleFixed?.y);

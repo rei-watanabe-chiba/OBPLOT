@@ -19,7 +19,6 @@
         const items = (opts || []).map(opt => this.option(opt)).join('');
         return emptyOpt + items;
       }
-      // --- select ---
       static select(conf) {
         const { type = 'select', bind, change, field, opts, hasEmpty, name } = conf;
         const nm = name ? ` name="${name}"` : ''; // form同期用属性
