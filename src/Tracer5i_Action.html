@@ -185,7 +185,7 @@
     static async genPrev() {
       await CoreAct.withAsync("ADPST.PREV.status", async () => {
         const { PREV, CALB, ASGN, SYMB } = State.proxy.ADPST;
-        const conf = { ...PREV.refs, ...CALB.refs, crctDT: ASGN.data.crctDT, graphType: 'calibration', calbVal: PREV.refs.val }; 
+        const conf = { ...PREV.refs, ...CALB.refs, crctDT: ASGN.data.crctDT, graphType: 'calib', calbVal: PREV.refs.val }; 
         const { prevDT, statsDT } = CHARTDT.generateChartData(ASGN.data.pxrfDT, ASGN.data.wdxrfDT, conf);
         if (!prevDT.length) throw new Error("対象データなし");
         State.set({ 

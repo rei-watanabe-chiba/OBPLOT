@@ -43,7 +43,7 @@
       panelGap: 4,
       rowAspect: [1.0, 1.0, 1.0]
     },
-    defPnl: { graphType: "calibration", calbVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF", tickUnit: null, tickUnitX: null, tickUnitY: null, scaleMode: "auto" }
+    defPnl: { graphType: "calib", calbVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF", tickUnit: null, tickUnitX: null, tickUnitY: null, scaleMode: "auto" }
   };
 
   const REPORT_SCHEMA = {
@@ -55,7 +55,7 @@
       { 
         part: "panelConfigSec", 
         visiblePhase: () => !window.__IS_PRINT_TAB__ && !!State.get("RPTST.panels")?.find(p => p.id === State.get("RPTST.ui.activePanelId")),
-        dataset: () => ({ graphtype: State.get("RPTST.config.modeSec.graphType") || (State.get("RPTST.config.boardMode") === "clus" ? "clusimination" : "calibration") })
+        dataset: () => ({ graphtype: State.get("RPTST.config.boardMode") || "calib" })
       },
       { 
         part: "boxOutput_sts", 

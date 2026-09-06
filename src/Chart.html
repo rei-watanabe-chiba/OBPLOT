@@ -34,10 +34,10 @@
         }
       }
       let prevDT = [], statsDT = null;
-      if (conf.graphType === 'calibration' && (conf.calbVal || conf.calibVal)) {
+      if (conf.graphType === 'calib' && (conf.calbVal || conf.calibVal)) {
          prevDT = this.genPrev(pDT, wDT, { ...conf, val: conf.calbVal || conf.calibVal });
          statsDT = CoreMethod.Calc.calcReg(prevDT.map(pt => pt.x), prevDT.map(pt => pt.y), CoreMethod.Util.getValidNums(prevDT.map(pt => pt.err)));
-      } else if (conf.graphType === 'clusimination' && conf.clusXVal && conf.clusYVal) {
+      } else if (conf.graphType === 'clus' && conf.clusXVal && conf.clusYVal) {
          const useCal = conf.useCal !== undefined ? conf.useCal : false;
          const calibBase = this.genPrev(pDT, wDT, { ...conf, val: GLB.valElms[0], useCal });
          const mapPts = (wList, pList) => [...wList.map(w => ({ ...w, x: CoreMethod.Calc.evaluate(conf.clusXVal, w), y: CoreMethod.Calc.evaluate(conf.clusYVal, w), _forceClr: GLB.wdxrfDefClr || '#78909C' })), ...pList.map(p => ({ ...p, x: CoreMethod.Calc.evaluate(conf.clusXVal, p), y: CoreMethod.Calc.evaluate(conf.clusYVal, p) }))] .filter(pt => pt.x != null && pt.y != null);
@@ -220,7 +220,7 @@
           return null; // 自動（未指定）の場合は上書きせず null を返す
         };
 
-        if (panel.graphType === 'clusimination') {
+        if (panel.graphType === 'clus') {
           const uX = resolveUnit(panel.tickUnitX);
           if (uX) {
             const cX = makeCustomScale(scaleX.min, scaleX.max, uX);
