@@ -30,7 +30,7 @@
     
     <div class="dash-layout">
       <!-- 左サイドバー -->
-      <aside class="dash-sidebar" data-part="dashSidebar">
+      <aside id="fixed-sidebar" class="dash-sidebar" data-part="dashSidebar">
         <!-- グラフ選択 -->
         <div class="segment-ctrl" data-ui="segment" data-bind="RPTST.config.boardMode">
           <button type="button" class="segment-btn" data-action="RepoAct.setBoardMode" data-arg="calib">検量線</button>
@@ -374,7 +374,11 @@
         </div>
       </aside>
       <!-- 右メイン描画領域 -->
-      <main class="dash-main">
+      <main id = "flow-main" class="dash-main">
+        <div class="floating-card">
+          <span style="font-weight: 600; color: var(--theme-color);">操作ガイド</span>
+          <p style="margin: 4px 0 0 0; color: var(--grey600);">パネルをクリックして選択してください。</p>
+        </div>
         <div class="a4-container" data-part="a4Container">
           <div class="dash-grid" data-part="dashGrid">
             <div class="grid-panel" data-part="panel-0" data-panel-id="p_0" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>

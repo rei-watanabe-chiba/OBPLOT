@@ -1,5 +1,29 @@
 <!-- src/Report_APP.html -->
 <script>
+
+  function lockSidebarZoom() {
+    const sidebar = document.getElementById('fixed-sidebar');
+    if (!sidebar) return;
+
+    // 現在のブラウザのズーム倍率を取得 (等倍時は 1)
+    const zoomScale = window.devicePixelRatio || 1;
+
+    // ズームの逆数を計算 (例: 2倍ズーム時は 0.5倍 に縮小する)
+    const inverseScale = 1 / zoomLevel;
+
+    // サイドバーのサイズと文字サイズを逆算して相殺する
+    sidebar.style.transform = `scale(${inverseScale})`;
+    
+    // scaleだけだと全体のサイズが縮むため、幅と高さを倍率分引き伸ばして固定する
+    const baseWidth = 320;
+    sidebar.style.width = `${baseWidth * zoomScale}px`;
+    sidebar.style.height = `${100 * zoomScale}vh`;
+    if (mainContent) {mainContent.style.marginLeft = `${baseWidth}px`;}
+  }
+
+  window.addEventListener('resize', lockSidebarZoom);
+  window.addEventListener('DOMContentLoaded', lockSidebarZoom);
+
   // --- RptTpl ---
   class RptTpl {
     // --- rowAspectCtrl ---
@@ -378,19 +402,7 @@
         else { el.removeAttribute('data-col-lbl'); el.removeAttribute('data-row-lbl'); }
       }
       RepoSt.update();
-      this.fitA4Scale();
       if (!window.__EXPORT_CFG__) this.genCharts(st);
-    }
-    // --- fitA4Scale ---
-    static fitA4Scale() {
-      if (window.__EXPORT_CFG__) return;
-      const main = document.querySelector('.dash-main'), a4 = document.querySelector('[data-part="a4Container"]');
-      if (!main || !a4) return;
-      a4.style.transform = 'none';
-      const scale = Math.min((main.clientWidth - 48) / a4.offsetWidth, (main.clientHeight - 48) / a4.offsetHeight, 1);
-      a4.style.transform = `scale(${scale})`;
-      a4.style.setProperty('--current-scale', scale);
-      a4.style.marginBottom = `-${a4.offsetHeight * (1 - scale)}px`;
     }
     // --- genGph ---
     static genGph(st = null) {
@@ -791,8 +803,8 @@
           const curSt = RepoSt.getSt();
           const gph = RepoRend.genGph(curSt);
           RepoRend.calcPanelSize(gph, curSt);
-          document.querySelectorAll('[data-part="dashGrid"] ui-plot').forEach(plot => { plot.src = { ...plot.src, gph }; });
-        }, 100);
+          RepoRend.genCharts(curSt);
+        }, 250);
       });
     }
     // --- start ---
