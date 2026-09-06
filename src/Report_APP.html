@@ -23,7 +23,7 @@
       return {
         ui, config: cfg, dataset: ds, panels: pnls, activeId: actId, layout: lyt,
         theme: cfg.theme || {}, symbology: cfg.symbology || {}, baseScales: ds.baseScales || { auto: {}, fixed: {} },
-        d: ds.raw || {}, rowPlotH: ds.rowPlotH, panel: pnls.find(p => p.id === actId) ?? null,
+        d: ds.raw || {}, panel: pnls.find(p => p.id === actId) ?? null,
         boardMode: cfg.boardMode || 'calib', rowAspect: lyt.rowAspect || [1.0, 1.0, 1.0]
       };
     }
@@ -121,39 +121,12 @@
         });
       }
       if (!targetMetrics.size) return;
+
+      // 純粋関数へ計算委譲
+      const calcScales = ReportMethod.calculateBaseScales(d, dataset, targetMetrics);
       const baseScales = st.baseScales || { auto: {}, fixed: {} };
-      baseScales.auto = baseScales.auto || {};
-      baseScales.fixed = baseScales.fixed || {};
-      const calcForMetrics = (mode, filters) => {
-        const conf = { useCal: dataset.useCal, crctDT: d.crctDT, useLOD: dataset.useLOD };
-        let pDT = d.pxrfDT, wDT = d.wdxrfDT;
-        if (filters) {
-          const { db, item, group } = filters;
-          if (db?.length) {
-            pDT = pDT.filter(r => db.includes(String(r[GLB.idx.key1])));
-            wDT = wDT.filter(r => db.includes(String(r[GLB.idx.key1])));
-          }
-          if (item?.length) pDT = pDT.filter(r => item.includes(String(r[GLB.idx.p1])));
-          if (group?.length) {
-            pDT = pDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
-            wDT = wDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
-          }
-        }
-        const filteredCalibBase = CHARTDT.genPrev(pDT, wDT, { ...conf, val: GLB.valElms[0] });
-        targetMetrics.forEach(metric => {
-          const wVals = wDT.map(w => CoreMethod.Calc.evaluate(metric, w)).filter(v => v != null && !isNaN(v));
-          const pVals = filteredCalibBase.map(p => CoreMethod.Calc.evaluate(metric, p)).filter(v => v != null && !isNaN(v));
-          const combined = [...wVals, ...pVals];
-          if (combined.length) {
-            const sc = CoreMethod.Util.calcScale(combined, combined);
-            baseScales[mode][metric] = { niceMin: sc.niceMin, niceMax: sc.niceMax, ticks: sc.niceTicks.map(t => t.v), units: CoreMethod.Util.calcNiceTickUnits(combined) };
-          } else {
-            baseScales[mode][metric] = null;
-          }
-        });
-      };
-      if (['all', 'db', 'metric'].includes(triggerType)) calcForMetrics('fixed', { db: dataset.filters?.db || [] });
-      if (['all', 'item', 'group', 'db', 'calib', 'lod', 'metric'].includes(triggerType)) calcForMetrics('auto', dataset.filters);
+      baseScales.auto = { ...baseScales.auto, ...calcScales.auto };
+      baseScales.fixed = { ...baseScales.fixed, ...calcScales.fixed };
       State.set("RPTST.dataset.baseScales", baseScales);
     }
     // --- renewSymbState ---
@@ -469,30 +442,36 @@
       const snap = st || RepoSt.getSt();
       const gph = this.genGph(snap);
       this.calcPanelSize(gph, snap);
-      const { dataset, d, config, panels, rowPlotH, baseScales, layout, boardMode } = snap;
+      const { dataset, d, config, panels, baseScales, layout, boardMode } = snap;
       const lyt = layout || config?.layout || { gridRows: 1, gridCols: 1 };
       const plots = document.querySelectorAll('[data-part="dashGrid"] ui-plot');
+
       const draw = () => {
         panels.forEach((p, idx) => {
           this._applyPanelLabels(idx, snap);
           if (!plots[idx]) return;
           const row = Math.floor(idx / lyt.gridCols);
-          const plotH = rowPlotH?.[row] ?? null;
           const srcScales = (p.scaleMode === 'manual') ? baseScales.fixed : baseScales.auto;
           const scaleFixed = {
             x: p.clusXVal ? srcScales?.[p.clusXVal] : srcScales?.[p.calbVal],
             y: p.clusYVal ? srcScales?.[p.clusYVal] : srcScales?.[p.calbVal]
           };
+
           if (pCalcDT?.[idx]) {
-            plots[idx].src = { prevDT: pCalcDT[idx].prevDT, statsDT: pCalcDT[idx].statsDT, symb: config.symbology, gph, panel: p, plotH, scaleFixed };
+            // 生成済データを利用
+            const aspectMode = boardMode === 'clus' ? 'custom' : 'square';
+            const aspectRatio = boardMode === 'clus' ? (lyt.rowAspect?.[row] ?? 1.0) : null;
+            plots[idx].src = { 
+              data: { prevDT: pCalcDT[idx].prevDT, statsDT: pCalcDT[idx].statsDT }, 
+              symb: config.symbology, gph, panel: p, layout: { aspectMode, aspectRatio }, scaleFixed 
+            };
           } else {
-            if (!d?.pxrfDT?.length) return;
-            const conf = { useCal: dataset.useCal, calElms: dataset.calElms, crct: dataset.crct, crctDT: d.crctDT, useLOD: dataset.useLOD, filters: dataset.filters, graphType: boardMode || config.boardMode || 'calib', calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
-            const { prevDT, statsDT } = CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
-            plots[idx].src = { prevDT, statsDT, symb: config.symbology, gph, panel: p, plotH, scaleFixed };
+            // 純粋関数で構成生成
+            plots[idx].src = ReportMethod.buildChartConfig(d, dataset, p, boardMode, gph, config.symbology, scaleFixed, lyt, row);
           }
         });
       };
+
       if (window.__EXPORT_CFG__) {
         let finishedCount = 0, printFired = false;
         const waitTime = 500 + Math.min(5000, (lyt.gridRows * lyt.gridCols) * (d?.pxrfDT?.length || 0) * 0.15);
@@ -581,13 +560,18 @@
     // --- _prepData ---
     static _prepData(st) {
       const snap = st || RepoSt.getSt();
-      const { dataset, d, config, panels, boardMode } = snap;
-      const pCalcDT = panels.map(p => {
-        if (!d.pxrfDT?.length) return { prevDT: [], statsDT: null };
-        const conf = { useCal: dataset.useCal, calElms: dataset.calElms, crct: dataset.crct, crctDT: d.crctDT, useLOD: dataset.useLOD, filters: dataset.filters, graphType: boardMode || config.boardMode || 'calib', calbVal: p.calbVal, clusXVal: p.clusXVal, clusYVal: p.clusYVal };
-        return CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+      const { dataset, d, config, panels, boardMode, layout } = snap;
+      const lyt = layout || config?.layout || { gridRows: 1, gridCols: 1 };
+      
+      const pCalcDT = panels.map((p, idx) => {
+        const row = Math.floor(idx / lyt.gridCols);
+        // 純粋関数で生成抽出
+        const cfg = ReportMethod.buildChartConfig(d, dataset, p, boardMode, {}, {}, {}, lyt, row);
+        return cfg ? cfg.data : { prevDT: [], statsDT: null };
       });
+
       if (!pCalcDT.some(res => res.prevDT?.length)) {
+        // 短い警告コメント
         CoreAct.toast("警告", "有効なグラフがありません。\nデータフィルターを確認してください。");
         return null;
       }

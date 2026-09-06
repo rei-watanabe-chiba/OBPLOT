@@ -115,18 +115,15 @@
         bgPlot: rS.bgPlot, bgOuter: rS.bgOuter, bgTip: rS.bgTip
       };
       const GAP = { ...(gph?.gap || GLB.defGraphGap) };
-
       // 1. 余白(Grid Padding)計算
       const charWidth = STYLE.fontS.tick * 0.6;
       const overY = (4 * charWidth) / 2;
       const overX = (2 * charWidth) / 2;
       const titleText = panel?.title || "";
       const titleSizePx = STYLE.fontS.title || (12 * 1.33);
-      
       const requiredPadT = Math.max(STYLE.fontS.tick, titleText ? titleSizePx + GAP.tick : 0);
       const safePadT = Math.max(GAP.padT, requiredPadT);
       const safePadR = Math.max(GAP.padR, STYLE.fontS.tick);
-
       const gridTop = safePadT + overY;
       const gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
       const gridLeft = GAP.padL + overX + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
@@ -134,11 +131,8 @@
 
       // 2. プロットサイズ確定計算
       let plotW = containerW - gridLeft - gridRight;
-      // containerH が 0 (height: auto等) の場合は、とりあえず幅と同じプロット高さを仮置きする
       let plotH = containerH > 0 ? (containerH - gridTop - gridBottom) : plotW;
-
       if (layout?.aspectMode === 'square') {
-        // 高さ指定がない(0)なら幅(plotW)を基準に正方形を作る
         const minSize = containerH > 0 ? Math.max(10, Math.min(plotW, plotH)) : Math.max(10, plotW);
         plotW = minSize;
         plotH = minSize;
@@ -152,75 +146,34 @@
         plotW = Math.max(10, plotW);
         plotH = Math.max(10, plotH);
       }
-      
       const renderHeight = plotH + gridTop + gridBottom;
       const renderWidth = plotW + gridLeft + gridRight;
-
-      // 3. スケール計算
+      // 3. スケール計算 (scaleFixed判定)
       const validPoints = prevDT.filter(d => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
-      const xVals = validPoints.map(d => d.x), yVals = validPoints.map(d => d.y);
-      const defScale = CoreMethod.Util.calcScale(xVals, yVals);
-      const defItv = defScale.niceTicks.length >= 2 ? (defScale.niceTicks[1].v - defScale.niceTicks[0].v) : undefined;
-      const defFmt = v => { const t = defScale.niceTicks.find(tck => Math.abs(tck.v - v) < 1e-8); return t ? t.f : v; };
-      
-      let scaleX = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
-      let scaleY = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
-
       const applyFixed = (sc) => {
         if (!sc) return null;
-        const interval = sc.ticks?.length >= 2 ? (sc.ticks[1] - sc.ticks[0]) : undefined;
-        const fmt = v => { const t = sc.ticks?.find(tk => Math.abs(tk - v) < 1e-8); return t != null ? t : v; };
-        return { min: sc.niceMin, max: sc.niceMax, interval, fmtTick: fmt };
-      };
-      if (scaleFixed?.x) scaleX = applyFixed(scaleFixed.x) ?? scaleX;
-      if (scaleFixed?.y) scaleY = applyFixed(scaleFixed.y) ?? scaleY;
-
-      if (panel) {
-        const makeCustomScale = (rawMin, rawMax, unit) => {
-          const u = Number(unit);
-          if (isNaN(u) || u <= 0) return null;
-          const minVal = rawMin >= 0 ? 0 : Math.floor(rawMin / u) * u;
-          const maxVal = rawMin >= 0 ? Math.max(u, Math.ceil(rawMax / u) * u) : Math.ceil(rawMax / u) * u;
-          const count = Math.round((maxVal - minVal) / u);
-          if (count > 200 || count <= 0) return null;
-          const decimals = (u.toString().split('.')[1] || '').length;
-          const ticks = Array.from({ length: count + 1 }, (_, i) => {
-            const v = Number((minVal + i * u).toFixed(Math.min(decimals, 10)));
-            return { v, f: Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : (decimals > 0 ? v.toFixed(decimals) : v.toLocaleString()) };
-          });
-          const fmt = v => { const t = ticks.find(tck => Math.abs(tck.v - v) < (u * 1e-4 || 1e-8)); return t ? t.f : v; };
-          return { min: minVal, max: maxVal, interval: u, fmtTick: fmt };
-        };
-
-        const resolveUnit = (specifiedUnit) => {
-          if (specifiedUnit != null && specifiedUnit !== '' && !isNaN(Number(specifiedUnit)) && Number(specifiedUnit) > 0) {
-            return Number(specifiedUnit);
-          }
-          return null;
-        };
-
-        if (panel.graphType === 'clus') {
-          const uX = resolveUnit(panel.tickUnitX);
-          if (uX) {
-            const cX = makeCustomScale(scaleX.min, scaleX.max, uX);
-            if (cX) scaleX = cX;
-          }
-          const uY = resolveUnit(panel.tickUnitY);
-          if (uY) {
-            const cY = makeCustomScale(scaleY.min, scaleY.max, uY);
-            if (cY) scaleY = cY;
-          }
-        } else {
-          const minAll = Math.min(scaleX.min, scaleY.min);
-          const maxAll = Math.max(scaleX.max, scaleY.max);
-          const u = resolveUnit(panel.tickUnit);
-          if (u) {
-            const c = makeCustomScale(minAll, maxAll, u);
-            if (c) { scaleX = c; scaleY = c; }
-          }
+        const interval = sc.interval ?? (sc.ticks?.length >= 2 ? (sc.ticks[1] - sc.ticks[0]) : undefined);
+        let fmt = sc.fmtTick;
+        if (!fmt && sc.ticks) {
+          fmt = v => { const t = sc.ticks.find(tk => Math.abs(tk - v) < 1e-8); return t != null ? t : v; };
+        } else if (!fmt) {
+          fmt = v => v; // Fallback
         }
-      }
+        return { min: sc.min ?? sc.niceMin, max: sc.max ?? sc.niceMax, interval, fmtTick: fmt };
+      };
 
+      let scaleX = applyFixed(scaleFixed?.x);
+      let scaleY = applyFixed(scaleFixed?.y);
+      // scaleFixedが無い場合自動計算
+      if (!scaleX || !scaleY) {
+        const xVals = validPoints.map(d => d.x), yVals = validPoints.map(d => d.y);
+        const defScale = CoreMethod.Util.calcScale(xVals, yVals);
+        const defItv = defScale.niceTicks.length >= 2 ? (defScale.niceTicks[1].v - defScale.niceTicks[0].v) : undefined;
+        const defFmt = v => { const t = defScale.niceTicks.find(tck => Math.abs(tck.v - v) < 1e-8); return t ? t.f : v; };
+        
+        if (!scaleX) scaleX = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
+        if (!scaleY) scaleY = { min: defScale.niceMin, max: defScale.niceMax, interval: defItv, fmtTick: defFmt };
+      }
       // 4. データとスタイルのマッピング
       const graphText = statsDT ? CoreMethod.Util.buildStats(statsDT, 3, [{ key: 'R² = {r2}', label: '' }, { key: 'y = {slope}x {sign} {abs_intercept}', label: '' }]).map(r => r[1]).join('\n') : "";
       const baseKey = symb?.baseKey, rls = symb?.rls || [], defRl = rls.find(r => r.key === "default");
@@ -237,7 +190,6 @@
           _isDef: rl === defRl
         };
       }).sort((a, b) => (b._isDef ? 1 : 0) - (a._isDef ? 1 : 0));
-
       const series = [{ type: 'scatter', data: plotDT, animation: false }];
       if (statsDT?.slope != null && statsDT?.intercept != null) {
         const { slope, intercept } = statsDT;
@@ -247,7 +199,6 @@
           animation: false, silent: true
         });
       }
-
       const graphics = [
         { type: 'rect', z: 1, silent: true, shape: { x: gridLeft, y: gridTop, width: plotW, height: plotH }, style: { fill: 'none', stroke: STYLE.lineC.axis, lineWidth: STYLE.lineW.axis } },
         { type: 'text', left: gridLeft + STYLE.fontS.tick, top: gridTop + STYLE.fontS.tick, style: { text: graphText, fontFamily: STYLE.font, fontSize: STYLE.fontS.stats, fill: STYLE.fontC.stats } }
@@ -260,7 +211,6 @@
           style: { text: titleText, fontFamily: STYLE.font, fontSize: titleSizePx, fill: STYLE.fontC.base }
         });
       }
-
       // 5. ECharts Option返却
       return {
         _calculated: { width: renderWidth, height: renderHeight, bgOuter: STYLE.bgOuter },
@@ -294,7 +244,6 @@
 
   class UIPlot extends HTMLElement {
     #box; #chart = null; #observer; #config = null; #lastW = 0; #lastH = 0;
-    
     constructor() {
       super();
       this.#box = document.createElement('div');
@@ -312,7 +261,6 @@
         }
       });
     }
-
     connectedCallback() {
       this.replaceChildren();
       this.style.display = 'grid';
@@ -321,17 +269,14 @@
       this.appendChild(this.#box);
       this.#observer.observe(this.#box);
     }
-
     disconnectedCallback() {
       this.#observer.disconnect();
       if (this.#chart) { this.#chart.dispose(); this.#chart = null; }
     }
-
     set src(data) {
       this.#config = data;
       this.#render();
     }
-
     clear() {
       this.#config = null;
       if (this.#chart) this.#chart.clear();
@@ -339,18 +284,14 @@
       this.#box.style.display = 'none';
       this.dispatchEvent(new CustomEvent('render-finished'));
     }
-
     #render() {
       if (!this.#config?.data?.prevDT?.length || typeof echarts === 'undefined') return this.clear();
       const containerWidth = this.clientWidth;
       const containerHeight = this.clientHeight;
-      
       // 幅が0の場合は描画不可。高さ0は自動計算に任せる
       if (containerWidth === 0) return;
-      
       this.#lastW = containerWidth;
       this.#lastH = containerHeight;
-
       if (!this.#chart) {
         const renderer = this.getAttribute('data-renderer') || 'canvas';
         this.#chart = echarts.init(this.#box, null, { renderer });
@@ -358,18 +299,14 @@
           this.dispatchEvent(new CustomEvent('render-finished'));
         });
       }
-
       const option = ChartRenderer.buildOption(containerWidth, containerHeight, this.#config);
       if (!option) return this.clear();
-
       this.#box.style.display = 'block';
       this.#box.style.width = `${option._calculated.width}px`;
       this.#box.style.height = `${option._calculated.height}px`;
       this.#box.style.backgroundColor = option._calculated.bgOuter;
-      
       // 計算された高さをEChartsに通知
       this.#chart.resize({ width: containerWidth, height: option._calculated.height });
-      
       delete option._calculated;
       this.#chart.setOption(option);
     }

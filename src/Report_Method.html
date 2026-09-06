@@ -1,6 +1,7 @@
 <!-- src/Report_Method.html -->
 <script>
   class ReportMethod {
+    // --- buildGraphStyle ---
     static buildGraphStyle(raw, rng) {
       const pt2px = pt => Number(pt) * 1.33;
       const mm2px = mm => Number(mm) * 3.78;
@@ -26,6 +27,7 @@
       };
     }
 
+    // --- calculatePanelMetrics ---
     static calculatePanelMetrics(gw, gh, gridCols, gridRows, gapPx, gph, hasTitle, titleSizePx) {
       const maxW = (gw - (gridCols - 1) * gapPx) / gridCols, maxH = (gh - (gridRows - 1) * gapPx) / gridRows;
       const style = gph.style, gap = gph.gap;
@@ -42,11 +44,7 @@
       };
     }
 
-    /**
-     * 判別図専用: 行単位アスペクト比を考慮したパネルメトリクス計算
-     * @param {number[]} rowAspects - 各行のアスペクト比配列 k_r = plotH/plotW
-     * @returns {{ panelW: number, panelH: number[], plotW: number, plotH: number[] }}
-     */
+    // --- calculatePanelMetricsAspect ---
     static calculatePanelMetricsAspect(gw, gh, gridCols, gridRows, gapPx, gph, hasTitle, titleSizePx, rowAspects) {
       const style = gph.style, gap = gph.gap;
       const charWidth = style.fontS.tick * 0.6;
@@ -55,32 +53,22 @@
       const gridRight  = gap.padR + gap.tick + style.fontS.tick + (charWidth * 2);
       const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
       const gridLeft   = gap.padL + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-
-      // 各行の固定マージン合計（top + bottom）
       const fixedH = gridTop + gridBottom;
       const fixedW = gridLeft + gridRight;
-
-      // 利用可能な最大幅・最大高さ（ギャップ込み）
       const maxW = (gw - (gridCols - 1) * gapPx) / gridCols;
       const maxHTotal = gh - (gridRows - 1) * gapPx;
-
-      // rowAspects を行数に合わせてパディング（不足分は 1.0 で補完）
       const aspects = Array.from({ length: gridRows }, (_, i) => rowAspects[i] ?? 1.0);
       const kSum = aspects.reduce((s, k) => s + k, 0);
-
-      // plotW の二重制約
-      //   幅制約: plotW <= maxW - fixedW
-      //   高さ制約: plotW * kSum <= maxHTotal - gridRows * fixedH
       const wConstraint = maxW - fixedW;
       const hConstraint = (maxHTotal - gridRows * fixedH) / kSum;
       const plotW = Math.max(10, Math.min(wConstraint, hConstraint));
       const plotH = aspects.map(k => Math.max(10, k * plotW));
       const panelH = plotH.map(ph => ph + fixedH);
       const panelW = plotW + fixedW;
-
       return { panelW, panelH, plotW, plotH };
     }
 
+    // --- generateExportHTML ---
     static generateExportHTML(type, outerHTML, dateStr, data) {
       const ttl = `OBPLOT_${type.toUpperCase()}_${dateStr}`;
       const esc = s => s.replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
@@ -97,6 +85,135 @@
         hStr = '<!DOCTYPE html>' + outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${sSt}; window.__PRECALC_DATA__=${sCalc};<\/script>`);
       }
       return { ttl, hStr };
+    }
+
+    // --- calculateBaseScales ---
+    static calculateBaseScales(d, dataset, targetMetrics) {
+      if (!d?.pxrfDT || !d?.wdxrfDT || !targetMetrics?.size) return { auto: {}, fixed: {} };
+      
+      const baseScales = { auto: {}, fixed: {} };
+      
+      const calcForMetrics = (mode, filters) => {
+        const conf = { useCal: dataset.useCal, crctDT: d.crctDT, useLOD: dataset.useLOD };
+        let pDT = d.pxrfDT, wDT = d.wdxrfDT;
+        
+        if (filters) {
+          const { db, item, group } = filters;
+          if (db?.length) {
+            pDT = pDT.filter(r => db.includes(String(r[GLB.idx.key1])));
+            wDT = wDT.filter(r => db.includes(String(r[GLB.idx.key1])));
+          }
+          if (item?.length) pDT = pDT.filter(r => item.includes(String(r[GLB.idx.p1])));
+          if (group?.length) {
+            pDT = pDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
+            wDT = wDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
+          }
+        }
+        
+        // 基準データ生成
+        const filteredCalibBase = CHARTDT.genPrev(pDT, wDT, { ...conf, val: GLB.valElms[0] });
+        
+        targetMetrics.forEach(metric => {
+          const wVals = wDT.map(w => CoreMethod.Calc.evaluate(metric, w)).filter(v => v != null && !isNaN(v));
+          const pVals = filteredCalibBase.map(p => CoreMethod.Calc.evaluate(metric, p)).filter(v => v != null && !isNaN(v));
+          const combined = [...wVals, ...pVals];
+          
+          if (combined.length) {
+            const sc = CoreMethod.Util.calcScale(combined, combined);
+            baseScales[mode][metric] = { niceMin: sc.niceMin, niceMax: sc.niceMax, ticks: sc.niceTicks.map(t => t.v), units: CoreMethod.Util.calcNiceTickUnits(combined) };
+          } else {
+            baseScales[mode][metric] = null;
+          }
+        });
+      };
+
+      // 固定スケール (dbフィルタのみ)
+      calcForMetrics('fixed', { db: dataset.filters?.db || [] });
+      // オートスケール (全フィルタ適用)
+      calcForMetrics('auto', dataset.filters);
+
+      return baseScales;
+    }
+
+    // --- _makeCustomScale ---
+    // カスタム単位が指定された場合のスケール再計算（純粋関数）
+    static _makeCustomScale(rawMin, rawMax, specifiedUnit) {
+      const u = Number(specifiedUnit);
+      if (isNaN(u) || u <= 0) return null;
+      const minVal = rawMin >= 0 ? 0 : Math.floor(rawMin / u) * u;
+      const maxVal = rawMin >= 0 ? Math.max(u, Math.ceil(rawMax / u) * u) : Math.ceil(rawMax / u) * u;
+      const count = Math.round((maxVal - minVal) / u);
+      if (count > 200 || count <= 0) return null;
+      const decimals = (u.toString().split('.')[1] || '').length;
+      const ticks = Array.from({ length: count + 1 }, (_, i) => {
+        const v = Number((minVal + i * u).toFixed(Math.min(decimals, 10)));
+        return { v, f: Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : (decimals > 0 ? v.toFixed(decimals) : v.toLocaleString()) };
+      });
+      const fmt = v => { const t = ticks.find(tck => Math.abs(tck.v - v) < (u * 1e-4 || 1e-8)); return t ? t.f : v; };
+      return { min: minVal, max: maxVal, interval: u, fmtTick: fmt };
+    }
+
+    // --- buildChartConfig ---
+    static buildChartConfig(d, dataset, panel, boardMode, gph, symb, srcScales, layout, rowIndex) {
+      if (!d?.pxrfDT?.length) return null;
+
+      const graphType = boardMode || 'calib';
+      
+      const conf = { 
+        useCal: dataset.useCal, 
+        calElms: dataset.calElms, 
+        crct: dataset.crct, 
+        crctDT: d.crctDT, 
+        useLOD: dataset.useLOD, 
+        filters: dataset.filters, 
+        graphType, 
+        calbVal: panel.calbVal, 
+        clusXVal: panel.clusXVal, 
+        clusYVal: panel.clusYVal 
+      };
+
+      const { prevDT, statsDT } = CHARTDT.generateChartData(d.pxrfDT, d.wdxrfDT, conf);
+
+      let aspectMode = 'square';
+      let aspectRatio = null;
+      let finalScaleFixed = null;
+
+      // カスタムスケールの適用ロジック
+      if (srcScales) {
+        const resolveUnit = (u) => (u != null && u !== '' && !isNaN(Number(u)) && Number(u) > 0) ? Number(u) : null;
+        let scaleX = srcScales.x;
+        let scaleY = srcScales.y;
+
+        if (graphType === 'clus') {
+          aspectMode = 'custom';
+          aspectRatio = layout?.rowAspect?.[rowIndex] ?? 1.0;
+          const uX = resolveUnit(panel.tickUnitX);
+          if (uX && scaleX) scaleX = this._makeCustomScale(scaleX.niceMin, scaleX.niceMax, uX) || scaleX;
+          const uY = resolveUnit(panel.tickUnitY);
+          if (uY && scaleY) scaleY = this._makeCustomScale(scaleY.niceMin, scaleY.niceMax, uY) || scaleY;
+        } else {
+          // calibモードの場合は、スケール全体(XY両方)を包括する最小値/最大値で統一
+          if (scaleX && scaleY) {
+            const minAll = Math.min(scaleX.niceMin, scaleY.niceMin);
+            const maxAll = Math.max(scaleX.niceMax, scaleY.niceMax);
+            const u = resolveUnit(panel.tickUnit);
+            if (u) {
+              const c = this._makeCustomScale(minAll, maxAll, u);
+              if (c) { scaleX = c; scaleY = c; }
+            }
+          }
+        }
+        finalScaleFixed = { x: scaleX, y: scaleY };
+      }
+
+      return {
+        data: { prevDT, statsDT },
+        symb,
+        panel,
+        gph,
+        layout: { aspectMode, aspectRatio },
+        scaleFixed: finalScaleFixed
+      };
     }
   }
 </script>
