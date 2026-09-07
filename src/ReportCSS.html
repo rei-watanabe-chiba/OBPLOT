@@ -439,12 +439,12 @@
     align-items: center;
     width: 100%;
   }
-  .form-addon input {
+  /* ★ select を追加 */
+  .form-addon input, .form-addon select {
     width: 100%;
     box-sizing: border-box;
     /* paddingはprefix/suffixの有無で上書きされる */
   }
-  /* 前後のコンテナ（絶対配置でinputの上に重ねる） */
   .prefix-container, .suffix-container {
     position: absolute;
     display: flex;
@@ -452,25 +452,26 @@
     gap: 4px;
     pointer-events: none;
     z-index: 1;
-    font-size: 0.8em; /* 基準サイズの0.8倍に自動追従 */
+    font-size: 0.8em;
   }
   .prefix-container { left: 8px; }
   .suffix-container { right: 8px; }
-  /* プレフィックス・サフィックス有無によるPadding自動調整 */
-  /* 文字数が多い場合は --pad-left などをインラインで上書き可能 */
-  .form-addon.has-prefix input {
+  
+  /* ★ select を追加 */
+  .form-addon.has-prefix input, 
+  .form-addon.has-prefix select {
     padding-left: var(--pad-left, 32px);
   }
-  .form-addon.has-suffix input {
+  .form-addon.has-suffix input, 
+  .form-addon.has-suffix select {
     padding-right: var(--pad-right, 24px);
   }
-  /* コンテナ内の文字要素の基本スタイル */
+  
   .input-text, .input-unit {
     font-weight: 500;
     line-height: 1;
     font-family: sans-serif;
   }
-  /* アイコンはデフォルトで透過的に継承 */
   .prefix-container .material-symbols-outlined, 
   .suffix-container .material-symbols-outlined {
     font-size: inherit; 

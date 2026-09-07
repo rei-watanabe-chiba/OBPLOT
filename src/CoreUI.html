@@ -289,20 +289,19 @@
     }
 
     // --- bindInputWraps ---
-    static bindInputWraps(nameList, fontSize, color, configObj = null) {
+    static bindFormAddons(nameList, fontSize, color, configObj = null) {
       if (!Array.isArray(nameList)) return;
       nameList.forEach(name => {
-        document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
-          const wrap = input.closest('.input-wrap');
-          if (!wrap) return;
-          if (wrap.dataset.bound === 'true') return;
-          // inputの前後の兄弟要素を収集
+        document.querySelectorAll(`input[name="${name}"], select[name="${name}"]`).forEach(el => {
+          const wrap = el.closest('.form-addon');
+          if (!wrap || wrap.dataset.bound === 'true') return;
+          
           const prevs = [], nexts = [];
-          let curr = input.previousElementSibling;
+          let curr = el.previousElementSibling;
           while (curr) { prevs.unshift(curr); curr = curr.previousElementSibling; }
-          curr = input.nextElementSibling;
+          curr = el.nextElementSibling;
           while (curr) { nexts.push(curr); curr = curr.nextElementSibling; }
-          // 後続要素がなく、configObjに設定があれば単位を補完
+          
           if (nexts.length === 0 && configObj?.[name]?.unit) {
             const u = document.createElement('span');
             u.className = 'input-unit';
@@ -310,25 +309,26 @@
             wrap.appendChild(u);
             nexts.push(u);
           }
-          // スタイル適用関数（アイコン・テキスト用）
-          const applyStyle = (el) => {
-            if (fontSize) el.style.fontSize = typeof fontSize === 'number' ? `${fontSize}px` : fontSize;
-            if (color) el.style.color = color;
+          
+          const applyStyle = (target) => {
+            if (fontSize) target.style.fontSize = typeof fontSize === 'number' ? `${fontSize}px` : fontSize;
+            if (color) target.style.color = color;
           };
-          // Prefix（前）のコンテナ化
+          
           if (prevs.length > 0) {
             wrap.classList.add('has-prefix');
             const preCont = document.createElement('div');
             preCont.className = 'prefix-container';
-            prevs.forEach(el => { applyStyle(el); preCont.appendChild(el); });
-            wrap.insertBefore(preCont, input);
+            // 変数名のシャドウイングを避けるため p に変更
+            prevs.forEach(p => { applyStyle(p); preCont.appendChild(p); });
+            wrap.insertBefore(preCont, el); // ★ エラー原因修正: input -> el
           }
-          // Suffix（後）のコンテナ化
+          
           if (nexts.length > 0) {
             wrap.classList.add('has-suffix');
             const sufCont = document.createElement('div');
             sufCont.className = 'suffix-container';
-            nexts.forEach(el => { applyStyle(el); sufCont.appendChild(el); });
+            nexts.forEach(n => { applyStyle(n); sufCont.appendChild(n); });
             wrap.appendChild(sufCont);
           }
           wrap.dataset.bound = 'true';
@@ -380,7 +380,13 @@
             icon: el.dataset.addonIcon, prefix: el.dataset.addonPrefix,
             suffix: el.dataset.addonSuffix, color: el.dataset.addonColor
           };
-          const enrichedVal = Array.isArray(val) ? val.map(v => ({ ...v, addon })) : val;
+          
+          // ★ 無駄なマージを防止する安全処理
+          const hasAddon = Object.values(addon).some(v => v);
+          const enrichedVal = (hasAddon && Array.isArray(val)) 
+            ? val.map(v => ({ ...v, addon })) 
+            : val;
+            
           el.innerHTML = Tpl.Form.fields(enrichedVal);
           el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
         }) }

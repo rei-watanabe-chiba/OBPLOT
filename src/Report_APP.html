@@ -778,6 +778,12 @@
           el.setAttribute('step', rng.step);
         }
       });
+      CoreUIPatcher.bindFormAddons(['bd_l', 'bd_t', 'bd_b', 'bd_r', 'p_l', 'p_t', 'p_b', 'p_r'], '14px', 'var(--grey400)', RPT_CFG.rng);
+      CoreUIPatcher.bindFormAddons(['title', 'xLabel', 'yLabel', 'gridRows', 'gridCols', 'rowAspect'], '14px', 'var(--theme-color)', null);
+      CoreUIPatcher.bindFormAddons(['g_name', 'g_tick', 'panelGap', 's_title', 's_name', 's_tick', 's_stats', 'sym_size', 'sym_bw', 'lw_axis', 'lw_grid', 'lw_reg'], '10px', 'var(--grey400)', RPT_CFG.rng);
+      CoreUIPatcher.bindFormAddons(['c_base', 'c_axis', 'c_grid'], '10px', 'var(--grey400)', null);
+
+      // ▼ 動的要素のDOM展開・バインドを実行
       RepoAct.automator.build();
       let fav = null;
       if (typeof window.__INJECTED_FAVORITE__ === 'object' && window.__INJECTED_FAVORITE__ !== null) {
