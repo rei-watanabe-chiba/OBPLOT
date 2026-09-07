@@ -1,46 +1,25 @@
 <!-- src/Report_APP.html -->
 <script>
-// 【重要】初回ロード時の devicePixelRatio を「基準（倍率1）」として固定保持する
-const baseDevicePixelRatio = window.devicePixelRatio || 1;
+  // --- サイドバーロック ---
+  class SIDEFIX {
+    static base = window.devicePixelRatio || 1;
+    static lock() {
+      if (!document.getElementById('fixed-sidebar')) return;
+      const zoom = (window.devicePixelRatio || 1) / SIDEFIX.base;
+      const rootStyle = document.documentElement.style;
+      rootStyle.setProperty('--current-scale', zoom);
+      rootStyle.setProperty('--main-margin', `${320 / zoom}px`);
+      rootStyle.setProperty('--sidebar-height', `${window.innerHeight * zoom}px`);
+    }
+    static init() {
+      ['resize', 'DOMContentLoaded'].forEach(ev => window.addEventListener(ev, () => SIDEFIX.lock()));
+      window.visualViewport?.addEventListener('resize', () => SIDEFIX.lock());
+      SIDEFIX.lock();
+    }
+  }
+  SIDEFIX.init();
 
-function lockSidebarZoom() {
-  const sidebar = document.getElementById('fixed-sidebar');
-  if (!sidebar) return;
-
-  // 現在の devicePixelRatio
-  const currentDPR = window.devicePixelRatio || 1;
-
-  // 初期状態からの相対的なズーム倍率を算出
-  const zoomRatio = currentDPR / baseDevicePixelRatio;
-
-  // CSS変数へ倍率を反映
-  document.documentElement.style.setProperty('--current-scale', zoomRatio);
-  
-  const baseWidth = 320; // サイドバーの物理幅 (px)
-
-  // CSSピクセル空間での実効幅
-  const effectiveWidth = baseWidth / zoomRatio;
-
-  // 【修正】vhではなく現在の画面高（CSS px）× zoomRatio で厳密な高さを算出
-  // これにより scale(1 / zoomRatio) 後に画面高（物理px）と完全一致します
-  const effectiveHeight = window.innerHeight * zoomRatio;
-
-  document.documentElement.style.setProperty('--sidebar-width', `${baseWidth}px`);
-  document.documentElement.style.setProperty('--main-margin', `${effectiveWidth}px`);
-  document.documentElement.style.setProperty('--sidebar-height', `${effectiveHeight}px`);
-}
-
-// 画面のリサイズ・DOM読み込み・ピンチ操作等に追従
-window.addEventListener('resize', lockSidebarZoom);
-window.addEventListener('DOMContentLoaded', lockSidebarZoom);
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', lockSidebarZoom);
-}
-
-// 初回実行
-lockSidebarZoom();
-
-  // --- RptTpl ---
+  // --- UIテンプレート ---
   class RptTpl {
     // --- rowAspectCtrl ---
     static rowAspectCtrl(row, aspect) {
@@ -577,7 +556,6 @@ lockSidebarZoom();
         if (e.data === 'PRINT_READY') {
           const iframe = document.querySelector('iframe.pdf-generator');
           if (iframe) { iframe.contentWindow.print(); iframe.remove(); }
-          CoreAct.toast("完了", "PDFを出力しました。", "success");
           document.querySelector('[data-part="btnOutput_exec"]')?.removeAttribute('disabled');
           State.set("RPTST.ui.exportStatus", "message");
           this.updExportDesc(document.querySelector('input[name="exportType"]:checked'));

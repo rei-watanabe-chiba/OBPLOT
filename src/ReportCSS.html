@@ -58,9 +58,8 @@
       height: var(--sidebar-height, var(--sidebar-base-height));
       top: 0;
       left: 0;
-      box-sizing: border-box; /* パディング・ボーダーを含めて厳密に固定 */
-      transform-origin: top left;
-      transform: scale(calc(1 / var(--current-scale)));
+      box-sizing: border-box;
+      zoom: calc(1 / var(--current-scale));
       background-color: #fff;
       border-right: 1px solid var(--grey200);
       display: flex;
@@ -71,83 +70,14 @@
       flex-shrink: 0;
       position: fixed; 
       z-index: 20;
-      -webkit-text-size-adjust: none !important;
       text-size-adjust: none !important;
-    }
-    /* 【追加】内部要素すべての文字自動拡大を禁止し、行高のブレを抑える */
-    .dash-sidebar * {
-      -webkit-text-size-adjust: none !important;
-      text-size-adjust: none !important;
-      box-sizing: border-box;
-    }
-
-    /* 【追加】ズーム時の極太スクロールバーによる横幅圧迫を防止 */
-    .dash-sidebar::-webkit-scrollbar {
-      width: 6px;
-    }
-    .dash-sidebar::-webkit-scrollbar-thumb {
-      background-color: var(--grey300, #ccc);
-      border-radius: 3px;
-    }
-    /* 1. セレクトボックス: ネイティブ矢印を無効化し、CSSベクター矢印に置換 */
-    .dash-sidebar select,
-    .dash-sidebar select.form-control,
-    .dash-sidebar [data-ui="mselect"] select {
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      appearance: none !important;
-      /* シャープなベクター下矢印SVGを背景として描画 */
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
-      background-repeat: no-repeat !important;
-      background-position: right 8px center !important;
-      background-size: 14px 14px !important;
-      padding-right: 26px !important;
-      cursor: pointer;
-    }
-    .dash-sidebar select::-ms-expand {
-      display: none !important;
-    }
-
-    /* 2. 数値入力欄: スピンボタン（上下矢印）の巨大化防止 */
-    .dash-sidebar input[type="number"]::-webkit-inner-spin-button,
-    .dash-sidebar input[type="number"]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    .dash-sidebar input[type="number"] {
-      -moz-appearance: textfield;
-    }
-
-    /* 3. レンジスライダー: つまみ（Thumb）のサイズを固定し巨大化/極小化を防止 */
-    .dash-sidebar input[type="range"] {
-      -webkit-appearance: none;
-      appearance: none;
-      background: var(--grey200, #e0e0e0);
-      height: 4px;
-      border-radius: 2px;
-      outline: none;
-    }
-    .dash-sidebar input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--theme-color, #107c41);
-      cursor: pointer;
-    }
-    .dash-sidebar input[type="range"]::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--theme-color, #107c41);
-      border: none;
-      cursor: pointer;
     }
     .floating-card {
-      position: absolute;
-      top: 24px;
-      left: 24px;
+      position: fixed;
+      top: 12px;
+      left: calc(var(--sidebar-base-width) + 12px);
+      zoom: calc(1 / var(--current-scale));
+      text-size-adjust: none !important;
       background-color: #fff;
       border: 1px solid var(--grey200);
       border-radius: 8px;
