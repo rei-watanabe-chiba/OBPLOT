@@ -96,8 +96,3 @@ CoreUIPatcher.bindFormAddons(
   null           // 単位の外部参照オブジェクト
 );
 ```
-```
-
-```
-
-```
