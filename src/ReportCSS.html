@@ -432,7 +432,7 @@
     .row-aspect-ctrl { display: none !important; }  
   }
 
-  /* --- form-addon装飾（HTML主導で任意のクラスに置換可能） --- */
+  /* --- form-addon装飾 (設計仕様準拠) --- */
   .form-addon {
     position: relative;
     display: flex;
@@ -443,7 +443,9 @@
     width: 100%;
     box-sizing: border-box;
   }
-  .addon-prefix, .addon-suffix {
+  
+  /* ★ クラス名を .prefix-container / .suffix-container へ変更 */
+  .prefix-container, .suffix-container { 
     position: absolute;
     display: flex;
     align-items: center;
@@ -456,10 +458,11 @@
     font-family: sans-serif;
     font-size: 0.8em;
   }
-  .addon-prefix { left: 8px; }
-  .addon-suffix { right: 8px; }
-  .addon-prefix .material-symbols-outlined, 
-  .addon-suffix .material-symbols-outlined {
+  .prefix-container { left: 8px; }
+  .suffix-container { right: 8px; }
+  
+  .prefix-container .material-symbols-outlined, 
+  .suffix-container .material-symbols-outlined {
     font-size: 1.2em; 
     font-weight: 500;
   }

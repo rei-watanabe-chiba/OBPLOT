@@ -127,18 +127,24 @@
       }
     }
 
-    static patchMSelectRefs(el, vals) {
+    static patchMSelectOpts(el, arr) {
       CoreUIPatcher.ensureMSelectInit(el);
-      const sum = el.querySelector('[data-part="popover-summary"], .popover-summary');
-      if (sum) {
-        sum.innerHTML = vals?.length
-          ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>`
-          : '<span style="color:var(--grey400)">未選択</span>';
+      const cntr = el.querySelector('[data-part="popover-content"], .popover-content');
+      if (!cntr) return;
+      if (!arr?.length) {
+        cntr.innerHTML = '<div class="txt-btninfo">データなし</div>';
+        return;
       }
-      const cbs = el.querySelectorAll('.dataset-cb');
-      cbs.forEach(cb => { cb.checked = Array.isArray(vals) && vals.includes(cb.value); });
-      const allCb = el.querySelector('.select-all-cb');
-      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
+      const actAll = el.dataset.actionAll; // ★ change-all から変更
+      const actItem = el.dataset.actionItem; // ★ change-item から変更
+      cntr.innerHTML = (actAll ? Tpl.MultiSelect.selectAll(actAll) : '') +
+        arr.map(item => Tpl.MultiSelect.item(item, actItem)).join('');
+      
+      const bindPath = el.dataset.bind || (el.dataset.patch ? CoreUIPatcher.routOptions(el.dataset.patch).bind : null);
+      if (bindPath) {
+        const vals = State.get(bindPath);
+        if (vals !== undefined) CoreUIPatcher.patchMSelectRefs(el, vals);
+      }
     }
 
     static patchMSelectOpts(el, arr) {
@@ -200,8 +206,15 @@
     }
 
     static patchOpts(el, val) {
-      if (el.dataset.ui === 'mselect' || el.tagName === 'UI-MSELECT') CoreUIPatcher.patchMSelectOpts(el, val);
-      else el.opts = val;
+      if (el.dataset.ui === 'mselect' || el.tagName === 'UI-MSELECT') {
+        CoreUIPatcher.patchMSelectOpts(el, val);
+      } else if (el.tagName === 'SELECT') {
+        // ★追加: selectタグの場合はoptionのみを動的生成する
+        const hasEmpty = el.dataset.hasEmpty === 'true';
+        el.innerHTML = Tpl.Form.options(val, hasEmpty);
+      } else {
+        el.opts = val;
+      }
     }
 
     static patchSrc(el, val) {
@@ -287,48 +300,101 @@
         }
       }
     }
+    // --- [routOptions] オプション文字列パース ---
+    static routOptions(optStr) {
+      if (!optStr) return {};
+      return optStr.split(';').reduce((a, pair) => {
+        const idx = pair.indexOf(':');
+        if (idx > -1) a[pair.substring(0, idx).trim()] = pair.substring(idx + 1).trim();
+        return a;
+      }, {});
+    }
 
-    // --- 装飾付きフォーム設定 ---
-    static decorateAddon(wrap, conf) {
-      if (wrap.dataset.bound === 'true') return;
-      const { icon, prefix, suffix, color, size } = conf;
-      if (!icon && !prefix && !suffix) { wrap.dataset.bound = 'true'; return; }
-      // 明示的な指定がある場合のみスタイル文字列を生成（なければ空文字列）
-      const styleAttr = (c, s) => {
-        const styles = [];
-        if (c) styles.push(`color:${c}`);
-        if (s) styles.push(`font-size:${typeof s === 'number' ? `${s}px` : s}`);
-        return styles.length ? ` style="${styles.join(';')}"` : '';
-      };
-      const inlineStyle = styleAttr(color, size);
+    // --- [routBuilder] UI初期構築ルーター (修正) ---
+    static routBuilder(el) {
+      if (el.__uiBound) return;
+      const type = el.dataset.ui;
+      const opts = this.routOptions(el.dataset.opts);
+      
+      if (type === 'dlg') this.initDlg(el);
+      else if (type === 'mselect') this.ensureMSelectInit(el);
+      else if (type === 'addon') this.buildAddon(el, opts); // ★追加: 新ルール用
+      
+      el.__uiBound = true;
+    }
+
+    // --- [routPatch] 動的パッチ処理ルーター ---
+    static routPatch(el, patchStr, getValFn) {
+      if (!patchStr || el.__patchBound) return;
+      el.__patchBound = true;
+      const config = this.routOptions(patchStr);
+
+      Object.entries(config).forEach(([type, path]) => {
+        const applyFn = (val) => {
+          if (val === undefined) return;
+          if (type === 'status') this.patchStatus(el, val);
+          else if (type === 'opts') this.patchOpts(el, val);
+          else if (type === 'src') this.patchSrc(el, val);
+          else if (type === 'stats') el.innerHTML = Tpl.Stats.gen(val);
+          else if (type === 'errs') this.patchErrs(el, val);
+          else if (type === 'invalid') {
+            if (val) el.setAttribute('aria-invalid', 'true');
+            else el.removeAttribute('aria-invalid');
+          }
+          else if (type === 'fields') {
+            el.innerHTML = Tpl.Form.fields(val); // 後方互換用
+          }
+          else if (type === 'bind') this.patchElementVal(el, val);
+        };
+        State.subscribe(path, applyFn);
+        applyFn(getValFn(path));
+      });
+    }
+
+    // --- [buildAddon] 装飾DOM直接付与 (旧 decorateAddon) ---
+    static buildAddon(wrap, opts) {
+      // 既にバインド済みの場合はスキップ
+      if (wrap.dataset.optsBound === 'true') return;
+      
+      const { icon, prefix, suffix, color, size } = opts;
+      if (!icon && !prefix && !suffix) { wrap.dataset.optsBound = 'true'; return; }
+      
+      const styles = [];
+      if (color) styles.push(`color:${color}`);
+      if (size) styles.push(`font-size:${typeof size === 'number' ? `${size}px` : size}`);
+      const styleAttr = styles.length ? ` style="${styles.join(';')}"` : '';
+
       if (icon || prefix) {
         wrap.classList.add('has-prefix');
         let preInner = '';
-        if (icon) preInner += `<span class="material-symbols-outlined"${inlineStyle}>${icon}</span>`;
-        if (prefix) preInner += `<span${inlineStyle}>${prefix}</span>`;
-        wrap.insertAdjacentHTML('afterbegin', `<span class="addon-prefix">${preInner}</span>`);
+        if (icon) preInner += `<span class="material-symbols-outlined"${styleAttr}>${icon}</span>`;
+        if (prefix) preInner += `<span${styleAttr}>${prefix}</span>`;
+        // 設計書準拠: .prefix-container へ変更
+        wrap.insertAdjacentHTML('afterbegin', `<span class="prefix-container">${preInner}</span>`);
       }
       if (suffix) {
         wrap.classList.add('has-suffix');
-        wrap.insertAdjacentHTML('beforeend', `<span class="addon-suffix"${inlineStyle}>${suffix}</span>`);
+        // 設計書準拠: .suffix-container へ変更
+        wrap.insertAdjacentHTML('beforeend', `<span class="suffix-container"${styleAttr}>${suffix}</span>`);
       }
-      wrap.dataset.bound = 'true';
+      wrap.dataset.optsBound = 'true';
     }
 
-    // --- 静的装飾付きフォームバインド ---
+    // --- [後方互換] 静的装飾付きフォームバインド ---
     static applyStaticAddons(configObj = null) {
-      document.querySelectorAll('.form-addon:not([data-bound])').forEach(wrap => {
-        if (wrap.closest('[data-bind-fields]')) return; // 動的要素は除外
+      // ※ここはStep 3のHTML書き換え後に消滅しますが、一旦既存HTMLのために残します
+      document.querySelectorAll('.form-addon:not([data-opts-bound])').forEach(wrap => {
+        if (wrap.closest('[data-bind-fields]')) return; 
         const ctrl = wrap.querySelector('input, select');
         if (!ctrl) return;
         let suffix = wrap.dataset.addonSuffix;
         if (!suffix && configObj?.[ctrl.name]?.unit) {
           suffix = configObj[ctrl.name].unit;
         }
-        this.decorateAddon(wrap, {
+        this.buildAddon(wrap, { // 名前を decorateAddon -> buildAddon へ変更
           icon: wrap.dataset.addonIcon,
           prefix: wrap.dataset.addonPrefix,
-          suffix: wrap.dataset.addonSuffix,
+          suffix: suffix,
           color: wrap.dataset.addoptColor,
           size: wrap.dataset.addoptSize
         });
@@ -349,16 +415,21 @@
     build() {
       this.update();
 
-      // --- UIDlg パッチャー ---
+      // [旧処理維持] 後で消去
       document.querySelectorAll('[data-ui="dlg"]').forEach(cntr => CoreUIPatcher.initDlg(cntr));
-
-      // --- UIMSelect 初期化 ---
       document.querySelectorAll('[data-ui="mselect"]').forEach(el => CoreUIPatcher.ensureMSelectInit(el));
+
+      // [新処理] data-ui ビルダー
+      document.querySelectorAll('[data-ui]').forEach(el => CoreUIPatcher.routBuilder(el));
 
       // --- <form data-bind-ctx> の自動バインド ---
       document.querySelectorAll('form[data-bind-ctx]').forEach(form => CoreUIPatcher.bindFormCtx(form));
 
-      // --- Binder Factory (高階関数) ---
+      // [新処理] data-patch ルーター
+      const getVal = (path) => this.getVal(path);
+      document.querySelectorAll('[data-patch]').forEach(el => CoreUIPatcher.routPatch(el, el.dataset.patch, getVal));
+
+      // [旧処理維持] --- Binder Factory (高階関数) --- 
       const binder = (patchFn) => CoreUIPatcher.makeBinder(patchFn, path => this.getVal(path));
       const bindElement = binder(CoreUIPatcher.patchElementVal);
 
@@ -392,7 +463,7 @@
                 wrap.className = 'form-addon';
                 child.parentNode.insertBefore(wrap, child);
                 wrap.appendChild(child); // ラベルを含めず純粋にinputのみラップ
-                CoreUIPatcher.decorateAddon(wrap, conf);
+                CoreUIPatcher.buildAddon(wrap, conf);
               }
             });
           }

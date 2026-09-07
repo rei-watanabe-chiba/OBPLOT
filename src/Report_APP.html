@@ -106,16 +106,11 @@
       const optValLgc = [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v }));
       State.set({
         "RPTST.ui.optFields": {
-          crctFields: [{ type: "select", bind: "RPTST.dataset.crct", hasEmpty: false, opts: optsCorr }],
-          fontEngFields: [{ type: "select", bind: "RPTST.config.theme.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({ label: v, val: v })) }],
-          fontJpFields: [{ type: "select", bind: "RPTST.config.theme.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({ label: v, val: v })) }],
-          calbValFields: [{ type: "select", name: "calbVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }], // name属性指定
-          clusXFields: [{ type: "select", name: "clusXVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }], // name属性指定
-          clusYFields: [{ type: "select", name: "clusYVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }], // name属性指定
-          tickUnitFields: [{ type: "select", name: "tickUnit", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnit", opts: [{ label: "自動", val: "" }] }],
-          clusTickXFields: [{ type: "select", name: "tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: [{ label: "自動", val: "" }] }],
-          clusTickYFields: [{ type: "select", name: "tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: [{ label: "自動", val: "" }] }],
-          axisFields: [{ type: "select", bind: "RPTST.config.symbology.baseKey", change: "RepoAct.valdSymbAxis", hasEmpty: false, opts: GLB.symbAxes }],
+          crctOpts: optsCorr,
+          fontEngOpts: GLB.fontEngList.map(v => ({ label: v, val: v })),
+          fontJpOpts: GLB.fontJpList.map(v => ({ label: v, val: v })),
+          valLgcOpts: optValLgc,
+          axisOpts: GLB.symbAxes,
           filterDBOpts: optsDB, filterItemOpts: optsItem, filterGroupOpts: optsGroup, calElmsOpts: GLB.valElms
         }
       });
@@ -185,11 +180,11 @@
       ensureOpt(tickYOpts, panel?.tickUnitY);
       State.set({
         "RPTST.ui.activePanelScaleMode": panel?.scaleMode || "auto",
-        "RPTST.ui.optFields.tickUnitFields": [{ type: "select", name: "tickUnit", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnit", opts: tickOpts }], // name属性指定
-        "RPTST.ui.optFields.clusTickXFields": [{ type: "select", name: "tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: tickXOpts }], // name属性指定
-        "RPTST.ui.optFields.clusTickYFields": [{ type: "select", name: "tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: tickYOpts }]  // name属性指定
+        "RPTST.ui.optFields.tickOpts": tickOpts,
+        "RPTST.ui.optFields.tickXOpts": tickXOpts,
+        "RPTST.ui.optFields.tickYOpts": tickYOpts
       });
-      this.finalizePanel(); // フォーム再同期を実行
+      this.finalizePanel();
     }
   }
 
@@ -199,7 +194,7 @@
     static oldSymbAxis = GLB.symbBaseKey;
     // --- setBoardMode ---
     static setBoardMode(btn, arg) {
-      const mode = arg || btn?.dataset?.arg || btn?.dataset?.target || 'calib';
+      const mode = arg || btn?.dataset?.param || btn?.dataset?.arg || btn?.dataset?.target || 'calib';
       if (State.get("RPTST.config.boardMode") === mode) return;
       document.body.setAttribute('data-board-mode', mode);
       State.set({
@@ -217,8 +212,7 @@
     // --- changePanelRef ---
     static changePanelRef(tgt) {
       const key = tgt.dataset.apKey || tgt.dataset.field || tgt.name || tgt.dataset.bind?.split('.').pop();
-      const val = tgt.value ?? tgt.dataset.arg ?? tgt.dataset.target;
-      const { panel, panels, boardMode } = RepoSt.getSt();
+      const val = tgt.value ?? tgt.dataset.param ?? tgt.dataset.arg ?? tgt.dataset.target;const { panel, panels, boardMode } = RepoSt.getSt();
       if (!panel) return;
       panel[key] = ['tickUnit', 'tickUnitX', 'tickUnitY'].includes(key) ? (val === "" || isNaN(Number(val)) ? null : Number(val)) : val;
       if (key === 'scaleMode') {
@@ -277,7 +271,7 @@
     }
     // --- setActiveScaleMode ---
     static setActiveScaleMode(btn, arg) {
-      const mode = arg || btn?.dataset?.arg;
+      const mode = arg || btn?.dataset?.param || btn?.dataset?.arg;
       if (!mode) return;
       const { panel, panels } = RepoSt.getSt();
       if (panel) {
@@ -299,9 +293,9 @@
       State.set("RPTST.config.layout", lyt);
     }
     // --- actvTab ---
-    static actvTab(btn, arg) { State.set("RPTST.ui.activeTab", arg || btn.dataset.arg || btn.dataset.tab); }
+    static actvTab(btn, arg) { State.set("RPTST.ui.activeTab", arg || btn.dataset.param || btn.dataset.arg || btn.dataset.tab); }
     // --- actvSub ---
-    static actvSub(btn, arg) { State.set("RPTST.ui.activeSub", arg || btn.dataset.arg || btn.dataset.target); }
+    static actvSub(btn, arg) { State.set("RPTST.ui.activeSub", arg || btn.dataset.param || btn.dataset.arg || btn.dataset.target); }
     // --- actvPanel ---
     static actvPanel(btn) { State.set("RPTST.ui.activePanelId", btn.dataset.panelId); }
     // --- updExportDesc ---
@@ -691,8 +685,9 @@
     // --- setup ---
     static setup() {
       const syncAria = (sel, attr, val) => document.querySelectorAll(sel).forEach(el => el.setAttribute('aria-selected', el.dataset[attr] === val ? 'true' : 'false'));
-      State.subscribe('RPTST.ui.activeTab', v => { syncAria('[data-part="tab-icon"]', 'arg', v); syncAria('[data-part="tab-pane"]', 'tab', v); });
-      State.subscribe('RPTST.ui.activeSub', v => syncAria('[data-part="sub-pane"]', 'sub', v));
+      // ★ 同期基準を param へ統一
+      State.subscribe('RPTST.ui.activeTab', v => { syncAria('[data-part="tab-icon"]', 'param', v); syncAria('[data-part="tab-pane"]', 'param', v); });
+      State.subscribe('RPTST.ui.activeSub', v => syncAria('[data-part="sub-pane"]', 'param', v));
       State.subscribe('RPTST.ui.activePanelId', v => syncAria('[data-panel-id]', 'panelId', v));
       State.subscribe(['RPTST.config.layout', 'RPTST.config.layout.gridRows', 'RPTST.config.layout.gridCols', 'RPTST.config.layout.panelGap', 'RPTST.config.layout.rowAspect'], () => this.debounce('layout', st => RepoRend.syncPanelDom(st))); // layout再計算
       State.subscribe('RPTST.config.boardMode', () => this.debounce('boardMode', st => { RepoSt.updateBaseScales(st, 'metric'); RepoSt.update(); RepoSt.renewPanel(st); }));

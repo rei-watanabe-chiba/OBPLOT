@@ -145,40 +145,62 @@
       const cfg = this.cfgRslv ? this.cfgRslv(tabId) : {};
       this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks, cfg);
     }
+    // --- [routEvent] 中央イベントルーター ---
     static rootGLB(actionClasses = {}) {
-      document.addEventListener("click", e => {
-        const btn = e.target.closest('[data-action]');
-        if (!btn || btn.disabled) return;
-        const [ns, method] = btn.dataset.action.split('.');
-        const arg = btn.dataset.arg || btn.dataset.target;
-        if (actionClasses[ns]?.[method]) actionClasses[ns][method](btn, arg);
-        else if (window[ns]?.[method]) window[ns][method](btn, arg);
-      });
-      const handleInput = e => {
-        const tgt = e.target.closest('[data-bind], [data-change], form[data-bind-ctx] input, form[data-bind-ctx] select, form[data-bind-ctx] textarea') || e.target;
-        if (!tgt) return;
+      const routEvent = (e) => {
+        const tgt = e.target.closest('[data-action], [data-bind], [data-change], form[data-bind-ctx] input, form[data-bind-ctx] select, form[data-bind-ctx] textarea') || e.target;
+        if (!tgt || tgt.disabled) return;
+
+        const tag = tgt.tagName;
+        const type = tgt.type;
+        const isClick = e.type === 'click';
+        const isInput = e.type === 'input';
+        const isChange = e.type === 'change';
+        const isLiveInput = isInput && ['INPUT', 'TEXTAREA'].includes(tag) && !['checkbox', 'radio'].includes(type);
         const formCtx = tgt.closest('form[data-bind-ctx]');
+
+        // --- Action発火処理 ---
+        const actionStr = tgt.dataset.action;
+        if (actionStr) {
+          // ボタン等のclick、またはInput等のchangeで発火を自動判定
+          const isBtnClick = isClick && !['INPUT', 'SELECT', 'TEXTAREA'].includes(tag);
+          const isValChange = (isChange || isLiveInput) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(tag);
+          
+          if (isBtnClick || isValChange) {
+            const [ns, method] = actionStr.split('.');
+            // data-param優先、後方互換でarg等も許容
+            const param = tgt.dataset.param ?? tgt.dataset.arg ?? tgt.dataset.target; 
+            const subParam = tgt.dataset.subParam;
+            
+            if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt, param, subParam);
+            else if (window[ns]?.[method]) window[ns][method](tgt, param, subParam);
+          }
+        }
+
+        // --- Bind/Change 処理 (後方互換維持) ---
         const bindPath = tgt.dataset.bind || (formCtx && tgt.name ? `${CoreUIPatcher.resolveBindCtx(formCtx.dataset.bindCtx)}.${tgt.name}` : null);
         const changePath = tgt.dataset.change || formCtx?.dataset?.change;
-        const isLiveInput = e.type === 'input' && ['INPUT', 'TEXTAREA'].includes(tgt.tagName) && !['checkbox', 'radio'].includes(tgt.type);
-        const isChange = e.type === 'change';
+
         if (bindPath && (isLiveInput || isChange)) {
-          let val = tgt.type === "checkbox" ? tgt.checked : (['number', 'range'].includes(tgt.type) ? (tgt.value === '' ? '' : Number(tgt.value)) : tgt.value);
-          if (['number', 'range'].includes(tgt.type) && typeof val === 'number') {
+          let val = type === "checkbox" ? tgt.checked : (['number', 'range'].includes(type) ? (tgt.value === '' ? '' : Number(tgt.value)) : tgt.value);
+          if (['number', 'range'].includes(type) && typeof val === 'number') {
             if (tgt.hasAttribute('min') && val < Number(tgt.getAttribute('min'))) val = Number(tgt.getAttribute('min'));
             if (tgt.hasAttribute('max') && val > Number(tgt.getAttribute('max'))) val = Number(tgt.getAttribute('max'));
             tgt.value = val;
           }
           State.set(bindPath, val);
         }
+
         if (changePath && (isLiveInput || isChange)) {
           const [ns, method] = changePath.split('.');
           if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt, formCtx);
           else if (window[ns]?.[method]) window[ns][method](tgt, formCtx);
         }
       };
-      document.addEventListener("change", handleInput);
-      document.addEventListener("input", handleInput);
+
+      document.addEventListener("click", routEvent);
+      document.addEventListener("change", routEvent);
+      document.addEventListener("input", routEvent);
     }
     static tglMulti(tgt) {
       const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');

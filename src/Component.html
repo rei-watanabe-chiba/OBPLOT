@@ -76,8 +76,9 @@
       }
     };
     static MultiSelect = class {
-      static item(val, dataChange) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-change="${dataChange}" checked><span class="cb-text">${val}</span></label>`; }
-      static selectAll(dataChange) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-change="${dataChange}" checked><span>すべて選択</span></label>`; }
+      // ★ data-change を data-action へ統一
+      static item(val, actName) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-action="${actName}" checked><span class="cb-text">${val}</span></label>`; }
+      static selectAll(actName) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-action="${actName}" checked><span>すべて選択</span></label>`; }
     };
     static Elements = class {
       static btn(text, action, cls = '', attrs = '') {
