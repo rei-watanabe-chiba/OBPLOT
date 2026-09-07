@@ -66,11 +66,12 @@
         rows: favList.map(name => ({ name })),
         cols: [
           { key: 'name', className: 'fav-col-name', render: name => `<span style="user-select:none;">${name}</span>` },
-          { key: 'name', className: 'fav-col-btn', render: name => Tpl.Elements.iconBtn('×', 'DashAct.delFavItem', name, false, 'icon-btn', `data-name="${name}" title="削除"`) }
+          { key: 'name', className: 'fav-col-btn', render: name => Tpl.Elements.iconBtn('×', 'DashAct.delFavItem', name, false, 'icon-btn', `data-param="${name}" title="削除"`) }
         ],
         rowClass: 'table-row',
         rowAttrsFn: (r) => {
-          let attrs = `data-action="DashAct.selectFavItem" data-name="${r.name}"`;
+          // ★ data-name を data-param へ統一
+          let attrs = `data-action="DashAct.selectFavItem" data-param="${r.name}"`;
           if (r.name === selectedFav) attrs += ' aria-selected="true"';
           if (r.name === overwriteTarget) attrs += ' aria-invalid="true"';
           if (r.name === successTarget) attrs += ' data-state="success"';
@@ -80,9 +81,10 @@
       });
     }
 
-    static selectFavItem(tgt) {
-      const name = tgt.dataset.name;
+    static selectFavItem(tgt, param) {
+      const name = param || tgt.dataset.param || tgt.dataset.name;
       if (!name) return;
+      // (以降変更なし)
       const cur = State.get("DashST.REPO.refs.selectedFav");
       if (cur === name) {
         State.set({
@@ -205,9 +207,10 @@
       });
     }
 
-    static async delFavItem(tgt) {
-      const name = tgt.dataset.name || tgt.dataset.key;
+    static async delFavItem(tgt, param) {
+      const name = param || tgt.dataset.param || tgt.dataset.name || tgt.dataset.key;
       if (!name) return;
+      // (以降変更なし)
       const ok = await CoreAct.confirm("確認", `設定「${name}」を削除しますか？`);
       if (!ok) return;
 

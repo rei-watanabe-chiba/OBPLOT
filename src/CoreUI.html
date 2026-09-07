@@ -127,6 +127,22 @@
       }
     }
 
+    // --- [復活] マルチセレクトの選択状態(チェックボックス)を反映 ---
+    static patchMSelectRefs(el, vals) {
+      CoreUIPatcher.ensureMSelectInit(el);
+      const sum = el.querySelector('[data-part="popover-summary"], .popover-summary');
+      if (sum) {
+        sum.innerHTML = vals?.length
+          ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>`
+          : '<span style="color:var(--grey400)">未選択</span>';
+      }
+      const cbs = el.querySelectorAll('.dataset-cb');
+      cbs.forEach(cb => { cb.checked = Array.isArray(vals) && vals.includes(cb.value); });
+      const allCb = el.querySelector('.select-all-cb');
+      if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
+    }
+
+    // --- [修正版] マルチセレクトの選択肢(Option)を生成 ---
     static patchMSelectOpts(el, arr) {
       CoreUIPatcher.ensureMSelectInit(el);
       const cntr = el.querySelector('[data-part="popover-content"], .popover-content');
@@ -135,32 +151,14 @@
         cntr.innerHTML = '<div class="txt-btninfo">データなし</div>';
         return;
       }
-      const actAll = el.dataset.actionAll; // ★ change-all から変更
-      const actItem = el.dataset.actionItem; // ★ change-item から変更
+      const actAll = el.dataset.actionAll; 
+      const actItem = el.dataset.actionItem; 
       cntr.innerHTML = (actAll ? Tpl.MultiSelect.selectAll(actAll) : '') +
         arr.map(item => Tpl.MultiSelect.item(item, actItem)).join('');
       
       const bindPath = el.dataset.bind || (el.dataset.patch ? CoreUIPatcher.routOptions(el.dataset.patch).bind : null);
       if (bindPath) {
         const vals = State.get(bindPath);
-        if (vals !== undefined) CoreUIPatcher.patchMSelectRefs(el, vals);
-      }
-    }
-
-    static patchMSelectOpts(el, arr) {
-      CoreUIPatcher.ensureMSelectInit(el);
-      const cntr = el.querySelector('[data-part="popover-content"], .popover-content');
-      if (!cntr) return;
-      if (!arr?.length) {
-        cntr.innerHTML = '<div class="txt-btninfo">データなし</div>';
-        return;
-      }
-      const changeAll = el.dataset.changeAll;
-      const changeItem = el.dataset.changeItem;
-      cntr.innerHTML = (changeAll ? Tpl.MultiSelect.selectAll(changeAll) : '') +
-        arr.map(item => Tpl.MultiSelect.item(item, changeItem)).join('');
-      if (el.dataset.bind) {
-        const vals = State.get(el.dataset.bind);
         if (vals !== undefined) CoreUIPatcher.patchMSelectRefs(el, vals);
       }
     }
@@ -181,7 +179,8 @@
         CoreUIPatcher.patchMSelectRefs(el, val);
       } else if (el.dataset.ui === 'segment') {
         el.querySelectorAll('.segment-btn').forEach(btn => {
-          const targetVal = btn.dataset.arg || btn.dataset.target;
+          // ★ data-param を取得対象に追加
+          const targetVal = btn.dataset.param || btn.dataset.arg || btn.dataset.target;
           if (targetVal === String(val)) {
             btn.setAttribute('aria-selected', 'true');
           } else {

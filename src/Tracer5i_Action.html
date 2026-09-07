@@ -172,8 +172,8 @@
       }
     }
     static addSymb() { State.set("ADPST.SYMB.refs.rls", [...(State.get("ADPST.SYMB.refs.rls") ?? []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
-    static removeSymb(tgtBtn) {
-      const key = tgtBtn.dataset.ruleKey;
+    static removeSymb(tgtBtn, param) {
+      const key = param || tgtBtn.dataset.param || tgtBtn.dataset.ruleKey;
       if (key) State.set("ADPST.SYMB.refs.rls", (State.get("ADPST.SYMB.refs.rls") ?? []).filter(r => r.key !== key));
     }
     static updSymb(tgtBtn) {

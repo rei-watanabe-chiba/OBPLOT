@@ -22,7 +22,8 @@
       </form>
     </dialog>
     <nav class="nav-tabs" data-part="nav">
-      <button class="tab-btn" data-part="tab-btn" aria-selected="true" data-action="CoreAct.switchTab" data-arg="dash">ダッシュボード</button>
+      <!-- data-arg を data-param へ変更 -->
+      <button class="tab-btn" data-part="tab-btn" aria-selected="true" data-action="CoreAct.switchTab" data-param="dash">ダッシュボード</button>
     </nav>
     <main class="scroll-y">
       <div data-part="tab-content" data-tab="dash" class="tab-content" aria-hidden="false" data-state="active">
@@ -34,26 +35,29 @@
               <button data-part="btnINST_load" data-action="DashAct.requestLoadDB" data-type="primary">データを読込</button>
             </div>
           </details>
-          <div data-part="barINST" class="status-bar" data-status="hidden" data-bind-status="DashST.INST.status"></div>
+          <!-- data-bind-status を data-patch へ変更 -->
+          <div data-part="barINST" class="status-bar" data-status="hidden" data-patch="status: DashST.INST.status"></div>
           <hr>
           <details data-part="secREPO">
             <summary>ダッシュボード作成</summary>
             <label>ユーザー設定選択</label>
             <div class="field-row" style="margin-top: var(--unit)">
               <div class="fav-table-cntr scroll-y">
-                <div data-part="tblFAV" data-ui="table" data-bind-src="DashST.REPO.data.favTableSrc"></div>
+                <!-- data-bind-src を data-patch へ変更 -->
+                <div data-part="tblFAV" data-ui="table" data-patch="src: DashST.REPO.data.favTableSrc"></div>
               </div>
             </div>
             <label>設定JSON登録</label>
             <div class="field-row" style="margin-top: var(--unit)">
-              <input type="text" data-part="iptFAV_name" placeholder="設定名を入力" data-bind="DashST.REPO.refs.favInputName" data-bind-invalid="DashST.REPO.data.favInputInvalid" data-change="DashAct.onFavNameChange">
-              <button data-part="btnFAV_save" data-action="DashAct.addFavFromClipboard" data-type="primary" class="outline" style="flex: 0.5;" data-bind="DashST.REPO.data.favBtnText">新規登録</button>
+              <!-- data-bind, data-bind-invalid, data-change を data-patch と data-action へ統合 -->
+              <input type="text" data-part="iptFAV_name" placeholder="設定名を入力" data-patch="bind: DashST.REPO.refs.favInputName; invalid: DashST.REPO.data.favInputInvalid" data-action="DashAct.onFavNameChange">
+              <button data-part="btnFAV_save" data-action="DashAct.addFavFromClipboard" data-type="primary" class="outline" style="flex: 0.5;" data-patch="bind: DashST.REPO.data.favBtnText">新規登録</button>
             </div>
             <div class="field-row">
               <button data-part="btnREPO_open" data-action="DashAct.requestOpenRepo" data-type="primary">ダッシュボードを展開</button>
             </div>
           </details>
-          <div data-part="barREPO" class="status-bar" data-status="hidden" data-bind-status="DashST.REPO.status"></div>
+          <div data-part="barREPO" class="status-bar" data-status="hidden" data-patch="status: DashST.REPO.status"></div>
           <div style="flex-grow: 1; min-height: calc(var(--unit) * 2);"></div>
         </fieldset>
       </div>

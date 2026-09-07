@@ -205,7 +205,10 @@
     static tglMulti(tgt) {
       const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');
       if (!cntr) return;
-      const statePath = cntr.dataset.bind;
+      
+      // ★ data-patch から bind パスを抽出するロジックを追加
+      const statePath = cntr.dataset.bind || (cntr.dataset.patch ? CoreUIPatcher.routOptions(cntr.dataset.patch).bind : null);
+      
       const itemCbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
       if (allCb) allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
       if (statePath) State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
@@ -213,7 +216,10 @@
     static tglAllMulti(tgt) {
       const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');
       if (!cntr) return;
-      const statePath = cntr.dataset.bind;
+      
+      // ★ data-patch から bind パスを抽出するロジックを追加
+      const statePath = cntr.dataset.bind || (cntr.dataset.patch ? CoreUIPatcher.routOptions(cntr.dataset.patch).bind : null);
+      
       const itemCbs = cntr.querySelectorAll('.dataset-cb');
       itemCbs.forEach(cb => cb.checked = tgt.checked);
       if (statePath) State.set(statePath, tgt.checked ? [...itemCbs].map(cb => cb.value) : []);
