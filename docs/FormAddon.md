@@ -95,7 +95,7 @@ CoreUIPatcher.bindFormAddons(
   'var(--theme-color)', // color指定
   null           // 単位の外部参照オブジェクト
 );
-
+```
 ```
 
 ```
