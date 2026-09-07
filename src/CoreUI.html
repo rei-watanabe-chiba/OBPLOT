@@ -288,51 +288,44 @@
       }
     }
 
-    // --- bindInputWraps ---
-    static bindFormAddons(nameList, fontSize, color, configObj = null) {
-      if (!Array.isArray(nameList)) return;
-      nameList.forEach(name => {
-        document.querySelectorAll(`input[name="${name}"], select[name="${name}"]`).forEach(el => {
-          const wrap = el.closest('.form-addon');
-          if (!wrap || wrap.dataset.bound === 'true') return;
-          
-          const prevs = [], nexts = [];
-          let curr = el.previousElementSibling;
-          while (curr) { prevs.unshift(curr); curr = curr.previousElementSibling; }
-          curr = el.nextElementSibling;
-          while (curr) { nexts.push(curr); curr = curr.nextElementSibling; }
-          
-          if (nexts.length === 0 && configObj?.[name]?.unit) {
-            const u = document.createElement('span');
-            u.className = 'input-unit';
-            u.textContent = configObj[name].unit;
-            wrap.appendChild(u);
-            nexts.push(u);
-          }
-          
-          const applyStyle = (target) => {
-            if (fontSize) target.style.fontSize = typeof fontSize === 'number' ? `${fontSize}px` : fontSize;
-            if (color) target.style.color = color;
-          };
-          
-          if (prevs.length > 0) {
-            wrap.classList.add('has-prefix');
-            const preCont = document.createElement('div');
-            preCont.className = 'prefix-container';
-            // 変数名のシャドウイングを避けるため p に変更
-            prevs.forEach(p => { applyStyle(p); preCont.appendChild(p); });
-            wrap.insertBefore(preCont, el); // ★ エラー原因修正: input -> el
-          }
-          
-          if (nexts.length > 0) {
-            wrap.classList.add('has-suffix');
-            const sufCont = document.createElement('div');
-            sufCont.className = 'suffix-container';
-            nexts.forEach(n => { applyStyle(n); sufCont.appendChild(n); });
-            wrap.appendChild(sufCont);
-          }
-          wrap.dataset.bound = 'true';
-        });
+    // --- 装飾付きフォーム構築 ---
+    static applyStaticAddons(configObj = null) {
+      const sel = '[data-addon-icon]:not([data-bound]), [data-addon-prefix]:not([data-bound]), [data-addon-suffix]:not([data-bound])';
+      document.querySelectorAll(sel).forEach(el => {
+        if (el.hasAttribute('data-bind-fields')) return;
+        const ctrl = el.querySelector('input, select');
+        if (!ctrl) return;
+        const icon = el.dataset.addonIcon;
+        const prefix = el.dataset.addonPrefix;
+        let suffix = el.dataset.addonSuffix;
+        const color = el.dataset.addoptColor;
+        const size = el.dataset.addoptSize;
+        const name = ctrl.name;
+        if (!suffix && configObj?.[name]?.unit) { suffix = configObj[name].unit; }
+        if (!icon && !prefix && !suffix) { el.dataset.bound = 'true'; return; }
+        const applyStyle = (target) => {
+          if (size) target.style.fontSize = typeof size === 'number' ? `${size}px` : size;
+          if (color) target.style.color = color;
+        };
+        if (icon || prefix) {
+          el.classList.add('has-prefix');
+          const preCont = document.createElement('div');
+          preCont.className = 'prefix-container';
+          if (icon) preCont.insertAdjacentHTML('beforeend', `<span class="material-symbols-outlined">${icon}</span>`);
+          if (prefix) preCont.insertAdjacentHTML('beforeend', `<span class="input-text">${prefix}</span>`);
+          applyStyle(preCont);
+          el.insertBefore(preCont, ctrl);
+        }
+        if (suffix) {
+          el.classList.add('has-suffix');
+          const sufCont = document.createElement('div');
+          sufCont.className = 'suffix-container';
+          sufCont.insertAdjacentHTML('beforeend', `<span class="input-unit">${suffix}</span>`);
+          applyStyle(sufCont);
+          el.appendChild(sufCont);
+        }
+        if (!el.classList.contains('form-addon')) el.classList.add('form-addon');
+        el.dataset.bound = 'true';
       });
     }
   }
@@ -378,15 +371,15 @@
         { key: 'bindFields', attr: 'data-bind-fields', fn: binder((el, val) => {
           const addon = {
             icon: el.dataset.addonIcon, prefix: el.dataset.addonPrefix,
-            suffix: el.dataset.addonSuffix, color: el.dataset.addonColor
+            suffix: el.dataset.addonSuffix
           };
-          
-          // ★ 無駄なマージを防止する安全処理
+          const addopt = {
+            color: el.dataset.addoptColor, size: el.dataset.addoptSize
+          };
           const hasAddon = Object.values(addon).some(v => v);
           const enrichedVal = (hasAddon && Array.isArray(val)) 
-            ? val.map(v => ({ ...v, addon })) 
+            ? val.map(v => ({ ...v, addon, addopt })) 
             : val;
-            
           el.innerHTML = Tpl.Form.fields(enrichedVal);
           el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
         }) }

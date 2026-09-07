@@ -96,8 +96,13 @@
             </form>
           </div>
         </div>
-
-        <!-- タブコンテンツエリア -->
+        <nav class="sidebar-tabs" data-part="sidebarTabs">
+          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabLayout" aria-selected="true" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
+          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabData" aria-selected="false" title="データ設定"><span class="material-symbols-outlined">database</span></button>
+          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabStyle" aria-selected="false" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
+          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabSymb" aria-selected="false" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
+          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabOutput" aria-selected="false" title="出力"><span class="material-symbols-outlined">output</span></button>
+        </nav>
         <div class="tab-content-area" data-part="tabContentArea">
           <!-- タブ: tabLayout -->
           <div data-part="tab-pane" data-tab="tabLayout" class="sidebar-tab-pane" aria-selected="true">
