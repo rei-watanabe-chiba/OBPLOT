@@ -116,68 +116,68 @@
             <h5 class="pane-title" style="margin-bottom:8px;">余白設定</h5>
             <div data-part="mount-layout-margins">
               <form data-bind-ctx="RPTST.config.theme">
-                <div class="linked-inputs-container">
-                  <label class="prop-label inline" style="margin-bottom: 4px;">
-                    <span>キャンバス余白<span class="badge-label">mm</span></span>
-                    <button type="button" class="link-toggle-inline" data-action="RepoAct.toggleMarginLink" data-sync-group="canvas" title="連動">
-                      <span class="material-symbols-outlined">link_off</span>
-                    </button>
-                  </label>
-                  <div class="prop-controls linked-inputs-row" style="width: 100%;">
-                    <div class="linked-input-cell">
-                      <span class="material-symbols-outlined inside-icon">border_left</span>
-                      <input type="number" name="bd_l" class="form-control inline-icon-input" data-sync-group="canvas" title="左">
-                    </div>
-                    <div class="linked-input-cell">
-                      <span class="material-symbols-outlined inside-icon">border_top</span>
-                      <input type="number" name="bd_t" class="form-control inline-icon-input" data-sync-group="canvas" title="上">
-                    </div>
-                    <div class="linked-input-cell">
-                      <span class="material-symbols-outlined inside-icon">border_bottom</span>
-                      <input type="number" name="bd_b" class="form-control inline-icon-input" data-sync-group="canvas" title="下">
-                    </div>
-                    <div class="linked-input-cell">
-                      <span class="material-symbols-outlined inside-icon">border_right</span>
-                      <input type="number" name="bd_r" class="form-control inline-icon-input" data-sync-group="canvas" title="右">
-                    </div>
+                <label class="prop-label inline" style="margin-bottom: 4px;">
+                  <span>キャンバス余白<span class="badge-label">mm</span></span>
+                  <button type="button" class="link-toggle" data-action="RepoAct.toggleMarginLink" data-sync-group="canvas" title="連動">
+                    <span class="material-symbols-outlined">link_off</span>
+                  </button>
+                </label>
+                <div class="prop-controls linkeRow" style="width: 100%;">
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">border_left</span>
+                    <input type="number" name="bd_l" class="form-control" data-sync-group="canvas" title="左">
+                  </div>
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">border_top</span>
+                    <input type="number" name="bd_t" class="form-control" data-sync-group="canvas" title="上">
+                  </div>
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">border_bottom</span>
+                    <input type="number" name="bd_b" class="form-control" data-sync-group="canvas" title="下">
+                  </div>
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">border_right</span>
+                    <input type="number" name="bd_r" class="form-control" data-sync-group="canvas" title="右">
                   </div>
                 </div>
-                <div class="linked-inputs-container">
-                  <label class="prop-label inline" style="margin-bottom: 4px;">
-                    <span>パネル内余白<span class="badge-label">mm</span></span>
-                    <button type="button" class="link-toggle-inline" data-action="RepoAct.toggleMarginLink" data-sync-group="panel" title="連動">
-                      <span class="material-symbols-outlined">link_off</span>
-                    </button>
-                  </label>
-                  <div class="prop-controls linked-inputs-row" style="width: 100%;">
-                    <div class="linked-input-cell">
-                      <span class="material-symbols-outlined inside-icon">border_left</span>
-                      <input type="number" name="p_l" class="form-control inline-icon-input" data-sync-group="panel" title="左">
-                    </div>
-                    <div class="linked-input-cell">
-                      <span class="material-symbols-outlined inside-icon">border_top</span>
-                      <input type="number" name="p_t" class="form-control inline-icon-input" data-sync-group="panel" title="上">
-                    </div>
-                    <div class="linked-input-cell">
-                      <span class="material-symbols-outlined inside-icon">border_bottom</span>
-                      <input type="number" name="p_b" class="form-control inline-icon-input" data-sync-group="panel" title="下">
-                    </div>
-                    <div class="linked-input-cell">
-                      <span class="material-symbols-outlined inside-icon">border_right</span>
-                      <input type="number" name="p_r" class="form-control inline-icon-input" data-sync-group="panel" title="右">
-                    </div>
+                <label class="prop-label inline" style="margin-bottom: 4px;">
+                  <span>パネル内余白<span class="badge-label">mm</span></span>
+                  <button type="button" class="link-toggle" data-action="RepoAct.toggleMarginLink" data-sync-group="panel" title="連動">
+                    <span class="material-symbols-outlined">link_off</span>
+                  </button>
+                </label>
+                <div class="prop-controls linkeRow" style="width: 100%;">
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">border_left</span>
+                    <input type="number" name="p_l" class="form-control" data-sync-group="panel" title="左">
+                  </div>
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">border_top</span>
+                    <input type="number" name="p_t" class="form-control" data-sync-group="panel" title="上">
+                  </div>
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">border_bottom</span>
+                    <input type="number" name="p_b" class="form-control" data-sync-group="panel" title="下">
+                  </div>
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">border_right</span>
+                    <input type="number" name="p_r" class="form-control" data-sync-group="panel" title="右">
                   </div>
                 </div>
                 <div class="prop-row">
                   <label class="prop-label">軸ラベル余白</label>
                   <div class="prop-controls">
-                    <input type="number" name="g_name" class="form-control">
+                    <div class="form-addon">
+                      <span class="material-symbols-outlined">horizontal_align_left</span><input type="number" name="g_name" class="form-control"><span class="input-unit"></span>
+                    </div>
                   </div>
                 </div>
                 <div class="prop-row">
                   <label class="prop-label">目盛余白</label>
                   <div class="prop-controls">
-                    <input type="number" name="g_tick" class="form-control">
+                    <div class="form-addon">
+                      <span class="material-symbols-outlined">horizontal_align_right</span><input type="number" name="g_tick" class="form-control"><span class="input-unit"></span>
+                    </div>
                   </div>
                 </div>
               </form>
@@ -185,7 +185,9 @@
                 <div class="prop-row">
                   <label class="prop-label">パネル間隔</label>
                   <div class="prop-controls">
-                    <input type="number" name="panelGap" class="form-control">
+                    <div class="form-addon">
+                      <span class="material-symbols-outlined">grid_view</span><input type="number" name="panelGap" class="form-control"><span class="input-unit"></span>
+                    </div>
                   </div>
                 </div>
               </form>

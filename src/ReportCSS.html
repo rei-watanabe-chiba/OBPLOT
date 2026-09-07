@@ -257,25 +257,6 @@
     }
   }
 
-  /* --- 動的単位表示ラッパー --- */
-  .input-wrap {
-    display: flex;
-    align-items: center;
-    position: relative;
-    width: 100%;
-  }
-  .input-wrap input {
-    width: 100%;
-    padding-right: 22px;
-  }
-  .input-wrap .input-unit {
-    position: absolute;
-    right: 6px;
-    font-size: 10px;
-    color: var(--grey400);
-    pointer-events: none;
-  }
-
   /* --- タブUI --- */
   .sidebar-tabs {
     display: flex;
@@ -451,43 +432,74 @@
     .row-aspect-ctrl { display: none !important; }  
   }
 
+  /* --- 新規: 動的 Input ラッパー --- */
+  .form-addon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  .form-addon input {
+    width: 100%;
+    box-sizing: border-box;
+    /* paddingはprefix/suffixの有無で上書きされる */
+  }
+  /* 前後のコンテナ（絶対配置でinputの上に重ねる） */
+  .prefix-container, .suffix-container {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: none;
+    z-index: 1;
+    font-size: 0.8em; /* 基準サイズの0.8倍に自動追従 */
+  }
+  .prefix-container { left: 8px; }
+  .suffix-container { right: 8px; }
+  /* プレフィックス・サフィックス有無によるPadding自動調整 */
+  /* 文字数が多い場合は --pad-left などをインラインで上書き可能 */
+  .form-addon.has-prefix input {
+    padding-left: var(--pad-left, 32px);
+  }
+  .form-addon.has-suffix input {
+    padding-right: var(--pad-right, 24px);
+  }
+  /* コンテナ内の文字要素の基本スタイル */
+  .input-text, .input-unit {
+    font-weight: 500;
+    line-height: 1;
+    font-family: sans-serif;
+  }
+  /* アイコンはデフォルトで透過的に継承 */
+  .prefix-container .material-symbols-outlined, 
+  .suffix-container .material-symbols-outlined {
+    font-size: inherit; 
+    color: inherit;
+  }
+
+
   /* --- 4方向インライン入力 (Linked Inputs) --- */
-  .link-toggle-inline {
+  .link-toggle {
     flex: none;
-    background: transparent; 
+    display: inline-flex;
+    align-items: center;
+    height: fit-content;
+    padding: 2px 8px;
+    background: var(--grey50); 
     border: 1px solid var(--grey300);
     border-radius: 20px;
-    padding: 2px 8px;
-    margin-left: 8px;
-    height: fit-content;
-    cursor: pointer; color: var(--grey400);
-    transition: 0.2s;
-    display: inline-block; align-items: center; justify-content: center;
-    line-height: 1;
-  }
-  .link-toggle-inline:hover { border-color: var(--grey400); color: var(--text-main); }
-  .link-toggle-inline.active, .link-toggle-inline[aria-selected="true"] { 
-    color: #fff;
-    background: color-mix(in srgb, var(--theme-color) 70%, transparent);
-    border-color: transparent;
-  }
-  .link-toggle-inline .material-symbols-outlined { font-size: 14px; }
-  .linked-inputs-row { display: flex; gap: 4px; width: 100%; }
-  .linked-input-cell { position: relative; flex: 1; min-width: 0; }
-  .inline-icon-input { width: 100%; padding: 4px 2px 4px 20px; text-align: center; }
-  .linked-input-cell .inside-icon {
-    position: absolute;
-    z-index: 1;
-    left: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 14px;
     color: var(--grey400);
-    pointer-events: none;
-    transition: color 0.2s;
+    cursor: pointer;
+    transition: 0.2s;
+    &:hover { border-color: var(--grey400); color: var(--text-main); }
+    &.active, &[aria-selected="true"] {
+      color: #fff;
+      background: color-mix(in srgb, var(--theme-color) 70%, transparent);
+      border-color: transparent;
+    }
+    .material-symbols-outlined { font-size: 14px;}
   }
-  .linked-input-cell:focus-within .inside-icon { color: var(--primary); }
-  .linked-inputs-container { margin-bottom: 8px; }
+  .linkeRow { display: flex; gap: 4px; width: 100%; };
   /* --- 単位自動付与ラッパー --- */
   .with-unit { position: relative; display: flex; width: 100%; }
   .with-unit::after {

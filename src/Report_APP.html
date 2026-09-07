@@ -110,9 +110,9 @@
           crctFields: [{ type: "select", bind: "RPTST.dataset.crct", hasEmpty: false, opts: optsCorr }],
           fontEngFields: [{ type: "select", bind: "RPTST.config.theme.fontEng", hasEmpty: false, opts: GLB.fontEngList.map(v => ({ label: v, val: v })) }],
           fontJpFields: [{ type: "select", bind: "RPTST.config.theme.fontJp", hasEmpty: false, opts: GLB.fontJpList.map(v => ({ label: v, val: v })) }],
-          calbValFields: [{ type: "select", name: "calbVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }], // name属性指定
-          clusXFields: [{ type: "select", name: "clusXVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }], // name属性指定
-          clusYFields: [{ type: "select", name: "clusYVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }], // name属性指定
+          calbValFields: [{ type: "select", name: "calbVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }],
+          clusXFields: [{ type: "select", name: "clusXVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }],
+          clusYFields: [{ type: "select", name: "clusYVal", change: "RepoAct.changePanelRef", hasEmpty: true, opts: optValLgc }],
           tickUnitFields: [{ type: "select", name: "tickUnit", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnit", opts: [{ label: "自動", val: "" }] }],
           clusTickXFields: [{ type: "select", name: "tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: [{ label: "自動", val: "" }] }],
           clusTickYFields: [{ type: "select", name: "tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: [{ label: "自動", val: "" }] }],
@@ -186,9 +186,9 @@
       ensureOpt(tickYOpts, panel?.tickUnitY);
       State.set({
         "RPTST.ui.activePanelScaleMode": panel?.scaleMode || "auto",
-        "RPTST.ui.optFields.tickUnitFields": [{ type: "select", name: "tickUnit", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnit", opts: tickOpts }], // name属性指定
-        "RPTST.ui.optFields.clusTickXFields": [{ type: "select", name: "tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: tickXOpts }], // name属性指定
-        "RPTST.ui.optFields.clusTickYFields": [{ type: "select", name: "tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: tickYOpts }]  // name属性指定
+        "RPTST.ui.optFields.tickUnitFields": [{ type: "select", name: "tickUnit", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnit", opts: tickOpts }],
+        "RPTST.ui.optFields.clusTickXFields": [{ type: "select", name: "tickUnitX", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitX", opts: tickXOpts }],
+        "RPTST.ui.optFields.clusTickYFields": [{ type: "select", name: "tickUnitY", change: "RepoAct.changePanelRef", hasEmpty: false, field: "tickUnitY", opts: tickYOpts }]
       });
       this.finalizePanel(); // フォーム再同期を実行
     }
@@ -733,7 +733,6 @@
         document.body.setAttribute('data-state', 'printing');
         const loading = document.createElement('div');
         loading.setAttribute('data-part', 'print-loading');
-        loading.textContent = window.__EXPORT_CFG__.autoPrint ? '印刷用PDF生成中...' : '静的HTML生成中...';
         document.body.appendChild(loading);
         const grid = document.querySelector('[data-part="dashGrid"]');
         grid.innerHTML = '';

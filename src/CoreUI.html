@@ -287,6 +287,54 @@
         }
       }
     }
+
+    // --- bindInputWraps ---
+    static bindInputWraps(nameList, fontSize, color, configObj = null) {
+      if (!Array.isArray(nameList)) return;
+      nameList.forEach(name => {
+        document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+          const wrap = input.closest('.input-wrap');
+          if (!wrap) return;
+          if (wrap.dataset.bound === 'true') return;
+          // inputの前後の兄弟要素を収集
+          const prevs = [], nexts = [];
+          let curr = input.previousElementSibling;
+          while (curr) { prevs.unshift(curr); curr = curr.previousElementSibling; }
+          curr = input.nextElementSibling;
+          while (curr) { nexts.push(curr); curr = curr.nextElementSibling; }
+          // 後続要素がなく、configObjに設定があれば単位を補完
+          if (nexts.length === 0 && configObj?.[name]?.unit) {
+            const u = document.createElement('span');
+            u.className = 'input-unit';
+            u.textContent = configObj[name].unit;
+            wrap.appendChild(u);
+            nexts.push(u);
+          }
+          // スタイル適用関数（アイコン・テキスト用）
+          const applyStyle = (el) => {
+            if (fontSize) el.style.fontSize = typeof fontSize === 'number' ? `${fontSize}px` : fontSize;
+            if (color) el.style.color = color;
+          };
+          // Prefix（前）のコンテナ化
+          if (prevs.length > 0) {
+            wrap.classList.add('has-prefix');
+            const preCont = document.createElement('div');
+            preCont.className = 'prefix-container';
+            prevs.forEach(el => { applyStyle(el); preCont.appendChild(el); });
+            wrap.insertBefore(preCont, input);
+          }
+          // Suffix（後）のコンテナ化
+          if (nexts.length > 0) {
+            wrap.classList.add('has-suffix');
+            const sufCont = document.createElement('div');
+            sufCont.className = 'suffix-container';
+            nexts.forEach(el => { applyStyle(el); sufCont.appendChild(el); });
+            wrap.appendChild(sufCont);
+          }
+          wrap.dataset.bound = 'true';
+        });
+      });
+    }
   }
 
   class CoreUI {
@@ -328,7 +376,12 @@
           else el.removeAttribute('aria-invalid');
         }) },
         { key: 'bindFields', attr: 'data-bind-fields', fn: binder((el, val) => {
-          el.innerHTML = Tpl.Form.fields(val);
+          const addon = {
+            icon: el.dataset.addonIcon, prefix: el.dataset.addonPrefix,
+            suffix: el.dataset.addonSuffix, color: el.dataset.addonColor
+          };
+          const enrichedVal = Array.isArray(val) ? val.map(v => ({ ...v, addon })) : val;
+          el.innerHTML = Tpl.Form.fields(enrichedVal);
           el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
         }) }
       ];

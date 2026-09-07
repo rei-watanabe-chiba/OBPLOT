@@ -255,7 +255,6 @@
         if (window.__EXPORT_CFG__) return;
         const curW = this.clientWidth;
         const curH = this.clientHeight;
-        // height が 0 であっても、width さえあれば自動計算可能とする
         if (curW > 0 && (curW !== this.#lastW || curH !== this.#lastH) && this.#config) {
           this.#lastW = curW;
           this.#lastH = curH;

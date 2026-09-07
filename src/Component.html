@@ -19,19 +19,37 @@
         const items = (opts || []).map(opt => this.option(opt)).join('');
         return emptyOpt + items;
       }
+      // --- select ---
       static select(conf) {
-        const { type = 'select', bind, change, field, opts, hasEmpty, name } = conf;
-        const nm = name ? ` name="${name}"` : ''; // form同期用属性
+        const { type = 'select', bind, change, field, opts, hasEmpty, name, addon } = conf;
+        const nm = name ? ` name="${name}"` : '';
         const ds = `${bind ? ` data-bind="${bind}"` : ''}${change ? ` data-change="${change}"` : ''}${field ? ` data-field="${field}"` : ''}`;
-        return html`<select class="field-${type} form-control"${nm}${ds}>${this.options(opts, hasEmpty)}</select>`;
+        const ctrlHtml = html`<select class="field-${type} form-control"${nm}${ds}>${this.options(opts, hasEmpty)}</select>`;
+        return this._wrapAddon(ctrlHtml, addon);
       }
+
       // --- input ---
       static input(conf) {
-        const { type = 'text', bind, change, field, inputType, placeholder, name } = conf;
-        const nm = name ? ` name="${name}"` : ''; // form同期用属性
+        const { type = 'text', bind, change, field, inputType, placeholder, name, addon } = conf;
+        const nm = name ? ` name="${name}"` : '';
         const ds = `${bind ? ` data-bind="${bind}"` : ''}${change ? ` data-change="${change}"` : ''}${field ? ` data-field="${field}"` : ''}`;
         const ph = placeholder ? ` placeholder="${placeholder}"` : '';
-        return html`<input type="${inputType || 'text'}" class="field-${type} form-control"${nm}${ph}${ds}>`;
+        const ctrlHtml = html`<input type="${inputType || 'text'}" class="field-${type} form-control"${nm}${ph}${ds}>`;
+        return this._wrapAddon(ctrlHtml, addon);
+      }
+
+      // --- _wrapAddon (内部処理) ---
+      static _wrapAddon(ctrlHtml, addon) {
+        if (!addon || (!addon.icon && !addon.prefix && !addon.suffix)) return ctrlHtml;
+        // --- 結合とコンテナ生成 ---
+        const cStyle = addon.color ? ` style="color:${addon.color};"` : '';
+        const iHtml = addon.icon ? html`<span class="material-symbols-outlined">${addon.icon}</span>` : '';
+        const pHtml = addon.prefix ? html`<span class="input-text">${addon.prefix}</span>` : '';
+        const preInner = iHtml + pHtml;
+        const pre = preInner ? html`<div class="prefix-container"${cStyle}>${preInner}</div>` : '';
+        const suf = addon.suffix ? html`<div class="suffix-container"${cStyle}><span class="input-unit">${addon.suffix}</span></div>` : '';
+        const cls = `form-addon${pre ? ' has-prefix' : ''}${suf ? ' has-suffix' : ''}`;
+        return html`<div class="${cls}">${pre}${ctrlHtml}${suf}</div>`;
       }
       static field(conf) {
         const { type = 'text', label } = conf;
