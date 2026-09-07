@@ -432,51 +432,40 @@
     .row-aspect-ctrl { display: none !important; }  
   }
 
-  /* --- 新規: 動的 Input ラッパー --- */
+  /* --- form-addon装飾（HTML主導で任意のクラスに置換可能） --- */
   .form-addon {
     position: relative;
     display: flex;
     align-items: center;
     width: 100%;
   }
-  /* ★ select を追加 */
   .form-addon input, .form-addon select {
     width: 100%;
     box-sizing: border-box;
-    /* paddingはprefix/suffixの有無で上書きされる */
   }
-  .prefix-container, .suffix-container {
+  .addon-prefix, .addon-suffix {
     position: absolute;
     display: flex;
     align-items: center;
     gap: 4px;
     pointer-events: none;
     z-index: 1;
-    font-size: 0.8em;
-  }
-  .prefix-container { left: 8px; }
-  .suffix-container { right: 8px; }
-  
-  /* ★ select を追加 */
-  .form-addon.has-prefix input, 
-  .form-addon.has-prefix select {
-    padding-left: var(--pad-left, 32px);
-  }
-  .form-addon.has-suffix input, 
-  .form-addon.has-suffix select {
-    padding-right: var(--pad-right, 24px);
-  }
-  
-  .input-text, .input-unit {
     font-weight: 500;
     line-height: 1;
     font-family: sans-serif;
+    font-size: 0.8em;
   }
-  .prefix-container .material-symbols-outlined, 
-  .suffix-container .material-symbols-outlined {
+  .addon-prefix { left: 8px; }
+  .addon-suffix { right: 8px; }
+  .addon-prefix .material-symbols-outlined, 
+  .addon-suffix .material-symbols-outlined {
     font-size: inherit; 
     color: inherit;
   }
+  .has-prefix input, 
+  .has-prefix select { padding-left: var(--pad-left, 32px); }
+  .has-suffix input, 
+  .has-suffix select { padding-right: var(--pad-right, 24px); }
 
 
   /* --- 4方向インライン入力 (Linked Inputs) --- */

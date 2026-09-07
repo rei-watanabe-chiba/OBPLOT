@@ -38,32 +38,21 @@
         return this._wrapAddon(ctrlHtml, addon, addopt);
       }
 
-      // --- _wrapAddon (内部処理) ---
+      // --- _wrapAddon ---
       static _wrapAddon(ctrlHtml, addon, addopt) {
         if (!addon || (!addon.icon && !addon.prefix && !addon.suffix)) return ctrlHtml;
-        let styleStr = '';
-        if (addopt) {
-          const s = [];
-          if (addopt.color) s.push(`color:${addopt.color}`);
-          if (addopt.size) s.push(`font-size:${typeof addopt.size === 'number' ? `${addopt.size}px` : addopt.size}`);
-          if (s.length) styleStr = ` style="${s.join(';')}"`;
-        }
+        const styles = [];
+        if (addopt?.color) styles.push(`color:${addopt.color}`);
+        if (addopt?.size) styles.push(`font-size:${typeof addopt.size === 'number' ? `${addopt.size}px` : addopt.size}`);
+        const styleStr = styles.length ? ` style="${styles.join(';')}"` : '';
         const iHtml = addon.icon ? html`<span class="material-symbols-outlined">${addon.icon}</span>` : '';
-        const pHtml = addon.prefix ? html`<span class="input-text">${addon.prefix}</span>` : '';
+        const pHtml = addon.prefix ? html`<span>${addon.prefix}</span>` : '';
         const preInner = iHtml + pHtml;
-        const pre = preInner ? html`<div class="prefix-container"${styleStr}>${preInner}</div>` : '';
-        const suf = addon.suffix ? html`<div class="suffix-container"${styleStr}><span class="input-unit">${addon.suffix}</span></div>` : '';
+        const pre = preInner ? html`<span class="addon-prefix"${styleStr}>${preInner}</span>` : '';
+        const suf = addon.suffix ? html`<span class="addon-suffix"${styleStr}>${addon.suffix}</span>` : '';
+        // 動的生成要素はラッパーをJSが作るため、デフォルトクラスとして form-addon を付与
         const cls = `form-addon${pre ? ' has-prefix' : ''}${suf ? ' has-suffix' : ''}`;
         return html`<div class="${cls}">${pre}${ctrlHtml}${suf}</div>`;
-      }
-      static field(conf) {
-        const { type = 'text', label } = conf;
-        const ctrl = type === 'select' ? this.select(conf) : this.input(conf);
-        return label ? html`<label class="field-label">${label} ${ctrl}</label>` : ctrl;
-      }
-      static fields(confArr) {
-        if (!Array.isArray(confArr)) return '';
-        return confArr.map(conf => this.field(conf)).join('');
       }
     };
     static Common = class {

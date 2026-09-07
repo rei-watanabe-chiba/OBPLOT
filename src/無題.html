@@ -41,6 +41,7 @@
           <h4 class="pane-title">選択中のパネル設定</h4>
           <div data-part="mount-panel-config">
             <div class="prop-row">
+              <label class="prop-label panel">スケール</label>
               <div class="prop-controls">
                 <div class="segment-ctrl" data-ui="segment" data-bind="RPTST.ui.activePanelScaleMode" style="margin-bottom:0;">
                   <button type="button" class="segment-btn" data-action="RepoAct.setActiveScaleMode" data-arg="auto">Auto</button>
@@ -52,7 +53,7 @@
               <div data-part="secCALB">
                 <div class="prop-row">
                   <label class="prop-label panel">対象指標</label>
-                  <div class="prop-controls" data-part="boxCalbVal" data-bind-fields="RPTST.ui.optFields.calbValFields" data-addon-icon="analytics" data-addon-color="var(--theme-color)"></div>
+                  <div class="prop-controls" data-part="boxCalbVal" data-bind-fields="RPTST.ui.optFields.calbValFields" data-addon-icon="analytics" data-addopt-color="var(--theme-color)"></div>
                 </div>
                 <div class="prop-row" data-part="boxCalibTick">
                   <label class="prop-label panel">目盛単位</label>
@@ -62,11 +63,11 @@
               <div data-part="secCluster">
                 <div class="prop-row">
                   <label class="prop-label panel">X<span class="badge-label">項目</span></label>
-                  <div class="prop-controls" data-part="boxClusX" data-bind-fields="RPTST.ui.optFields.clusXFields" data-addon-icon="data_object" data-addon-color="var(--theme-color)"></div>
+                  <div class="prop-controls" data-part="boxClusX" data-bind-fields="RPTST.ui.optFields.clusXFields" data-addon-icon="data_object" data-addopt-color="var(--theme-color)"></div>
                 </div>
                 <div class="prop-row">
                   <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
-                  <div class="prop-controls" data-part="boxClusY" data-bind-fields="RPTST.ui.optFields.clusYFields" data-addon-icon="data_object" data-addon-color="var(--theme-color)"></div>
+                  <div class="prop-controls" data-part="boxClusY" data-bind-fields="RPTST.ui.optFields.clusYFields" data-addon-icon="data_object" data-addopt-color="var(--theme-color)"></div>
                 </div>
                 <div class="prop-row" data-part="boxClusTick">
                   <label class="prop-label panel">X/Y<span class="badge-label">目盛</span></label>
@@ -76,10 +77,10 @@
                   </div>
                 </div>
               </div>
-              <<div class="prop-row">
+              <div class="prop-row">
                 <label class="prop-label panel">タイトル</label>
                 <div class="prop-controls">
-                  <div class="form-addon" data-addon-icon="title">
+                  <div data-addon-icon="title">
                     <input type="text" name="title" placeholder="パネルタイトルを入力" class="form-control">
                   </div>
                 </div>
@@ -87,10 +88,10 @@
               <div class="prop-row">
                 <label class="prop-label panel">X/Y<span class="badge-label">ラベル</span></label>
                 <div class="prop-controls">
-                  <div class="form-addon" data-addon-icon="label">
+                  <div data-addon-icon="label">
                     <input type="text" name="xLabel" class="form-control" placeholder="X軸">
                   </div>
-                  <div class="form-addon" data-addon-icon="label">
+                  <div data-addon-icon="label">
                     <input type="text" name="yLabel" class="form-control" placeholder="Y軸">
                   </div>
                 </div>
@@ -98,8 +99,6 @@
             </form>
           </div>
         </div>
-
-        <!-- タブエリア -->
         <nav class="sidebar-tabs" data-part="sidebarTabs">
           <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabLayout" aria-selected="true" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
           <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabData" aria-selected="false" title="データ設定"><span class="material-symbols-outlined">database</span></button>
@@ -115,10 +114,10 @@
                 <div class="prop-row">
                   <label class="prop-label panel">行数 / 列数</label>
                   <div class="prop-controls">
-                    <div class="form-addon" data-addon-icon="table_rows">
+                    <div data-addon-icon="table_rows">
                       <input type="number" name="gridRows" data-part="inpGridRows" class="form-control" title="行数" min="1" max="3" step="1">
                     </div>
-                    <div class="form-addon" data-addon-icon="view_column">
+                    <div data-addon-icon="view_column">
                       <input type="number" name="gridCols" data-part="inpGridCols" class="form-control" title="列数" min="1" max="3" step="1">
                     </div>
                   </div>
@@ -134,16 +133,16 @@
                   </button>
                 </label>
                 <div class="prop-controls linkeRow" style="width: 100%;">
-                  <div class="form-addon" data-addon-icon="border_left">
+                  <div data-addon-icon="border_left">
                     <input type="number" name="bd_l" class="form-control" data-sync-group="canvas" title="左">
                   </div>
-                  <div class="form-addon" data-addon-icon="border_top">
+                  <div data-addon-icon="border_top">
                     <input type="number" name="bd_t" class="form-control" data-sync-group="canvas" title="上">
                   </div>
-                  <div class="form-addon" data-addon-icon="border_bottom">
+                  <div data-addon-icon="border_bottom">
                     <input type="number" name="bd_b" class="form-control" data-sync-group="canvas" title="下">
                   </div>
-                  <div class="form-addon" data-addon-icon="border_right">
+                  <div data-addon-icon="border_right">
                     <input type="number" name="bd_r" class="form-control" data-sync-group="canvas" title="右">
                   </div>
                 </div>
@@ -154,23 +153,23 @@
                   </button>
                 </label>
                 <div class="prop-controls linkeRow" style="width: 100%;">
-                  <div class="form-addon" data-addon-icon="border_left">
+                  <div data-addon-icon="border_left">
                     <input type="number" name="p_l" class="form-control" data-sync-group="panel" title="左">
                   </div>
-                  <div class="form-addon" data-addon-icon="border_top">
+                  <div data-addon-icon="border_top">
                     <input type="number" name="p_t" class="form-control" data-sync-group="panel" title="上">
                   </div>
-                  <div class="form-addon" data-addon-icon="border_bottom">
+                  <div data-addon-icon="border_bottom">
                     <input type="number" name="p_b" class="form-control" data-sync-group="panel" title="下">
                   </div>
-                  <div class="form-addon" data-addon-icon="border_right">
+                  <div data-addon-icon="border_right">
                     <input type="number" name="p_r" class="form-control" data-sync-group="panel" title="右">
                   </div>
                 </div>
                 <div class="prop-row">
                   <label class="prop-label">軸ラベル余白</label>
                   <div class="prop-controls">
-                    <div class="form-addon" data-addon-icon="horizontal_align_left">
+                    <div data-addon-icon="horizontal_align_left">
                       <input type="number" name="g_name" class="form-control">
                     </div>
                   </div>
@@ -178,7 +177,7 @@
                 <div class="prop-row">
                   <label class="prop-label">目盛余白</label>
                   <div class="prop-controls">
-                    <div class="form-addon" data-addon-icon="horizontal_align_right">
+                    <div data-addon-icon="horizontal_align_right">
                       <input type="number" name="g_tick" class="form-control">
                     </div>
                   </div>
@@ -188,7 +187,7 @@
                 <div class="prop-row">
                   <label class="prop-label">パネル間隔</label>
                   <div class="prop-controls">
-                    <div class="form-addon" data-addon-icon="grid_view">
+                    <div data-addon-icon="grid_view">
                       <input type="number" name="panelGap" class="form-control">
                     </div>
                   </div>
@@ -262,7 +261,7 @@
                     <label class="prop-label">カラー<span class="badge-label">K</span></label>
                     <div class="prop-controls">
                       <input type="range" name="c_base" style="flex:1.8;">
-                      <div class="form-addon" style="flex:1.2;" data-addon-suffix="%">
+                      <div style="flex:1.2;" data-addon-suffix="%">
                         <input type="text" name="c_base" class="form-control" style="text-align:center;">
                       </div>
                     </div>
@@ -270,7 +269,7 @@
                   <div class="prop-row">
                     <label class="prop-label">タイトル</label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="title">
+                      <div data-addon-icon="title">
                         <input type="number" name="s_title" class="form-control">
                       </div>
                     </div>
@@ -278,7 +277,7 @@
                   <div class="prop-row">
                     <label class="prop-label">軸名</label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="label">
+                      <div data-addon-icon="label">
                         <input type="number" name="s_name" class="form-control">
                       </div>
                     </div>
@@ -286,7 +285,7 @@
                   <div class="prop-row">
                     <label class="prop-label">目盛</label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="linear_scale">
+                      <div data-addon-icon="linear_scale">
                         <input type="number" name="s_tick" class="form-control">
                       </div>
                     </div>
@@ -294,7 +293,7 @@
                   <div class="prop-row">
                     <label class="prop-label">回帰式</label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="functions">
+                      <div data-addon-icon="functions">
                         <input type="number" name="s_stats" class="form-control">
                       </div>
                     </div>
@@ -309,7 +308,7 @@
                   <div class="prop-row">
                     <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="radio_button_unchecked">
+                      <div data-addon-icon="radio_button_unchecked">
                         <input type="number" name="sym_size" class="form-control">
                       </div>
                     </div>
@@ -317,7 +316,7 @@
                   <div class="prop-row">
                     <label class="prop-label">シンボル<span class="badge-label">線幅</span></label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="line_weight">
+                      <div data-addon-icon="line_weight">
                         <input type="number" name="sym_bw" class="form-control">
                       </div>
                     </div>
@@ -325,7 +324,7 @@
                   <div class="prop-row">
                     <label class="prop-label">軸線<span class="badge-label">線幅</span></label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="border_bottom">
+                      <div data-addon-icon="border_bottom">
                         <input type="number" name="lw_axis" class="form-control">
                       </div>
                     </div>
@@ -334,7 +333,7 @@
                     <label class="prop-label">軸線<span class="badge-label">K</span></label>
                     <div class="prop-controls">
                       <input type="range" name="c_axis" style="flex:1.8;">
-                      <div class="form-addon" style="flex:1.2;" data-addon-suffix="%">
+                      <div style="flex:1.2;" data-addon-suffix="%">
                         <input type="text" name="c_axis" class="form-control" style="text-align:center;">
                       </div>
                     </div>
@@ -342,7 +341,7 @@
                   <div class="prop-row">
                     <label class="prop-label">グリッド<span class="badge-label">線幅</span></label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="grid_4x4">
+                      <div data-addon-icon="grid_4x4">
                         <input type="number" name="lw_grid" class="form-control">
                       </div>
                     </div>
@@ -351,7 +350,7 @@
                     <label class="prop-label">グリッド<span class="badge-label">K</span></label>
                     <div class="prop-controls">
                       <input type="range" name="c_grid" style="flex:1.8;">
-                      <div class="form-addon" style="flex:1.2;" data-addon-suffix="%">
+                      <div style="flex:1.2;" data-addon-suffix="%">
                         <input type="text" name="c_grid" class="form-control" style="text-align:center;">
                       </div>
                     </div>
@@ -359,7 +358,7 @@
                   <div class="prop-row">
                     <label class="prop-label">回帰線<span class="badge-label">線幅</span></label>
                     <div class="prop-controls">
-                      <div class="form-addon" data-addon-icon="timeline">
+                      <div data-addon-icon="timeline">
                         <input type="number" name="lw_reg" class="form-control">
                       </div>
                     </div>

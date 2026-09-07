@@ -23,12 +23,11 @@
   class RptTpl {
     // --- rowAspectCtrl ---
     static rowAspectCtrl(row, aspect) {
-      return `<div class="linked-input-cell aspect-ctrl-inp" title="アスペクト比">
-        <div class="inside-icon aspect-icon-wrap">
-          <span class="material-symbols-outlined">aspect_ratio</span>
-          <span>H:</span>
-        </div>
-        <input type="number" class="form-control inline-icon-input" min="0.1" max="2.0" step="0.1" data-aspect-idx="${row}" value="${aspect}">
+      return `<div class="form-addon aspect-ctrl-inp" title="アスペクト比" 
+                   data-addon-icon="aspect_ratio" 
+                   data-addon-prefix="H:" 
+                   data-addopt-color="var(--theme-color)">
+        <input type="number" class="form-control" min="0.1" max="2.0" step="0.1" data-aspect-idx="${row}" value="${aspect}">
       </div>`;
     }
   }
@@ -397,6 +396,7 @@
         else { el.removeAttribute('data-col-lbl'); el.removeAttribute('data-row-lbl'); }
       }
       RepoSt.update();
+      CoreUIPatcher.applyStaticAddons();
       if (!window.__EXPORT_CFG__) this.genCharts(st);
     }
     // --- genGph ---

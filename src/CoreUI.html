@@ -290,6 +290,7 @@
 
     // --- 装飾付きフォーム構築 ---
     static applyStaticAddons(configObj = null) {
+      // クラスに依存しないdata-検知
       const sel = '[data-addon-icon]:not([data-bound]), [data-addon-prefix]:not([data-bound]), [data-addon-suffix]:not([data-bound])';
       document.querySelectorAll(sel).forEach(el => {
         if (el.hasAttribute('data-bind-fields')) return;
@@ -303,28 +304,24 @@
         const name = ctrl.name;
         if (!suffix && configObj?.[name]?.unit) { suffix = configObj[name].unit; }
         if (!icon && !prefix && !suffix) { el.dataset.bound = 'true'; return; }
-        const applyStyle = (target) => {
-          if (size) target.style.fontSize = typeof size === 'number' ? `${size}px` : size;
-          if (color) target.style.color = color;
-        };
+        // style属性文字列の組み立て
+        const styles = [];
+        if (color) styles.push(`color:${color}`);
+        if (size) styles.push(`font-size:${typeof size === 'number' ? size + 'px' : size}`);
+        const styleStr = styles.length ? ` style="${styles.join(';')}"` : '';
+        // 前部要素挿入
         if (icon || prefix) {
           el.classList.add('has-prefix');
-          const preCont = document.createElement('div');
-          preCont.className = 'prefix-container';
-          if (icon) preCont.insertAdjacentHTML('beforeend', `<span class="material-symbols-outlined">${icon}</span>`);
-          if (prefix) preCont.insertAdjacentHTML('beforeend', `<span class="input-text">${prefix}</span>`);
-          applyStyle(preCont);
-          el.insertBefore(preCont, ctrl);
+          let preInner = '';
+          if (icon) preInner += `<span class="material-symbols-outlined">${icon}</span>`;
+          if (prefix) preInner += `<span>${prefix}</span>`;
+          el.insertAdjacentHTML('afterbegin', `<span class="addon-prefix"${styleStr}>${preInner}</span>`);
         }
+        // 後部要素挿入
         if (suffix) {
-          el.classList.add('has-suffix');
-          const sufCont = document.createElement('div');
-          sufCont.className = 'suffix-container';
-          sufCont.insertAdjacentHTML('beforeend', `<span class="input-unit">${suffix}</span>`);
-          applyStyle(sufCont);
-          el.appendChild(sufCont);
+          el.classList.add('has-suffix'); // 余白確保用
+          el.insertAdjacentHTML('beforeend', `<span class="addon-suffix"${styleStr}>${suffix}</span>`);
         }
-        if (!el.classList.contains('form-addon')) el.classList.add('form-addon');
         el.dataset.bound = 'true';
       });
     }
@@ -384,7 +381,6 @@
           el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
         }) }
       ];
-
       // --- 単一セレクタによるDOM走査と一括バインド ---
       const selector = bindDefs.map(d => `[${d.attr}^="${this.stateTarget}"]`).join(',');
       if (selector) {
