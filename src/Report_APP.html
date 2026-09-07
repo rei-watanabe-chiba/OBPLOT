@@ -793,7 +793,6 @@
       window.addEventListener('resize', () => {
         clearTimeout(RepoRend.resizeTimer);
         RepoRend.resizeTimer = setTimeout(() => {
-          RepoRend.fitA4Scale();
           const curSt = RepoSt.getSt();
           const gph = RepoRend.genGph(curSt);
           RepoRend.calcPanelSize(gph, curSt);
