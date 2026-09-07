@@ -21,38 +21,30 @@
       }
       // --- select ---
       static select(conf) {
-        const { type = 'select', bind, change, field, opts, hasEmpty, name, addon, addopt } = conf;
+        const { type = 'select', bind, change, field, opts, hasEmpty, name } = conf;
         const nm = name ? ` name="${name}"` : '';
         const ds = `${bind ? ` data-bind="${bind}"` : ''}${change ? ` data-change="${change}"` : ''}${field ? ` data-field="${field}"` : ''}`;
-        const ctrlHtml = html`<select class="field-${type} form-control"${nm}${ds}>${this.options(opts, hasEmpty)}</select>`;
-        return this._wrapAddon(ctrlHtml, addon, addopt); // addopt追加
+        return html`<select class="field-${type} form-control"${nm}${ds}>${this.options(opts, hasEmpty)}</select>`;
       }
 
       // --- input ---
       static input(conf) {
-        const { type = 'text', bind, change, field, inputType, placeholder, name, addon, addopt } = conf;
+        const { type = 'text', bind, change, field, inputType, placeholder, name } = conf;
         const nm = name ? ` name="${name}"` : '';
         const ds = `${bind ? ` data-bind="${bind}"` : ''}${change ? ` data-change="${change}"` : ''}${field ? ` data-field="${field}"` : ''}`;
         const ph = placeholder ? ` placeholder="${placeholder}"` : '';
-        const ctrlHtml = html`<input type="${inputType || 'text'}" class="field-${type} form-control"${nm}${ph}${ds}>`;
-        return this._wrapAddon(ctrlHtml, addon, addopt);
+        return html`<input type="${inputType || 'text'}" class="field-${type} form-control"${nm}${ph}${ds}>`;
       }
 
-      // --- _wrapAddon ---
-      static _wrapAddon(ctrlHtml, addon, addopt) {
-        if (!addon || (!addon.icon && !addon.prefix && !addon.suffix)) return ctrlHtml;
-        const styles = [];
-        if (addopt?.color) styles.push(`color:${addopt.color}`);
-        if (addopt?.size) styles.push(`font-size:${typeof addopt.size === 'number' ? `${addopt.size}px` : addopt.size}`);
-        const styleStr = styles.length ? ` style="${styles.join(';')}"` : '';
-        const iHtml = addon.icon ? html`<span class="material-symbols-outlined">${addon.icon}</span>` : '';
-        const pHtml = addon.prefix ? html`<span>${addon.prefix}</span>` : '';
-        const preInner = iHtml + pHtml;
-        const pre = preInner ? html`<span class="addon-prefix"${styleStr}>${preInner}</span>` : '';
-        const suf = addon.suffix ? html`<span class="addon-suffix"${styleStr}>${addon.suffix}</span>` : '';
-        // 動的生成要素はラッパーをJSが作るため、デフォルトクラスとして form-addon を付与
-        const cls = `form-addon${pre ? ' has-prefix' : ''}${suf ? ' has-suffix' : ''}`;
-        return html`<div class="${cls}">${pre}${ctrlHtml}${suf}</div>`;
+      static field(conf) {
+        const { type = 'text', label } = conf;
+        const ctrl = type === 'select' ? this.select(conf) : this.input(conf);
+        return label ? html`<label class="field-label">${label} ${ctrl}</label>` : ctrl;
+      }
+      
+      static fields(confArr) {
+        if (!Array.isArray(confArr)) return '';
+        return confArr.map(conf => this.field(conf)).join('');
       }
     };
     static Common = class {

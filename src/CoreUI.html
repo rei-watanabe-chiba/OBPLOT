@@ -288,41 +288,50 @@
       }
     }
 
-    // --- 装飾付きフォーム構築 ---
-    static applyStaticAddons(configObj = null) {
-      // クラスに依存しないdata-検知
-      const sel = '[data-addon-icon]:not([data-bound]), [data-addon-prefix]:not([data-bound]), [data-addon-suffix]:not([data-bound])';
-      document.querySelectorAll(sel).forEach(el => {
-        if (el.hasAttribute('data-bind-fields')) return;
-        const ctrl = el.querySelector('input, select');
-        if (!ctrl) return;
-        const icon = el.dataset.addonIcon;
-        const prefix = el.dataset.addonPrefix;
-        let suffix = el.dataset.addonSuffix;
-        const color = el.dataset.addoptColor;
-        const size = el.dataset.addoptSize;
-        const name = ctrl.name;
-        if (!suffix && configObj?.[name]?.unit) { suffix = configObj[name].unit; }
-        if (!icon && !prefix && !suffix) { el.dataset.bound = 'true'; return; }
-        // style属性文字列の組み立て
+    // --- 装飾付きフォーム設定 ---
+    static decorateAddon(wrap, conf) {
+      if (wrap.dataset.bound === 'true') return;
+      const { icon, prefix, suffix, color, size } = conf;
+      if (!icon && !prefix && !suffix) { wrap.dataset.bound = 'true'; return; }
+      // 明示的な指定がある場合のみスタイル文字列を生成（なければ空文字列）
+      const styleAttr = (c, s) => {
         const styles = [];
-        if (color) styles.push(`color:${color}`);
-        if (size) styles.push(`font-size:${typeof size === 'number' ? size + 'px' : size}`);
-        const styleStr = styles.length ? ` style="${styles.join(';')}"` : '';
-        // 前部要素挿入
-        if (icon || prefix) {
-          el.classList.add('has-prefix');
-          let preInner = '';
-          if (icon) preInner += `<span class="material-symbols-outlined">${icon}</span>`;
-          if (prefix) preInner += `<span>${prefix}</span>`;
-          el.insertAdjacentHTML('afterbegin', `<span class="addon-prefix"${styleStr}>${preInner}</span>`);
+        if (c) styles.push(`color:${c}`);
+        if (s) styles.push(`font-size:${typeof s === 'number' ? `${s}px` : s}`);
+        return styles.length ? ` style="${styles.join(';')}"` : '';
+      };
+      const inlineStyle = styleAttr(color, size);
+      if (icon || prefix) {
+        wrap.classList.add('has-prefix');
+        let preInner = '';
+        if (icon) preInner += `<span class="material-symbols-outlined"${inlineStyle}>${icon}</span>`;
+        if (prefix) preInner += `<span${inlineStyle}>${prefix}</span>`;
+        wrap.insertAdjacentHTML('afterbegin', `<span class="addon-prefix">${preInner}</span>`);
+      }
+      if (suffix) {
+        wrap.classList.add('has-suffix');
+        wrap.insertAdjacentHTML('beforeend', `<span class="addon-suffix"${inlineStyle}>${suffix}</span>`);
+      }
+      wrap.dataset.bound = 'true';
+    }
+
+    // --- 静的装飾付きフォームバインド ---
+    static applyStaticAddons(configObj = null) {
+      document.querySelectorAll('.form-addon:not([data-bound])').forEach(wrap => {
+        if (wrap.closest('[data-bind-fields]')) return; // 動的要素は除外
+        const ctrl = wrap.querySelector('input, select');
+        if (!ctrl) return;
+        let suffix = wrap.dataset.addonSuffix;
+        if (!suffix && configObj?.[ctrl.name]?.unit) {
+          suffix = configObj[ctrl.name].unit;
         }
-        // 後部要素挿入
-        if (suffix) {
-          el.classList.add('has-suffix'); // 余白確保用
-          el.insertAdjacentHTML('beforeend', `<span class="addon-suffix"${styleStr}>${suffix}</span>`);
-        }
-        el.dataset.bound = 'true';
+        this.decorateAddon(wrap, {
+          icon: wrap.dataset.addonIcon,
+          prefix: wrap.dataset.addonPrefix,
+          suffix: wrap.dataset.addonSuffix,
+          color: wrap.dataset.addoptColor,
+          size: wrap.dataset.addoptSize
+        });
       });
     }
   }
@@ -366,21 +375,32 @@
           else el.removeAttribute('aria-invalid');
         }) },
         { key: 'bindFields', attr: 'data-bind-fields', fn: binder((el, val) => {
-          const addon = {
+          // 動的構築はComponent移譲
+          el.innerHTML = Tpl.Form.fields(val);
+          // 親要素から装飾設定を抽出
+          const conf = {
             icon: el.dataset.addonIcon, prefix: el.dataset.addonPrefix,
-            suffix: el.dataset.addonSuffix
+            suffix: el.dataset.addonSuffix, color: el.dataset.addoptColor,
+            size: el.dataset.addoptSize
           };
-          const addopt = {
-            color: el.dataset.addoptColor, size: el.dataset.addoptSize
-          };
-          const hasAddon = Object.values(addon).some(v => v);
-          const enrichedVal = (hasAddon && Array.isArray(val)) 
-            ? val.map(v => ({ ...v, addon, addopt })) 
-            : val;
-          el.innerHTML = Tpl.Form.fields(enrichedVal);
+          // CoreUI側でラッパーを被せて共通関数で装飾
+          if (conf.icon || conf.prefix || conf.suffix) {
+            Array.from(el.children).forEach(child => {
+              const ctrl = child.querySelector('input, select') || (child.matches('input, select') ? child : null);
+              if (ctrl) {
+                const wrap = document.createElement('div');
+                wrap.className = 'form-addon';
+                child.parentNode.insertBefore(wrap, child);
+                wrap.appendChild(child); // ラベルを含めず純粋にinputのみラップ
+                CoreUIPatcher.decorateAddon(wrap, conf);
+              }
+            });
+          }
+          
           el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
         }) }
       ];
+
       // --- 単一セレクタによるDOM走査と一括バインド ---
       const selector = bindDefs.map(d => `[${d.attr}^="${this.stateTarget}"]`).join(',');
       if (selector) {
