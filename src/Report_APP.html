@@ -1,28 +1,38 @@
 <!-- src/Report_APP.html -->
 <script>
+  // 【重要】初回ロード時の devicePixelRatio を「基準（倍率1）」として固定保持する
+const baseDevicePixelRatio = window.devicePixelRatio || 1;
 
-  function lockSidebarZoom() {
-    const sidebar = document.getElementById('fixed-sidebar');
-    if (!sidebar) return;
+function lockSidebarZoom() {
+  const sidebar = document.getElementById('fixed-sidebar');
+  const mainContent = document.getElementById('flow-main');
+  if (!sidebar) return;
 
-    // 現在のブラウザのズーム倍率を取得 (等倍時は 1)
-    const zoomScale = window.devicePixelRatio || 1;
+  // 現在の devicePixelRatio
+  const currentDPR = window.devicePixelRatio || 1;
 
-    // ズームの逆数を計算 (例: 2倍ズーム時は 0.5倍 に縮小する)
-    const inverseScale = 1 / zoomLevel;
+  // 初期状態（OSのディスプレイ設定など）からの相対的なズーム倍率を算出
+  const zoomRatio = currentDPR / baseDevicePixelRatio;
 
-    // サイドバーのサイズと文字サイズを逆算して相殺する
-    sidebar.style.transform = `scale(${inverseScale})`;
-    
-    // scaleだけだと全体のサイズが縮むため、幅と高さを倍率分引き伸ばして固定する
-    const baseWidth = 320;
-    sidebar.style.width = `${baseWidth * zoomScale}px`;
-    sidebar.style.height = `${100 * zoomScale}vh`;
-    if (mainContent) {mainContent.style.marginLeft = `${baseWidth}px`;}
-  }
+  // CSS変数へ反映
+  document.documentElement.style.setProperty('--current-scale', zoomRatio);
+  
+  const baseWidth = 320;
+  const currentWidth = baseWidth * zoomRatio;
+  const currentHeight = 100 * zoomRatio; // 綴りミス(currentheight)も修正
 
-  window.addEventListener('resize', lockSidebarZoom);
-  window.addEventListener('DOMContentLoaded', lockSidebarZoom);
+  // 【修正】メインマージンもズーム倍率を反映した currentWidth と完全に一致させる
+  document.documentElement.style.setProperty('--main-margin', `${currentWidth}px`);
+  document.documentElement.style.setProperty('--sidebar-width', `${currentWidth}px`);
+  document.documentElement.style.setProperty('--sidebar-height', `${currentHeight}vh`);
+}
+
+// 画面のリサイズやDOM読み込み時に実行
+window.addEventListener('resize', lockSidebarZoom);
+window.addEventListener('DOMContentLoaded', lockSidebarZoom);
+
+// 初回実行
+lockSidebarZoom();
 
   // --- RptTpl ---
   class RptTpl {

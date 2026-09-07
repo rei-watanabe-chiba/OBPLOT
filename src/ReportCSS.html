@@ -1,5 +1,10 @@
 <!-- src/ReportCSS.html -->
 <style>
+  root{
+    --sidebar-base-width: 320px;
+    --sidebar-base-height: 100vh;
+    --current-scale: 1;
+  }
   @keyframes fadeEnter {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -44,22 +49,21 @@
     display: flex;
     width: 100%;
     height: 100%;
-    
+
     .dash-sidebar {
-      width: 320px;
+      width: var(--sidebar-width, var(--sidebar-base-width));
+      height: var(--sidebar-height, var(--sidebar-base-height));
+      transform-origin: top left;
+      transform: scale(calc(1 / var(--current-scale)));
       background-color: #fff;
       border-right: 1px solid var(--grey200);
       display: flex;
       flex-direction: column;
-      height: 100%;
       overflow-y: auto;
       scrollbar-gutter: stable;
       padding: 16px;
       flex-shrink: 0;
-      transform-origin: top left; 
       position: fixed; 
-      left: 0;
-      top: 0;
       z-index: 20; 
     }
     .floating-card {
@@ -76,7 +80,7 @@
       color: var(--text-main);
     }
     .dash-main {
-      margin-left: 320px;
+      margin-left: var(--main-margin, var(--sidebar-base-width));
       flex: 1;
       display: flex;
       justify-content: center;
