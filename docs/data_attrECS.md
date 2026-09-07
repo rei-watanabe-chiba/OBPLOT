@@ -1,5 +1,13 @@
 # DataAttribute_Design.md
 
+## 💎 コア・デザイン原則：CSSクラスとJSの責務分離 (役割の純粋化)
+本アプリケーションにおける属性付与の絶対ルールとして、以下の責務分離を徹底する。
+1. **CSSクラスの純粋性**: CSSクラスは「UIの静的な装飾」および「状態（active, open等）による視覚的変化の定義」のみを純粋に司る。
+2. **JSからのCSSクラス検知の禁止**: JSロジックにおいて、`className` や `classList.contains()`、およびCSSクラスを用いた `querySelector` 等を「処理フロー発火の検知対象」とすることを固く禁じる。DOMの特定や状態検知は必ず `data-*` 属性を介して行う。
+3. **スタイル定義のデフォルト化**: `data-*` に連動するCSSは全てデフォルトの装飾値を持つ。動的に見た目（色・サイズ等）を変更する場合は、`data-opts` などのオプション属性にHTML上で宣言し、JSがそれを解釈して動的に付与する。
+
+---
+
 ## A. data-属性の新分類
 全体を走査し、既存の乱立していた属性を以下の4種7個（主属性）＋オプション属性（従）にマッピング・統合します。
 
@@ -8,35 +16,39 @@
 
 * **1-1.`data-action`**: 単発のイベント発火（ボタンクリック等）
   * **該当（統合される）属性**: `data-action`, `data-change-item`, `data-change-all`
+  * **【CSS分離の確認・該当】**: イベントリスナー内で発火元要素のCSSクラス（例: `.btn`, `.toggle`）を条件分岐の判定に使っていないか確認・修正対象。発火の起点・判定は純粋に `data-action` に依存させる。
 * **1-2.`data-bind`**: Stateとの双方向/単方向データ結合（フォーム入力、自動反映等）
   * **該当（統合される）属性**: `data-bind`, `data-bind-ctx`, `data-change`
+  * **【CSS分離の確認・該当】**: フォーム要素の取得や値変更の検知において、CSSクラスをトリガーとしていないか確認対象。
 
 ### 2. UI変更・構築系
 ※設定が必要な場合は `data-opts="key:val; key2:val2"` (1つのみ) に統合する。
 
 * **2-1.`data-ui`**: HTML構造そのものを動的に生成・マウントするトリガー。
   * **該当（統合される）属性**: `data-ui` (値として `dlg`, `mselect`, `segment`, `table`, `symbtbl`, `addon` 等をとる)
+  * **【CSS分離の確認・該当】**: JS側でのコンポーネント初期化時、ベースとなる構造のCSSクラスをJSが判定基準にしていないか確認対象。
 * **2-2.`data-patch`**: 既存のDOMに対して、Stateの値を元に動的な変更（テキスト、クラス、disabled状態など）を加えるトリガー。
   * **該当（統合される）属性**: `data-bind-status`, `data-bind-opts`, `data-bind-src`, `data-bind-stats`, `data-bind-errs`, `data-bind-invalid`, `data-bind-fields`
+  * **【CSS分離の確認・該当】**: JSがUI状態を変更する際、既存のクラス（`classList.add/remove`）を操作するのではなく、必ずStateを正として `data-state` や `data-status` 属性（後述4-1, 4-2）へ値を書き込む一方向フローになっているか確認・改修対象。
 
 ### 3. DOM参照・識別系
 ※オプション属性を持たない（禁止）。
 
 * **3-1.`data-part`**: 要素の特定・クエリ用。機能を持たない純粋なマーカー。
   * **該当（統合される）属性**: `data-part`
+  * **【CSS分離の確認・該当】**: JS内の `document.querySelector` や `closest` 等において、CSSクラス（`.hoge-container` など）でDOM検索している箇所を全て洗い出し、`[data-part="..."]` を用いたクエリへ置換する対象。
 
 ### 4. スタイル・状態反映系
 ※オプション属性を持たない（禁止）。CSSの起点としてJSから書き込まれる。
 
 * **4-1.`data-state`**: UIコンポーネントの見た目の状態（active, open, hidden等）。
   * **該当（統合される）属性**: `data-state`, `data-theme`, `data-board-mode`
+  * **【CSS分離の確認・該当】**: CSS側の記述において、擬似クラスや `.active` のような動的付与クラスに依存しているスタイル定義を、`&[data-state="active"]` などの属性セレクタへ変更する対象。
 * **4-2.`data-status`**: ビジネスロジックや通信結果の状態（loading, success, error等）。
   * **該当（統合される）属性**: `data-status`
+  * **【CSS分離の確認・該当】**: 上記 `data-state` と同様、CSS側は属性値をフックとして装飾を切り替えるよう徹底する対象。
 
 ---
-*(廃止・オプションへ吸収される属性群)*
-`data-arg`, `data-target`, `data-key`, `data-name`, `data-rule-key`, `data-symbol-idx`, `data-symbol-type`, `data-aspect-idx`, `data-sync-group`, `data-panel-id`, `data-tab`, `data-sub`, `data-result`, `data-addon-icon`, `data-addon-prefix`, `data-addon-suffix`, `data-addon-color`, `data-addopt-size`, `data-renderer`
-
 
 ## B. 汎用関数（ルーター）の導入
 各主属性を安全かつ効率的に処理するための汎用ルーター・パーサーの設計です。
