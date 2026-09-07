@@ -1,35 +1,41 @@
 <!-- src/Report_APP.html -->
 <script>
-  // 【重要】初回ロード時の devicePixelRatio を「基準（倍率1）」として固定保持する
+// 【重要】初回ロード時の devicePixelRatio を「基準（倍率1）」として固定保持する
 const baseDevicePixelRatio = window.devicePixelRatio || 1;
 
 function lockSidebarZoom() {
   const sidebar = document.getElementById('fixed-sidebar');
-  const mainContent = document.getElementById('flow-main');
   if (!sidebar) return;
 
   // 現在の devicePixelRatio
   const currentDPR = window.devicePixelRatio || 1;
 
-  // 初期状態（OSのディスプレイ設定など）からの相対的なズーム倍率を算出
+  // 初期状態からの相対的なズーム倍率を算出
   const zoomRatio = currentDPR / baseDevicePixelRatio;
 
-  // CSS変数へ反映
+  // CSS変数へ倍率を反映
   document.documentElement.style.setProperty('--current-scale', zoomRatio);
   
-  const baseWidth = 320;
-  const currentWidth = baseWidth * zoomRatio;
-  const currentHeight = 100 * zoomRatio; // 綴りミス(currentheight)も修正
+  const baseWidth = 320; // サイドバーの物理幅 (px)
 
-  // 【修正】メインマージンもズーム倍率を反映した currentWidth と完全に一致させる
-  document.documentElement.style.setProperty('--main-margin', `${currentWidth}px`);
-  document.documentElement.style.setProperty('--sidebar-width', `${currentWidth}px`);
-  document.documentElement.style.setProperty('--sidebar-height', `${currentHeight}vh`);
+  // CSSピクセル空間での実効幅
+  const effectiveWidth = baseWidth / zoomRatio;
+
+  // 【修正】vhではなく現在の画面高（CSS px）× zoomRatio で厳密な高さを算出
+  // これにより scale(1 / zoomRatio) 後に画面高（物理px）と完全一致します
+  const effectiveHeight = window.innerHeight * zoomRatio;
+
+  document.documentElement.style.setProperty('--sidebar-width', `${baseWidth}px`);
+  document.documentElement.style.setProperty('--main-margin', `${effectiveWidth}px`);
+  document.documentElement.style.setProperty('--sidebar-height', `${effectiveHeight}px`);
 }
 
-// 画面のリサイズやDOM読み込み時に実行
+// 画面のリサイズ・DOM読み込み・ピンチ操作等に追従
 window.addEventListener('resize', lockSidebarZoom);
 window.addEventListener('DOMContentLoaded', lockSidebarZoom);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', lockSidebarZoom);
+}
 
 // 初回実行
 lockSidebarZoom();
