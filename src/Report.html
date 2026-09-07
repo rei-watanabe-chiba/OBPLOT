@@ -41,19 +41,13 @@
           <h4 class="pane-title">選択中のパネル設定</h4>
           <div data-part="mount-panel-config">
             <div class="prop-row">
-              <label class="prop-label panel">スケール</label>
-              <div class="prop-controls">
-                <div class="segment-ctrl" data-ui="segment" data-bind="RPTST.ui.activePanelScaleMode" style="margin-bottom:0;">
-                  <button type="button" class="segment-btn" data-action="RepoAct.setActiveScaleMode" data-arg="auto">Auto</button>
-                  <button type="button" class="segment-btn" data-action="RepoAct.setActiveScaleMode" data-arg="manual">固定</button>
-                </div>
-              </div>
+              <!-- 省略: スケール設定 -->
             </div>
             <form data-bind-ctx="RPTST.panels.$active">
               <div data-part="secCALB">
                 <div class="prop-row">
                   <label class="prop-label panel">対象指標</label>
-                  <div class="prop-controls" data-part="boxCalbVal" data-bind-fields="RPTST.ui.optFields.calbValFields"></div>
+                  <div class="prop-controls" data-part="boxCalbVal" data-bind-fields="RPTST.ui.optFields.calbValFields" data-addon-icon="analytics" data-addon-color="var(--theme-color)"></div>
                 </div>
                 <div class="prop-row" data-part="boxCalibTick">
                   <label class="prop-label panel">目盛単位</label>
@@ -63,11 +57,11 @@
               <div data-part="secCluster">
                 <div class="prop-row">
                   <label class="prop-label panel">X<span class="badge-label">項目</span></label>
-                  <div class="prop-controls" data-part="boxClusX" data-bind-fields="RPTST.ui.optFields.clusXFields"></div>
+                  <div class="prop-controls" data-part="boxClusX" data-bind-fields="RPTST.ui.optFields.clusXFields" data-addon-icon="data_object" data-addon-color="var(--theme-color)"></div>
                 </div>
                 <div class="prop-row">
                   <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
-                  <div class="prop-controls" data-part="boxClusY" data-bind-fields="RPTST.ui.optFields.clusYFields"></div>
+                  <div class="prop-controls" data-part="boxClusY" data-bind-fields="RPTST.ui.optFields.clusYFields" data-addon-icon="data_object" data-addon-color="var(--theme-color)"></div>
                 </div>
                 <div class="prop-row" data-part="boxClusTick">
                   <label class="prop-label panel">X/Y<span class="badge-label">目盛</span></label>
@@ -80,26 +74,30 @@
               <div class="prop-row">
                 <label class="prop-label panel">タイトル</label>
                 <div class="prop-controls">
-                  <input type="text" name="title" placeholder="パネルタイトルを入力" class="form-control">
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">title</span>
+                    <input type="text" name="title" placeholder="パネルタイトルを入力" class="form-control">
+                  </div>
                 </div>
               </div>
               <div class="prop-row">
                 <label class="prop-label panel">X/Y<span class="badge-label">ラベル</span></label>
                 <div class="prop-controls">
-                  <input type="text" name="xLabel" class="form-control" placeholder="X軸">
-                  <input type="text" name="yLabel" class="form-control" placeholder="Y軸">
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">label</span>
+                    <input type="text" name="xLabel" class="form-control" placeholder="X軸">
+                  </div>
+                  <div class="form-addon">
+                    <span class="material-symbols-outlined">label</span>
+                    <input type="text" name="yLabel" class="form-control" placeholder="Y軸">
+                  </div>
                 </div>
               </div>
             </form>
           </div>
         </div>
-        <nav class="sidebar-tabs" data-part="sidebarTabs">
-          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabLayout" aria-selected="true" title="レイアウト"><span class="material-symbols-outlined">grid_view</span></button>
-          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabData" aria-selected="false" title="データ設定"><span class="material-symbols-outlined">database</span></button>
-          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabStyle" aria-selected="false" title="グラフスタイル"><span class="material-symbols-outlined">palette</span></button>
-          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabSymb" aria-selected="false" title="シンボル設定"><span class="material-symbols-outlined">category</span></button>
-          <button data-part="tab-icon" class="tab-icon" data-action="RepoAct.actvTab" data-arg="tabOutput" aria-selected="false" title="出力"><span class="material-symbols-outlined">output</span></button>
-        </nav>
+
+        <!-- タブコンテンツエリア -->
         <div class="tab-content-area" data-part="tabContentArea">
           <!-- タブ: tabLayout -->
           <div data-part="tab-pane" data-tab="tabLayout" class="sidebar-tab-pane" aria-selected="true">
@@ -108,8 +106,14 @@
                 <div class="prop-row">
                   <label class="prop-label panel">行数 / 列数</label>
                   <div class="prop-controls">
-                    <input type="number" name="gridRows" data-part="inpGridRows" class="form-control" title="行数" min="1" max="3" step="1">
-                    <input type="number" name="gridCols" data-part="inpGridCols" class="form-control" title="列数" min="1" max="3" step="1">
+                    <div class="form-addon">
+                      <span class="material-symbols-outlined">table_rows</span>
+                      <input type="number" name="gridRows" data-part="inpGridRows" class="form-control" title="行数" min="1" max="3" step="1">
+                    </div>
+                    <div class="form-addon">
+                      <span class="material-symbols-outlined">view_column</span>
+                      <input type="number" name="gridCols" data-part="inpGridCols" class="form-control" title="列数" min="1" max="3" step="1">
+                    </div>
                   </div>
                 </div>
               </form>
@@ -220,7 +224,7 @@
             <div data-part="mount-data-crct">
               <div class="prop-row">
                 <label class="prop-label panel">検量線</label>
-                <div class="prop-controls" data-part="boxGlobalCrct" data-bind-fields="RPTST.ui.optFields.crctFields"></div>
+                <div class="prop-controls" data-part="boxGlobalCrct" data-bind-fields="RPTST.ui.optFields.crctFields" data-addon-icon="show_chart" data-addon-color="var(--theme-color)"></div>
               </div>
               <div class="prop-row">
                 <label class="prop-label panel">対象元素</label>
@@ -240,113 +244,147 @@
           </div>
           <!-- タブ: tabStyle -->
           <div data-part="tab-pane" data-tab="tabStyle" class="sidebar-tab-pane" aria-selected="false">
-            <div class="segment-ctrl" data-ui="segment" data-bind="RPTST.ui.activeSub">
-              <button type="button" class="segment-btn" data-action="RepoAct.actvSub" data-arg="subFont" aria-selected="true">フォント</button>
-              <button type="button" class="segment-btn" data-action="RepoAct.actvSub" data-arg="subArea" aria-selected="false">グラフエリア</button>
-            </div>
             <div data-part="sub-pane" data-sub="subFont" class="sub-pane" aria-selected="true">
               <div data-part="mount-style-font">
                 <div class="prop-row">
                   <label class="prop-label">欧文スタイル</label>
-                  <div class="prop-controls" data-part="boxFontEng" data-bind-fields="RPTST.ui.optFields.fontEngFields"></div>
+                  <div class="prop-controls" data-part="boxFontEng" data-bind-fields="RPTST.ui.optFields.fontEngFields" data-addon-icon="text_format" data-addon-color="var(--theme-color)"></div>
                 </div>
                 <div class="prop-row">
                   <label class="prop-label">和文スタイル</label>
-                  <div class="prop-controls" data-part="boxFontJp" data-bind-fields="RPTST.ui.optFields.fontJpFields"></div>
+                  <div class="prop-controls" data-part="boxFontJp" data-bind-fields="RPTST.ui.optFields.fontJpFields" data-addon-icon="language" data-addon-color="var(--theme-color)"></div>
                 </div>
                 <form data-bind-ctx="RPTST.config.theme">
                   <div class="prop-row">
                     <label class="prop-label">カラー<span class="badge-label">K</span></label>
                     <div class="prop-controls">
                       <input type="range" name="c_base" style="flex:1.8;">
-                      <input type="text" name="c_base" class="form-control" style="flex:1.2;text-align:center;">
+                      <div class="form-addon" style="flex:1.2;">
+                        <input type="text" name="c_base" class="form-control" style="text-align:center;">
+                        <span class="input-unit">%</span>
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">タイトル</label>
                     <div class="prop-controls">
-                      <input type="number" name="s_title" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">title</span>
+                        <input type="number" name="s_title" class="form-control">
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">軸名</label>
                     <div class="prop-controls">
-                      <input type="number" name="s_name" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">label</span>
+                        <input type="number" name="s_name" class="form-control">
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">目盛</label>
                     <div class="prop-controls">
-                      <input type="number" name="s_tick" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">linear_scale</span>
+                        <input type="number" name="s_tick" class="form-control">
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">回帰式</label>
                     <div class="prop-controls">
-                      <input type="number" name="s_stats" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">functions</span>
+                        <input type="number" name="s_stats" class="form-control">
+                      </div>
                     </div>
                   </div>
                 </form>
               </div>
             </div>
+            
             <div data-part="sub-pane" data-sub="subArea" class="sub-pane" aria-selected="false">
               <div data-part="mount-style-area">
                 <form data-bind-ctx="RPTST.config.theme">
                   <div class="prop-row">
                     <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
                     <div class="prop-controls">
-                      <input type="number" name="sym_size" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">radio_button_unchecked</span>
+                        <input type="number" name="sym_size" class="form-control">
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">シンボル<span class="badge-label">線幅</span></label>
                     <div class="prop-controls">
-                      <input type="number" name="sym_bw" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">line_weight</span>
+                        <input type="number" name="sym_bw" class="form-control">
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">軸線<span class="badge-label">線幅</span></label>
                     <div class="prop-controls">
-                      <input type="number" name="lw_axis" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">border_bottom</span>
+                        <input type="number" name="lw_axis" class="form-control">
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">軸線<span class="badge-label">K</span></label>
                     <div class="prop-controls">
                       <input type="range" name="c_axis" style="flex:1.8;">
-                      <input type="text" name="c_axis" class="form-control" style="flex:1.2;text-align:center;">
+                      <div class="form-addon" style="flex:1.2;">
+                        <input type="text" name="c_axis" class="form-control" style="text-align:center;">
+                        <span class="input-unit">%</span>
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">グリッド<span class="badge-label">線幅</span></label>
                     <div class="prop-controls">
-                      <input type="number" name="lw_grid" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">grid_4x4</span>
+                        <input type="number" name="lw_grid" class="form-control">
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">グリッド<span class="badge-label">K</span></label>
                     <div class="prop-controls">
                       <input type="range" name="c_grid" style="flex:1.8;">
-                      <input type="text" name="c_grid" class="form-control" style="flex:1.2;text-align:center;">
+                      <div class="form-addon" style="flex:1.2;">
+                        <input type="text" name="c_grid" class="form-control" style="text-align:center;">
+                        <span class="input-unit">%</span>
+                      </div>
                     </div>
                   </div>
                   <div class="prop-row">
                     <label class="prop-label">回帰線<span class="badge-label">線幅</span></label>
                     <div class="prop-controls">
-                      <input type="number" name="lw_reg" class="form-control">
+                      <div class="form-addon">
+                        <span class="material-symbols-outlined">timeline</span>
+                        <input type="number" name="lw_reg" class="form-control">
+                      </div>
                     </div>
                   </div>
                 </form>
               </div>
             </div>
           </div>
+
           <!-- タブ: tabSymb -->
           <div data-part="tab-pane" data-tab="tabSymb" class="sidebar-tab-pane" aria-selected="false">
             <div data-part="mount-symb">
               <div class="prop-row" style="margin-bottom:12px;">
                 <label class="prop-label panel">属性選択</label>
                 <div class="prop-controls">
-                  <div data-part="boxSymbAxis" data-bind-fields="RPTST.ui.optFields.axisFields" style="flex:1;"></div>
+                  <div data-part="boxSymbAxis" data-bind-fields="RPTST.ui.optFields.axisFields" style="flex:1;" data-addon-icon="category" data-addon-color="var(--theme-color)"></div>
                   <button data-action="RepoAct.resetSymb" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
                 </div>
               </div>
