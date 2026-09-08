@@ -82,9 +82,8 @@
     }
 
     static selectFavItem(tgt, param) {
-      const name = param || tgt.dataset.param || tgt.dataset.name;
+      const name = param || tgt.dataset.param;
       if (!name) return;
-      // (以降変更なし)
       const cur = State.get("DashST.REPO.refs.selectedFav");
       if (cur === name) {
         State.set({
@@ -208,9 +207,8 @@
     }
 
     static async delFavItem(tgt, param) {
-      const name = param || tgt.dataset.param || tgt.dataset.name || tgt.dataset.key;
+      const name = param || tgt.dataset.param;
       if (!name) return;
-      // (以降変更なし)
       const ok = await CoreAct.confirm("確認", `設定「${name}」を削除しますか？`);
       if (!ok) return;
 

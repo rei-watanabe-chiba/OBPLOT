@@ -19,21 +19,21 @@
       }
       // --- select ---
       static select(conf) {
-        const { type = 'select', bind, change, field, opts, hasEmpty, name } = conf;
+        const { type = 'select', bind, change, field, param, opts, hasEmpty, name } = conf;
         const nm = name ? ` name="${name}"` : '';
         const patchStr = bind ? ` data-patch="bind: ${bind}"` : '';
         const actStr = change ? ` data-action="${change}"` : '';
-        const fldStr = field ? ` data-field="${field}"` : '';
+        const fldStr = param ? ` data-param="${param}"` : '';
         return html`<select class="field-${type} form-control"${nm}${patchStr}${actStr}${fldStr}>${this.options(opts, hasEmpty)}</select>`;
       }
 
       // --- input ---
       static input(conf) {
-        const { type = 'text', bind, change, field, inputType, placeholder, name } = conf;
+        const { type = 'text', bind, change, field, param, inputType, placeholder, name } = conf;
         const nm = name ? ` name="${name}"` : '';
         const patchStr = bind ? ` data-patch="bind: ${bind}"` : '';
         const actStr = change ? ` data-action="${change}"` : '';
-        const fldStr = field ? ` data-field="${field}"` : '';
+        const fldStr = param ? ` data-param="${param}"` : '';
         const ph = placeholder ? ` placeholder="${placeholder}"` : '';
         return html`<input type="${inputType || 'text'}" class="field-${type} form-control"${nm}${ph}${patchStr}${actStr}${fldStr}>`;
       }
@@ -86,7 +86,7 @@
         return html`<button type="button" class="${cls}" data-action="${action}" ${attrs}>${text}</button>`;
       }
       static iconBtn(text, action, key = '', dis = false, cls = 'icon-btn', attrs = '') {
-        return html`<button type="button" class="${cls}" data-action="${action}" ${key ? html`data-rule-key="${key}" data-key="${key}"` : ''} ${dis ? 'disabled' : ''} ${attrs}>${text}</button>`;
+        return html`<button type="button" class="${cls}" data-action="${action}" ${key ? html`data-param="${key}"` : ''} ${dis ? 'disabled' : ''} ${attrs}>${text}</button>`;
       }
       static cell(cntHtml, cls = '', attrs = '') {
         return html`<div class="${cls}" ${attrs}>${cntHtml}</div>`;
@@ -125,7 +125,8 @@
         { key: 'clr', className: 'symb-col-color', hasClr: true }
       ];
       static sum(label, clr, hasClr, hasVal) { return html`${(hasClr && hasVal) ? Tpl.Common.colorBox(clr) : ""}${label}`; }
-      static item(opt, type, idx, hasClr, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-symbol-idx="${idx}" data-symbol-type="${type}" value="${opt.val}" popovertargetaction="hide">${hasClr ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
+      static item(opt, type, idx, hasClr, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-param="${idx}" data-sub-param="${type}" value="${opt.val}" popovertargetaction="hide">${hasClr ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
+      static btn(action, key, text, dis) { return Tpl.Elements.iconBtn(text, action, key, dis); }
       static btn(action, key, text, dis) { return Tpl.Elements.iconBtn(text, action, key, dis); }
       static col(clsName, cntHtml) { return Tpl.Elements.cell(cntHtml, clsName); }
       static row(btnHtml, colsHtml) { return Tpl.Elements.row(`${Tpl.Elements.cell(btnHtml, 'symb-col-btn')}${colsHtml}`, 'symb-table-row'); }

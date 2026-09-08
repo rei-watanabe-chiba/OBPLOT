@@ -69,7 +69,8 @@
     }
 
     static syncFormCtx(form) {
-      const rawCtx = form.dataset.bindCtx;
+      const opts = CoreUIPatcher.routOptions(form.dataset.opts);
+      const rawCtx = opts.ctx;
       if (!rawCtx) return;
       const ctx = CoreUIPatcher.resolveBindCtx(rawCtx);
       form.querySelectorAll('input[name], select[name], textarea[name]').forEach(ctrl => {
@@ -91,7 +92,8 @@
         return;
       }
       form.__boundCtx = true;
-      const rawCtx = form.dataset.bindCtx;
+      const opts = CoreUIPatcher.routOptions(form.dataset.opts);
+      const rawCtx = opts.ctx;
       if (!rawCtx) return;
 
       CoreUIPatcher.syncFormCtx(form);
@@ -316,7 +318,8 @@
       
       if (type === 'dlg') this.initDlg(el);
       else if (type === 'mselect') this.ensureMSelectInit(el);
-      else if (type === 'addon') this.buildAddon(el, opts); // ★追加: 新ルール用
+      else if (type === 'addon') this.buildAddon(el, opts);
+      else if (type === 'form') this.bindFormCtx(el);
       
       el.__uiBound = true;
     }
@@ -351,11 +354,8 @@
 
     // --- [buildAddon] 装飾DOM直接付与 (旧 decorateAddon) ---
     static buildAddon(wrap, opts) {
-      // 既にバインド済みの場合はスキップ
-      if (wrap.dataset.optsBound === 'true') return;
-      
       const { icon, prefix, suffix, color, size } = opts;
-      if (!icon && !prefix && !suffix) { wrap.dataset.optsBound = 'true'; return; }
+      if (!icon && !prefix && !suffix) return;
       
       const styles = [];
       if (color) styles.push(`color:${color}`);
@@ -367,15 +367,12 @@
         let preInner = '';
         if (icon) preInner += `<span class="material-symbols-outlined"${styleAttr}>${icon}</span>`;
         if (prefix) preInner += `<span${styleAttr}>${prefix}</span>`;
-        // 設計書準拠: .prefix-container へ変更
         wrap.insertAdjacentHTML('afterbegin', `<span class="prefix-container">${preInner}</span>`);
       }
       if (suffix) {
         wrap.classList.add('has-suffix');
-        // 設計書準拠: .suffix-container へ変更
         wrap.insertAdjacentHTML('beforeend', `<span class="suffix-container"${styleAttr}>${suffix}</span>`);
       }
-      wrap.dataset.optsBound = 'true';
     }
   }
 
@@ -394,9 +391,6 @@
 
       // [新処理] data-ui ビルダー
       document.querySelectorAll('[data-ui]').forEach(el => CoreUIPatcher.routBuilder(el));
-
-      // --- <form data-bind-ctx> の自動バインド ---
-      document.querySelectorAll('form[data-bind-ctx]').forEach(form => CoreUIPatcher.bindFormCtx(form));
 
       // [新処理] data-patch ルーター
       const getVal = (path) => this.getVal(path);

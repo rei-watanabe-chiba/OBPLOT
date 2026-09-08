@@ -48,7 +48,7 @@
                 </div>
               </div>
             </div>
-            <form data-bind-ctx="RPTST.panels.$active">
+            <form data-ui="form" data-opts="ctx: RPTST.panels.$active">
               <div data-part="secCALB">
                 <div class="prop-row">
                   <label class="prop-label panel">対象指標</label>
@@ -123,7 +123,7 @@
           <!-- タブ: tabLayout -->
           <div data-part="tab-pane" data-param="tabLayout" class="sidebar-tab-pane" aria-selected="true">
             <h5 class="pane-title" style="margin-bottom:8px;">ボード設定</h5>
-              <form data-bind-ctx="RPTST.config.layout">
+              <form data-ui="form" data-opts="ctx: RPTST.config.layout">
                 <div class="prop-row">
                   <label class="prop-label panel">行数 / 列数</label>
                   <div class="prop-controls">
@@ -138,7 +138,7 @@
               </form>
             <h5 class="pane-title" style="margin-bottom:8px;">余白設定</h5>
             <div data-part="mount-layout-margins">
-              <form data-bind-ctx="RPTST.config.theme">
+              <form data-ui="form" data-opts="ctx: RPTST.config.theme">
                 <label class="prop-label inline" style="margin-bottom: 4px;">
                   <span>キャンバス余白<span class="badge-label">mm</span></span>
                   <button type="button" class="link-toggle" data-action="RepoAct.toggleMarginLink" data-sync-group="canvas" title="連動">
@@ -196,7 +196,7 @@
                   </div>
                 </div>
               </form>
-              <form data-bind-ctx="RPTST.config.layout">
+              <form data-ui="form" data-opts="ctx: RPTST.config.layout">
                 <div class="prop-row">
                   <label class="prop-label">パネル間隔</label>
                   <div class="prop-controls">
@@ -273,7 +273,7 @@
                     <select name="fontJp" class="form-control" data-patch="bind: RPTST.config.theme.fontJp; opts: RPTST.ui.optFields.fontJpOpts" data-has-empty="false"></select>
                   </div>
                 </div>
-                <form data-bind-ctx="RPTST.config.theme">
+                <form data-ui="form" data-opts="ctx: RPTST.config.theme">
                   <div class="prop-row">
                     <label class="prop-label">カラー<span class="badge-label">K</span></label>
                     <div class="prop-controls">
@@ -321,7 +321,7 @@
             
             <div data-part="sub-pane" data-param="subArea" class="sub-pane" aria-selected="false">
               <div data-part="mount-style-area">
-                <form data-bind-ctx="RPTST.config.theme">
+                <form data-ui="form" data-opts="ctx: RPTST.config.theme">
                   <div class="prop-row">
                     <label class="prop-label">シンボル<span class="badge-label">サイズ</span></label>
                     <div class="prop-controls">

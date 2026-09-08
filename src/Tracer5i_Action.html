@@ -14,8 +14,8 @@
       State.set({ "ENTST.PREF.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出対応" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "ENTST.phase": isInit ? ENT_PHS.READY : ENT_PHS.INVALID } : {}) });
     }
 
-    static updRawRefs(tgt) {
-      State.set(`ENTST.RAW.refs.${tgt.dataset.field}`, tgt.value);
+    static updRawRefs(tgt, param) {
+      State.set(`ENTST.RAW.refs.${param}`, tgt.value);
       ENTAct.valdRawRefs();
     }
     static valdRawRefs() {
@@ -174,11 +174,11 @@
     }
     static addSymb() { State.set("ADPST.SYMB.refs.rls", [...(State.get("ADPST.SYMB.refs.rls") ?? []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
     static removeSymb(tgtBtn, param) {
-      const key = param || tgtBtn.dataset.param || tgtBtn.dataset.ruleKey;
+      const key = param || tgtBtn.dataset.param;
       if (key) State.set("ADPST.SYMB.refs.rls", (State.get("ADPST.SYMB.refs.rls") ?? []).filter(r => r.key !== key));
     }
-    static updSymb(tgtBtn) {
-      const idx = tgtBtn.dataset.symbolIdx, type = tgtBtn.dataset.symbolType;
+    static updSymb(tgtBtn, param, subParam) {
+      const idx = param || tgtBtn.dataset.param, type = subParam || tgtBtn.dataset.subParam;
       if (idx == null || !type) return;
       const rls = [...(State.get("ADPST.SYMB.refs.rls") ?? [])];
       if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("ADPST.SYMB.refs.rls", rls); }

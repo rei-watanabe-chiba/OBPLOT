@@ -48,7 +48,7 @@
     static update() { RepoAct.automator?.update(); }
     // --- finalizePanel ---
     static finalizePanel() {
-      document.querySelectorAll('form[data-bind-ctx]').forEach(f => CoreUIPatcher.syncFormCtx(f));
+      document.querySelectorAll('form[data-ui="form"]').forEach(f => CoreUIPatcher.syncFormCtx(f));
       this.update();
     }
     // --- initSt ---
@@ -192,8 +192,8 @@
     static automator = null;
     static oldSymbAxis = GLB.symbBaseKey;
     // --- setBoardMode ---
-    static setBoardMode(btn, arg) {
-      const mode = arg || btn?.dataset?.param || btn?.dataset?.arg || btn?.dataset?.target || 'calib';
+    static setBoardMode(btn, param) {
+      const mode = param || btn?.dataset?.param || 'calib';
       if (State.get("RPTST.config.boardMode") === mode) return;
       document.body.setAttribute('data-board-mode', mode);
       State.set({
@@ -209,10 +209,9 @@
       State.set("RPTST.ui.activePanelId", newPanel.id);
     }
     // --- changePanelRef ---
-    static changePanelRef(tgt) {
-      //data-bind-ctxが残存するためdataset.bindが残留**削除するとエラーになるため注意**
-      const key = tgt.dataset.apKey || tgt.dataset.field || tgt.name || tgt.dataset.bind?.split('.').pop();
-      const val = tgt.value ?? tgt.dataset.param;
+    static changePanelRef(tgt, param) {
+      const key = tgt.name || param || tgt.dataset.param;
+      const val = tgt.value ?? param;
       const { panel, panels, boardMode } = RepoSt.getSt();
       if (!panel) return;
       panel[key] = ['tickUnit', 'tickUnitX', 'tickUnitY'].includes(key) ? (val === "" || isNaN(Number(val)) ? null : Number(val)) : val;
@@ -257,13 +256,14 @@
       State.set("RPTST.config.symbology.rls", [...rls, { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]);
     }
     // --- removeSymb ---
-    static removeSymb(btn) {
-      const rls = State.get("RPTST.config.symbology.rls") || [];
-      State.set("RPTST.config.symbology.rls", rls.filter(rw => rw.key !== btn.dataset.ruleKey));
+    static removeSymb(btn, param) {
+      const key = param || btn.dataset.param;
+      const rls = State.get("RPTST.config.symbology.rls")
+      if (key) rls, (rls || []).filter(rw => rw.key !== key));
     }
     // --- updSymb ---
-    static updSymb(btn) {
-      const i = btn.dataset.symbolIdx, t = btn.dataset.symbolType;
+    static updSymb(btn, param, subParam) {
+      const i = param || btn.dataset.param, t = subParam || btn.dataset.subParam;
       if (i != null && t) {
         const newSym = JSON.parse(JSON.stringify(State.get("RPTST.config.symbology.rls") || []));
         newSym[i][t] = btn.value;
@@ -271,8 +271,8 @@
       }
     }
     // --- setActiveScaleMode ---
-    static setActiveScaleMode(btn, arg) {
-      const mode = arg || btn?.dataset?.param || btn?.dataset?.arg;
+    static setActiveScaleMode(btn, param) {
+      const mode = param || btn?.dataset?.param;
       if (!mode) return;
       const { panel, panels } = RepoSt.getSt();
       if (panel) {
@@ -294,9 +294,9 @@
       State.set("RPTST.config.layout", lyt);
     }
     // --- actvTab ---
-    static actvTab(btn, v) { State.set("RPTST.ui.activeTab", v || btn.dataset.param || btn.dataset.v || btn.dataset.tab); }
+    static actvTab(btn, param) { State.set("RPTST.ui.activeTab", param || btn.dataset.param); }
     // --- actvSub ---
-    static actvSub(btn, v) { State.set("RPTST.ui.activeSub", v || btn.dataset.param); }
+    static actvSub(btn, param) { State.set("RPTST.ui.activeSub", param || btn.dataset.param); }
     // --- actvPanel ---
     static actvPanel(btn) { State.set("RPTST.ui.activePanelId", btn.dataset.panelId); }
     // --- updExportDesc ---
@@ -328,7 +328,7 @@
       const keys = group === 'canvas' ? ['bd_l', 'bd_t', 'bd_b', 'bd_r'] : ['p_l', 'p_t', 'p_b', 'p_r'];
       const val = Number(inp.value);
       keys.forEach(k => State.set(`RPTST.config.theme.${k}`, val));
-      document.querySelectorAll('form[data-bind-ctx]').forEach(f => CoreUIPatcher.syncFormCtx(f));
+      document.querySelectorAll('form[data-ui="form"]').forEach(f => CoreUIPatcher.syncFormCtx(f));
     }
   }
 
@@ -704,7 +704,7 @@
           const updates = {};
           keys.forEach(k => { updates[`RPTST.config.theme.${k}`] = val; });
           State.set(updates);
-          document.querySelectorAll('form[data-bind-ctx]').forEach(f => CoreUIPatcher.syncFormCtx(f));
+          document.querySelectorAll('form[data-ui="form"]').forEach(f => CoreUIPatcher.syncFormCtx(f));
         };
         State.subscribe(linkBind, isLinked => { 
           if (isLinked) syncAll(State.get(statePaths[0]) ?? 0); 

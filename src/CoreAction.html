@@ -182,7 +182,7 @@
     // --- [routEvent] 中央イベントルーター ---
     static rootGLB(actionClasses = {}) {
       const routEvent = (e) => {
-        const tgt = e.target.closest('[data-action], [data-patch], form[data-bind-ctx] input, form[data-bind-ctx] select, form[data-bind-ctx] textarea') || e.target;
+        const tgt = e.target.closest('[data-action], [data-patch], form[data-ui="form"] input, form[data-ui="form"] select, form[data-ui="form"] textarea') || e.target;
         if (!tgt || tgt.disabled) return;
 
         const tag = tgt.tagName;
@@ -191,7 +191,7 @@
         const isInput = e.type === 'input';
         const isChange = e.type === 'change';
         const isLiveInput = isInput && ['INPUT', 'TEXTAREA'].includes(tag) && !['checkbox', 'radio'].includes(type);
-        const formCtx = tgt.closest('form[data-bind-ctx]');
+        const formCtx = tgt.closest('form[data-ui="form"]');
 
         // --- Action発火処理 ---
         const actionStr = tgt.dataset.action;
@@ -211,7 +211,8 @@
 
         // --- State結合処理 (data-patch="bind: ...") ---
         const patchBind = tgt.dataset.patch ? CoreUIPatcher.routOptions(tgt.dataset.patch).bind : null;
-        const bindPath = patchBind || (formCtx && tgt.name ? `${CoreUIPatcher.resolveBindCtx(formCtx.dataset.bindCtx)}.${tgt.name}` : null);
+        const ctxPath = formCtx ? CoreUIPatcher.routOptions(formCtx.dataset.opts).ctx : null;
+        const bindPath = patchBind || (ctxPath && tgt.name ? `${CoreUIPatcher.resolveBindCtx(ctxPath)}.${tgt.name}` : null);
 
         if (bindPath && (isLiveInput || isChange)) {
           let val = type === "checkbox" ? tgt.checked : (['number', 'range'].includes(type) ? (tgt.value === '' ? '' : Number(tgt.value)) : tgt.value);
