@@ -2,20 +2,20 @@
 <script>
   const ENT_SCHEMA = {
       elements: [
-        { id: "entFieldset", disablePhase: () => State.get("GLB.isLocked") },
-        { id: "secPREF", activePhase: p => p === ENT_PHS.INIT, disablePhase: p => false },
+        { part: "entFieldset", disablePhase: () => State.get("GLB.isLocked") },
+        { part: "secPREF", activePhase: p => p === ENT_PHS.INIT, disablePhase: p => false },
         
-        { id: "secRAW", activePhase: p => p >= ENT_PHS.READY, disablePhase: p => p < ENT_PHS.READY, openPhase: p => p >= ENT_PHS.READY && p < ENT_PHS.VALID },
-        { id: "btnRAW_load", disablePhase: p => false, text: p => p <= ENT_PHS.READY ? "データを取得" : "再取得" },
-        { id: "btnRAW_genList", activePhase: p => p >= ENT_PHS.READY, className: p => p === ENT_PHS.LOAD ? "" : "outline" },
-        { id: "btnRAW_valdList", activePhase: p => p >= ENT_PHS.INVALID && !State.get("ENTST.RAW.flags").some(Boolean), className: p => p === ENT_PHS.INVALID ? "" : "outline" },
-        { id: "secRAW_area", visiblePhase: p => p >= ENT_PHS.LOAD },
-        { id: "boxRAW_btn", visiblePhase: p => p >= ENT_PHS.LOAD },
+        { part: "secRAW", activePhase: p => p >= ENT_PHS.READY, disablePhase: p => p < ENT_PHS.READY, openPhase: p => p >= ENT_PHS.READY && p < ENT_PHS.VALID },
+        { part: "btnRAW_load", disablePhase: p => false, text: p => p <= ENT_PHS.READY ? "データを取得" : "再取得" },
+        { part: "btnRAW_genList", activePhase: p => p >= ENT_PHS.READY, className: p => p === ENT_PHS.LOAD ? "" : "outline" },
+        { part: "btnRAW_valdList", activePhase: p => p >= ENT_PHS.INVALID && !State.get("ENTST.RAW.flags").some(Boolean), className: p => p === ENT_PHS.INVALID ? "" : "outline" },
+        { part: "secRAW_area", visiblePhase: p => p >= ENT_PHS.LOAD },
+        { part: "boxRAW_btn", visiblePhase: p => p >= ENT_PHS.LOAD },
         
-        { id: "secEXTR", activePhase: p => p >= ENT_PHS.VALID, disablePhase: p => p < ENT_PHS.VALID, openPhase: p => p >= ENT_PHS.VALID && p < ENT_PHS.OUTPUT },
-        { id: "btnEXTR_run", activePhase: p => p >= ENT_PHS.VALID && !State.get("ENTST.EXTR.flags").some(Boolean) },
-        { id: "btnEXTR_push", activePhase: p => p >= ENT_PHS.EXTRACT, visiblePhase: p => p >= ENT_PHS.EXTRACT },
-        { id: "secEXTR_area", visiblePhase: p => p >= ENT_PHS.VALID }
+        { part: "secEXTR", activePhase: p => p >= ENT_PHS.VALID, disablePhase: p => p < ENT_PHS.VALID, openPhase: p => p >= ENT_PHS.VALID && p < ENT_PHS.OUTPUT },
+        { part: "btnEXTR_run", activePhase: p => p >= ENT_PHS.VALID && !State.get("ENTST.EXTR.flags").some(Boolean) },
+        { part: "btnEXTR_push", activePhase: p => p >= ENT_PHS.EXTRACT, visiblePhase: p => p >= ENT_PHS.EXTRACT },
+        { part: "secEXTR_area", visiblePhase: p => p >= ENT_PHS.VALID }
       ]
 };
 const ADP_SCHEMA = {
@@ -28,24 +28,23 @@ const ADP_SCHEMA = {
         "ADPST.ASGN.status", "ADPST.SYMB.status", "ADPST.CALB.status", "ADPST.PREV.status", "ADPST.STDZ.status"
       ],
       elements: [
-        { id: "adpFieldset", disablePhase: () => State.get("GLB.isLocked") },
-        { id: "secASGN", activePhase: p => true, disablePhase: p => false, openPhase: p => p < ADP_PHS.FILTERED },
-        { id: "btnASGN_load", disablePhase: p => false },
-        { id: "btnASGN_fltr", activePhase: p => p >= ADP_PHS.LOADED },
-        { id: "secASGN_area", visiblePhase: p => p >= ADP_PHS.LOADED },
+        { part: "adpFieldset", disablePhase: () => State.get("GLB.isLocked") },
+        { part: "secASGN", activePhase: p => true, disablePhase: p => false, openPhase: p => p < ADP_PHS.FILTERED },
+        { part: "btnASGN_load", disablePhase: p => false },
+        { part: "btnASGN_fltr", activePhase: p => p >= ADP_PHS.LOADED },
+        { part: "secASGN_area", visiblePhase: p => p >= ADP_PHS.LOADED },
 
-        { id: "secSYMB", activePhase: p => p >= ADP_PHS.FILTERED, disablePhase: p => p < ADP_PHS.FILTERED, openPhase: p => p >= ADP_PHS.FILTERED && p < ADP_PHS.MAPPED },
-        { id: "btnSYMB_set", activePhase: p => p >= ADP_PHS.FILTERED },
-        { id: "boxSYMB_axis", activePhase: p => p >= ADP_PHS.FILTERED },
-        { id: "secSYMB_area", visiblePhase: p => p >= ADP_PHS.FILTERED },
+        { part: "secSYMB", activePhase: p => p >= ADP_PHS.FILTERED, disablePhase: p => p < ADP_PHS.FILTERED, openPhase: p => p >= ADP_PHS.FILTERED && p < ADP_PHS.MAPPED },
+        { part: "btnSYMB_set", activePhase: p => p >= ADP_PHS.FILTERED },
+        { part: "boxSYMB_axis", activePhase: p => p >= ADP_PHS.FILTERED },
+        { part: "secSYMB_area", visiblePhase: p => p >= ADP_PHS.FILTERED },
 
-        // ダウンフェーズ (p < 4) 時は false (強制閉鎖)、それ以上は undefined (ユーザー操作維持)
-        { id: "secPREV", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined },
-        { id: "btnPREV_genPrev", activePhase: p => p >= ADP_PHS.MAPPED },
+        { part: "secPREV", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined },
+        { part: "btnPREV_genPrev", activePhase: p => p >= ADP_PHS.MAPPED },
 
-        { id: "secCALB", activePhase: p => p >= ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED? false : undefined },
+        { part: "secCALB", activePhase: p => p >= ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED? false : undefined },
 
-        { id: "secSTDZ", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined }
+        { part: "secSTDZ", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined }
       ]
 };
-  </script>
+</script>

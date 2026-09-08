@@ -1,5 +1,38 @@
 <!-- src/CoreAction.html -->
 <script>
+  // --- 開発デバッグ用クラス ---
+  class OBPDebugger {
+    static #box = null;
+    static init() {
+      if (this.#box) return;
+      this.#box = document.createElement('div');
+      this.#box.style.cssText = `
+        position: fixed; bottom: 0; left: 0; width: 100%; max-height: 120px;
+        background: rgba(0,0,0,0.85); color: #00ff00; font-family: monospace;
+        font-size: 10px; z-index: 99999; overflow-y: auto; padding: 4px;
+        border-top: 2px solid #ff0055; pointer-events: none; pointer-events: auto;
+      `;
+      this.#box.innerHTML = '<div style="font-weight:bold;color:#ff0055;border-bottom:1px solid #333;">[OBPLOT DEBUG CONSOLE]</div>';
+      document.body.appendChild(this.#box);
+      // グローバルエラーの捕捉
+      window.addEventListener('error', (e) => {
+        OBPDebugger.log(`[FATAL_ERR] ${e.message} (${e.filename}:${e.lineno})`, '#ff3333');
+      });
+      window.addEventListener('unhandledrejection', (e) => {
+        OBPDebugger.log(`[PROMISE_REJ] ${e.reason?.message || e.reason}`, '#ffaa00');
+      });
+    }
+    static log(msg, color = '#00ff00') {
+      if (!this.#box) this.init();
+      const line = document.createElement('div');
+      line.style.color = color;
+      line.style.borderBottom = '1px solid #222';
+      line.style.padding = '2px 0';
+      line.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      this.#box.appendChild(line);
+      this.#box.scrollTop = this.#box.scrollHeight;
+    }
+  }
   // --- CoreIdlTm ---
   class CoreIdlTm {
     static #MS = 5 * 60000;
@@ -125,30 +158,31 @@
       State.set("GLB.isLocked", false);
       if (hooks.onAfterInit) hooks.onAfterInit();
     }
-    static actvTab(tabId) {
+    static actvTab(tabPRM) {
       document.querySelectorAll('[data-part="tab-content"], .tab-content').forEach(el => {
-        const isCur = (el.dataset.tab === tabId || el.dataset.ref === tabId || el.id === tabId);
+        const isCur = (el.dataset.param === tabPRM);
         el.setAttribute('aria-hidden', isCur ? 'false' : 'true');
         if (isCur) el.setAttribute('data-state', 'active');
         else el.removeAttribute('data-state');
       });
       document.querySelectorAll('[data-part="tab-btn"], .tab-btn').forEach(el => {
-        const isCur = (el.dataset.arg === tabId || el.dataset.target === tabId);
+        const isCur = (el.dataset.param === tabPRM);
         el.setAttribute('aria-selected', isCur ? 'true' : 'false');
       });
-      document.body.setAttribute('data-theme', tabId);
-      State.set("GLB.activeTab", tabId);
+      document.body.setAttribute('data-theme', tabPRM);
+      State.set("GLB.activeTab", tabPRM);
     }
+
     static switchTab(btnOrId, hooks = {}) {
-      const tabId = typeof btnOrId === 'string' ? btnOrId : (btnOrId.dataset.arg || btnOrId.dataset.target);
-      this.actvTab(tabId);
-      const cfg = this.cfgRslv ? this.cfgRslv(tabId) : {};
+      const tabPRM = typeof btnOrId === 'string' ? btnOrId : btnOrId.dataset.param;
+      this.actvTab(tabPRM);
+      const cfg = this.cfgRslv ? this.cfgRslv(tabPRM) : {};
       this.startSession(this.#ssId || "EXCEL_LOCAL_RUN", true, hooks, cfg);
     }
     // --- [routEvent] 中央イベントルーター ---
     static rootGLB(actionClasses = {}) {
       const routEvent = (e) => {
-        const tgt = e.target.closest('[data-action], [data-bind], [data-change], form[data-bind-ctx] input, form[data-bind-ctx] select, form[data-bind-ctx] textarea') || e.target;
+        const tgt = e.target.closest('[data-action], [data-patch], form[data-bind-ctx] input, form[data-bind-ctx] select, form[data-bind-ctx] textarea') || e.target;
         if (!tgt || tgt.disabled) return;
 
         const tag = tgt.tagName;
@@ -162,14 +196,12 @@
         // --- Action発火処理 ---
         const actionStr = tgt.dataset.action;
         if (actionStr) {
-          // ボタン等のclick、またはInput等のchangeで発火を自動判定
           const isBtnClick = isClick && !['INPUT', 'SELECT', 'TEXTAREA'].includes(tag);
           const isValChange = (isChange || isLiveInput) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(tag);
           
           if (isBtnClick || isValChange) {
             const [ns, method] = actionStr.split('.');
-            // data-param優先、後方互換でarg等も許容
-            const param = tgt.dataset.param ?? tgt.dataset.arg ?? tgt.dataset.target; 
+            const param = tgt.dataset.param; 
             const subParam = tgt.dataset.subParam;
             
             if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt, param, subParam);
@@ -177,9 +209,9 @@
           }
         }
 
-        // --- Bind/Change 処理 (後方互換維持) ---
-        const bindPath = tgt.dataset.bind || (formCtx && tgt.name ? `${CoreUIPatcher.resolveBindCtx(formCtx.dataset.bindCtx)}.${tgt.name}` : null);
-        const changePath = tgt.dataset.change || formCtx?.dataset?.change;
+        // --- State結合処理 (data-patch="bind: ...") ---
+        const patchBind = tgt.dataset.patch ? CoreUIPatcher.routOptions(tgt.dataset.patch).bind : null;
+        const bindPath = patchBind || (formCtx && tgt.name ? `${CoreUIPatcher.resolveBindCtx(formCtx.dataset.bindCtx)}.${tgt.name}` : null);
 
         if (bindPath && (isLiveInput || isChange)) {
           let val = type === "checkbox" ? tgt.checked : (['number', 'range'].includes(type) ? (tgt.value === '' ? '' : Number(tgt.value)) : tgt.value);
@@ -190,12 +222,6 @@
           }
           State.set(bindPath, val);
         }
-
-        if (changePath && (isLiveInput || isChange)) {
-          const [ns, method] = changePath.split('.');
-          if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt, formCtx);
-          else if (window[ns]?.[method]) window[ns][method](tgt, formCtx);
-        }
       };
 
       document.addEventListener("click", routEvent);
@@ -205,8 +231,6 @@
     static tglMulti(tgt) {
       const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');
       if (!cntr) return;
-      
-      // ★ data-patch から bind パスを抽出するロジックを追加
       const statePath = cntr.dataset.bind || (cntr.dataset.patch ? CoreUIPatcher.routOptions(cntr.dataset.patch).bind : null);
       
       const itemCbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
@@ -216,8 +240,6 @@
     static tglAllMulti(tgt) {
       const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');
       if (!cntr) return;
-      
-      // ★ data-patch から bind パスを抽出するロジックを追加
       const statePath = cntr.dataset.bind || (cntr.dataset.patch ? CoreUIPatcher.routOptions(cntr.dataset.patch).bind : null);
       
       const itemCbs = cntr.querySelectorAll('.dataset-cb');

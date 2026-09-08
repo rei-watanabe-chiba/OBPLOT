@@ -4,7 +4,6 @@
   const ENT_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
   const ADP_PHS = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
   const DASH_PHS = { INIT: 1, LOADED: 2 };
-  // 互換用エイリアス
   // --- AppSt ---
   class AppSt {
     #state; #initialState; #listeners; #updating;
@@ -18,16 +17,16 @@
         },
         ENTST: {
           phase: ENT_PHS.INIT,
-          PREF: createSec({ refs: { mode: "" }, data: { modeFields: [{ type: "select", opts: GLB.confMods, bind: "ENTST.PREF.refs.mode", change: "ENTAct.valdPref", hasEmpty: false }] } }),
-          RAW:  createSec({ flags: GLB.initFlags.raw }),
-          EXTR: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr, data: { extrFields: GLB.extrFields.map(f => ({ type: "text", label: f.label, bind: f.bind, placeholder: f.placeholder })) } })
+          PREF: createSec({ refs: { mode: "" }, data: { modeOpts: GLB.confMods } }),
+          RAW:  createSec({ flags: GLB.initFlags.raw, data: { hdrOpts: [] } }),
+          EXTR: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr })
         },
         ADPST: {
           phase: ADP_PHS.INIT,
           ASGN: createSec({ data: { crctDT: [], wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], filter: [] } }),
-          SYMB: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] }, data: { axisFields: [{ type: "select", opts: GLB.symbAxes, change: "ADPAct.valdAxis", hasEmpty: false }] } }),
-          CALB: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], crct: "new", useLOD: false, useCal: false }, data: { modeOpts: GLB.optElms, calElmOpts: GLB.valElms } }),
-          PREV: createSec({ refs: { itemMap: [], val: GLB.valLgc.length ? GLB.valLgc[0] : GLB.valElms[0], saveIndexName: "" }, data: { crctLogic: {}, prevDT: null, statsDT: null, chartSrc: null, valFields: [{ type: "select", bind: "ADPST.PREV.refs.val", hasEmpty: false, opts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) }] } }),
+          SYMB: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] }, data: { axisOpts: GLB.symbAxes } }),
+          CALB: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], crct: "new", useLOD: false, useCal: false }, data: { modeOpts: GLB.optElms, calElmOpts: GLB.valElms, crctOpts: [] } }),
+          PREV: createSec({ refs: { itemMap: [], val: GLB.valLgc.length ? GLB.valLgc[0] : GLB.valElms[0], saveIndexName: "" }, data: { crctLogic: {}, prevDT: null, statsDT: null, chartSrc: null, valOpts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) } }),
           STDZ: createSec({ refs: { itemMap: [], modeMap: [...GLB.optElms], useLOD: false, saveIndexName: "" }, data: { modeOpts: GLB.optElms } })
         },
         DashST: {

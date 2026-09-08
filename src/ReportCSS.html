@@ -371,37 +371,17 @@
     transform: translateY(-50%) scale(calc(1 / var(--current-scale, 1)));
     transform-origin: right center;
     z-index: 10;
-    .aspect-ctrl-inp {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    &.form-addon {
       width: 80px;
-      &:focus-within .aspect-icon-wrap { color: var(--theme-color); }
-      .aspect-icon-wrap {
-        color: var(--theme-color);
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        left: 6px;
-        width: max-content;
-        .material-symbols-outlined {
-          font-size: 14px;
-        }
-        span:not(.material-symbols-outlined) {
-          font-size: 10px;
-          font-weight: 500;
-          font-family: sans-serif;
-          line-height: 1;
-        }
-      }
-      input {
-        background: transparent;
-        border: 1.5px solid var(--theme-color);
-        border-radius: 6px;
-        padding-left: 30px;
-        padding-right: 2px;
-        font-size: 11px;
-      }
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    &:input {
+      background: transparent;
+      border: 1.5px solid var(--theme-color);
+      border-radius: 6px;
+      padding-left: 30px;
+      padding-right: 2px;
+      font-size: 11px;
     }
   }
 

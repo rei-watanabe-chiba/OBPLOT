@@ -30,11 +30,12 @@
       }
     }
     static async loadRaw() {
-      const promptMsg = State.get("ENTST.RAW.data") ? "データをリセットしますか？" : "Fileシートを読込ますか？";
+      const hasData = State.get("ENTST.RAW.data.hdrOpts")?.length > 0;
+      const promptMsg = hasData ? "データをリセットしますか？" : "Fileシートを読込ますか？";
       await CoreAct.withAsync("ENTST.RAW.status", promptMsg, async () => {
         const { data, msg } = await API.pullDT(ENTAct.ssId, GLB.rawShts.file, 5);
         State.set({ 
-          "ENTST.RAW.data": data, 
+          "ENTST.RAW.data": data,
           "ENTST.RAW.refs": Object.fromEntries(GLB.fileFields.map(f => [f.key, ""])), 
           "ENTST.RAW.flags": [true, true, true, false, false], 
           "ENTST.RAW.cachedStatus": ["success", msg], 
@@ -264,8 +265,8 @@
       const urlParams = new URLSearchParams(window.location.search);
       const actMode = window.__APP_MODE__ || urlParams.get('mode') || 'entry';
       CoreAct.rootGLB({ CoreAct, ENTAct, ADPAct, });
-      CoreAct.cfgRslv = (tabId) => {
-        return (tabId === 'ent' || tabId === 'entry')
+      CoreAct.cfgRslv = (tabPRM) => {
+        return (tabPRM === 'ent' || tabPRM === 'entry')
           ? { schemaKey: 'ent', statPath: 'ENTST.PREF.status', schema: ENT_SCHEMA }
           : { schemaKey: 'adp', statPath: 'ADPST.ASGN.status', schema: ADP_SCHEMA, persistPaths: ADP_SCHEMA.persistPaths };
       };
@@ -283,13 +284,13 @@
       });
       State.subscribe(`ENTST.EXTR.refs.${GLB.idx.key1}`, () => ENTAct.valdExtrRefs());
       State.subscribe("ENTST.RAW.data", data => {
-        if (data?.[0]) State.set("ENTST.RAW.data.fields", GLB.fileFields.map(f => ({ type: "select", label: f.label, field: f.key, change: "ENTAct.updRawRefs", opts: data[0].map(h => ({ label: h, val: h })), hasEmpty: true })));
-        else State.set("ENTST.RAW.data.fields", []);
+        if (data?.[0]) State.set("ENTST.RAW.data.hdrOpts", data[0].map(h => ({ label: h, val: h })));
+        else State.set("ENTST.RAW.data.hdrOpts", []);
       });
       State.subscribe("ADPST.ASGN.data.crctDT", data => {
         if (!data) return;
         const opts = [{ label: "新規検量線", val: "new" }, ...data.slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
-        State.set("ADPST.CALB.data.crctFields", [{ type: "select", bind: "ADPST.CALB.refs.crct", hasEmpty: false, opts: opts }]);
+        State.set("ADPST.CALB.data.crctOpts", opts);
       });
       State.subscribe("ADPST.ASGN.data.pxrfDT", () => ADPAct.renewADPState());
       State.subscribe("ADPST.SYMB.refs.baseKey", () => ADPAct.renewADPState());

@@ -245,14 +245,12 @@
                   <div data-ui="mselect" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: RPTST.dataset.calElms; opts: RPTST.ui.optFields.calElmsOpts"></div>
                 </div>
               </div>
-              <div class="prop-row" style="margin-top:16px;">
-                <div class="prop-controls">
-                  <div class="toggle-row"><span class="toggle-label">検量線適用</span><label class="toggle-switch"><input type="checkbox" data-bind="RPTST.dataset.useCal"><span class="toggle-slider"></span></label></div>
+              <div class="prop-controls">
+                  <div class="toggle-row"><span class="toggle-label">検量線適用</span><label class="toggle-switch"><input type="checkbox" data-patch="bind: RPTST.dataset.useCal"><span class="toggle-slider"></span></label></div>
                 </div>
                 <div class="prop-controls">
-                  <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-bind="RPTST.dataset.useLOD"><span class="toggle-slider"></span></label></div>
+                  <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-patch="bind: RPTST.dataset.useLOD"><span class="toggle-slider"></span></label></div>
                 </div>
-              </div>
             </div>
           </div>
           <!-- タブ: tabStyle -->

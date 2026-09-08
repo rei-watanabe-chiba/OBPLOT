@@ -10,122 +10,159 @@
   </head>
   <body data-theme="entry">
     <div data-ui="dlg"></div>
-    <nav class="nav-tabs" id="nav">
-      <!-- data-arg を data-param へ -->
+    <nav class="nav-tabs" data-part="nav">
       <button data-part="tab-btn" class="tab-btn" data-action="CoreAct.switchTab" data-param="entry" aria-selected="true">データ抽出</button>
       <button data-part="tab-btn" class="tab-btn" data-action="CoreAct.switchTab" data-param="adapter" aria-selected="false">検量線・標準化</button>
     </nav>
     <main class="scroll-y">
-      <!-- ENT (旧 Tab1) -->
-      <div data-part="tab-content" id="entry" class="tab-content" aria-hidden="false" data-state="active">
-        <fieldset id="entFieldset">
-          <details id="secPREF" open>
+      <!-- ENT -->
+      <div data-part="tab-content" data-param="entry" class="tab-content" aria-hidden="false" data-state="active">
+        <fieldset data-part="entFieldset">
+          <details data-part="secPREF" open>
             <summary>抽出設定</summary>
-            <!-- 複数の属性を data-patch に統合 -->
-            <div><div id="boxPREF_mode" data-patch="fields: ENTST.PREF.data.modeFields"></div></div>
-            <div id="barPREF" class="status-bar" data-status="hidden" data-patch="status: ENTST.PREF.status"></div>
+            <div class="field-row">
+              <div data-ui="addon" style="flex:1;">
+                <select class="form-control" data-patch="bind: ENTST.PREF.refs.mode; opts: ENTST.PREF.data.modeOpts" data-action="ENTAct.valdPref" data-has-empty="false"></select>
+              </div>
+            </div>
+            <div data-part="barPREF" class="status-bar" data-status="hidden" data-patch="status: ENTST.PREF.status"></div>
           </details>
           <hr>
-          <details id="secRAW">
+          <details data-part="secRAW">
             <summary>読込と検証</summary>
             <div class="flex-row">
-              <button id="btnRAW_load" data-action="ENTAct.loadRaw" data-type="primary">データを取得</button>
+              <button data-part="btnRAW_load" data-action="ENTAct.loadRaw" data-type="primary">データを取得</button>
               <span class="txt-btninfo">読込シート:<span class="badge-label">File</span></span>
             </div>
-            <div id="secRAW_area">
-              <div id="boxRAW_fields" data-patch="errs: ENTST.RAW.flags; fields: ENTST.RAW.data.fields"></div>
+            <div data-part="secRAW_area">
+              <div class="field-row">
+                <label class="prop-label">file</label>
+                <div data-ui="addon" style="flex:2.75;"><select class="form-control" data-field="file" data-action="ENTAct.updRawRefs" data-patch="bind: ENTST.RAW.refs.file; opts: ENTST.RAW.data.hdrOpts; invalid: ENTST.RAW.flags.0" data-has-empty="true"></select></div>
+              </div>
+              <div class="field-row">
+                <label class="prop-label">mode</label>
+                <div data-ui="addon" style="flex:2.75;"><select class="form-control" data-field="mode" data-action="ENTAct.updRawRefs" data-patch="bind: ENTST.RAW.refs.mode; opts: ENTST.RAW.data.hdrOpts; invalid: ENTST.RAW.flags.1" data-has-empty="true"></select></div>
+              </div>
+              <div class="field-row">
+                <label class="prop-label">ID</label>
+                <div data-ui="addon" style="flex:2.75;"><select class="form-control" data-field="ID" data-action="ENTAct.updRawRefs" data-patch="bind: ENTST.RAW.refs.ID; opts: ENTST.RAW.data.hdrOpts; invalid: ENTST.RAW.flags.2" data-has-empty="true"></select></div>
+              </div>
+              <div class="field-row">
+                <label class="prop-label">sub_id</label>
+                <div data-ui="addon" style="flex:2.75;"><select class="form-control" data-field="sub_id" data-action="ENTAct.updRawRefs" data-patch="bind: ENTST.RAW.refs.sub_id; opts: ENTST.RAW.data.hdrOpts" data-has-empty="true"></select></div>
+              </div>
+              <div class="field-row">
+                <label class="prop-label">info</label>
+                <div data-ui="addon" style="flex:2.75;"><select class="form-control" data-field="info" data-action="ENTAct.updRawRefs" data-patch="bind: ENTST.RAW.refs.info; opts: ENTST.RAW.data.hdrOpts" data-has-empty="true"></select></div>
+              </div>
             </div>
-            <div id="boxRAW_btn" class="field-row">
-              <button id="btnRAW_genList" data-action="ENTAct.genList" data-type="primary">リスト生成</button>
-              <button id="btnRAW_valdList" data-action="ENTAct.valdList" data-type="primary">検証</button>
+            <div data-part="boxRAW_btn" class="field-row">
+              <button data-part="btnRAW_genList" data-action="ENTAct.genList" data-type="primary">リスト生成</button>
+              <button data-part="btnRAW_valdList" data-action="ENTAct.valdList" data-type="primary">検証</button>
             </div>
           </details>
-          <div id="barRAW" class="status-bar" data-status="hidden" data-patch="status: ENTST.RAW.status"></div>
+          <div data-part="barRAW" class="status-bar" data-status="hidden" data-patch="status: ENTST.RAW.status"></div>
           <hr>
-          <details id="secEXTR">
+          <details data-part="secEXTR">
             <summary>抽出と格納</summary>
             <div class="flex-row">
-              <button id="btnEXTR_run" data-action="ENTAct.runExtr" data-type="primary">データを抽出</button>
+              <button data-part="btnEXTR_run" data-action="ENTAct.runExtr" data-type="primary">データを抽出</button>
               <span class="txt-btninfo">読込シート:<span class="badge-label">Results</span></span>
             </div>
-            <div id="secEXTR_area">
-              <div id="boxEXTR_fields" data-patch="errs: ENTST.EXTR.flags; fields: ENTST.EXTR.data.extrFields"></div>
+            <div data-part="secEXTR_area">
+              <div class="field-row">
+                <label class="prop-label">database</label>
+                <div data-ui="addon" style="flex:2.75;"><input type="text" class="form-control" placeholder="データベース名" data-patch="bind: ENTST.EXTR.refs.database; invalid: ENTST.EXTR.flags.0" data-action="ENTAct.valdExtrRefs"></div>
+              </div>
+              <div class="field-row">
+                <label class="prop-label">item</label>
+                <div data-ui="addon" style="flex:2.75;;"><input type="text" class="form-control" placeholder="計測情報" data-patch="bind: ENTST.EXTR.refs.item; invalid: ENTST.EXTR.flags.1"></div>
+              </div>
+              <div class="field-row">
+                <label class="prop-label">date</label>
+                <div data-ui="addon" style="flex:2.75;;"><input type="text" class="form-control" placeholder="計測日" data-patch="bind: ENTST.EXTR.refs.date; invalid: ENTST.EXTR.flags.2"></div>
+              </div>
             </div>
             <div class="field-row">
-              <button id="btnEXTR_push" data-action="ENTAct.pushExtr" data-type="primary" class="outline">tracer5iに格納</button>
+              <button data-part="btnEXTR_push" data-action="ENTAct.pushExtr" data-type="primary" class="outline">tracer5iに格納</button>
             </div>
           </details>
-          <div id="barEXTR" class="status-bar" data-status="hidden" data-patch="status: ENTST.EXTR.status"></div>
+          <div data-part="barEXTR" class="status-bar" data-status="hidden" data-patch="status: ENTST.EXTR.status"></div>
         </fieldset>
       </div>
       <!-- ADP (旧 Tab2) -->
-      <div data-part="tab-content" id="adapter" class="tab-content" aria-hidden="true">
-        <fieldset id="adpFieldset">
-          <details id="secASGN" open>
+      <div data-part="tab-content" data-param="adapter" class="tab-content" aria-hidden="true">
+        <fieldset data-part="adpFieldset">
+          <details data-part="secASGN" open>
             <summary>データ読込・選択</summary>
-            <div id="secASGN_area">
+            <div data-part="secASGN_area">
               <label>データセット選択</label>
-              <!-- data-change-item 等を data-action-item, data-patch へ統合 -->
               <div data-ui="mselect" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.ASGN.refs.filter; opts: ADPST.ASGN.refs.available"></div>
             </div>
             <div class="txt-btninfo">読込シート<span class="badge-label">tracer5i</span><span class="badge-label">WDXRF</span><span class="badge-label">Correction</span></div>
             <div class="field-row">
-              <button id="btnASGN_load" data-action="ADPAct.loadDB" data-type="primary">データを読込</button>
-              <button id="btnASGN_fltr" data-action="ADPAct.fltrDB" data-type="primary" class="outline">データを確定</button>
+              <button data-part="btnASGN_load" data-action="ADPAct.loadDB" data-type="primary">データを読込</button>
+              <button data-part="btnASGN_fltr" data-action="ADPAct.fltrDB" data-type="primary" class="outline">データを確定</button>
             </div>
           </details>
-          <div id="barASGN" class="status-bar" data-status="hidden" data-patch="status: ADPST.ASGN.status"></div>
+          <div data-part="barASGN" class="status-bar" data-status="hidden" data-patch="status: ADPST.ASGN.status"></div>
           <hr>
-          <details id="secSYMB">
+          <details data-part="secSYMB">
             <summary>シンボル設定</summary>
-            <div id="secSYMB_area">
+            <div data-part="secSYMB_area">
               <label>属性選択</label>
               <div class="field-row" style="margin-top: var(--unit)">
-                <div id="boxSYMB_axis" data-patch="fields: ADPST.SYMB.data.axisFields" style="flex:1;"></div>
-                <button data-action="ADPAct.resetSymb" data-type="primary" class="outline" style="flex:none;">リセット</button>
+                <div data-ui="addon" style="flex:2;">
+                  <select class="form-control" data-action="ADPAct.valdAxis" data-patch="bind: ADPST.SYMB.refs.baseKey; opts: ADPST.SYMB.data.axisOpts" data-has-empty="false"></select>
+                </div>
+                <button data-action="ADPAct.resetSymb" data-type="primary" class="outline" style="flex:1;">リセット</button>
               </div>
               <label>シンボル設定</label>
               <div class="scroll-y" style="max-height: calc(var(--unit) * 50); border: 1px solid var(--grey200); border-radius: var(--unit); padding: var(--unit) calc(var(--unit) * 2);">
-                <div data-ui="symbtbl" id="tblSYMB" data-patch="src: ADPST.SYMB.data.src"></div>
+                <div data-ui="symbtbl" data-part="tblSYMB" data-patch="src: ADPST.SYMB.data.src"></div>
               </div>
             </div>
             <div class="field-row">
-              <button id="btnSYMB_set" data-action="ADPAct.setSymb" data-type="primary">シンボル確定</button>
+              <button data-part="btnSYMB_set" data-action="ADPAct.setSymb" data-type="primary">シンボル確定</button>
             </div>
           </details>
-          <div id="barSYMB" class="status-bar" data-status="hidden" data-patch="status: ADPST.SYMB.status"></div>
+          <div data-part="barSYMB" class="status-bar" data-status="hidden" data-patch="status: ADPST.SYMB.status"></div>
           <hr>
-          <details id="secPREV">
+          <details data-part="secPREV">
             <summary>プレビュー</summary>
-            <div id="boxPREV_chart" style="width: 100%; height: auto;">
+            <div data-part="boxPREV_chart" style="width: 100%; height: auto;">
               <ui-plot data-patch="src: ADPST.PREV.data.chartSrc"></ui-plot>
             </div>
-            <div id="tblPREV_stats" data-patch="stats: ADPST.PREV.data.statsDT"></div>
-            <div id="secPREV_area">
+            <div data-part="tblPREV_stats" data-patch="stats: ADPST.PREV.data.statsDT"></div>
+            <div data-part="secPREV_area">
               <div class="field-row">
                 <div class="field-col">
                   <label>プレビュー値</label>
-                  <div id="boxPREV_val" data-patch="fields: ADPST.PREV.data.valFields"></div>
+                  <div data-ui="addon">
+                    <select class="form-control" data-patch="bind: ADPST.PREV.refs.val; opts: ADPST.PREV.data.valOpts" data-has-empty="false"></select>
+                  </div>
                 </div>
               </div>
               <label>対象Item</label>
-              <div data-ui="mselect" id="boxPREV_item" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.PREV.refs.itemMap; opts: ADPST.ASGN.refs.availableItems"></div>
+              <div data-ui="mselect" data-part="boxPREV_item" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.PREV.refs.itemMap; opts: ADPST.ASGN.refs.availableItems"></div>
               <div class="field-row">
-                <button id="btnPREV_genPrev" data-action="ADPAct.genPrev" data-type="primary">プレビュー更新</button>
+                <button data-part="btnPREV_genPrev" data-action="ADPAct.genPrev" data-type="primary">プレビュー更新</button>
               </div>
               <hr style="margin: calc(var(--unit) * 4) 0 calc(var(--unit) * 2);">
-              <details id="secCALB" class="sub-sec">
+              <details data-part="secCALB" class="sub-sec">
                 <summary>プレビュー補正設定</summary>
                 <div class="field-row">
                   <div class="field-col">
                     <label>補正方法</label>
-                    <div id="boxCALB_crct" data-patch="fields: ADPST.CALB.data.crctFields"></div>
+                    <div data-ui="addon">
+                      <select class="form-control" data-patch="bind: ADPST.CALB.refs.crct; opts: ADPST.CALB.data.crctOpts" data-has-empty="false"></select>
+                    </div>
                   </div>
                 </div>
                 <label>Obsidianモード計測値</label>
-                <div data-ui="mselect" id="boxCALB_mode" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.CALB.refs.modeMap; opts: ADPST.CALB.data.modeOpts"></div>
+                <div data-ui="mselect" data-part="boxCALB_mode" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.CALB.refs.modeMap; opts: ADPST.CALB.data.modeOpts"></div>
                 <label>検量線適用対象</label>
-                <div data-ui="mselect" id="boxCALB_calElm" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.CALB.refs.calElms; opts: ADPST.CALB.data.calElmOpts"></div>
+                <div data-ui="mselect" data-part="boxCALB_calElm" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.CALB.refs.calElms; opts: ADPST.CALB.data.calElmOpts"></div>
                 <div class="field-row">
                   <div class="field-col">
                     <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-patch="bind: ADPST.CALB.refs.useLOD"><span class="toggle-slider"></span></label></div>
@@ -137,14 +174,14 @@
               </details>
             </div>
           </details>
-          <div id="barPREV" class="status-bar" data-status="hidden" data-patch="status: ADPST.PREV.status"></div>
+          <div data-part="barPREV" class="status-bar" data-status="hidden" data-patch="status: ADPST.PREV.status"></div>
           <hr>
-          <details id="secSTDZ">
+          <details data-part="secSTDZ">
             <summary>出力と標準化</summary>
             <label>対象Item（検量線計算用）</label>
-            <div data-ui="mselect" id="boxSTDZ_item" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.STDZ.refs.itemMap; opts: ADPST.ASGN.refs.availableItems"></div>
+            <div data-ui="mselect" data-part="boxSTDZ_item" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.STDZ.refs.itemMap; opts: ADPST.ASGN.refs.availableItems"></div>
             <label>Obsidianモード計測値</label>
-            <div data-ui="mselect" id="boxSTDZ_mode" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.STDZ.refs.modeMap; opts: ADPST.STDZ.data.modeOpts"></div>
+            <div data-ui="mselect" data-part="boxSTDZ_mode" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: ADPST.STDZ.refs.modeMap; opts: ADPST.STDZ.data.modeOpts"></div>
             <div class="field-row">
               <div class="field-col">
                 <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-patch="bind: ADPST.STDZ.refs.useLOD"><span class="toggle-slider"></span></label></div>
@@ -152,13 +189,13 @@
             </div>
             <div class="field-row" style="margin-top: calc(var(--unit) * 3);">
               <input type="text" class="form-control" placeholder="インデックス名を入力" data-patch="bind: ADPST.STDZ.refs.saveIndexName">
-              <button id="btnCALB_pushCrct" data-action="ADPAct.pushCrct" data-type="primary">検量線出力</button>
+              <button data-part="btnCALB_pushCrct" data-action="ADPAct.pushCrct" data-type="primary">検量線出力</button>
             </div>
             <div class="field-row">
-              <button id="btnSTDZ_push" data-action="ADPAct.pushStdz" data-type="primary" class="outline">PXRFシート出力</button>
+              <button data-part="btnSTDZ_push" data-action="ADPAct.pushStdz" data-type="primary" class="outline">PXRFシート出力</button>
             </div>
           </details>
-          <div id="barSTDZ" class="status-bar" data-status="hidden" data-patch="status: ADPST.STDZ.status"></div>
+          <div data-part="barSTDZ" class="status-bar" data-status="hidden" data-patch="status: ADPST.STDZ.status"></div>
         </fieldset>
       </div>
     </main>

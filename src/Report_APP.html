@@ -23,10 +23,9 @@
   class RptTpl {
     // --- rowAspectCtrl ---
     static rowAspectCtrl(row, aspect) {
-      return `<div class="form-addon aspect-ctrl-inp" title="アスペクト比" 
-                   data-addon-icon="aspect_ratio" 
-                   data-addon-prefix="H:" 
-                   data-addopt-color="var(--theme-color)">
+      return `<div class="form-addon" title="アスペクト比" 
+                   data-ui="addon" 
+                   data-opts="icon:aspect_ratio; prefix:H:; color:var(--theme-color)">
         <input type="number" class="form-control" min="0.1" max="2.0" step="0.1" data-aspect-idx="${row}" value="${aspect}">
       </div>`;
     }
@@ -211,8 +210,10 @@
     }
     // --- changePanelRef ---
     static changePanelRef(tgt) {
+      //data-bind-ctxが残存するためdataset.bindが残留**削除するとエラーになるため注意**
       const key = tgt.dataset.apKey || tgt.dataset.field || tgt.name || tgt.dataset.bind?.split('.').pop();
-      const val = tgt.value ?? tgt.dataset.param ?? tgt.dataset.arg ?? tgt.dataset.target;const { panel, panels, boardMode } = RepoSt.getSt();
+      const val = tgt.value ?? tgt.dataset.param;
+      const { panel, panels, boardMode } = RepoSt.getSt();
       if (!panel) return;
       panel[key] = ['tickUnit', 'tickUnitX', 'tickUnitY'].includes(key) ? (val === "" || isNaN(Number(val)) ? null : Number(val)) : val;
       if (key === 'scaleMode') {
@@ -293,9 +294,9 @@
       State.set("RPTST.config.layout", lyt);
     }
     // --- actvTab ---
-    static actvTab(btn, arg) { State.set("RPTST.ui.activeTab", arg || btn.dataset.param || btn.dataset.arg || btn.dataset.tab); }
+    static actvTab(btn, v) { State.set("RPTST.ui.activeTab", v || btn.dataset.param || btn.dataset.v || btn.dataset.tab); }
     // --- actvSub ---
-    static actvSub(btn, arg) { State.set("RPTST.ui.activeSub", arg || btn.dataset.param || btn.dataset.arg || btn.dataset.target); }
+    static actvSub(btn, v) { State.set("RPTST.ui.activeSub", v || btn.dataset.param); }
     // --- actvPanel ---
     static actvPanel(btn) { State.set("RPTST.ui.activePanelId", btn.dataset.panelId); }
     // --- updExportDesc ---
@@ -359,6 +360,7 @@
           ctrl.innerHTML = RptTpl.rowAspectCtrl(row, layout.rowAspect?.[row] || 1.0);
           ctrl.querySelector('input').addEventListener('change', e => RepoAct.changeRowAspect(e.target));
           el.appendChild(ctrl);
+          CoreUIPatcher.routBuilder(ctrl.firstElementChild); // 動的生成DOMへの装飾バインド
         }
       } else {
         el.removeAttribute('data-row-lbl');
@@ -390,7 +392,6 @@
         else { el.removeAttribute('data-col-lbl'); el.removeAttribute('data-row-lbl'); }
       }
       RepoSt.update();
-      CoreUIPatcher.applyStaticAddons();
       if (!window.__EXPORT_CFG__) this.genCharts(st);
     }
     // --- genGph ---
@@ -773,7 +774,6 @@
           el.setAttribute('step', rng.step);
         }
       });
-      CoreUIPatcher.applyStaticAddons(RPT_CFG.rng);
       RepoAct.automator.build();
       let fav = null;
       if (typeof window.__INJECTED_FAVORITE__ === 'object' && window.__INJECTED_FAVORITE__ !== null) {

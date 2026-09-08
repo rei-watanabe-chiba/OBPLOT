@@ -254,7 +254,7 @@
     static async start() {
       CoreAct.rootGLB({ CoreAct, DashAct });
 
-      CoreAct.cfgRslv = (tabId) => {
+      CoreAct.cfgRslv = (tabPRM) => {
         return { schemaKey: 'dash', statPath: 'DashST.INST.status', schema: DASH_SIDEBAR_SCHEMA };
       };
 

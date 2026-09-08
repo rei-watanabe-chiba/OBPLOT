@@ -1,7 +1,5 @@
 <!-- src/Component.html -->
 <script>
-
-
   // --- Tpl ---
   const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
   class Tpl {
@@ -23,17 +21,21 @@
       static select(conf) {
         const { type = 'select', bind, change, field, opts, hasEmpty, name } = conf;
         const nm = name ? ` name="${name}"` : '';
-        const ds = `${bind ? ` data-bind="${bind}"` : ''}${change ? ` data-change="${change}"` : ''}${field ? ` data-field="${field}"` : ''}`;
-        return html`<select class="field-${type} form-control"${nm}${ds}>${this.options(opts, hasEmpty)}</select>`;
+        const patchStr = bind ? ` data-patch="bind: ${bind}"` : '';
+        const actStr = change ? ` data-action="${change}"` : '';
+        const fldStr = field ? ` data-field="${field}"` : '';
+        return html`<select class="field-${type} form-control"${nm}${patchStr}${actStr}${fldStr}>${this.options(opts, hasEmpty)}</select>`;
       }
 
       // --- input ---
       static input(conf) {
         const { type = 'text', bind, change, field, inputType, placeholder, name } = conf;
         const nm = name ? ` name="${name}"` : '';
-        const ds = `${bind ? ` data-bind="${bind}"` : ''}${change ? ` data-change="${change}"` : ''}${field ? ` data-field="${field}"` : ''}`;
+        const patchStr = bind ? ` data-patch="bind: ${bind}"` : '';
+        const actStr = change ? ` data-action="${change}"` : '';
+        const fldStr = field ? ` data-field="${field}"` : '';
         const ph = placeholder ? ` placeholder="${placeholder}"` : '';
-        return html`<input type="${inputType || 'text'}" class="field-${type} form-control"${nm}${ph}${ds}>`;
+        return html`<input type="${inputType || 'text'}" class="field-${type} form-control"${nm}${ph}${patchStr}${actStr}${fldStr}>`;
       }
 
       static field(conf) {
@@ -63,7 +65,7 @@
       static genHtml() { return this.universal(); }
     };
     static Toggle = class {
-      static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-bind="${bindPath}"` : ""} ${changePath ? html`data-change="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
+      static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-patch="bind: ${bindPath}"` : ""} ${changePath ? html`data-action="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
     };
     static Stats = class {
       static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
@@ -76,7 +78,6 @@
       }
     };
     static MultiSelect = class {
-      // ★ data-change を data-action へ統一
       static item(val, actName) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-action="${actName}" checked><span class="cb-text">${val}</span></label>`; }
       static selectAll(actName) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-action="${actName}" checked><span>すべて選択</span></label>`; }
     };

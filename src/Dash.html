@@ -22,11 +22,10 @@
       </form>
     </dialog>
     <nav class="nav-tabs" data-part="nav">
-      <!-- data-arg を data-param へ変更 -->
       <button class="tab-btn" data-part="tab-btn" aria-selected="true" data-action="CoreAct.switchTab" data-param="dash">ダッシュボード</button>
     </nav>
     <main class="scroll-y">
-      <div data-part="tab-content" data-tab="dash" class="tab-content" aria-hidden="false" data-state="active">
+      <div data-part="tab-content" data-param="dash" class="tab-content" aria-hidden="false" data-state="active">
         <fieldset data-part="dashFieldset">
           <details data-part="secINST" open>
             <summary>データ読込</summary>
@@ -35,7 +34,6 @@
               <button data-part="btnINST_load" data-action="DashAct.requestLoadDB" data-type="primary">データを読込</button>
             </div>
           </details>
-          <!-- data-bind-status を data-patch へ変更 -->
           <div data-part="barINST" class="status-bar" data-status="hidden" data-patch="status: DashST.INST.status"></div>
           <hr>
           <details data-part="secREPO">
@@ -43,13 +41,11 @@
             <label>ユーザー設定選択</label>
             <div class="field-row" style="margin-top: var(--unit)">
               <div class="fav-table-cntr scroll-y">
-                <!-- data-bind-src を data-patch へ変更 -->
                 <div data-part="tblFAV" data-ui="table" data-patch="src: DashST.REPO.data.favTableSrc"></div>
               </div>
             </div>
             <label>設定JSON登録</label>
             <div class="field-row" style="margin-top: var(--unit)">
-              <!-- data-bind, data-bind-invalid, data-change を data-patch と data-action へ統合 -->
               <input type="text" data-part="iptFAV_name" placeholder="設定名を入力" data-patch="bind: DashST.REPO.refs.favInputName; invalid: DashST.REPO.data.favInputInvalid" data-action="DashAct.onFavNameChange">
               <button data-part="btnFAV_save" data-action="DashAct.addFavFromClipboard" data-type="primary" class="outline" style="flex: 0.5;" data-patch="bind: DashST.REPO.data.favBtnText">新規登録</button>
             </div>
@@ -70,7 +66,6 @@
     <?!= include('Adapter'); ?>
     <?!= include('Model'); ?>
     <?!= include('CoreMethod'); ?>
-
     <?!= include('Component'); ?>
     <?!= include('Dash_Schema'); ?>
     <?!= include('CoreUI'); ?>

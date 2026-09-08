@@ -179,8 +179,7 @@
         CoreUIPatcher.patchMSelectRefs(el, val);
       } else if (el.dataset.ui === 'segment') {
         el.querySelectorAll('.segment-btn').forEach(btn => {
-          // ★ data-param を取得対象に追加
-          const targetVal = btn.dataset.param || btn.dataset.arg || btn.dataset.target;
+          const targetVal = btn.dataset.param;
           if (targetVal === String(val)) {
             btn.setAttribute('aria-selected', 'true');
           } else {
@@ -378,27 +377,6 @@
       }
       wrap.dataset.optsBound = 'true';
     }
-
-    // --- [後方互換] 静的装飾付きフォームバインド ---
-    static applyStaticAddons(configObj = null) {
-      // ※ここはStep 3のHTML書き換え後に消滅しますが、一旦既存HTMLのために残します
-      document.querySelectorAll('.form-addon:not([data-opts-bound])').forEach(wrap => {
-        if (wrap.closest('[data-bind-fields]')) return; 
-        const ctrl = wrap.querySelector('input, select');
-        if (!ctrl) return;
-        let suffix = wrap.dataset.addonSuffix;
-        if (!suffix && configObj?.[ctrl.name]?.unit) {
-          suffix = configObj[ctrl.name].unit;
-        }
-        this.buildAddon(wrap, { // 名前を decorateAddon -> buildAddon へ変更
-          icon: wrap.dataset.addonIcon,
-          prefix: wrap.dataset.addonPrefix,
-          suffix: suffix,
-          color: wrap.dataset.addoptColor,
-          size: wrap.dataset.addoptSize
-        });
-      });
-    }
   }
 
   class CoreUI {
@@ -414,10 +392,6 @@
     build() {
       this.update();
 
-      // [旧処理維持] 後で消去
-      document.querySelectorAll('[data-ui="dlg"]').forEach(cntr => CoreUIPatcher.initDlg(cntr));
-      document.querySelectorAll('[data-ui="mselect"]').forEach(el => CoreUIPatcher.ensureMSelectInit(el));
-
       // [新処理] data-ui ビルダー
       document.querySelectorAll('[data-ui]').forEach(el => CoreUIPatcher.routBuilder(el));
 
@@ -427,62 +401,6 @@
       // [新処理] data-patch ルーター
       const getVal = (path) => this.getVal(path);
       document.querySelectorAll('[data-patch]').forEach(el => CoreUIPatcher.routPatch(el, el.dataset.patch, getVal));
-
-      // [旧処理維持] --- Binder Factory (高階関数) --- 
-      const binder = (patchFn) => CoreUIPatcher.makeBinder(patchFn, path => this.getVal(path));
-      const bindElement = binder(CoreUIPatcher.patchElementVal);
-
-      // --- バインディング属性定義とハンドラー群 ---
-      const bindDefs = [
-        { key: 'bindStatus', attr: 'data-bind-status', fn: binder(CoreUIPatcher.patchStatus) },
-        { key: 'bind', attr: 'data-bind', fn: bindElement },
-        { key: 'bindOpts', attr: 'data-bind-opts', fn: binder(CoreUIPatcher.patchOpts) },
-        { key: 'bindSrc', attr: 'data-bind-src', fn: binder(CoreUIPatcher.patchSrc) },
-        { key: 'bindStats', attr: 'data-bind-stats', fn: binder((el, val) => { el.innerHTML = Tpl.Stats.gen(val); }) },
-        { key: 'bindErrs', attr: 'data-bind-errs', fn: binder(CoreUIPatcher.patchErrs) },
-        { key: 'bindInvalid', attr: 'data-bind-invalid', fn: binder((el, val) => {
-          if (val) el.setAttribute('aria-invalid', 'true');
-          else el.removeAttribute('aria-invalid');
-        }) },
-        { key: 'bindFields', attr: 'data-bind-fields', fn: binder((el, val) => {
-          // 動的構築はComponent移譲
-          el.innerHTML = Tpl.Form.fields(val);
-          // 親要素から装飾設定を抽出
-          const conf = {
-            icon: el.dataset.addonIcon, prefix: el.dataset.addonPrefix,
-            suffix: el.dataset.addonSuffix, color: el.dataset.addoptColor,
-            size: el.dataset.addoptSize
-          };
-          // CoreUI側でラッパーを被せて共通関数で装飾
-          if (conf.icon || conf.prefix || conf.suffix) {
-            Array.from(el.children).forEach(child => {
-              const ctrl = child.querySelector('input, select') || (child.matches('input, select') ? child : null);
-              if (ctrl) {
-                const wrap = document.createElement('div');
-                wrap.className = 'form-addon';
-                child.parentNode.insertBefore(wrap, child);
-                wrap.appendChild(child); // ラベルを含めず純粋にinputのみラップ
-                CoreUIPatcher.buildAddon(wrap, conf);
-              }
-            });
-          }
-          
-          el.querySelectorAll('[data-bind]').forEach(child => bindElement(child, child.dataset.bind));
-        }) }
-      ];
-
-      // --- 単一セレクタによるDOM走査と一括バインド ---
-      const selector = bindDefs.map(d => `[${d.attr}^="${this.stateTarget}"]`).join(',');
-      if (selector) {
-        document.querySelectorAll(selector).forEach(el => {
-          bindDefs.forEach(def => {
-            const path = el.dataset[def.key];
-            if (path && path.startsWith(this.stateTarget)) {
-              def.fn(el, path);
-            }
-          });
-        });
-      }
     }
 
     update() {
