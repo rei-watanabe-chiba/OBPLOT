@@ -9,11 +9,11 @@
 
 ### 1. 知識取得の完全優先（ソース・成果物の自律インプット）
 - 作業を開始する前に、必ず本Notebookの「ソース」および「Studioパネル（あるいはartifacts内のマークダウンファイル）」を全走査して脳内にパースしてください。
-- 特に以下の2つのファイルを「絶対的なシステム設計・変更の基準」として最優先で読み込んでください。
+- 特に以下の4つのファイルを「絶対的なシステム設計・変更の基準」として最優先で読み込んでください。
   1. `obplot_system_architectural_design_philosophy.md`（システム設計思想＆絶対厳守の原則）
   2. `obplot_directory_structure_and_file_summary.md`（ディレクトリ構成・依存関係・ファイル要約）
-  3. `OBPLOT 次世代 UI/CSS 統合アーキテクチャ設計書 - v2`（CSS統合ブループリント）
-  4. `OBPLOT 次世代 UI/CSS 統合アーキテクチャ補足知識集`（公式技術仕様の解説）
+  3. `obplot_ui_css_integration_architecture_blueprint_v2`（CSS統合ブループリント）
+  4. `obplot_ui_css_integration_technical_reference`（公式技術仕様の解説）
 
 ### 2. 「反転対話（Reverse Dialogue）」によるステップバイステップ実行
 - 一度に大量のコードを修正・提示してはなりません。
