@@ -1,8 +1,13 @@
 <!-- src/CSS.html -->
 <style>
-  /* --- レイヤー定義 --- */
-  @layer reset, base, components, utilities;
-  /* --- 1. Reset --- */
+  /* =========================================
+     1. レイヤー定義（優先順位の制御）
+     ========================================= */
+  @layer reset, theme, base, components, layout_gas, layout_report, print;
+
+  /* =========================================
+     2. @layer reset （リセット）
+     ========================================= */
   @layer reset {
     * {
       box-sizing: border-box;
@@ -11,11 +16,17 @@
     }
     fieldset { border: none; }
   }
-  /* --- 2. Base --- */
-  @layer base {
+
+  /* =========================================
+     3. @layer theme （テーマ変数・一元集約）
+     ========================================= */
+  @layer theme {
     :root {
+      /* 共通・GASサイドバー基本寸法 */
       --unit: 4px;
       --control-height: calc(var(--unit) * 8.5);
+
+      /* システム基底カラー */
       --main-blue: #1A73E8;
       --main-blue-hover: #1F41B6;
       --main-green: #34A853;
@@ -23,31 +34,36 @@
       --main-yellow: #E88F1A;
       --main-yellow-hover: #DB7212;
       --main-red: #ea4335;
+
+      /* グレースケール */
       --grey50: #ECEFF1;
       --grey200: #B0BEC5;
+      --grey300: #90A4AE;
       --grey400: #78909C;
       --grey600: #546E7A;
+
+      /* サーフェス・テキスト定義 */
       --bg-color: #FFF;
       --bg-color-hover: #F5F5F5;
       --text-main: #202124;
       --transition-speed: 0.2s;
       interpolate-size: allow-keywords;
+
+      /* レポート（ReportCSS.html）由来の共通幾何・物理スケール変数 */
+      --sidebar-base-width: 320px;
+      --sidebar-base-height: 100vh;
+      --current-scale: 1;
+      --sidebar-width: var(--sidebar-base-width);
+      --sidebar-height: var(--sidebar-base-height);
+      --main-margin: var(--sidebar-base-width);
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 画面コンテキスト（data-theme）別動的カラーマッピング */
     body {
       --theme-color: var(--main-blue);
       --theme-hover: var(--main-blue-hover);
-      display: grid;
-      grid-template-rows: auto 1fr;
-      height: 100vh;
-      font-family: 'Roboto', 'Noto Sans JP', sans-serif;
-      font-size: 13px;
-      color: var(--text-main);
-      background-color: var(--bg-color);
-      overflow-x: hidden;
-      /*user-select: none;*/
     }
-    body[data-theme="entry"]{
+    body[data-theme="entry"] {
       --theme-color: var(--main-blue);
       --theme-hover: var(--main-blue-hover);
     }
@@ -56,14 +72,38 @@
       --theme-hover: var(--main-yellow-hover);
     }
     body[data-theme="dash"],
-    body[data-theme="report"]{
+    body[data-theme="report"] {
       --theme-color: var(--main-green);
       --theme-hover: var(--main-green-hover);
     }
-    main {
-      padding: calc(var(--unit) * 2) var(--unit) calc(var(--unit) * 3) calc(var(--unit) * 3);
-      overflow-x: hidden;
-      scrollbar-gutter: stable;
+  }
+
+  /* =========================================
+     4. @layer base （基本要素スタイル）
+     ========================================= */
+  @layer base {
+    body {
+      font-family: 'Roboto', 'Noto Sans JP', sans-serif;
+      font-size: 13px;
+      color: var(--text-main);
+      background-color: var(--bg-color);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeEnter {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideEnter {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes panelRefresh1 {
+      0% { opacity: 0.3; transform: scale(0.98); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes panelRefresh2 {
+      0% { opacity: 0.3; transform: scale(0.98); }
+      100% { opacity: 1; transform: scale(1); }
     }
     hr {
       margin: calc(var(--unit) * 3) 0;
@@ -71,8 +111,12 @@
       border-top: 1.5px solid var(--grey200);
     }
   }
-  /* --- 3. Utilities --- */
-  @layer utilities {
+
+  /* =========================================
+     5. @layer components （共通コンポーネント完全集約 ＆ 詳細度0,1,0化）
+     ========================================= */
+  @layer components {
+    /* --- ユーティリティクラス --- */
     .scroll-y {
       overflow-y: auto;
       scrollbar-width: thin;
@@ -142,13 +186,36 @@
       border: 1px solid var(--grey400);
       border-radius: 2px;
     }
-  }
-  /* --- 4. Components --- */
-  @layer components {
-    /* --- タブナビ --- */
+
+    /* --- タブナビゲーション（汎用 ＆ サイドバー） --- */
     .nav-tabs { display: none; }
     .tab-content { display: none; &.active, &[aria-selected="true"], &[data-state="active"], &[aria-hidden="false"] { display: block; } }
-    /* --- フォーム --- */
+
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--grey200);
+      margin-bottom: 16px;
+    }
+    .tab-icon {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 8px 0;
+      cursor: pointer;
+      color: var(--grey400);
+      transition: all 0.2s;
+      border-radius: 0;
+      &:hover { color: var(--theme-color); }
+      &.active, &[aria-selected="true"] { color: var(--theme-color); border-bottom-color: var(--theme-color); }
+    }
+    .sidebar-tab-pane { display: none; }
+    .sidebar-tab-pane.active, .sidebar-tab-pane[aria-selected="true"] {
+      display: block;
+      animation: slideEnter 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    /* --- フォームコントロール（標準 ＆ フラット化） --- */
     label {
       display: block;
       margin: var(--unit) calc(var(--unit) * 0.5);
@@ -187,7 +254,76 @@
       padding: 0 calc(var(--unit) * 2);
     }
     input[type="text"]:not(:disabled) { cursor: text; }
-    /* --- ボタン --- */
+
+    /* --- 昇格部品：フォームアドオン (.form-addon, prefix/suffix) --- */
+    .form-addon, [data-ui="addon"] {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      input, select {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+    .prefix-container, .suffix-container {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      pointer-events: none;
+      z-index: 1;
+      color: var(--grey400);
+      font-weight: 400;
+      line-height: 1;
+      font-family: sans-serif;
+      font-size: 0.8em;
+    }
+    .prefix-container { left: 8px; }
+    .suffix-container { right: 8px; }
+    .prefix-container .material-symbols-outlined,
+    .suffix-container .material-symbols-outlined {
+      font-size: 1.2em;
+      font-weight: 500;
+    }
+    .has-prefix input,
+    .has-prefix select { padding-left: var(--pad-left, 32px); }
+    .has-suffix input,
+    .has-suffix select { padding-right: var(--pad-right, 24px); }
+
+    /* --- 昇格部品：4方向連動インラインボタン (.link-toggle) --- */
+    .link-toggle {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      height: fit-content;
+      padding: 2px 8px;
+      background: var(--grey50);
+      border: 1px solid var(--grey300);
+      border-radius: 20px;
+      color: var(--grey400);
+      cursor: pointer;
+      transition: 0.2s;
+      &:hover { border-color: var(--grey400); color: var(--text-main); }
+      &.active, &[aria-selected="true"] {
+        color: #fff;
+        background: color-mix(in srgb, var(--theme-color) 70%, transparent);
+        border-color: transparent;
+      }
+      .material-symbols-outlined { font-size: 14px; }
+    }
+    .linkeRow { display: flex; gap: 4px; width: 100%; }
+
+    /* --- 昇格部品：単位自動付与ラッパー (.with-unit) --- */
+    .with-unit { position: relative; display: flex; width: 100%; }
+    .with-unit::after {
+      content: attr(data-unit);
+      position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+      font-size: 10px; color: var(--grey400); pointer-events: none;
+    }
+    .with-unit input { padding-right: 22px !important; }
+
+    /* --- ボタン類 --- */
     button {
       --btn-bg: transparent;
       --btn-color: var(--text-main);
@@ -257,7 +393,8 @@
         --btn-border: var(--grey400);
       }
     }
-    /* --- アコーディオン --- */
+
+    /* --- アコーディオン (details/summary 仕様統一) --- */
     details {
       margin: var(--unit) 0;
       transition: opacity var(--transition-speed);
@@ -274,7 +411,7 @@
         height: 0;
         opacity: 0;
         overflow: clip;
-        transition: height 0.4s ease, opacity 0.4s ease, content-visibility 0.4s ease allow-clusete;
+        transition: height 0.4s ease, opacity 0.4s ease, content-visibility 0.4s ease allow-discrete;
       }
       &[open]::details-content {
         height: auto;
@@ -318,6 +455,149 @@
       font-size: 13px;
       padding: 0;
     }
+
+    /* --- 昇格部品：セグメントトグル (.segment-ctrl) --- */
+    .segment-ctrl {
+      display: flex;
+      background: var(--grey50);
+      border-radius: 6px;
+      padding: 3px;
+      margin-bottom: 12px;
+    }
+    .segment-btn {
+      flex: 1;
+      text-align: center;
+      font-size: 11px;
+      padding: 6px 0;
+      cursor: pointer;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--grey600);
+      font-weight: 500;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      z-index: 1;
+      &:hover { background: color-mix(in srgb, var(--grey200) 20%, transparent); }
+      &.active, &[aria-selected="true"] {
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        color: var(--theme-color);
+        font-weight: 600;
+        transform: scale(1.02);
+        z-index: 2;
+      }
+    }
+    .sub-pane { display: none; }
+    .sub-pane.active, .sub-pane[aria-selected="true"] {
+      display: block;
+      animation: slideEnter 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    /* --- 昇格部品：ラジオグループ (.radio-group) --- */
+    .radio-group {
+      display: flex;
+      gap: 8px;
+    }
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      input[type="radio"] {
+        width: 14px;
+        height: 14px;
+        margin: 0;
+        accent-color: var(--theme-color);
+      }
+    }
+
+    /* --- 昇格部品：プロパティ行・インスペクタコントロール --- */
+    .board-mode-sec {
+      background-color: var(--grey50);
+      border: 1px solid var(--grey200);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .row-aspect-box {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--grey200);
+    }
+    .aspect-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .aspect-label {
+      font-size: 11px;
+      color: var(--grey600);
+    }
+    .aspect-input {
+      width: 60px;
+      text-align: center;
+    }
+    .panel-context {
+      background-color: color-mix(in srgb, var(--theme-color) 5%, transparent);
+      border: 1px solid var(--theme-color);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      color: var(--text-main);
+      font-weight: 500;
+      animation: panelRefresh1 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+    .pane-title {
+      font-size: 13px;
+      color: var(--theme-color);
+      margin: 0 0 12px 0;
+      font-weight: 600;
+    }
+    .prop-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .prop-label {
+      flex: 0 0 100px;
+      font-size: 12px;
+      color: var(--grey600);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      &.panel { flex: 0 0 60px; }
+      &.inline {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+    .prop-controls {
+      flex: 1;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      min-width: 0;
+      > * { flex: 1; min-width: 0; }
+      input[type="range"] {
+        padding: 0;
+        cursor: pointer;
+      }
+    }
+    .scroll-box {
+      max-height: 250px;
+      border: 1px solid var(--grey200);
+      border-radius: 4px;
+      padding: 4px;
+      margin-bottom: 12px;
+      overflow-y: auto;
+    }
+
     /* --- ダイアログ --- */
     dialog {
       width: calc(var(--unit) * 70);
@@ -344,6 +624,7 @@
         backdrop-filter: blur(2px);
       }
     }
+
     /* --- ステータスバー --- */
     .status-bar {
       --status-color: transparent;
@@ -388,6 +669,7 @@
       &[data-status="success"] { --status-color: var(--theme-color); }
       &[data-status="error"], &[data-status="alert"] { --status-color: var(--main-red); }
     }
+
     /* --- ポップオーバー --- */
     ui-pop, .ui-pop {
       display: block;
@@ -419,7 +701,8 @@
       max-width: fit-content;
       max-height: calc(var(--unit) * 40);
     }
-    /* --- ui-mselect --- */
+
+    /* --- マルチセレクト (ui-mselect) --- */
     ui-mselect, [data-ui="mselect"] {
       display: block;
       margin: var(--unit) 0;
@@ -429,12 +712,13 @@
       width: 100%;
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      align-items: center; 
+      align-items: center;
       padding: 0 calc(var(--unit) * 6) 0 calc(var(--unit) * 2);
       font-weight: normal;
       &:hover { background-color: var(--bg-color-hover); }
     }
-    /* --- ui-symbtbl --- */
+
+    /* --- シンボル・お気に入りテーブル表示 --- */
     .single-summary {
       height: calc(var(--unit) * 7);
       padding: var(--unit) calc(var(--unit) * 1.5);
@@ -467,7 +751,6 @@
       border-radius: var(--unit);
       padding: var(--unit) calc(var(--unit) * 2);
     }
-    /* --- テーブル行・動的ステータス --- */
     .table-row, .symb-table-row {
       &.has-error, &[aria-invalid="true"] {
         background-color: color-mix(in srgb, var(--main-red) 12%, transparent);
@@ -509,9 +792,7 @@
       white-space: nowrap;
       font-size: 12px;
     }
-    .fav-col-btn {
-      flex: none;
-    }
+    .fav-col-btn { flex: none; }
     .symb-table-row {
       display: flex;
       align-items: center;
@@ -523,20 +804,12 @@
         flex: 0 0 calc(var(--unit) * 6);
         text-align: center;
       }
-      .symb-col-target {
-        flex: 2.5;
-        min-width: 0;
-      }
-      .symb-col-shape {
-        flex: 1;
-        min-width: 0;
-      }
-      .symb-col-color {
-        flex: 1.5;
-        min-width: 0;
-      }
+      .symb-col-target { flex: 2.5; min-width: 0; }
+      .symb-col-shape { flex: 1; min-width: 0; }
+      .symb-col-color { flex: 1.5; min-width: 0; }
     }
-    /* --- リスト・チェック --- */
+
+    /* --- チェックボックスリスト --- */
     .cb-container {
       max-height: calc(var(--unit) * 35);
       overflow-y: auto;
@@ -568,6 +841,7 @@
         span { font-weight: 500; }
       }
     }
+
     /* --- トグルスイッチ --- */
     .toggle-row {
       display: flex;
@@ -617,6 +891,7 @@
     }
     .toggle-switch input:checked + .toggle-slider { background-color: var(--theme-color); }
     .toggle-switch input:checked + .toggle-slider::before { transform: translateX(calc(var(--unit) * 4)); }
+
     /* --- 統計テーブル --- */
     .stats-container {
       margin-top: calc(var(--unit) * 1.5);
@@ -638,6 +913,256 @@
         color: var(--grey600);
       }
       .stats-val { font-weight: 700; }
+    }
+  }
+
+  /* =========================================
+     6. @layer layout_gas （GASサイドバー専用レイアウト）
+     ========================================= */
+  @layer layout_gas {
+    body:not([data-theme="report"]) {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+      overflow-x: hidden;
+
+      main {
+        padding: calc(var(--unit) * 2) var(--unit) calc(var(--unit) * 3) calc(var(--unit) * 3);
+        overflow-x: hidden;
+        scrollbar-gutter: stable;
+      }
+    }
+  }
+
+  /* =========================================
+     7. @layer layout_report （レポート専用レイアウト・ネスト最小化）
+     ========================================= */
+  @layer layout_report {
+    body[data-theme="report"] {
+      margin: 0;
+      padding: 0;
+      background-color: var(--grey50);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+
+      /* 基本構造 */
+      .dash-layout {
+        resize: none;
+        display: flex;
+        width: 100%;
+        height: 100%;
+
+        /* 左操作サイドバー枠 */
+        .dash-sidebar {
+          width: var(--sidebar-width, var(--sidebar-base-width));
+          height: var(--sidebar-height, var(--sidebar-base-height));
+          top: 0;
+          left: 0;
+          box-sizing: border-box;
+          zoom: calc(1 / var(--current-scale));
+          background-color: #fff;
+          border-right: 1px solid var(--grey200);
+          display: flex;
+          flex-direction: column;
+          overflow-y: auto;
+          scrollbar-gutter: stable;
+          padding: 16px;
+          flex-shrink: 0;
+          position: fixed;
+          z-index: 20;
+          text-size-adjust: none !important;
+        }
+
+        /* 画面上ガイドカード */
+        .floating-card {
+          position: fixed;
+          top: 12px;
+          left: calc(var(--sidebar-base-width) + 12px);
+          zoom: calc(1 / var(--current-scale));
+          text-size-adjust: none !important;
+          background-color: #fff;
+          border: 1px solid var(--grey200);
+          border-radius: 8px;
+          padding: 12px 16px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          z-index: 10;
+          font-size: 12px;
+          color: var(--text-main);
+        }
+
+        /* 右描画メイン領域枠 */
+        .dash-main {
+          margin-left: var(--main-margin, var(--sidebar-base-width));
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          overflow-y: auto;
+          padding: 24px;
+          box-sizing: border-box;
+          height: 100%;
+          position: relative;
+
+          /* A4コンテナ用紙枠 */
+          .a4-container {
+            background-color: #fff;
+            width: 210mm;
+            height: 297mm;
+            transform-origin: top center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: var(--margin-top, 15mm) var(--margin-right, 15mm) var(--margin-bottom, 15mm) var(--margin-left, 15mm);
+            box-sizing: border-box;
+            flex-shrink: 0;
+            animation: fadeEnter 1s ease-out forwards;
+
+            /* 内部プロットグリッド */
+            .dash-grid {
+              display: grid;
+              gap: var(--panel-gap, 16px);
+              width: 100%;
+              height: 100%;
+              grid-template-columns: repeat(var(--col-count, 1), var(--panel-w, 100%));
+              grid-template-rows: repeat(var(--row-count, 1), var(--panel-h, auto));
+              align-content: center;
+              justify-content: center;
+              place-items: center;
+
+              /* プロットパネル枠 */
+              .grid-panel {
+                border: 1px dashed var(--grey200);
+                position: relative;
+                cursor: pointer;
+                transition: border-color 0.2s;
+                background-color: transparent;
+                width: 100%;
+                height: 100%;
+                min-width: 0;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                box-sizing: border-box;
+                transform: translateZ(0);
+                will-change: transform;
+                &.active, &[aria-selected="true"] { border: 2px solid var(--theme-color); }
+
+                /* 列ラベル */
+                &::before {
+                  content: attr(data-col-lbl);
+                  position: absolute;
+                  bottom: 100%;
+                  margin-bottom: calc(4mm / var(--current-scale, 1));
+                  left: 50%;
+                  transform: translateX(-50%);
+                  font-size: calc(12pt / var(--current-scale, 1));
+                  font-weight: 500;
+                  color: var(--theme-color, var(--text-main));
+                  pointer-events: none;
+                  z-index: 5;
+                  line-height: 1;
+                }
+                &:not([data-col-lbl])::before { display: none; }
+
+                /* 行ラベル */
+                &::after {
+                  content: attr(data-row-lbl);
+                  position: absolute;
+                  right: 100%;
+                  margin-right: calc(4mm / var(--current-scale, 1));
+                  top: 50%;
+                  transform: translateY(-50%);
+                  font-size: calc(12pt / var(--current-scale, 1));
+                  font-weight: 500;
+                  color: var(--theme-color, var(--text-main));
+                  pointer-events: none;
+                  z-index: 5;
+                  line-height: 1;
+                }
+                &:not([data-row-lbl])::after { display: none; }
+              }
+            }
+          }
+        }
+      }
+
+      /* インスペクタのアクティブ/非アクティブ表示制御 */
+      &[data-board-mode="calib"] [data-part="secCluster"] { display: none; }
+      &[data-board-mode="clus"] [data-part="secCALB"] { display: none; }
+
+      .print-loading {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        padding: 16px 32px;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: bold;
+        z-index: 9999;
+      }
+
+      /* 行別アスペクト比コントロール位置 */
+      .row-aspect-ctrl {
+        position: absolute;
+        right: 100%;
+        margin-right: calc((4mm + 30px) / var(--current-scale, 1));
+        top: 50%;
+        transform: translateY(-50%) scale(calc(1 / var(--current-scale, 1)));
+        transform-origin: right center;
+        z-index: 10;
+        &.form-addon {
+          width: 80px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        input {
+          background: transparent;
+          border: 1.5px solid var(--theme-color);
+          border-radius: 6px;
+          padding-left: 30px;
+          padding-right: 2px;
+          font-size: 11px;
+        }
+      }
+    }
+  }
+
+  /* =========================================
+     8. @layer print （印刷出力用リセット）
+     ========================================= */
+  @layer print {
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body, html { margin: 0; padding: 0; background-color: #fff; height: 100%; }
+
+      body[data-theme="report"], body.is-print {
+        display: block;
+        overflow: visible;
+        background-color: #fff;
+
+        .dash-layout { display: block; }
+        .dash-sidebar { display: none; }
+        .dash-main {
+          margin-left: 0 !important;
+          padding: 0 !important;
+          display: block;
+          height: auto;
+          overflow: visible;
+          background: none;
+        }
+        .a4-container {
+          width: 210mm !important;
+          height: 297mm !important;
+          transform: none !important;
+          margin: 0 !important;
+          max-height: none !important;
+          box-shadow: none !important;
+        }
+        .grid-panel, .grid-panel.active, .grid-panel[aria-selected="true"] { border: none !important; }
+        .grid-panel::before, .grid-panel::after { display: none; }
+        .row-aspect-ctrl, .print-loading { display: none !important; }
+      }
     }
   }
 </style>

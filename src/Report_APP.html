@@ -259,7 +259,7 @@
     static removeSymb(btn, param) {
       const key = param || btn.dataset.param;
       const rls = State.get("RPTST.config.symbology.rls")
-      if (key) rls, (rls || []).filter(rw => rw.key !== key));
+      if (key) rls, (rls || []).filter(rw => rw.key !== key);
     }
     // --- updSymb ---
     static updSymb(btn, param, subParam) {
