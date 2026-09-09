@@ -6,12 +6,13 @@
     static valdPref(tgt) {
       const mode = tgt.value;
       if (!mode) return;
+      const passSts = ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出対応" : "1ファイル単位抽出（モード混在可）"];
       const phs = State.get("ENTST.phase"), isInit = phs === ENT_PHS.INIT, isInvalid = phs >= ENT_PHS.INVALID;
       if (isInvalid) { 
         const errSts = ["error", "設定変更検知: リストの再生成・検証が必要です"];
         State.set({ "ENTST.RAW.status": errSts, "ENTST.RAW.cachedStatus": errSts, "ENTST.EXTR.status": ["hidden", ""] });
       }
-      State.set({ "ENTST.PREF.status": ["message", mode === "Dual" ? "Obsidian/mudrockセット抽出対応" : "1ファイル単位抽出（モード混在可）"], ...(isInit || isInvalid ? { "ENTST.phase": isInit ? ENT_PHS.READY : ENT_PHS.INVALID } : {}) });
+      State.set({ "ENTST.PREF.status": passSts, ...(isInit || isInvalid ? { "ENTST.phase": isInit ? ENT_PHS.READY : ENT_PHS.INVALID } : {}) });
     }
 
     static updRawRefs(tgt, param) {
@@ -20,7 +21,8 @@
     }
     static valdRawRefs() {
       const flags = CoreMethod.Util.validateSelect(GLB.fileFields.map(f => State.get(`ENTST.RAW.refs.${f.key}`) ?? ""), 3);
-      State.set({ "ENTST.RAW.flags": flags, "ENTST.RAW.status": flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("ENTST.RAW.cachedStatus") });
+      const errSts = flags.some(Boolean) ? ["error", "エラー: 列選択"] : State.get("ENTST.RAW.cachedStatus");
+      State.set({ "ENTST.RAW.flags": flags, "ENTST.RAW.status": errSts });
     }
     static valdExtrRefs() {
       const isErr = !(State.get(`ENTST.EXTR.refs.${GLB.idx.key1}`)?.trim());
@@ -136,7 +138,14 @@
         if (!wData || wData.length <= 1) throw new Error("WDXRF不足");
         State.reset(['ADPST.ASGN', 'ADPST.SYMB', 'ADPST.CALB', 'ADPST.PREV', 'ADPST.STDZ']);
         const { pxrfDT: wrapPXRF, wdxrfDT: wrapWDXRF, dbs } = CoreMethod.Util.genDB(pData, wData, { mixWD: true });
-        State.set({ "ADPST.ASGN.data.wrapPXRF": wrapPXRF, "ADPST.ASGN.data.wrapWDXRF": wrapWDXRF, "ADPST.ASGN.data.crctDT": cData || [], "ADPST.ASGN.refs.available": dbs, "ADPST.ASGN.refs.filter": dbs, "ADPST.phase": ADP_PHS.LOADED, "ADPST.CALB.refs.modeMap": [...GLB.optElms], "ADPST.CALB.refs.calElms": [...GLB.valElms], "ADPST.STDZ.refs.modeMap": [...GLB.optElms] });
+        const { ASGN, CALB, STDZ } = State.proxy.ADPST;
+        State.set({
+          "ADPST.ASGN.data": { ...ASGN.data, wrapPXRF, wrapWDXRF, crctDT: cData || [] },
+          "ADPST.ASGN.refs": { ...ASGN.refs, available: dbs, filter: dbs },
+          "ADPST.CALB.refs": { ...CALB.refs, modeMap: [...GLB.optElms], calElms: [...GLB.valElms] },
+          "ADPST.STDZ.refs": { ...STDZ.refs, modeMap: [...GLB.optElms] },
+          "ADPST.phase": ADP_PHS.LOADED
+        });
         return `読込完了: database ${dbs.length}件`;
       });
     }
@@ -146,7 +155,13 @@
         if (!ASGN.refs.filter?.length) throw new Error("DB未選択");
         State.reset(['ADPST.SYMB', 'ADPST.CALB', 'ADPST.PREV', 'ADPST.STDZ']);
         const { pxrfDT, wdxrfDT } = CoreMethod.Util.fltrDB(ASGN.data.wrapPXRF, ASGN.data.wrapWDXRF, ASGN.refs.filter, true);
-        State.set({ "ADPST.ASGN.data.pxrfDT": pxrfDT, "ADPST.ASGN.data.wdxrfDT": wdxrfDT, "ADPST.phase": ADP_PHS.FILTERED }); return "データ更新";
+        State.set({ 
+          "ADPST.ASGN.data.pxrfDT": pxrfDT, 
+          "ADPST.ASGN.data.wdxrfDT": wdxrfDT, 
+          "ADPST.ASGN.data.crctDT": [...ASGN.data.crctDT],
+          "ADPST.phase": ADP_PHS.FILTERED 
+        }); 
+        return "データ更新";
       });
     }
     static async setSymb() { 
@@ -170,6 +185,7 @@
       });
       if (!isConfirmed) {
         tgtSelect.value = oldVal;
+        State.set("ADPST.SYMB.refs.baseKey", oldVal);
       }
     }
     static addSymb() { State.set("ADPST.SYMB.refs.rls", [...(State.get("ADPST.SYMB.refs.rls") ?? []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
@@ -183,26 +199,19 @@
       const rls = [...(State.get("ADPST.SYMB.refs.rls") ?? [])];
       if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("ADPST.SYMB.refs.rls", rls); }
     }
-    static async genBaseDT() {
+    static async genPrev() {
       await CoreAct.withAsync("ADPST.PREV.status", async () => {
         const { PREV, CALB, ASGN, SYMB } = State.proxy.ADPST;
         const conf = { ...PREV.refs, ...CALB.refs, crctDT: ASGN.data.crctDT, graphType: 'calib', calbVal: PREV.refs.val }; 
         const { prevDT, statsDT } = CHARTDT.genChartDB(ASGN.data.pxrfDT, ASGN.data.wdxrfDT, conf);
         if (!prevDT.length) throw new Error("対象データなし");
-
         const chartConfig = {
           data: { prevDT, statsDT },
           symb: SYMB.refs,
-          panel: {
-            title: "",
-            xLabel: "WDXRF",
-            yLabel: "pXRF",
-            graphType: "calib"
-          },
+          panel: { title: "", xLabel: "WDXRF", yLabel: "pXRF", graphType: "calib" },
           gph: { style: GLB.defGraphStyle, gap: GLB.defGraphGap },
           layout: { aspectMode: 'square' }
         };
-
         State.set({ 
           "ADPST.PREV.data.crctLogic": statsDT, 
           "ADPST.PREV.data.statsDT": statsDT, 
@@ -217,13 +226,17 @@
       const idxNm = State.get("ADPST.STDZ.refs.saveIndexName")?.trim();
       if (!idxNm) { State.set("ADPST.STDZ.status", ["error", "名前が未入力です"]); return; }
       const { ASGN, STDZ } = State.proxy.ADPST;
-      const isDup = ASGN.data.crctDT?.slice(1).some(r => r[0] === idxNm);
+      const hasOriginal = ASGN.data.crctDT?.length > 0;
+      const updDT = hasOriginal ? [...ASGN.data.crctDT] : [CoreMethod.Util.genHeader('crct')];
+      const dupIdx = updDT.findIndex((r, i) => i > 0 && r[0] === idxNm);
+      const isDup = dupIdx > 0;
       const msg = isDup ? `全対象元素の検量線を上書きしますか？\n名前：${idxNm}` : `全対象元素の検量線を出力しますか？\n名前：${idxNm}`;
       await CoreAct.withAsync("ADPST.STDZ.status", msg, async () => {
         const newRow = Mtd.ADP.genCALB(ASGN.data.pxrfDT, ASGN.data.wdxrfDT, STDZ.refs, idxNm);
-        let updDT = ASGN.data.crctDT?.length ? [...ASGN.data.crctDT] : [CoreMethod.Util.genHeader('crct')];
-        if (isDup) updDT[updDT.findIndex(r => r[0] === idxNm)] = newRow; else updDT.push(newRow);
-        await API.pushDT(ADPAct.ssId, GLB.appShts.crct, isDup ? updDT : (ASGN.data.crctDT?.length ? [newRow] : updDT), (isDup || !ASGN.data.crctDT?.length) ? "clear" : ["append"]);
+        let pushData, pushOpts;
+        if (isDup) { updDT[dupIdx] = newRow; pushData = updDT; pushOpts = "clear";
+        } else { updDT.push(newRow); pushData = hasOriginal ? [newRow] : updDT; pushOpts = hasOriginal ? ["append"] : "clear"; }
+        await API.pushDT(ADPAct.ssId, GLB.appShts.crct, pushData, pushOpts);
         State.set({ "ADPST.ASGN.data.crctDT": updDT, "ADPST.STDZ.refs.saveIndexName": "" }); 
         return `補正値を${isDup ? '上書き' : '保存'}しました`;
       });
@@ -237,28 +250,22 @@
       });
     }
     static renewADPState() {
-      const baseDT = State.get("ADPST.ASGN.data.pxrfDT");
-      const baseKey = State.get("ADPST.SYMB.refs.baseKey");
-      const rls = State.get("ADPST.SYMB.refs.rls");
-      if (baseDT?.length) {
-        const items = [...new Set(baseDT.map(d => d[GLB.idx.p1]).filter(Boolean))];
-        State.set({
-          "ADPST.ASGN.refs.availableItems": items,
-          "ADPST.PREV.refs.itemMap": State.get("ADPST.PREV.refs.itemMap")?.length ? State.get("ADPST.PREV.refs.itemMap") : items,
-          "ADPST.STDZ.refs.itemMap": State.get("ADPST.STDZ.refs.itemMap")?.length ? State.get("ADPST.STDZ.refs.itemMap") : items
-        });
-        const vals = [...new Set(baseDT.map(d => d[baseKey]).filter(Boolean))];
-        State.set("ADPST.SYMB.data.src", {
-          rls: rls,
-          optsConf: { target: [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))], shp: GLB.symbShapes, clr: GLB.symbColors },
-          actsConf: { add: "ADPAct.addSymb", remove: "ADPAct.removeSymb", update: "ADPAct.updSymb"}
-        });
-      } else {
-        State.set({ "ADPST.ASGN.refs.availableItems": [], "ADPST.SYMB.data.src": null });
-      }
+      const { ASGN, SYMB, PREV, STDZ } = State.proxy.ADPST;
+      const baseDT = ASGN.data.pxrfDT;
+      if (!baseDT?.length) { State.set({ "ADPST.ASGN.refs.availableItems": [], "ADPST.SYMB.data.src": null }); return; }
+      const items = [...new Set(baseDT.map(d => d[GLB.idx.p1]).filter(Boolean))];
+      const vals = [...new Set(baseDT.map(d => d[SYMB.refs.baseKey]).filter(Boolean))];
+      const targetOpts = [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))];
+      const optsConf = { target: targetOpts, shp: GLB.symbShapes, clr: GLB.symbColors };
+      const actsConf = { add: "ADPAct.addSymb", remove: "ADPAct.removeSymb", update: "ADPAct.updSymb" };
+      State.set({
+        "ADPST.ASGN.refs.availableItems": items,
+        "ADPST.PREV.refs.itemMap": PREV.refs.itemMap?.length ? PREV.refs.itemMap : items,
+        "ADPST.STDZ.refs.itemMap": STDZ.refs.itemMap?.length ? STDZ.refs.itemMap : items,
+        "ADPST.SYMB.data.src": { rls: SYMB.refs.rls, optsConf, actsConf } 
+      });
     }
   }
-
   // --- TrcInit ---
   class TrcInit {
     static async start() {
