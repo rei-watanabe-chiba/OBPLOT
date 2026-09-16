@@ -21,14 +21,6 @@
 
   // --- UIテンプレート ---
   class RptTpl {
-    // --- rowAspectCtrl ---
-    static rowAspectCtrl(row, aspect) {
-      return `<div class="form-addon" title="アスペクト比" 
-                   data-ui="addon" 
-                   data-opts="icon:aspect_ratio; prefix:H:; color:var(--theme-color)">
-        <input type="number" class="form-control" min="0.1" max="2.0" step="0.1" data-aspect-idx="${row}" value="${aspect}">
-      </div>`;
-    }
   }
 
   // --- RepoSt ---
@@ -48,7 +40,6 @@
     static update() { RepoAct.automator?.update(); }
     // --- finalizePanel ---
     static finalizePanel() {
-      document.querySelectorAll('form[data-ui="form"]').forEach(f => CoreUIPatcher.syncFormCtx(f));
       this.update();
     }
     // --- initSt ---
@@ -263,7 +254,10 @@
     }
     // --- updSymb ---
     static updSymb(btn, param, subParam) {
-      const i = param || btn.dataset.param, t = subParam || btn.dataset.subParam;
+      let i = param, t = subParam;
+      if (i == null && btn.dataset.param) {
+        [i, t] = btn.dataset.param.split('|');
+      }
       if (i != null && t) {
         const newSym = JSON.parse(JSON.stringify(State.get("RPTST.config.symbology.rls") || []));
         newSym[i][t] = btn.value;
@@ -283,8 +277,8 @@
       }
     }
     // --- changeRowAspect ---
-    static changeRowAspect(inp) {
-      const idx = Number(inp.dataset.aspectIdx);
+    static changeRowAspect(inp, param) {
+      const idx = Number(param || inp.dataset.param);
       let val = Number(inp.value);
       val = isNaN(val) || val < 0.1 ? 0.1 : (val > 2.0 ? 2.0 : Math.round(val * 10) / 10);
       inp.value = val;
@@ -298,7 +292,7 @@
     // --- actvSub ---
     static actvSub(btn, param) { State.set("RPTST.ui.activeSub", param || btn.dataset.param); }
     // --- actvPanel ---
-    static actvPanel(btn) { State.set("RPTST.ui.activePanelId", btn.dataset.panelId); }
+    static actvPanel(btn, param) { State.set("RPTST.ui.activePanelId", param || btn.dataset.param); }
     // --- updExportDesc ---
     static updExportDesc(tgt) { RepoExport.updExportDesc(tgt); }
     // --- requestExport ---
@@ -308,20 +302,20 @@
     // --- syncPanelDom ---
     static syncPanelDom() { RepoRend.syncPanelDom(RepoSt.getSt()); }
     // --- toggleMarginLink ---
-    static toggleMarginLink(btn) {
-      const group = btn.dataset.syncGroup;
+    static toggleMarginLink(btn, param) {
+      const group = param || btn.dataset.param;
       if (!group) return;
       const linkBind = `RPTST.ui.link${group.charAt(0).toUpperCase() + group.slice(1)}Margin`;
       const isLinked = !State.get(linkBind);
       State.set(linkBind, isLinked); 
       btn.setAttribute('aria-selected', isLinked ? 'true' : 'false');
-      const icon = btn.querySelector('.material-symbols-outlined') || btn;
+      const icon = btn.querySelector('[data-part="icon"]') || btn;
       icon.textContent = isLinked ? 'link' : 'link_off';
       btn.title = isLinked ? '連動解除' : '4方向連動';
     }
     // --- syncMargin ---
-    static syncMargin(inp) {
-      const group = inp.dataset.syncGroup;
+    static syncMargin(inp, param) {
+      const group = param || inp.dataset.param;
       if (!group) return;
       const linkBind = `RPTST.ui.link${group.charAt(0).toUpperCase() + group.slice(1)}Margin`;
       if (!State.get(linkBind)) return;
@@ -338,7 +332,7 @@
     static renderTimer = null;
     // --- _applyPanelLabels ---
     static _applyPanelLabels(idx, st) {
-      const el = document.querySelector(`[data-panel-id="p_${idx}"]`);
+      const el = document.querySelector(`[data-param="p_${idx}"]`);
       if (!el) return;
       const { layout, config, boardMode } = st;
       const bMode = boardMode || config?.boardMode || 'calib';
@@ -346,24 +340,18 @@
       const row = Math.floor(idx / cols);
       const col = idx % cols;
       
-      if (row === 0) el.setAttribute('data-col-lbl', `c${col + 1}`);
-      else el.removeAttribute('data-col-lbl');
-      
-      el.querySelector('.row-aspect-ctrl')?.remove();
+      if (row === 0) el.style.setProperty('--col-lbl', `'c${col + 1}'`);
+      else el.style.removeProperty('--col-lbl');
       
       if (col === 0) {
-        el.setAttribute('data-row-lbl', `r${row + 1}`);
-        
-        if (bMode === 'clus') {
-          const ctrl = document.createElement('div');
-          ctrl.className = 'row-aspect-ctrl';
-          ctrl.innerHTML = RptTpl.rowAspectCtrl(row, layout.rowAspect?.[row] || 1.0);
-          ctrl.querySelector('input').addEventListener('change', e => RepoAct.changeRowAspect(e.target));
-          el.appendChild(ctrl);
-          CoreUIPatcher.routBuilder(ctrl.firstElementChild); // 動的生成DOMへの装飾バインド
+        el.style.setProperty('--row-lbl', `'r${row + 1}'`);
+        const aspectInput = el.querySelector('[data-part="row-aspect-ctrl"] input');
+        if (aspectInput) {
+          aspectInput.dataset.param = row;
+          aspectInput.value = layout.rowAspect?.[row] ?? 1.0;
         }
       } else {
-        el.removeAttribute('data-row-lbl');
+        el.style.removeProperty('--row-lbl');
       }
     }
     // --- syncPanelDom ---
@@ -383,13 +371,51 @@
         cont.style.setProperty('--col-count', layout.gridCols);
         cont.style.setProperty('--row-count', layout.gridRows);
         cont.style.setProperty('--panel-gap', `${(layout.panelGap !== undefined ? Number(layout.panelGap) : 4)}mm`);
+        const grid = cont.querySelector('[data-part="dashGrid"]');
+        if (grid) {
+          const rowCount = layout.gridRows || 1;
+          const isClus = (st.boardMode || st.config?.boardMode) === 'clus';
+          const MM2PX = 3.7795275591;
+          const theme = st.theme || st.config?.theme || {};
+          let gw = 0, gh = 0;
+          if (window.__EXPORT_CFG__) {
+            gw = (210 - (theme.bd_l || 15) - (theme.bd_r || 15)) * MM2PX;
+            gh = (297 - (theme.bd_t || 15) - (theme.bd_b || 15)) * MM2PX;
+          } else {
+            const size = st.ui?.gridSize;
+            if (size) { gw = size.w; gh = size.h; }
+          }
+          if (gw && gh) {
+            const gapPx = (layout.panelGap !== undefined ? Number(layout.panelGap) : 4) * 3.78;
+            const hasTitle = st.panels.some(p => p.title);
+            const titleSizePx = (theme.s_title || 12) * 1.33;
+            const gph = this.genGph(st);
+            if (isClus && layout.rowAspect?.length && rowCount > 0) {
+              const metrics = ReportMethod.calculatePanelMetricsAspect(gw, gh, layout.gridCols || 1, rowCount, gapPx, gph, hasTitle, titleSizePx, layout.rowAspect.slice(0, rowCount));
+              grid.style.setProperty('--panel-w', `${metrics.panelW}px`);
+              grid.style.gridTemplateRows = metrics.panelH.map(h => `${h}px`).join(' ');
+              State.set("RPTST.dataset.rowPlotH", metrics.plotH);
+            } else {
+              const metrics = ReportMethod.calculatePanelMetrics(gw, gh, layout.gridCols || 1, rowCount, gapPx, gph, hasTitle, titleSizePx);
+              grid.style.setProperty('--panel-w', `${metrics.panelW}px`);
+              grid.style.setProperty('--panel-h', `${metrics.panelH}px`);
+              grid.style.gridTemplateRows = `repeat(${rowCount}, var(--panel-h, auto))`;
+              State.set("RPTST.dataset.rowPlotH", null);
+            }
+          } else {
+            // gridSizeが未計算の場合のフォールバック
+            grid.style.gridTemplateRows = isClus && layout.rowAspect 
+              ? layout.rowAspect.slice(0, rowCount).map(a => `${a}fr`).join(' ')
+              : `repeat(${rowCount}, 1fr)`;
+          }
+        }
       }
       for (let i = 0; i < 9; i++) {
-        const el = document.querySelector(`[data-panel-id="p_${i}"]`);
+        const el = document.querySelector(`[data-param="p_${i}"]`);
         if (!el) continue;
         el.setAttribute('aria-selected', `p_${i}` === (st.activeId || "p_0") ? 'true' : 'false'); // アクティブ枠強制同期
         if (i < layout.gridRows * layout.gridCols) this._applyPanelLabels(i, st);
-        else { el.removeAttribute('data-col-lbl'); el.removeAttribute('data-row-lbl'); }
+        else { el.style.removeProperty('--col-lbl'); el.style.removeProperty('--row-lbl'); }
       }
       RepoSt.update();
       if (!window.__EXPORT_CFG__) this.genCharts(st);
@@ -407,43 +433,10 @@
       }
       return gphProps;
     }
-    // --- calcPanelSize ---
-    static calcPanelSize(gph, st) {
-      const grid = document.querySelector('[data-part="dashGrid"]');
-      if (!grid) return;
-      const snap = st || RepoSt.getSt();
-      const { layout, panels, theme, boardMode } = snap;
-      grid.style.removeProperty('--panel-w');
-      grid.style.removeProperty('--panel-h');
-      const MM2PX = 3.7795275591;
-      const gw = window.__EXPORT_CFG__ ? (210 - (theme.bd_l || 15) - (theme.bd_r || 15)) * MM2PX : grid.clientWidth;
-      const gh = window.__EXPORT_CFG__ ? (297 - (theme.bd_t || 15) - (theme.bd_b || 15)) * MM2PX : grid.clientHeight;
-      if (!gw || !gh) return;
-      const gapPx = (layout.panelGap !== undefined ? Number(layout.panelGap) : 4) * 3.78;
-      const hasTitle = panels.some(p => p.title);
-      const titleSizePx = (theme.s_title || 12) * 1.33;
-      if (boardMode === 'clus' && layout.rowAspect?.length && (layout.gridRows || 1) > 0) {
-        const rowCount = layout.gridRows || 1;
-        const metrics = ReportMethod.calculatePanelMetricsAspect(
-          gw, gh, layout.gridCols || 1, rowCount, gapPx, gph, hasTitle, titleSizePx, (layout.rowAspect || []).slice(0, rowCount)
-        );
-        grid.style.setProperty('--panel-w', `${metrics.panelW}px`);
-        grid.style.gridTemplateRows = metrics.panelH.map(h => `${h}px`).join(' ');
-        State.set("RPTST.dataset.rowPlotH", metrics.plotH);
-      } else {
-        const metrics = ReportMethod.calculatePanelMetrics(gw, gh, layout.gridCols || 1, layout.gridRows || 1, gapPx, gph, hasTitle, titleSizePx);
-        grid.style.setProperty('--panel-w', `${metrics.panelW}px`);
-        grid.style.setProperty('--panel-h', `${metrics.panelH}px`);
-        grid.style.gridTemplateRows = '';
-        State.set("RPTST.dataset.rowPlotH", null);
-      }
-      void grid.offsetHeight;
-    }
     // --- genCharts ---
     static genCharts(st, pCalcDT = null) {
       const snap = st || RepoSt.getSt();
       const gph = this.genGph(snap);
-      this.calcPanelSize(gph, snap);
       const { dataset, d, config, panels, baseScales, layout, boardMode } = snap;
       const lyt = layout || config?.layout || { gridRows: 1, gridCols: 1 };
       const plots = document.querySelectorAll('[data-part="dashGrid"] ui-plot');
@@ -480,7 +473,7 @@
         const executePrint = () => {
           if (printFired) return;
           printFired = true;
-          const loader = document.querySelector('[data-part="print-loading"], .print-loading');
+          const loader = document.querySelector('[data-part="print-loading"]');
           if (loader) loader.style.display = 'none';
           if (window.__EXPORT_CFG__.autoPrint) {
             requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => window.parent.postMessage('PRINT_READY', '*'), waitTime)));
@@ -689,8 +682,9 @@
       // ★ 同期基準を param へ統一
       State.subscribe('RPTST.ui.activeTab', v => { syncAria('[data-part="tab-icon"]', 'param', v); syncAria('[data-part="tab-pane"]', 'param', v); });
       State.subscribe('RPTST.ui.activeSub', v => syncAria('[data-part="sub-pane"]', 'param', v));
-      State.subscribe('RPTST.ui.activePanelId', v => syncAria('[data-panel-id]', 'panelId', v));
+      State.subscribe('RPTST.ui.activePanelId', v => syncAria('.grid-panel', 'param', v));
       State.subscribe(['RPTST.config.layout', 'RPTST.config.layout.gridRows', 'RPTST.config.layout.gridCols', 'RPTST.config.layout.panelGap', 'RPTST.config.layout.rowAspect'], () => this.debounce('layout', st => RepoRend.syncPanelDom(st))); // layout再計算
+      State.subscribe('RPTST.ui.gridSize', () => this.debounce('gridSize', st => { RepoRend.syncPanelDom(st); RepoRend.genCharts(st); }));
       State.subscribe('RPTST.config.boardMode', () => this.debounce('boardMode', st => { RepoSt.updateBaseScales(st, 'metric'); RepoSt.update(); RepoSt.renewPanel(st); }));
       State.subscribe(['RPTST.dataset.filters', 'RPTST.dataset.useCal', 'RPTST.dataset.useLOD', 'RPTST.dataset.crct', 'RPTST.dataset.calElms'], () => this.debounce('dataset', st => { RepoSt.updateBaseScales(st, 'all'); RepoSt.renewPanel(st); RepoRend.qRend(st); }));
       State.subscribe(['RPTST.config.symbology', 'RPTST.config.theme', 'RPTST.panels'], () => this.debounce('config', st => RepoRend.qRend(st)));
@@ -726,7 +720,7 @@
       RepoAct.automator = new CoreUI(REPORT_SCHEMA, 'RPTST');
       if (window.__EXPORT_CFG__) {
         State.set(window.__PRINT_STATE__);
-        document.body.setAttribute('data-state', 'printing');
+        document.body.setAttribute('data-view', 'printing');
         const loading = document.createElement('div');
         loading.setAttribute('data-part', 'print-loading');
         loading.textContent = window.__EXPORT_CFG__.autoPrint ? '印刷用PDF生成中...' : '静的HTML生成中...';
@@ -737,11 +731,11 @@
           const div = document.createElement('div');
           div.setAttribute('data-part', `panel-${i}`);
           div.className = 'grid-panel';
-          div.dataset.panelId = `p_${i}`;
+          div.dataset.param = `p_${i}`;
           div.dataset.action = 'RepoAct.actvPanel';
           const chart = document.createElement('ui-plot');
           chart.style.cssText = 'width: 100%; height: 100%;';
-          chart.setAttribute('data-renderer', 'svg');
+          chart.setAttribute('data-param', 'svg');
           div.appendChild(chart);
           grid.appendChild(div);
         }
@@ -762,11 +756,26 @@
         "RPTST.ui.exportDesc": "ブラウザ機能を使用してPDFを出力します。",
         "RPTST.ui.copyDesc": "設定項目をクリップボードにコピーします。"
       });
+      CoreUIPatcher.ctxResolver = (ctx) => {
+        if (!ctx) return ctx;
+        if (ctx.includes('$active')) {
+          const activeId = State.get("RPTST.ui.activePanelId") || State.get("RPTST.refs.activePanelId") || "p_0";
+          const panels = State.get("RPTST.panels") || State.get("RPTST.refs.panels") || [];
+          const idx = panels.findIndex(p => p.id === activeId);
+          const root = ctx.replace('.$active', '');
+          return idx !== -1 ? `${root}.${idx}` : `${root}.0`;
+        }
+        return ctx;
+      };
+      CoreUIPatcher.activeCtxSubscriber = (cb) => {
+        State.subscribe("RPTST.ui.activePanelId", cb);
+        State.subscribe("RPTST.refs.activePanelId", cb);
+      };
       const initDataRaw = window.__INJECTED_DATA__;
       const injData = (typeof initDataRaw === 'object' && initDataRaw !== null) ? initDataRaw : { pxrfDT: [], wdxrfDT: [], crctDT: [] };
       State.set("RPTST.dataset.raw", injData);
       document.querySelectorAll('input[type="number"], input[type="range"]').forEach(el => {
-        const key = el.name || el.dataset.bind?.split('.').pop();
+        const key = el.name || (el.dataset.out ? CoreUIPatcher.routOptions(el.dataset.out).bind?.split('.').pop() : null);
         if (key && RPT_CFG.rng[key]) {
           const rng = RPT_CFG.rng[key];
           el.setAttribute('min', rng.min);
@@ -774,7 +783,6 @@
           el.setAttribute('step', rng.step);
         }
       });
-      RepoAct.automator.build();
       let fav = null;
       if (typeof window.__INJECTED_FAVORITE__ === 'object' && window.__INJECTED_FAVORITE__ !== null) {
         fav = window.__INJECTED_FAVORITE__;
@@ -782,19 +790,23 @@
         try { fav = JSON.parse(window.__INJECTED_FAVORITE__); } catch (e) {}
       }
       await RepoSt.initSt(fav, injData);
+      RepoAct.automator.build();
       const st = RepoSt.getSt();
       RepoRend.syncPanelDom(st);
       RepoSt.renewPanel(st);
       RepoReact.setup();
-      window.addEventListener('resize', () => {
-        clearTimeout(RepoRend.resizeTimer);
-        RepoRend.resizeTimer = setTimeout(() => {
-          const curSt = RepoSt.getSt();
-          const gph = RepoRend.genGph(curSt);
-          RepoRend.calcPanelSize(gph, curSt);
-          RepoRend.genCharts(curSt);
-        }, 250);
-      });
+      const a4Cont = document.querySelector('[data-part="a4Container"]');
+      if (a4Cont) {
+        const ro = new ResizeObserver(entries => {
+          for (let entry of entries) {
+            clearTimeout(RepoRend.resizeTimer);
+            RepoRend.resizeTimer = setTimeout(() => {
+              State.set("RPTST.ui.gridSize", { w: entry.contentRect.width, h: entry.contentRect.height });
+            }, 100);
+          }
+        });
+        ro.observe(a4Cont);
+      }
     }
     // --- start ---
     static start() { return this.init(); }

@@ -1,19 +1,23 @@
 <!-- src/CoreUI.html -->
 <script>
   class CoreUIPatcher {
+    static ctxResolver = null;
+    static activeCtxSubscriber = null;
+
     static initDlg(cntr) {
       if (cntr.__dlgInit) return;
       cntr.__dlgInit = true;
       cntr.innerHTML = Tpl.Dialog.universal();
+      cntr.querySelectorAll('[data-opts]:not([data-ui])').forEach(el => CoreUIPatcher.applyOpts(el, el.dataset.opts));
       const dialogEl = cntr.querySelector('dialog');
       const applyDlg = (dlg) => {
         if (!dlg || !dialogEl) return;
         if (dlg.isOpen) {
-          const titleEl = cntr.querySelector('[data-part="title"], .d-title');
+          const titleEl = cntr.querySelector('[data-part="title"]');
           if (titleEl) titleEl.innerText = dlg.title || (dlg.type === 'toast' ? '通知' : '確認');
-          const msgEl = cntr.querySelector('[data-part="msg"], .d-msg');
+          const msgEl = cntr.querySelector('[data-part="msg"]');
           if (msgEl) msgEl.innerText = dlg.msg || '';
-          const cancelBtn = cntr.querySelector('[data-part="cancel"], .d-cancel');
+          const cancelBtn = cntr.querySelector('[data-part="cancel"]');
           if (cancelBtn) cancelBtn.style.display = dlg.type === 'toast' ? 'none' : '';
           if (!dialogEl.open) dialogEl.showModal();
         } else {
@@ -58,19 +62,14 @@
 
     static resolveBindCtx(ctx) {
       if (!ctx) return ctx;
-      if (ctx.includes('$active')) {
-        const activeId = State.get("RPTST.ui.activePanelId") || State.get("RPTST.refs.activePanelId") || "p_0";
-        const panels = State.get("RPTST.panels") || State.get("RPTST.refs.panels") || [];
-        const idx = panels.findIndex(p => p.id === activeId);
-        const root = ctx.replace('.$active', '');
-        return idx !== -1 ? `${root}.${idx}` : `${root}.0`;
+      if (ctx.includes('$active') && typeof CoreUIPatcher.ctxResolver === 'function') {
+        return CoreUIPatcher.ctxResolver(ctx);
       }
       return ctx;
     }
 
-    static syncFormCtx(form) {
-      const opts = CoreUIPatcher.routOptions(form.dataset.opts);
-      const rawCtx = opts.ctx;
+    static syncFormCtx(form, directCtx) {
+      const rawCtx = directCtx || form.__formOpts?.ctx || (form.dataset.opts ? CoreUIPatcher.routOptions(form.dataset.opts).ctx : null);
       if (!rawCtx) return;
       const ctx = CoreUIPatcher.resolveBindCtx(rawCtx);
       form.querySelectorAll('input[name], select[name], textarea[name]').forEach(ctrl => {
@@ -86,23 +85,21 @@
       });
     }
 
-    static bindFormCtx(form) {
+    static bindFormCtx(form, directCtx) {
       if (form.__boundCtx) {
-        CoreUIPatcher.syncFormCtx(form);
+        CoreUIPatcher.syncFormCtx(form, directCtx);
         return;
       }
       form.__boundCtx = true;
-      const opts = CoreUIPatcher.routOptions(form.dataset.opts);
-      const rawCtx = opts.ctx;
+      const rawCtx = directCtx || form.__formOpts?.ctx || (form.dataset.opts ? CoreUIPatcher.routOptions(form.dataset.opts).ctx : null);
       if (!rawCtx) return;
 
-      CoreUIPatcher.syncFormCtx(form);
+      CoreUIPatcher.syncFormCtx(form, rawCtx);
 
-      // $active が含まれる場合、アクティブパネル変更時にフォームを自動再同期
-      if (rawCtx.includes('$active')) {
-        const onActiveChange = () => CoreUIPatcher.syncFormCtx(form);
-        State.subscribe("RPTST.ui.activePanelId", onActiveChange);
-        State.subscribe("RPTST.refs.activePanelId", onActiveChange);
+      // $active が含まれる場合、アクティブ変更時にフォームを自動再同期
+      if (rawCtx.includes('$active') && typeof CoreUIPatcher.activeCtxSubscriber === 'function') {
+        const onActiveChange = () => CoreUIPatcher.syncFormCtx(form, rawCtx);
+        CoreUIPatcher.activeCtxSubscriber(onActiveChange);
       }
 
       form.querySelectorAll('input[name], select[name], textarea[name]').forEach(ctrl => {
@@ -124,7 +121,7 @@
     }
 
     static ensureMSelectInit(el) {
-      if (!el.querySelector('[data-part="popover-content"], .popover-content')) {
+      if (!el.querySelector('[data-part="popover-content"]')) {
         el.innerHTML = Tpl.Common.popover("未選択", "", "form-control", "cb-container", el.id ? `pop_${el.id}` : null);
       }
     }
@@ -132,47 +129,39 @@
     // --- [復活] マルチセレクトの選択状態(チェックボックス)を反映 ---
     static patchMSelectRefs(el, vals) {
       CoreUIPatcher.ensureMSelectInit(el);
-      const sum = el.querySelector('[data-part="popover-summary"], .popover-summary');
+      const sum = el.querySelector('[data-part="popover-summary"]');
       if (sum) {
         sum.innerHTML = vals?.length
           ? `<span class="badge-wrapper">${vals.map(v => Tpl.Common.badge(v)).join('')}</span>`
           : '<span style="color:var(--grey400)">未選択</span>';
       }
-      const cbs = el.querySelectorAll('.dataset-cb');
+      const cbs = el.querySelectorAll('[data-part="dataset-cb"]');
       cbs.forEach(cb => { cb.checked = Array.isArray(vals) && vals.includes(cb.value); });
-      const allCb = el.querySelector('.select-all-cb');
+      const allCb = el.querySelector('[data-part="select-all-cb"]');
       if (allCb) allCb.checked = cbs.length > 0 && [...cbs].every(cb => cb.checked);
     }
 
     // --- [修正版] マルチセレクトの選択肢(Option)を生成 ---
     static patchMSelectOpts(el, arr) {
       CoreUIPatcher.ensureMSelectInit(el);
-      const cntr = el.querySelector('[data-part="popover-content"], .popover-content');
+      const cntr = el.querySelector('[data-part="popover-content"]');
       if (!cntr) return;
       if (!arr?.length) {
         cntr.innerHTML = '<div class="txt-btninfo">データなし</div>';
         return;
       }
-      const actAll = el.dataset.actionAll; 
-      const actItem = el.dataset.actionItem; 
+      const actAll = el.__mselectOpts?.actionAll; 
+      const actItem = el.__mselectOpts?.actionItem; 
       cntr.innerHTML = (actAll ? Tpl.MultiSelect.selectAll(actAll) : '') +
         arr.map(item => Tpl.MultiSelect.item(item, actItem)).join('');
       
-      const bindPath = el.dataset.bind || (el.dataset.patch ? CoreUIPatcher.routOptions(el.dataset.patch).bind : null);
+      const bindPath = el.dataset.out ? CoreUIPatcher.routOptions(el.dataset.out).bind : null;
       if (bindPath) {
         const vals = State.get(bindPath);
         if (vals !== undefined) CoreUIPatcher.patchMSelectRefs(el, vals);
       }
     }
 
-    static makeBinder(patchFn, getValFn) {
-      return (el, path) => {
-        if (!path) return;
-        const apply = (val) => { if (val !== undefined) patchFn(el, val); };
-        State.subscribe(path, apply);
-        apply(getValFn ? getValFn(path) : State.get(path));
-      };
-    }
 
     static patchElementVal(el, val) {
       if (el.type === 'checkbox') {
@@ -180,7 +169,7 @@
       } else if (el.dataset.ui === 'mselect' || el.tagName === 'UI-MSELECT') {
         CoreUIPatcher.patchMSelectRefs(el, val);
       } else if (el.dataset.ui === 'segment') {
-        el.querySelectorAll('.segment-btn').forEach(btn => {
+        el.querySelectorAll('button').forEach(btn => {
           const targetVal = btn.dataset.param;
           if (targetVal === String(val)) {
             btn.setAttribute('aria-selected', 'true');
@@ -197,20 +186,20 @@
 
     static patchStatus(el, val) {
       if (Array.isArray(val) && val.length >= 2) {
-        if (el.dataset.status !== val[0]) el.dataset.status = val[0];
+        if (el.dataset.view !== val[0]) el.dataset.view = val[0];
         if (el.innerText !== val[1]) el.innerText = val[1];
       } else {
-        el.dataset.status = "hidden";
+        el.dataset.view = "hidden";
         el.innerText = "";
       }
     }
 
-    static patchOpts(el, val) {
+    static patchOpts(el, val, hasEmptyOverride) {
       if (el.dataset.ui === 'mselect' || el.tagName === 'UI-MSELECT') {
         CoreUIPatcher.patchMSelectOpts(el, val);
       } else if (el.tagName === 'SELECT') {
-        // ★追加: selectタグの場合はoptionのみを動的生成する
-        const hasEmpty = el.dataset.hasEmpty === 'true';
+        // selectタグの場合はoptionのみを動的生成する
+        const hasEmpty = hasEmptyOverride !== undefined ? hasEmptyOverride : (el.__hasEmpty ?? false);
         el.innerHTML = Tpl.Form.options(val, hasEmpty);
       } else {
         el.opts = val;
@@ -263,13 +252,14 @@
         : !isActive;
 
       if (el.tagName === 'DETAILS') {
-        el.setAttribute('data-state', isActive ? 'active' : '');
-        if (isDis) el.setAttribute('data-type', 'disabled');
-        else el.removeAttribute('data-type');
+        if (isActive && isDis) el.dataset.view = 'active disabled';
+        else if (isActive) el.dataset.view = 'active';
+        else if (isDis) el.dataset.view = 'disabled';
+        else el.dataset.view = '';
 
         el.querySelectorAll('input, select, button, textarea, ui-mselect, [data-ui="mselect"]').forEach(child => {
           if (child.tagName === 'UI-MSELECT' || child.dataset.ui === 'mselect') {
-            const sum = child.querySelector('.popover-summary');
+            const sum = child.querySelector('[data-part="popover-summary"]');
             if (sum) sum.disabled = isDis;
           }
           child.disabled = isDis;
@@ -310,40 +300,80 @@
       }, {});
     }
 
-    // --- [routBuilder] UI初期構築ルーター (修正) ---
+    // --- [applyOpts] 巨大パーサー本体 ---
+    static applyOpts(el, rawOpts, uiType = null) {
+      if (!rawOpts) return;
+      let opts;
+      try {
+        opts = JSON.parse(rawOpts);
+      } catch {
+        opts = this.routOptions(rawOpts);
+      }
+      if (!opts || typeof opts !== 'object') return;
+
+      // [view-state] CSS内部属性へ書き込み（開発者は直接書かない）
+      if (opts.view !== undefined) {
+        el.dataset.view = opts.view;
+      }
+
+      // [ui-opts] data-ui の種別に応じて振り分け
+      if (uiType === 'addon' || (!uiType && (opts.icon || opts.prefix || opts.suffix))) {
+        this.buildAddon(el, opts);
+      }
+      if (uiType === 'form') {
+        el.__formOpts = opts;
+        if (opts.ctx) this.bindFormCtx(el, opts.ctx);
+      }
+      if (uiType === 'mselect' || opts.actionItem || opts.actionAll) {
+        el.__mselectOpts = opts; // キャッシュ
+      }
+      if (opts.hasEmpty !== undefined) {
+        el.__hasEmpty = opts.hasEmpty !== 'false' && opts.hasEmpty !== false;
+      }
+
+      // [free] 未知のキーは dataset に直接マップ（拡張スロット）
+      const knownKeys = new Set(['view', 'icon', 'prefix', 'suffix', 'color', 'size', 'ctx', 'actionItem', 'actionAll', 'hasEmpty']);
+      for (const [k, v] of Object.entries(opts)) {
+        if (!knownKeys.has(k)) el.dataset[k] = v;
+      }
+    }
+
+    // --- [routBuilder] UI初期構築ルーター ---
     static routBuilder(el) {
       if (el.__uiBound) return;
       const type = el.dataset.ui;
-      const opts = this.routOptions(el.dataset.opts);
-      
+      this.applyOpts(el, el.dataset.opts, type);
+
       if (type === 'dlg') this.initDlg(el);
       else if (type === 'mselect') this.ensureMSelectInit(el);
-      else if (type === 'addon') this.buildAddon(el, opts);
-      else if (type === 'form') this.bindFormCtx(el);
-      
+      else if (type === 'addon') {} // buildAddon は applyOpts 内で実行済
+      else if (type === 'form') {}  // bindFormCtx は applyOpts 内で実行済
+
       el.__uiBound = true;
     }
 
-    // --- [routPatch] 動的パッチ処理ルーター ---
-    static routPatch(el, patchStr, getValFn) {
-      if (!patchStr || el.__patchBound) return;
-      el.__patchBound = true;
-      const config = this.routOptions(patchStr);
+    // --- [routOut] 動的パッチ処理ルーター (旧 routPatch) ---
+    static routOut(el, outStr, getValFn) {
+      if (!outStr || el.__outBound) return;
+      el.__outBound = true;
+      const config = this.routOptions(outStr);
+
+      if (config.hasEmpty !== undefined) {
+        el.__hasEmpty = config.hasEmpty !== 'false' && config.hasEmpty !== false;
+      }
 
       Object.entries(config).forEach(([type, path]) => {
+        if (type === 'hasEmpty') return;
         const applyFn = (val) => {
           if (val === undefined) return;
           if (type === 'status') this.patchStatus(el, val);
-          else if (type === 'opts') this.patchOpts(el, val);
+          else if (type === 'opts') this.patchOpts(el, val, el.__hasEmpty);
           else if (type === 'src') this.patchSrc(el, val);
           else if (type === 'stats') el.innerHTML = Tpl.Stats.gen(val);
           else if (type === 'errs') this.patchErrs(el, val);
           else if (type === 'invalid') {
             if (val) el.setAttribute('aria-invalid', 'true');
             else el.removeAttribute('aria-invalid');
-          }
-          else if (type === 'fields') {
-            el.innerHTML = Tpl.Form.fields(val); // 後方互換用
           }
           else if (type === 'bind') this.patchElementVal(el, val);
         };
@@ -354,12 +384,17 @@
 
     // --- [buildAddon] 装飾DOM直接付与 (旧 decorateAddon) ---
     static buildAddon(wrap, opts) {
+      if (wrap.__addonBuilt) return;
       const { icon, prefix, suffix, color, size } = opts;
       if (!icon && !prefix && !suffix) return;
+      wrap.__addonBuilt = true;
       
       const styles = [];
       if (color) styles.push(`color:${color}`);
-      if (size) styles.push(`font-size:${typeof size === 'number' ? `${size}px` : size}`);
+      if (size) {
+        const sz = typeof size === 'number' ? `${size}px` : size;
+        styles.push(`font-size:${sz};--addon-icon-size:${sz}`);
+      }
       const styleAttr = styles.length ? ` style="${styles.join(';')}"` : '';
 
       if (icon || prefix) {
@@ -392,9 +427,12 @@
       // [新処理] data-ui ビルダー
       document.querySelectorAll('[data-ui]').forEach(el => CoreUIPatcher.routBuilder(el));
 
-      // [新処理] data-patch ルーター
+      // [新処理] data-opts 単体要素（data-uiを持たない要素）のパース
+      document.querySelectorAll('[data-opts]:not([data-ui])').forEach(el => CoreUIPatcher.applyOpts(el, el.dataset.opts));
+
+      // [新処理] data-out ルーター
       const getVal = (path) => this.getVal(path);
-      document.querySelectorAll('[data-patch]').forEach(el => CoreUIPatcher.routPatch(el, el.dataset.patch, getVal));
+      document.querySelectorAll('[data-out]').forEach(el => CoreUIPatcher.routOut(el, el.dataset.out, getVal));
     }
 
     update() {

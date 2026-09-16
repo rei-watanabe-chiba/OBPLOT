@@ -1,5 +1,17 @@
-<!-- src/Dash_Action.html -->
+<!-- src/Dash_App.html -->
 <script>
+  const DASH_SIDEBAR_SCHEMA = {
+    elements: [
+      { id: "dashFieldset", disablePhase: () => State.get("GLB.isLocked") },
+      { id: "secINST", activePhase: p => true, disablePhase: p => false, openPhase: p => p < DASH_PHS.LOADED },
+      { id: "btnINST_load", activePhase: p => true, disablePhase: p => false },
+      { id: "secREPO", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED, openPhase: p => p >= DASH_PHS.LOADED ? true : false },
+      { id: "iptFAV_name", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED },
+      { id: "btnFAV_save", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED },
+      { id: "btnREPO_open", activePhase: p => p >= DASH_PHS.LOADED, disablePhase: p => p < DASH_PHS.LOADED }
+    ]
+  };
+
   class DashAct {
     static get ssId() { return State.get("GLB.ssId"); }
 
@@ -29,8 +41,7 @@
         let template = await API.getReportTemplate();
         const { INST, REPO } = State.proxy.DashST;
         const injectData = { pxrfDT: INST.data.pxrfDT || [], wdxrfDT: INST.data.wdxrfDT || [], crctDT: INST.data.crctDT || [] };
-        const safeJson = JSON.stringify(injectData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-        template = template.replace("'INJECT_TARGET'", () => safeJson);
+        template = template.replace("'INJECT_TARGET'", () => CoreMethod.Util.escapeJsonForScript(injectData));
 
         let favData = null;
         if (REPO.refs?.useFav && REPO.refs?.selectedFav) {
@@ -39,7 +50,7 @@
             if (favStr) favData = JSON.parse(favStr);
           } catch (e) {}
         }
-        const safeFavJson = favData ? JSON.stringify(favData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') : 'null';
+        const safeFavJson = favData ? CoreMethod.Util.escapeJsonForScript(favData) : 'null';
         template = template.replace("'INJECT_FAVORITE_TARGET'", () => safeFavJson);
 
         const blob = new Blob([template], { type: 'text/html' });
@@ -70,11 +81,10 @@
         ],
         rowClass: 'table-row',
         rowAttrsFn: (r) => {
-          // ★ data-name を data-param へ統一
           let attrs = `data-action="DashAct.selectFavItem" data-param="${r.name}"`;
           if (r.name === selectedFav) attrs += ' aria-selected="true"';
           if (r.name === overwriteTarget) attrs += ' aria-invalid="true"';
-          if (r.name === successTarget) attrs += ' data-state="success"';
+          if (r.name === successTarget) attrs += ' data-view="success"';
           return attrs;
         },
         emptyText: '登録設定がありません'

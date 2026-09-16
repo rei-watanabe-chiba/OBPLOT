@@ -167,6 +167,43 @@
         }));
         return { pxrfDT, wdxrfDT };
       }
+      static filterDatasets(pxrfDT, wdxrfDT, filters, idxKeys) {
+        const { db = [], item = [], group = [] } = filters || {};
+        const { key1, p1, wd1 } = idxKeys;
+        const pDT = pxrfDT.filter(r => 
+          (!db.length || db.includes(String(r[key1] || ""))) &&
+          (!item.length || item.includes(String(r[p1] || ""))) &&
+          (!group.length || group.includes(String(r[wd1] || "")))
+        );
+        const wDT = wdxrfDT.filter(r => 
+          (!db.length || db.includes(String(r[key1] || ""))) &&
+          (!group.length || group.includes(String(r[wd1] || "")))
+        );
+        return { pDT, wDT };
+      }
+      static parseLodOrNum(rawVal, minVal = null, useLOD = false) {
+        if (typeof rawVal === 'string' && rawVal.includes('LOD')) return useLOD ? minVal : null;
+        const n = Number(rawVal);
+        return isNaN(n) ? null : n;
+      }
+      static getElmVal(record, elm, modeMap = [], optElms = []) {
+        const prefix = (optElms.includes(elm) && modeMap.includes(elm)) ? 'md' : 'ob';
+        return { val: record[`${prefix}_${elm}`], err: record[`${prefix}_${elm}_Err`] };
+      }
+      static makeCompositeKeyMap(list, keyFields, delimiter = "_") {
+        return new Map((list || []).map(r => [keyFields.map(k => String(r[k])).join(delimiter), r]));
+      }
+      static createTicks(minVal, maxVal, step) {
+        const ticks = [];
+        for (let v = minVal; v <= maxVal + (step/10); v += step) {
+          const f = Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toLocaleString();
+          ticks.push({ v, f });
+        }
+        return { ticks, fmtTick: (val) => ticks.find(t => Math.abs(t.v - val) < step / 10)?.f || val };
+      }
+      static escapeJsonForScript(data) {
+        return JSON.stringify(data || {}).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      }
     },
     Calc: class {
       static evaluate(fml, rData) {
@@ -211,6 +248,24 @@
           err3Sigma = Math.sqrt(valErr.reduce((a, b) => a + (b - meanErr) ** 2, 0) / (valErr.length - 1)) * 3;
         }
         return { count: n, slope, intercept, r, r2, resStdDev, err3Sigma, maxRes };
+      }
+      static calcElementCalibrations(pxrfDT, wdxrfDT, calElms, options) {
+        const { modeMap = [], optElms = [], useLOD = false, minMap = {}, idxKeys = {} } = options || {};
+        const wMap = CoreMethod.Util.makeCompositeKeyMap(wdxrfDT, [idxKeys.key1, idxKeys.key2]);
+        const res = {};
+        for (const elm of calElms) {
+          const wArr = [], pArr = [];
+          for (const pRec of pxrfDT) {
+            const wRec = wMap.get(`${String(pRec[idxKeys.key1])}_${String(pRec[idxKeys.key2])}`);
+            if (!wRec) continue;
+            const wVal = CoreMethod.Util.parseLodOrNum(wRec[elm], minMap[elm], useLOD);
+            const { val: pRaw } = CoreMethod.Util.getElmVal(pRec, elm, modeMap, optElms);
+            const pVal = CoreMethod.Util.parseLodOrNum(pRaw, minMap[elm], useLOD);
+            if (wVal != null && pVal != null) { wArr.push(wVal); pArr.push(pVal); }
+          }
+          res[elm] = this.calcCALB(wArr, pArr);
+        }
+        return res;
       }
     }
   };

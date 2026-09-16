@@ -14,29 +14,8 @@
   }
   // --- グラフ用データ変換 ---
   class CHARTDT {
-    // --- 計測値取得 ---
-    static _getVal(r, elm, conf) {
-      if (r[elm] !== undefined) return { val: r[elm], err: r[`${elm}_Err`] };
-      const pfx = (GLB.optElms.includes(elm) && conf.modeMap?.includes(elm)) ? 'ob' : 'md';
-      return { val: r[`${pfx}_${elm}`], err: r[`${pfx}_${elm}_Err`] };
-    }
-    // --- データ抽出と統計計算 ---
     static genChartDB(pxrfDT, wdxrfDT, conf) {
-      let pDT = pxrfDT, wDT = wdxrfDT;
-      if (conf.filters) {
-        const { db, item, group } = conf.filters;
-        if (Array.isArray(db) && db.length > 0) {
-          pDT = pDT.filter(r => db.includes(String(r[GLB.idx.key1])));
-          wDT = wDT.filter(r => db.includes(String(r[GLB.idx.key1])));
-        }
-        if (Array.isArray(item) && item.length > 0) {
-          pDT = pDT.filter(r => item.includes(String(r[GLB.idx.p1])));
-        }
-        if (Array.isArray(group) && group.length > 0) {
-          pDT = pDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
-          wDT = wDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
-        }
-      }
+      const { pDT, wDT } = conf.filters ? CoreMethod.Util.filterDatasets(pxrfDT, wdxrfDT, conf.filters, GLB.idx) : { pDT: pxrfDT, wDT: wdxrfDT };
       let prevDT = [], statsDT = null;
       if (conf.graphType === 'calib' && (conf.calbVal || conf.calibVal)) {
          prevDT = this.genBaseDT(pDT, wDT, { ...conf, val: conf.calbVal || conf.calibVal });
@@ -49,13 +28,30 @@
       }
       return { prevDT, statsDT };
     }
-    // --- 基礎データ生成 ---
+
     static genBaseDT(pxrfDT, wdxrfDT, conf) {
       if (!pxrfDT?.length || !wdxrfDT?.length) return [];
       const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
-      const wMap = new Map(wdxrfDT.map(w => [`${String(w[k1])}_${String(w[k2])}`, w]));
-      const minMap = conf.useLOD ? this.getMinMap(pxrfDT, conf) : {};
-      const cfs = this.#cfs(pxrfDT, wMap, conf, minMap);
+      const wMap = CoreMethod.Util.makeCompositeKeyMap(wdxrfDT, [k1, k2]);
+      
+      const getV = (r, e) => r[e] !== undefined ? { val: r[e], err: r[`${e}_Err`] } : CoreMethod.Util.getElmVal(r, e, conf.modeMap, GLB.optElms);
+      const minMap = conf.useLOD ? Object.fromEntries(GLB.valElms.map(e => [e, Math.min(...CoreMethod.Util.getValidNums(pxrfDT.map(r => getV(r, e).val), true)) || null])) : {};
+      
+      let cfs = null;
+      if (conf.useCal && conf.calElms?.length) {
+        if (conf.crct === "new") {
+          cfs = CoreMethod.Calc.calcElementCalibrations(pxrfDT, wdxrfDT, conf.calElms, { modeMap: conf.modeMap, optElms: GLB.optElms, useLOD: conf.useLOD, minMap, idxKeys: GLB.idx });
+        } else {
+          const r = conf.crctDT?.find(rw => rw[0] === conf.crct);
+          if (r) {
+            cfs = Object.fromEntries(conf.calElms.map(e => {
+              const sIdx = conf.crctDT[0].indexOf(`${e}_slp`), iIdx = conf.crctDT[0].indexOf(`${e}_int`);
+              return sIdx !== -1 && iIdx !== -1 && r[sIdx] !== "" ? [e, { slp: Number(r[sIdx]), int: Number(r[iIdx]) }] : [e, null];
+            }).filter(([, v]) => v));
+          }
+        }
+      }
+
       return pxrfDT.reduce((a, r) => {
         const itemVal = r[p1];
         if (conf.itemMap?.length && !conf.itemMap.includes(itemVal)) return a;
@@ -63,9 +59,8 @@
         if (!w) return a;
         const pDT = { '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: itemVal, [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
         GLB.valElms.forEach(e => {
-          const { val: rawV, err } = this._getVal(r, e, conf);
-          const isLod = typeof rawV === 'string' && rawV.includes('LOD');
-          let v = (isLod && conf.useLOD) ? (minMap[e] ?? null) : (rawV != null && rawV !== "" && !isNaN(Number(rawV)) ? Number(rawV) : null);
+          const { val: rawV, err } = getV(r, e);
+          let v = CoreMethod.Util.parseLodOrNum(rawV, minMap[e], conf.useLOD);
           if (cfs?.[e] && v != null) v = (v - cfs[e].int) / cfs[e].slp;
           pDT[e] = v; pDT[`${e}_Err`] = err ?? null;
         });
@@ -74,38 +69,28 @@
         return a;
       }, []);
     }
-    static getMinMap(pxrfDT, conf) {
-      return Object.fromEntries(GLB.valElms.map(e => {
-        const nums = CoreMethod.Util.getValidNums(pxrfDT.map(r => this._getVal(r, e, conf).val), true);
-        return [e, nums.length ? Math.min(...nums) : null];
-      }));
-    }
-    static #cfs(pxrfDT, wMap, conf, minMap) {
-      if (!conf.useCal || !conf.calElms?.length) return null;
-      const { key1: k1, key2: k2 } = GLB.idx;
-      if (conf.crct === "new") {
-        return Object.fromEntries(conf.calElms.map(e => {
-          const vList = pxrfDT.reduce((a, p) => {
-            const w = wMap.get(`${String(p[k1])}_${String(p[k2])}`);
-            if (!w || w[e] == null) return a;
-            const { val: raw } = this._getVal(p, e, conf);
-            const v = (typeof raw === 'string' && raw.includes('LOD') && conf.useLOD) ? minMap[e] : (raw != null && !isNaN(Number(raw)) ? Number(raw) : null);
-            if (v != null) { a.w.push(Number(w[e])); a.p.push(v); }
-            return a;
-          }, { w: [], p: [] });
-          return [e, CoreMethod.Calc.calcCALB(vList.w, vList.p)];
-        }).filter(([, v]) => v));
-      }
-      const r = conf.crctDT?.find(rw => rw[0] === conf.crct);
-      if (!r) return null;
-      return Object.fromEntries(conf.calElms.map(e => {
-        const sIdx = conf.crctDT[0].indexOf(`${e}_slp`), iIdx = conf.crctDT[0].indexOf(`${e}_int`);
-        return sIdx !== -1 && iIdx !== -1 && r[sIdx] !== "" ? [e, { slp: Number(r[sIdx]), int: Number(r[iIdx]) }] : [e, null];
-      }).filter(([, v]) => v));
-    }
   }
 
   class ChartRenderer {
+    static getGridMargins(gph, hasTitle) {
+      const rS = gph?.style || GLB.defGraphStyle;
+      const GAP = { ...(gph?.gap || GLB.defGraphGap) };
+      const charWidth = (rS.fontS?.tick || 12) * 0.6;
+      const overY = (2 * charWidth);
+      const overX = (2 * charWidth);
+      const titleSizePx = rS.fontS?.title || (12 * 1.33);
+      const requiredPadT = Math.max(rS.fontS?.tick || 12, hasTitle ? titleSizePx + GAP.tick : 0);
+      const safePadT = Math.max(GAP.padT, requiredPadT);
+      const safePadR = Math.max(GAP.padR, rS.fontS?.tick || 12);
+      
+      return {
+        gridTop: safePadT + overY,
+        gridBottom: GAP.padB + (rS.fontS?.name || 12) + GAP.name + (rS.fontS?.tick || 12) + GAP.tick,
+        gridLeft: GAP.padL + (rS.fontS?.name || 12) + GAP.name + (rS.fontS?.tick || 12) + GAP.tick,
+        gridRight: safePadR + overX
+      };
+    }
+
     static buildOption(containerW, containerH, config) {
       const { data: { prevDT, statsDT }, symb, panel, scaleFixed, gph, layout } = config;
       if (!prevDT?.length) return null;
@@ -120,18 +105,13 @@
       };
       const GAP = { ...(gph?.gap || GLB.defGraphGap) };
       // 余白計算
+      const titleText = panel?.title || "";
+      const hasTitle = !!titleText;
+      const { gridTop, gridBottom, gridLeft, gridRight } = this.getGridMargins(gph, hasTitle);
+      
       const charWidth = STYLE.fontS.tick * 0.6;
       const overY = (2 * charWidth);
-      const overX = (2 * charWidth);
-      const titleText = panel?.title || "";
       const titleSizePx = STYLE.fontS.title || (12 * 1.33);
-      const requiredPadT = Math.max(STYLE.fontS.tick, titleText ? titleSizePx + GAP.tick : 0);
-      const safePadT = Math.max(GAP.padT, requiredPadT);
-      const safePadR = Math.max(GAP.padR, STYLE.fontS.tick);
-      const gridTop = safePadT + overY;
-      const gridBottom = GAP.padB + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
-      const gridLeft = GAP.padL + STYLE.fontS.name + GAP.name + STYLE.fontS.tick + GAP.tick;
-      const gridRight = safePadR + overX;
       // プロットサイズ計算
       let plotW = containerW - gridLeft - gridRight;
       let plotH = containerH > 0 ? (containerH - gridTop - gridBottom) : plotW;
@@ -295,7 +275,7 @@
       this.#lastW = containerWidth;
       this.#lastH = containerHeight;
       if (!this.#chart) {
-        const renderer = this.getAttribute('data-renderer') || 'canvas';
+        const renderer = this.getAttribute('data-param') || 'canvas';
         this.#chart = echarts.init(this.#box, null, { renderer });
         this.#chart.on('finished', () => {
           this.dispatchEvent(new CustomEvent('render-finished'));

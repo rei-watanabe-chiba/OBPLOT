@@ -21,7 +21,7 @@
       static select(conf) {
         const { type = 'select', bind, change, field, param, opts, hasEmpty, name } = conf;
         const nm = name ? ` name="${name}"` : '';
-        const patchStr = bind ? ` data-patch="bind: ${bind}"` : '';
+        const patchStr = bind ? ` data-out="bind: ${bind}"` : '';
         const actStr = change ? ` data-action="${change}"` : '';
         const fldStr = param ? ` data-param="${param}"` : '';
         return html`<select class="field-${type} form-control"${nm}${patchStr}${actStr}${fldStr}>${this.options(opts, hasEmpty)}</select>`;
@@ -31,7 +31,7 @@
       static input(conf) {
         const { type = 'text', bind, change, field, param, inputType, placeholder, name } = conf;
         const nm = name ? ` name="${name}"` : '';
-        const patchStr = bind ? ` data-patch="bind: ${bind}"` : '';
+        const patchStr = bind ? ` data-out="bind: ${bind}"` : '';
         const actStr = change ? ` data-action="${change}"` : '';
         const fldStr = param ? ` data-param="${param}"` : '';
         const ph = placeholder ? ` placeholder="${placeholder}"` : '';
@@ -53,19 +53,19 @@
       static popover(sumHtml, cntHtml, sumCls = "", cntCls = "", customId = null) {
         const uid = customId || `pop_${Math.random().toString(36).substring(2, 9)}`;
         const anchorName = `--anchor-${uid}`;
-        return html`<div class="ui-pop"><button type="button" class="popover-summary ${sumCls}" popovertarget="${uid}" style="anchor-name: ${anchorName};">${sumHtml}</button><div id="${uid}" popover="auto" class="popover-content scroll-y ${cntCls}" style="position-anchor: ${anchorName};">${cntHtml}</div></div>`;
+        return html`<div class="ui-pop"><button type="button" data-part="popover-summary" class="popover-summary ${sumCls}" popovertarget="${uid}" style="anchor-name: ${anchorName};">${sumHtml}</button><div id="${uid}" popover="auto" data-part="popover-content" class="popover-content scroll-y ${cntCls}" style="position-anchor: ${anchorName};">${cntHtml}</div></div>`;
       }
       static colorBox(clr) { return clr ? html`<span class="color-box" style="background: ${clr}"></span>` : ""; }
       static badge(val) { return html`<span class="badge">${val}</span>`; }
     };
     static Dialog = class {
       static universal() { 
-        return html`<dialog class="universal-dialog"><h3 class="d-title"></h3><p class="d-msg" style="white-space: pre-wrap;"></p><div class="field-row"><button class="d-cancel outline" data-type="primary" data-action="CoreAct.closeDlg" data-result="false">キャンセル</button><button class="d-ok" data-type="primary" data-action="CoreAct.closeDlg" data-result="true">OK</button></div></dialog>`; 
+        return html`<dialog class="universal-dialog"><h3 data-part="title" class="d-title"></h3><p data-part="msg" class="d-msg" style="white-space: pre-wrap;"></p><div class="field-row"><button data-part="cancel" class="d-cancel outline" data-opts="view: primary" data-action="CoreAct.closeDlg" data-param="false">キャンセル</button><button class="d-ok" data-opts="view: primary" data-action="CoreAct.closeDlg" data-param="true">OK</button></div></dialog>`; 
       }
       static genHtml() { return this.universal(); }
     };
     static Toggle = class {
-      static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-patch="bind: ${bindPath}"` : ""} ${changePath ? html`data-action="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
+      static row(label, bindPath, changePath, isCheck) { return html`<div class="toggle-row"><span class="toggle-label">${label}</span><label class="toggle-switch"><input type="checkbox" ${bindPath ? html`data-out="bind: ${bindPath}"` : ""} ${changePath ? html`data-action="${changePath}"` : ""} ${isCheck ? "checked" : ""}><span class="toggle-slider"></span></label></div>`; }
     };
     static Stats = class {
       static row(label, val) { return html`<div class="stats-label">${label}</div><div class="stats-val">${val}</div>`; }
@@ -78,8 +78,8 @@
       }
     };
     static MultiSelect = class {
-      static item(val, actName) { return html`<label class="cb-item"><input type="checkbox" class="dataset-cb" value="${val}" data-action="${actName}" checked><span class="cb-text">${val}</span></label>`; }
-      static selectAll(actName) { return html`<label class="cb-item select-all"><input type="checkbox" class="select-all-cb" data-action="${actName}" checked><span>すべて選択</span></label>`; }
+      static item(val, actName) { return html`<label class="cb-item"><input type="checkbox" data-part="dataset-cb" class="dataset-cb" value="${val}" data-action="${actName}" checked><span class="cb-text">${val}</span></label>`; }
+      static selectAll(actName) { return html`<label class="cb-item select-all"><input type="checkbox" data-part="select-all-cb" class="select-all-cb" data-action="${actName}" checked><span>すべて選択</span></label>`; }
     };
     static Elements = class {
       static btn(text, action, cls = '', attrs = '') {
@@ -125,8 +125,7 @@
         { key: 'clr', className: 'symb-col-color', hasClr: true }
       ];
       static sum(label, clr, hasClr, hasVal) { return html`${(hasClr && hasVal) ? Tpl.Common.colorBox(clr) : ""}${label}`; }
-      static item(opt, type, idx, hasClr, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-param="${idx}" data-sub-param="${type}" value="${opt.val}" popovertargetaction="hide">${hasClr ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
-      static btn(action, key, text, dis) { return Tpl.Elements.iconBtn(text, action, key, dis); }
+      static item(opt, type, idx, hasClr, action) { return html`<button type="button" class="single-select-item" data-action="${action}" data-param="${idx}|${type}" value="${opt.val}" popovertargetaction="hide">${hasClr ? Tpl.Common.colorBox(opt.val) : ""}${opt.label}</button>`; }
       static btn(action, key, text, dis) { return Tpl.Elements.iconBtn(text, action, key, dis); }
       static col(clsName, cntHtml) { return Tpl.Elements.cell(cntHtml, clsName); }
       static row(btnHtml, colsHtml) { return Tpl.Elements.row(`${Tpl.Elements.cell(btnHtml, 'symb-col-btn')}${colsHtml}`, 'symb-table-row'); }

@@ -1,5 +1,87 @@
-<!-- src/Report_Method.html -->
+﻿<!-- src/Report_Logic.html -->
 <script>
+
+
+  // --- ダッシュボード用ハードコード定数 ---
+  const RPT_CFG = {
+    lbl: { newCorr: "新規検量線", calib: "検量線", clus: "判別図", useCal: "検量線適用", useLOD: "LOD置換", unsel: "未選択" },
+    rng: {
+      gridRows: { min: 1, max: 3, step: 1, unit: "" },
+      gridCols: { min: 1, max: 3, step: 1, unit: "" },
+      panelGap: { min: 0, max: 50, step: 0.5, unit: "mm" },
+      bd_t: { min: 5, max: 100, step: 0.5, unit: "mm" },
+      bd_b: { min: 5, max: 100, step: 0.5, unit: "mm" },
+      bd_l: { min: 5, max: 100, step: 0.5, unit: "mm" },
+      bd_r: { min: 5, max: 100, step: 0.5, unit: "mm" },
+      p_t: { min: 0, max: 10, step: 0.5, unit: "mm" },
+      p_b: { min: 0, max: 10, step: 0.5, unit: "mm" },
+      p_l: { min: 0, max: 10, step: 0.5, unit: "mm" },
+      p_r: { min: 0, max: 10, step: 0.5, unit: "mm" },
+      g_name: { min: 1, max: 10, step: 0.5, unit: "mm" },
+      g_tick: { min: 1, max: 10, step: 0.5, unit: "mm" },
+      s_title: { min: 5, max: 20, step: 0.5, unit: "pt" },
+      s_name: { min: 3, max: 20, step: 0.5, unit: "pt" },
+      s_tick: { min: 3, max: 20, step: 0.5, unit: "pt" },
+      s_stats: { min: 3, max: 20, step: 0.5, unit: "pt" },
+      sym_size: { min: 1, max: 20, step: 0.5, unit: "pt" },
+      sym_bw: { min: 0.1, max: 5, step: 0.1, unit: "pt" },
+      lw_axis: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      lw_grid: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      lw_reg: { min: 0.1, max: 3.0, step: 0.1, unit: "pt" },
+      c_base: { min: 0, max: 100, step: 1, unit: "%" },
+      c_axis: { min: 0, max: 100, step: 1, unit: "%" },
+      c_grid: { min: 0, max: 100, step: 1, unit: "%" }
+    },
+    defTheme: {
+      fontEng: GLB.fontEngList.find(f => (GLB.defGraphStyle.font || "").includes(f)) || GLB.fontEngList[0],
+      fontJp: GLB.fontJpList.find(f => (GLB.defGraphStyle.font || "").includes(f)) || GLB.fontJpList[0],
+      s_title: 12, s_name: 9, s_tick: 7, s_stats: 9, c_base: 60, c_stats: 60, 
+      sym_size: 5, sym_bw: 0.5, lw_axis: 0.6, c_axis: 50, lw_grid: 0.3, c_grid: 20,
+      lw_reg: 0.5, g_name: 3, g_tick: 2, bd_t: 5, bd_b: 5, bd_l: 5, bd_r: 5, p_t: 0, p_b: 0, p_l: 0, p_r: 0
+    },
+    defLayout: {
+      gridRows: 1,
+      gridCols: 1,
+      panelGap: 4,
+      rowAspect: [1.0, 1.0, 1.0]
+    },
+    defPnl: { graphType: "calib", calbVal: "", clusXVal: "", clusYVal: "", title: "", xLabel: "WDXRF", yLabel: "pXRF", tickUnit: null, tickUnitX: null, tickUnitY: null, scaleMode: "auto" }
+  };
+
+  const REPORT_SCHEMA = {
+    elements: [
+      { part: "lblFilterDB", text: () => GLB.idx.key1 },
+      { part: "lblFilterItem", text: () => GLB.idx.p1 },
+      { part: "lblFilterGroup", text: () => GLB.idx.wd1 },
+      { part: "btnOutput_copyCfg", visiblePhase: () => !window.__IS_PRINT_TAB__ },
+      { 
+        part: "panelConfigSec", 
+        visiblePhase: () => !window.__IS_PRINT_TAB__ && !!State.get("RPTST.panels")?.find(p => p.id === State.get("RPTST.ui.activePanelId")),
+        dataset: () => ({ graphtype: State.get("RPTST.config.boardMode") || "calib" })
+      },
+      { 
+        part: "boxOutput_sts", 
+        dataset: () => ({ status: State.get("RPTST.ui.exportStatus") || "message" }),
+        text: () => State.get("RPTST.ui.exportDesc") || ""
+      },
+      {
+        part: "boxOutput_copySts",
+        dataset: () => ({ status: State.get("RPTST.ui.copyStatus") || "message" }),
+        text: () => State.get("RPTST.ui.copyDesc") || ""
+      },
+      ...Array.from({ length: 9 }, (_, i) => ({
+        part: `panel-${i}`,
+        visiblePhase: () => { 
+          const l = State.get("RPTST.config.layout"); 
+          return l && i < (l.gridRows * l.gridCols); 
+        }
+      }))
+    ],
+    persistPaths: ["RPTST.dataset", "RPTST.config", "RPTST.panels"]
+  };
+
+
+
   class ReportMethod {
     // --- buildGraphStyle ---
     static buildGraphStyle(raw, rng) {
@@ -29,15 +111,12 @@
 
     // --- 共通パディング ---
     static getPanelOffsets(gph, hasTitle, titleSizePx) {
-      const style = gph.style, gap = gph.gap;
-      const titleSpace = hasTitle ? (titleSizePx + gap.tick) : gap.tick;
-      const gridTop = gap.padT + titleSpace + style.fontS.tick;
-      const gridRight = gap.padR + gap.tick + style.fontS.tick;
-      const gridBottom = gap.padB + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
-      const gridLeft = gap.padL + style.fontS.name + gap.name + style.fontS.tick + gap.tick;
+      // 幾何計算のDRY化：実際の描画を行う ChartRenderer に余白計算を完全委譲
+      const { gridTop, gridBottom, gridLeft, gridRight } = ChartRenderer.getGridMargins(gph, hasTitle);
       return {
         gridTop, gridRight, gridBottom, gridLeft,
-        fixedW: gridLeft + gridRight, fixedH: gridTop + gridBottom
+        fixedW: gridLeft + gridRight, 
+        fixedH: gridTop + gridBottom
       };
     }
 
@@ -69,18 +148,13 @@
     // --- generateExportHTML ---
     static generateExportHTML(type, outerHTML, dateStr, data) {
       const ttl = `OBPLOT_${type.toUpperCase()}_${dateStr}`;
-      const esc = s => s.replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       let hStr = '';
       if (type === 'app') {
-        const sDT = esc(JSON.stringify(data.raw));
-        const sFav = esc(JSON.stringify(data.fav));
-        const scrTag = `<title>${ttl}</title><script>window.__INJECTED_DATA__=${sDT}; window.__INJECTED_FAVORITE__=${sFav};<\/script></head>`;
+        const scrTag = `<title>${ttl}</title>window.__INJECTED_DATA__=${CoreMethod.Util.escapeJsonForScript(data.raw)}; window.__INJECTED_FAVORITE__=${CoreMethod.Util.escapeJsonForScript(data.fav)};<\/script></head>`;
         hStr = '<!DOCTYPE html>' + outerHTML.replace('</head>', scrTag);
       } else {
-        const sSt = esc(JSON.stringify(data.state));
-        const sCalc = esc(JSON.stringify(data.pCalcDT));
         const cfg = JSON.stringify({ autoPrint: type === 'pdf' });
-        hStr = '<!DOCTYPE html>' + outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${sSt}; window.__PRECALC_DATA__=${sCalc};<\/script>`);
+        hStr = '<!DOCTYPE html>' + outerHTML.replace('<head>', `<head><title>${ttl}</title>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${CoreMethod.Util.escapeJsonForScript(data.state)}; window.__PRECALC_DATA__=${CoreMethod.Util.escapeJsonForScript(data.pCalcDT)};<\/script>`);
       }
       return { ttl, hStr };
     }
@@ -88,34 +162,15 @@
     // --- calculateBaseScales ---
     static calculateBaseScales(d, dataset, targetMetrics) {
       if (!d?.pxrfDT || !d?.wdxrfDT || !targetMetrics?.size) return { auto: {}, fixed: {} };
-      
       const baseScales = { auto: {}, fixed: {} };
-      
       const calcForMetrics = (mode, filters) => {
         const conf = { useCal: dataset.useCal, crctDT: d.crctDT, useLOD: dataset.useLOD };
-        let pDT = d.pxrfDT, wDT = d.wdxrfDT;
-        
-        if (filters) {
-          const { db, item, group } = filters;
-          if (db?.length) {
-            pDT = pDT.filter(r => db.includes(String(r[GLB.idx.key1])));
-            wDT = wDT.filter(r => db.includes(String(r[GLB.idx.key1])));
-          }
-          if (item?.length) pDT = pDT.filter(r => item.includes(String(r[GLB.idx.p1])));
-          if (group?.length) {
-            pDT = pDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
-            wDT = wDT.filter(r => group.includes(String(r[GLB.idx.wd1])));
-          }
-        }
-        
-        // 基準データ生成
+        const { pDT, wDT } = filters ? CoreMethod.Util.filterDatasets(d.pxrfDT, d.wdxrfDT, filters, GLB.idx) : { pDT: d.pxrfDT, wDT: d.wdxrfDT };
         const filteredCalibBase = CHARTDT.genBaseDT(pDT, wDT, { ...conf, val: GLB.valElms[0] });
-        
         targetMetrics.forEach(metric => {
           const wVals = wDT.map(w => CoreMethod.Calc.evaluate(metric, w)).filter(v => v != null && !isNaN(v));
           const pVals = filteredCalibBase.map(p => CoreMethod.Calc.evaluate(metric, p)).filter(v => v != null && !isNaN(v));
           const combined = [...wVals, ...pVals];
-          
           if (combined.length) {
             const sc = CoreMethod.Util.calcScale(combined, combined);
             baseScales[mode][metric] = { niceMin: sc.niceMin, niceMax: sc.niceMax, ticks: sc.niceTicks.map(t => t.v), units: CoreMethod.Util.calcNiceTickUnits(combined) };
@@ -124,12 +179,8 @@
           }
         });
       };
-
-      // 固定スケール (dbフィルタのみ)
       calcForMetrics('fixed', { db: dataset.filters?.db || [] });
-      // オートスケール (全フィルタ適用)
       calcForMetrics('auto', dataset.filters);
-
       return baseScales;
     }
 
@@ -142,13 +193,8 @@
       const maxVal = rawMin >= 0 ? Math.max(u, Math.ceil(rawMax / u) * u) : Math.ceil(rawMax / u) * u;
       const count = Math.round((maxVal - minVal) / u);
       if (count > 200 || count <= 0) return null;
-      const decimals = (u.toString().split('.')[1] || '').length;
-      const ticks = Array.from({ length: count + 1 }, (_, i) => {
-        const v = Number((minVal + i * u).toFixed(Math.min(decimals, 10)));
-        return { v, f: Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : (decimals > 0 ? v.toFixed(decimals) : v.toLocaleString()) };
-      });
-      const fmt = v => { const t = ticks.find(tck => Math.abs(tck.v - v) < (u * 1e-4 || 1e-8)); return t ? t.f : v; };
-      return { min: minVal, max: maxVal, interval: u, fmtTick: fmt };
+      const { ticks, fmtTick } = CoreMethod.Util.createTicks(minVal, maxVal, u);
+      return { min: minVal, max: maxVal, interval: u, fmtTick };
     }
 
     // --- buildChartConfig ---
@@ -214,4 +260,5 @@
       };
     }
   }
+
 </script>

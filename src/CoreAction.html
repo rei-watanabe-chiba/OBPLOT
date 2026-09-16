@@ -74,7 +74,7 @@
       this.confirm(title, msg, true).then(res => { if (onOk) onOk(); });
     }
     static closeDlg(tgt) {
-      const result = tgt.dataset.result === "true";
+      const result = tgt.dataset.param === "true";
       State.set("GLB.dialog.isOpen", false);
       if (window.__dialogResolve) {
         window.__dialogResolve(result);
@@ -159,13 +159,12 @@
       if (hooks.onAfterInit) hooks.onAfterInit();
     }
     static actvTab(tabPRM) {
-      document.querySelectorAll('[data-part="tab-content"], .tab-content').forEach(el => {
+      document.querySelectorAll('[data-part="tab-content"]').forEach(el => {
         const isCur = (el.dataset.param === tabPRM);
         el.setAttribute('aria-hidden', isCur ? 'false' : 'true');
-        if (isCur) el.setAttribute('data-state', 'active');
-        else el.removeAttribute('data-state');
+        el.dataset.view = isCur ? 'active' : '';
       });
-      document.querySelectorAll('[data-part="tab-btn"], .tab-btn').forEach(el => {
+      document.querySelectorAll('[data-part="tab-btn"]').forEach(el => {
         const isCur = (el.dataset.param === tabPRM);
         el.setAttribute('aria-selected', isCur ? 'true' : 'false');
       });
@@ -182,7 +181,7 @@
     // --- [routEvent] 中央イベントルーター ---
     static rootGLB(actionClasses = {}) {
       const routEvent = (e) => {
-        const tgt = e.target.closest('[data-action], [data-patch], form[data-ui="form"] input, form[data-ui="form"] select, form[data-ui="form"] textarea') || e.target;
+        const tgt = e.target.closest('[data-action], [data-out], form[data-ui="form"] input, form[data-ui="form"] select, form[data-ui="form"] textarea') || e.target;
         if (!tgt || tgt.disabled) return;
 
         const tag = tgt.tagName;
@@ -201,17 +200,17 @@
           
           if (isBtnClick || isValChange) {
             const [ns, method] = actionStr.split('.');
-            const param = tgt.dataset.param; 
-            const subParam = tgt.dataset.subParam;
+            const rawParam = tgt.dataset.param;
+            const [param, subParam] = rawParam ? rawParam.split('|') : [undefined, undefined];
             
             if (actionClasses[ns]?.[method]) actionClasses[ns][method](tgt, param, subParam);
             else if (window[ns]?.[method]) window[ns][method](tgt, param, subParam);
           }
         }
 
-        // --- State結合処理 (data-patch="bind: ...") ---
-        const patchBind = tgt.dataset.patch ? CoreUIPatcher.routOptions(tgt.dataset.patch).bind : null;
-        const ctxPath = formCtx ? CoreUIPatcher.routOptions(formCtx.dataset.opts).ctx : null;
+        // --- State結合処理 (data-out="bind: ...") ---
+        const patchBind = tgt.dataset.out ? CoreUIPatcher.routOptions(tgt.dataset.out).bind : null;
+        const ctxPath = formCtx ? (formCtx.__formOpts?.ctx || (formCtx.dataset.opts ? CoreUIPatcher.routOptions(formCtx.dataset.opts).ctx : null)) : null;
         const bindPath = patchBind || (ctxPath && tgt.name ? `${CoreUIPatcher.resolveBindCtx(ctxPath)}.${tgt.name}` : null);
 
         if (bindPath && (isLiveInput || isChange)) {
@@ -232,18 +231,18 @@
     static tglMulti(tgt) {
       const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');
       if (!cntr) return;
-      const statePath = cntr.dataset.bind || (cntr.dataset.patch ? CoreUIPatcher.routOptions(cntr.dataset.patch).bind : null);
+      const statePath = cntr.dataset.out ? CoreUIPatcher.routOptions(cntr.dataset.out).bind : null;
       
-      const itemCbs = [...cntr.querySelectorAll('.dataset-cb')], allCb = cntr.querySelector('.select-all-cb');
+      const itemCbs = [...cntr.querySelectorAll('[data-part="dataset-cb"]')], allCb = cntr.querySelector('[data-part="select-all-cb"]');
       if (allCb) allCb.checked = itemCbs.length > 0 && itemCbs.every(cb => cb.checked);
       if (statePath) State.set(statePath, itemCbs.filter(cb => cb.checked).map(cb => cb.value));
     }
     static tglAllMulti(tgt) {
       const cntr = tgt.closest('[data-ui="mselect"], ui-mselect');
       if (!cntr) return;
-      const statePath = cntr.dataset.bind || (cntr.dataset.patch ? CoreUIPatcher.routOptions(cntr.dataset.patch).bind : null);
+      const statePath = cntr.dataset.out ? CoreUIPatcher.routOptions(cntr.dataset.out).bind : null;
       
-      const itemCbs = cntr.querySelectorAll('.dataset-cb');
+      const itemCbs = cntr.querySelectorAll('[data-part="dataset-cb"]');
       itemCbs.forEach(cb => cb.checked = tgt.checked);
       if (statePath) State.set(statePath, tgt.checked ? [...itemCbs].map(cb => cb.value) : []);
     }

@@ -16,14 +16,12 @@
       window.__INJECTED_DATA__ = 'INJECT_TARGET';
       window.__INJECTED_FAVORITE__ = 'INJECT_FAVORITE_TARGET';
     </script>
-    <?!= include('Global'); ?>
+    <?!= include('CoreState'); ?>
     <?!= include('Adapter'); ?>
-    <?!= include('Model'); ?>
     <?!= include('CoreMethod'); ?>
 
     <?!= include('Component'); ?>
     <?!= include('Chart'); ?>
-    <?!= include('Report_Schema'); ?>
     <?!= include('CoreUI'); ?>
     <?!= include('CoreAction'); ?> 
     
@@ -31,7 +29,7 @@
       <!-- 左サイドバー -->
       <aside id="fixed-sidebar" class="dash-sidebar" data-part="dashSidebar">
         <!-- グラフ選択 -->
-        <div class="segment-ctrl" data-ui="segment" data-patch="bind: RPTST.config.boardMode">
+        <div class="segment-ctrl" data-ui="segment" data-out="bind: RPTST.config.boardMode">
           <button type="button" class="segment-btn" data-action="RepoAct.setBoardMode" data-param="calib">検量線</button>
           <button type="button" class="segment-btn" data-action="RepoAct.setBoardMode" data-param="clus">判別図</button>
         </div>
@@ -41,7 +39,7 @@
           <div data-part="mount-panel-config">
             <div class="prop-row">
               <div class="prop-controls">
-                <div class="segment-ctrl" data-ui="segment" data-patch="bind: RPTST.ui.activePanelScaleMode" style="margin-bottom:0;">
+                <div class="segment-ctrl" data-ui="segment" data-out="bind: RPTST.ui.activePanelScaleMode" style="margin-bottom:0;">
                   <button type="button" class="segment-btn" data-action="RepoAct.setActiveScaleMode" data-param="auto">Auto</button>
                   <button type="button" class="segment-btn" data-action="RepoAct.setActiveScaleMode" data-param="manual">固定</button>
                 </div>
@@ -52,13 +50,13 @@
                 <div class="prop-row">
                   <label class="prop-label panel">対象指標</label>
                   <div class="prop-controls" data-ui="addon" data-opts="icon:analytics; color:var(--theme-color)">
-                    <select class="form-control" name="calbVal" data-action="RepoAct.changePanelRef" data-patch="bind: RPTST.panels.$active.calbVal; opts: RPTST.ui.optFields.valLgcOpts" data-has-empty="true"></select>
+                    <select class="form-control" name="calbVal" data-action="RepoAct.changePanelRef" data-out="bind: RPTST.panels.$active.calbVal; opts: RPTST.ui.optFields.valLgcOpts; hasEmpty: true"></select>
                   </div>
                 </div>
                 <div class="prop-row" data-part="boxCalibTick">
                   <label class="prop-label panel">目盛単位</label>
                   <div class="prop-controls">
-                    <select class="form-control" name="tickUnit" data-action="RepoAct.changePanelRef" data-patch="bind: RPTST.panels.$active.tickUnit; opts: RPTST.ui.optFields.tickOpts" data-has-empty="false"></select>
+                    <select class="form-control" name="tickUnit" data-action="RepoAct.changePanelRef" data-out="bind: RPTST.panels.$active.tickUnit; opts: RPTST.ui.optFields.tickOpts; hasEmpty: false"></select>
                   </div>
                 </div>
               </div>
@@ -66,23 +64,23 @@
                 <div class="prop-row">
                   <label class="prop-label panel">X<span class="badge-label">項目</span></label>
                   <div class="prop-controls" data-ui="addon" data-opts="icon:data_object; color:var(--theme-color)">
-                    <select class="form-control" name="clusXVal" data-action="RepoAct.changePanelRef" data-patch="bind: RPTST.panels.$active.clusXVal; opts: RPTST.ui.optFields.valLgcOpts" data-has-empty="true"></select>
+                    <select class="form-control" name="clusXVal" data-action="RepoAct.changePanelRef" data-out="bind: RPTST.panels.$active.clusXVal; opts: RPTST.ui.optFields.valLgcOpts; hasEmpty: true"></select>
                   </div>
                 </div>
                 <div class="prop-row">
                   <label class="prop-label panel">Y<span class="badge-label">項目</span></label>
                   <div class="prop-controls" data-ui="addon" data-opts="icon:data_object; color:var(--theme-color)">
-                    <select class="form-control" name="clusYVal" data-action="RepoAct.changePanelRef" data-patch="bind: RPTST.panels.$active.clusYVal; opts: RPTST.ui.optFields.valLgcOpts" data-has-empty="true"></select>
+                    <select class="form-control" name="clusYVal" data-action="RepoAct.changePanelRef" data-out="bind: RPTST.panels.$active.clusYVal; opts: RPTST.ui.optFields.valLgcOpts; hasEmpty: true"></select>
                   </div>
                 </div>
                 <div class="prop-row" data-part="boxClusTick">
                   <label class="prop-label panel">X/Y<span class="badge-label">目盛</span></label>
                   <div class="prop-controls">
                     <div style="flex:1;">
-                      <select class="form-control" name="tickUnitX" data-action="RepoAct.changePanelRef" data-patch="bind: RPTST.panels.$active.tickUnitX; opts: RPTST.ui.optFields.tickXOpts" data-has-empty="false"></select>
+                      <select class="form-control" name="tickUnitX" data-action="RepoAct.changePanelRef" data-out="bind: RPTST.panels.$active.tickUnitX; opts: RPTST.ui.optFields.tickXOpts; hasEmpty: false"></select>
                     </div>
                     <div style="flex:1;">
-                      <select class="form-control" name="tickUnitY" data-action="RepoAct.changePanelRef" data-patch="bind: RPTST.panels.$active.tickUnitY; opts: RPTST.ui.optFields.tickYOpts" data-has-empty="false"></select>
+                      <select class="form-control" name="tickUnitY" data-action="RepoAct.changePanelRef" data-out="bind: RPTST.panels.$active.tickUnitY; opts: RPTST.ui.optFields.tickYOpts; hasEmpty: false"></select>
                     </div>
                   </div>
                 </div>
@@ -140,42 +138,42 @@
               <form data-ui="form" data-opts="ctx: RPTST.config.theme">
                 <label class="prop-label inline" style="margin-bottom: 4px;">
                   <span>キャンバス余白<span class="badge-label">mm</span></span>
-                  <button type="button" class="link-toggle" data-action="RepoAct.toggleMarginLink" data-sync-group="canvas" title="連動">
-                    <span class="material-symbols-outlined">link_off</span>
+                  <button type="button" class="link-toggle" data-action="RepoAct.toggleMarginLink" data-param="canvas" title="連動">
+                    <span data-part="icon" class="material-symbols-outlined">link_off</span>
                   </button>
                 </label>
                 <div class="prop-controls linkeRow" style="width: 100%;">
                   <div data-ui="addon" data-opts="icon:border_left">
-                    <input type="number" name="bd_l" class="form-control" data-sync-group="canvas" title="左">
+                    <input type="number" name="bd_l" class="form-control" data-param="canvas" title="左">
                   </div>
                   <div data-ui="addon" data-opts="icon:border_top">
-                    <input type="number" name="bd_t" class="form-control" data-sync-group="canvas" title="上">
+                    <input type="number" name="bd_t" class="form-control" data-param="canvas" title="上">
                   </div>
                   <div data-ui="addon" data-opts="icon:border_bottom">
-                    <input type="number" name="bd_b" class="form-control" data-sync-group="canvas" title="下">
+                    <input type="number" name="bd_b" class="form-control" data-param="canvas" title="下">
                   </div>
                   <div data-ui="addon" data-opts="icon:border_right">
-                    <input type="number" name="bd_r" class="form-control" data-sync-group="canvas" title="右">
+                    <input type="number" name="bd_r" class="form-control" data-param="canvas" title="右">
                   </div>
                 </div>
                 <label class="prop-label inline" style="margin-bottom: 4px;">
                   <span>パネル内余白<span class="badge-label">mm</span></span>
-                  <button type="button" class="link-toggle" data-action="RepoAct.toggleMarginLink" data-sync-group="panel" title="連動">
-                    <span class="material-symbols-outlined">link_off</span>
+                  <button type="button" class="link-toggle" data-action="RepoAct.toggleMarginLink" data-param="panel" title="連動">
+                    <span data-part="icon" class="material-symbols-outlined">link_off</span>
                   </button>
                 </label>
                 <div class="prop-controls linkeRow" style="width: 100%;">
                   <div data-ui="addon" data-opts="icon:border_left">
-                    <input type="number" name="p_l" class="form-control" data-sync-group="panel" title="左">
+                    <input type="number" name="p_l" class="form-control" data-param="panel" title="左">
                   </div>
                   <div data-ui="addon" data-opts="icon:border_top">
-                    <input type="number" name="p_t" class="form-control" data-sync-group="panel" title="上">
+                    <input type="number" name="p_t" class="form-control" data-param="panel" title="上">
                   </div>
                   <div data-ui="addon" data-opts="icon:border_bottom">
-                    <input type="number" name="p_b" class="form-control" data-sync-group="panel" title="下">
+                    <input type="number" name="p_b" class="form-control" data-param="panel" title="下">
                   </div>
                   <div data-ui="addon" data-opts="icon:border_right">
-                    <input type="number" name="p_r" class="form-control" data-sync-group="panel" title="右">
+                    <input type="number" name="p_r" class="form-control" data-param="panel" title="右">
                   </div>
                 </div>
                 <div class="prop-row">
@@ -214,19 +212,19 @@
               <div class="prop-row">
                 <label class="prop-label panel" data-part="lblFilterDB">dataset</label>
                 <div class="prop-controls">
-                  <div data-ui="mselect" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: RPTST.dataset.filters.db; opts: RPTST.ui.optFields.filterDBOpts"></div>
+                  <div data-ui="mselect" data-opts="actionItem: CoreAct.tglMulti; actionAll: CoreAct.tglAllMulti" data-out="bind: RPTST.dataset.filters.db; opts: RPTST.ui.optFields.filterDBOpts"></div>
                 </div>
               </div>
               <div class="prop-row">
                 <label class="prop-label panel" data-part="lblFilterItem">item</label>
                 <div class="prop-controls">
-                  <div data-ui="mselect" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: RPTST.dataset.filters.item; opts: RPTST.ui.optFields.filterItemOpts"></div>
+                  <div data-ui="mselect" data-opts="actionItem: CoreAct.tglMulti; actionAll: CoreAct.tglAllMulti" data-out="bind: RPTST.dataset.filters.item; opts: RPTST.ui.optFields.filterItemOpts"></div>
                 </div>
               </div>
               <div class="prop-row">
                 <label class="prop-label panel" data-part="lblFilterGroup">Group</label>
                 <div class="prop-controls">
-                  <div data-ui="mselect" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: RPTST.dataset.filters.group; opts: RPTST.ui.optFields.filterGroupOpts"></div>
+                  <div data-ui="mselect" data-opts="actionItem: CoreAct.tglMulti; actionAll: CoreAct.tglAllMulti" data-out="bind: RPTST.dataset.filters.group; opts: RPTST.ui.optFields.filterGroupOpts"></div>
                 </div>
               </div>
             </div>
@@ -235,26 +233,26 @@
               <div class="prop-row">
                 <label class="prop-label panel">検量線</label>
                 <div class="prop-controls" data-ui="addon" data-opts="icon:show_chart; color:var(--theme-color)">
-                  <select name="crct" class="form-control" data-patch="bind: RPTST.dataset.crct; opts: RPTST.ui.optFields.crctOpts" data-has-empty="false"></select>
+                  <select name="crct" class="form-control" data-out="bind: RPTST.dataset.crct; opts: RPTST.ui.optFields.crctOpts; hasEmpty: false"></select>
                 </div>
               </div>
               <div class="prop-row">
                 <label class="prop-label panel">対象元素</label>
                 <div class="prop-controls">
-                  <div data-ui="mselect" data-action-item="CoreAct.tglMulti" data-action-all="CoreAct.tglAllMulti" data-patch="bind: RPTST.dataset.calElms; opts: RPTST.ui.optFields.calElmsOpts"></div>
+                  <div data-ui="mselect" data-opts="actionItem: CoreAct.tglMulti; actionAll: CoreAct.tglAllMulti" data-out="bind: RPTST.dataset.calElms; opts: RPTST.ui.optFields.calElmsOpts"></div>
                 </div>
               </div>
               <div class="prop-controls">
-                  <div class="toggle-row"><span class="toggle-label">検量線適用</span><label class="toggle-switch"><input type="checkbox" data-patch="bind: RPTST.dataset.useCal"><span class="toggle-slider"></span></label></div>
+                  <div class="toggle-row"><span class="toggle-label">検量線適用</span><label class="toggle-switch"><input type="checkbox" data-out="bind: RPTST.dataset.useCal"><span class="toggle-slider"></span></label></div>
                 </div>
                 <div class="prop-controls">
-                  <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-patch="bind: RPTST.dataset.useLOD"><span class="toggle-slider"></span></label></div>
+                  <div class="toggle-row"><span class="toggle-label">LOD置換</span><label class="toggle-switch"><input type="checkbox" data-out="bind: RPTST.dataset.useLOD"><span class="toggle-slider"></span></label></div>
                 </div>
             </div>
           </div>
           <!-- タブ: tabStyle -->
           <div data-part="tab-pane" data-param="tabStyle" class="sidebar-tab-pane" aria-selected="false">
-            <div class="segment-ctrl" data-ui="segment" data-patch="bind: RPTST.ui.activeSub">
+            <div class="segment-ctrl" data-ui="segment" data-out="bind: RPTST.ui.activeSub">
               <button type="button" class="segment-btn" data-action="RepoAct.actvSub" data-param="subFont" aria-selected="true">フォント</button>
               <button type="button" class="segment-btn" data-action="RepoAct.actvSub" data-param="subArea" aria-selected="false">グラフエリア</button>
             </div>
@@ -263,13 +261,13 @@
                 <div class="prop-row">
                   <label class="prop-label">欧文スタイル</label>
                   <div class="prop-controls" data-ui="addon" data-opts="icon:text_format; color:var(--theme-color)">
-                    <select name="fontEng" class="form-control" data-patch="bind: RPTST.config.theme.fontEng; opts: RPTST.ui.optFields.fontEngOpts" data-has-empty="false"></select>
+                    <select name="fontEng" class="form-control" data-out="bind: RPTST.config.theme.fontEng; opts: RPTST.ui.optFields.fontEngOpts; hasEmpty: false"></select>
                   </div>
                 </div>
                 <div class="prop-row">
                   <label class="prop-label">和文スタイル</label>
                   <div class="prop-controls" data-ui="addon" data-opts="icon:language">
-                    <select name="fontJp" class="form-control" data-patch="bind: RPTST.config.theme.fontJp; opts: RPTST.ui.optFields.fontJpOpts" data-has-empty="false"></select>
+                    <select name="fontJp" class="form-control" data-out="bind: RPTST.config.theme.fontJp; opts: RPTST.ui.optFields.fontJpOpts; hasEmpty: false"></select>
                   </div>
                 </div>
                 <form data-ui="form" data-opts="ctx: RPTST.config.theme">
@@ -391,13 +389,13 @@
                 <label class="prop-label panel">属性選択</label>
                 <div class="prop-controls">
                   <div style="flex:1;" data-ui="addon" data-opts="icon:category; color:var(--theme-color)">
-                    <select name="baseKey" class="form-control" data-action="RepoAct.valdSymbAxis" data-patch="bind: RPTST.config.symbology.baseKey; opts: RPTST.ui.optFields.axisOpts" data-has-empty="false"></select>
+                    <select name="baseKey" class="form-control" data-action="RepoAct.valdSymbAxis" data-out="bind: RPTST.config.symbology.baseKey; opts: RPTST.ui.optFields.axisOpts; hasEmpty: false"></select>
                   </div>
-                  <button data-action="RepoAct.resetSymb" data-type="primary" class="outline" style="flex:none;width:60px;">リセット</button>
+                  <button data-action="RepoAct.resetSymb" data-opts="view: primary" class="outline" style="flex:none;width:60px;">リセット</button>
                 </div>
               </div>
               <div class="scroll-box">
-                <div data-ui="symbtbl" data-part="tblSymb" data-patch="src: RPTST.ui.optFields.symbSrc"></div>
+                <div data-ui="symbtbl" data-part="tblSymb" data-out="src: RPTST.ui.optFields.symbSrc"></div>
               </div>
             </div>
           </div>
@@ -410,11 +408,11 @@
               <label class="radio-item"><input type="radio" name="exportType" value="app" data-action="RepoAct.updExportDesc">HTMLアプリ</label>
             </div>
             <div class="prop-row">
-              <button data-part="btnOutput_exec" data-action="RepoAct.requestExport" data-type="primary" style="width:100%;">出力実行</button>
+              <button data-part="btnOutput_exec" data-action="RepoAct.requestExport" data-opts="view: primary" style="width:100%;">出力実行</button>
             </div>
             <div data-part="boxOutput_sts" class="status-bar" style="margin: 8px 0; font-size: 11px;"></div>
             <div class="prop-row">
-              <button data-part="btnOutput_copyCfg" data-action="RepoAct.requestCopyConfig" class="outline" data-type="primary" style="width:100%;">設定JSONをコピー</button>
+              <button data-part="btnOutput_copyCfg" data-action="RepoAct.requestCopyConfig" class="outline" data-opts="view: primary" style="width:100%;">設定JSONをコピー</button>
             </div>
             <div data-part="boxOutput_copySts" class="status-bar" style="margin: 8px 0; font-size: 11px;"></div>
             <textarea data-part="txtOutput_fallback" class="form-control" style="display:none; width:100%; height:80px; margin-top:8px; font-size:10px; resize:none;" readonly></textarea>
@@ -428,21 +426,23 @@
       <!-- 右メイン描画領域 -->
       <main id = "flow-main" class="dash-main">
         <div class="a4-container" data-part="a4Container">
-          <div class="dash-grid" data-part="dashGrid">
-            <div class="grid-panel" data-part="panel-0" data-panel-id="p_0" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div class="grid-panel" data-part="panel-1" data-panel-id="p_1" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div class="grid-panel" data-part="panel-2" data-panel-id="p_2" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div class="grid-panel" data-part="panel-3" data-panel-id="p_3" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div class="grid-panel" data-part="panel-4" data-panel-id="p_4" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div class="grid-panel" data-part="panel-5" data-panel-id="p_5" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div class="grid-panel" data-part="panel-6" data-panel-id="p_6" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div class="grid-panel" data-part="panel-7" data-panel-id="p_7" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-            <div class="grid-panel" data-part="panel-8" data-panel-id="p_8" data-action="RepoAct.actvPanel"><ui-plot style="width: 100%; height: 100%;" data-renderer="canvas"></ui-plot></div>
-          </div>
+          <div class="dash-grid" data-part="dashGrid"></div>
+          <script>
+            (function() {
+              var g = document.querySelector('[data-part="dashGrid"]');
+              if (!g) return;
+              var h = '';
+              var ctrl = '<div data-part="row-aspect-ctrl" class="row-aspect-ctrl"><div class="form-addon" style="--addon-text-size:1.0em;" title="アスペクト比" data-ui="addon" data-opts="icon:aspect_ratio; prefix:H:; color:var(--theme-color)"><input type="number" class="form-control" min="0.1" max="2.0" step="0.1" value="1.0" data-action="RepoAct.changeRowAspect"></div></div>';
+              for (var i = 0; i < 9; i++) {
+                h += '<div class="grid-panel" data-part="panel-' + i + '" data-param="p_' + i + '" data-action="RepoAct.actvPanel">' + ctrl + '<ui-plot style="width:100%;height:100%;" data-param="canvas"></ui-plot></div>';
+              }
+              g.innerHTML = h;
+            })();
+          </script>
         </div>
       </main>
     </div>
-    <?!= include("Report_Method"); ?>
+    <?!= include("Report_Logic"); ?>
     <?!= include("Report_APP"); ?>
   </body>
 </html>

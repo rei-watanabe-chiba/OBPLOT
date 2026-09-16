@@ -3,7 +3,7 @@
   /* =========================================
      1. レイヤー定義（優先順位の制御）
      ========================================= */
-  @layer reset, theme, base, components, layout_gas, layout_report, print;
+  @layer reset, theme, base, components, layout_gas, layout_report;
 
   /* =========================================
      2. @layer reset （リセット）
@@ -22,7 +22,7 @@
      ========================================= */
   @layer theme {
     :root {
-      /* 共通・GASサイドバー基本寸法 */
+      /* 共通のGASサイドバー基本寸法 */
       --unit: 4px;
       --control-height: calc(var(--unit) * 8.5);
 
@@ -49,7 +49,7 @@
       --transition-speed: 0.2s;
       interpolate-size: allow-keywords;
 
-      /* レポート（ReportCSS.html）由来の共通幾何・物理スケール変数 */
+      /* レポート(ReportCSS.html)由来の共通幾何・物理スケール変数 */
       --sidebar-base-width: 320px;
       --sidebar-base-height: 100vh;
       --current-scale: 1;
@@ -58,7 +58,7 @@
       --main-margin: var(--sidebar-base-width);
     }
 
-    /* 画面コンテキスト（data-theme）別動的カラーマッピング */
+    /* 画面コンテキスト(data-theme)別動的カラーマッピング */
     body {
       --theme-color: var(--main-blue);
       --theme-hover: var(--main-blue-hover);
@@ -113,7 +113,7 @@
   }
 
   /* =========================================
-     5. @layer components （共通コンポーネント完全集約 ＆ 詳細度0,1,0化）
+     5. @layer components （共通コンポーネント完全集約・詳細度0,1,0化）
      ========================================= */
   @layer components {
     /* --- ユーティリティクラス --- */
@@ -187,9 +187,9 @@
       border-radius: 2px;
     }
 
-    /* --- タブナビゲーション（汎用 ＆ サイドバー） --- */
+    /* --- タブナビゲーション(汎用 ・ サイドバー) --- */
     .nav-tabs { display: none; }
-    .tab-content { display: none; &.active, &[aria-selected="true"], &[data-state="active"], &[aria-hidden="false"] { display: block; } }
+    .tab-content { display: none; &.active, &[aria-selected="true"], &[data-view~="active"], &[aria-hidden="false"] { display: block; } }
 
     .sidebar-tabs {
       display: flex;
@@ -215,7 +215,7 @@
       animation: slideEnter 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     }
 
-    /* --- フォームコントロール（標準 ＆ フラット化） --- */
+    /* --- フォームコントロール(標準 ・ フラット化) --- */
     label {
       display: block;
       margin: var(--unit) calc(var(--unit) * 0.5);
@@ -255,7 +255,7 @@
     }
     input[type="text"]:not(:disabled) { cursor: text; }
 
-    /* --- 昇格部品：フォームアドオン (.form-addon, prefix/suffix) --- */
+    /* --- 固有部品:フォームアドオン (.form-addon, prefix/suffix) --- */
     .form-addon, [data-ui="addon"] {
       position: relative;
       display: flex;
@@ -291,7 +291,7 @@
     .has-suffix input,
     .has-suffix select { padding-right: var(--pad-right, 24px); }
 
-    /* --- 昇格部品：4方向連動インラインボタン (.link-toggle) --- */
+    /* --- 固有部品:双方向連動インラインボタン (.link-toggle) --- */
     .link-toggle {
       flex: none;
       display: inline-flex;
@@ -314,10 +314,10 @@
     }
     .linkeRow { display: flex; gap: 4px; width: 100%; }
 
-    /* --- 昇格部品：単位自動付与ラッパー (.with-unit) --- */
+    /* --- 固有部品:単位自動付与ラッパー (.with-unit) --- */
     .with-unit { position: relative; display: flex; width: 100%; }
     .with-unit::after {
-      content: attr(data-unit);
+      content: var(--unit, '');
       position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
       font-size: 10px; color: var(--grey400); pointer-events: none;
     }
@@ -343,7 +343,7 @@
       &:focus-visible {
         box-shadow: 0 0 6px color-mix(in srgb, var(--theme-color) 70%, transparent);
       }
-      &[data-type="primary"] {
+      &[data-view="primary"] {
         --btn-bg: var(--theme-color);
         --btn-color: #fff;
         --btn-border: var(--theme-color);
@@ -355,7 +355,7 @@
       &.outline {
         --btn-bg: var(--bg-color);
         --btn-border: currentColor;
-        &[data-type="primary"] { --btn-color: var(--theme-color); }
+        &[data-view="primary"] { --btn-color: var(--theme-color); }
         &:not(:disabled):hover { --btn-bg: color-mix(in srgb, var(--theme-hover) 7%, var(--bg-color)); }
       }
       &:disabled {
@@ -398,15 +398,15 @@
     details {
       margin: var(--unit) 0;
       transition: opacity var(--transition-speed);
-      &[data-type="disabled"] {
+      &[data-view~="disabled"] {
         opacity: 0.5;
         pointer-events: none;
       }
-      &[data-state="active"] summary {
+      &[data-view~="active"] summary {
         margin-bottom: calc(var(--unit) * 2);
         color: var(--theme-color);
       }
-      &[data-state="disabled"] summary { cursor: not-allowed; }
+      &[data-view~="disabled"] summary { cursor: not-allowed; }
       &::details-content {
         height: 0;
         opacity: 0;
@@ -456,7 +456,7 @@
       padding: 0;
     }
 
-    /* --- 昇格部品：セグメントトグル (.segment-ctrl) --- */
+    /* --- 固有部品:セグメントトグル (.segment-ctrl) --- */
     .segment-ctrl {
       display: flex;
       background: var(--grey50);
@@ -494,7 +494,7 @@
       animation: slideEnter 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     }
 
-    /* --- 昇格部品：ラジオグループ (.radio-group) --- */
+    /* --- 固有部品:ラジオグループ (.radio-group) --- */
     .radio-group {
       display: flex;
       gap: 8px;
@@ -513,7 +513,7 @@
       }
     }
 
-    /* --- 昇格部品：プロパティ行・インスペクタコントロール --- */
+    /* --- 固有部品:プロパティ行・インスペクタコントロール --- */
     .board-mode-sec {
       background-color: var(--grey50);
       border: 1px solid var(--grey200);
@@ -642,7 +642,7 @@
       border-radius: var(--unit);
       opacity: 1;
       transition: all 0.3s ease;
-      &[data-status="hidden"] {
+      &[data-view="hidden"] {
         max-height: 0;
         margin-bottom: 0;
         padding-top: 0;
@@ -651,11 +651,11 @@
         opacity: 0;
         pointer-events: none;
       }
-      &[data-status="loading"], &[data-status="message"] {
+      &[data-view="loading"], &[data-view="message"] {
         --status-color: var(--grey600);
         background-color: transparent;
       }
-      &[data-status="loading"]::before {
+      &[data-view="loading"]::before {
         display: block;
         width: calc(var(--unit) * 3.5);
         height: calc(var(--unit) * 3.5);
@@ -665,9 +665,9 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
-      &[data-status="message"] { padding:calc(var(--unit) * 0.5) calc(var(--unit) * 3) }
-      &[data-status="success"] { --status-color: var(--theme-color); }
-      &[data-status="error"], &[data-status="alert"] { --status-color: var(--main-red); }
+      &[data-view="message"] { padding:calc(var(--unit) * 0.5) calc(var(--unit) * 3) }
+      &[data-view="success"] { --status-color: var(--theme-color); }
+      &[data-view="error"], &[data-view="alert"] { --status-color: var(--main-red); }
     }
 
     /* --- ポップオーバー --- */
@@ -755,7 +755,7 @@
       &.has-error, &[aria-invalid="true"] {
         background-color: color-mix(in srgb, var(--main-red) 12%, transparent);
       }
-      &.has-success, &[data-state="success"] {
+      &.has-success, &[data-view="success"] {
         background-color: color-mix(in srgb, var(--main-green) 12%, transparent);
       }
       &.selected, &[aria-selected="true"] {
@@ -939,6 +939,19 @@
      ========================================= */
   @layer layout_report {
     body[data-theme="report"] {
+      &[data-view="printing"] {
+        margin-left: 0 !important;
+        display: block;
+        overflow: visible;
+        background-color: #fff;
+        .dash-layout { display: block; }
+        .dash-sidebar { display: none !important; }
+        .dash-main { padding: 0 !important; display: block; height: auto; overflow: visible; background: none; margin-left: 0 !important; }
+        .a4-container { width: 210mm !important; height: 297mm !important; transform: none !important; margin: 0 auto !important; max-height: none !important; box-shadow: none !important; }
+        .grid-panel, .grid-panel.active, .grid-panel[aria-selected="true"] { border: none !important; }
+        .grid-panel::before, .grid-panel::after { display: none !important; }
+        .row-aspect-ctrl { display: none !important; }
+      }
       margin: 0;
       padding: 0;
       background-color: var(--grey50);
@@ -953,7 +966,7 @@
         width: 100%;
         height: 100%;
 
-        /* 左操作サイドバー枠 */
+        /* 左操作サイドバー部 */
         .dash-sidebar {
           width: var(--sidebar-width, var(--sidebar-base-width));
           height: var(--sidebar-height, var(--sidebar-base-height));
@@ -991,7 +1004,7 @@
           color: var(--text-main);
         }
 
-        /* 右描画メイン領域枠 */
+        /* 右描画メイン領域部 */
         .dash-main {
           margin-left: var(--main-margin, var(--sidebar-base-width));
           flex: 1;
@@ -1010,25 +1023,25 @@
             width: 210mm;
             height: 297mm;
             transform-origin: top center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-md);
             padding: var(--margin-top, 15mm) var(--margin-right, 15mm) var(--margin-bottom, 15mm) var(--margin-left, 15mm);
             box-sizing: border-box;
             flex-shrink: 0;
             animation: fadeEnter 1s ease-out forwards;
 
             /* 内部プロットグリッド */
-            .dash-grid {
-              display: grid;
-              gap: var(--panel-gap, 16px);
-              width: 100%;
-              height: 100%;
-              grid-template-columns: repeat(var(--col-count, 1), var(--panel-w, 100%));
-              grid-template-rows: repeat(var(--row-count, 1), var(--panel-h, auto));
-              align-content: center;
-              justify-content: center;
-              place-items: center;
+              .dash-grid {
+                display: grid;
+                gap: var(--panel-gap, 16px);
+                width: 100%;
+                height: 100%;
+                grid-template-columns: repeat(var(--col-count, 1), var(--panel-w, 100%));
+                grid-template-rows: repeat(var(--row-count, 1), var(--panel-h, auto));
+                align-content: center;
+                justify-content: center;
+                place-items: center;
 
-              /* プロットパネル枠 */
+              /* プロットパネル部 */
               .grid-panel {
                 border: 1px dashed var(--grey200);
                 position: relative;
@@ -1048,7 +1061,7 @@
 
                 /* 列ラベル */
                 &::before {
-                  content: attr(data-col-lbl);
+                  content: var(--col-lbl, '');
                   position: absolute;
                   bottom: 100%;
                   margin-bottom: calc(4mm / var(--current-scale, 1));
@@ -1061,11 +1074,11 @@
                   z-index: 5;
                   line-height: 1;
                 }
-                &:not([data-col-lbl])::before { display: none; }
+                &:not([style*="--col-lbl"])::before { display: none; }
 
                 /* 行ラベル */
                 &::after {
-                  content: attr(data-row-lbl);
+                  content: var(--row-lbl, '');
                   position: absolute;
                   right: 100%;
                   margin-right: calc(4mm / var(--current-scale, 1));
@@ -1078,15 +1091,17 @@
                   z-index: 5;
                   line-height: 1;
                 }
-                &:not([data-row-lbl])::after { display: none; }
+                &:not([style*="--row-lbl"])::after { display: none; }
+                &:not([style*="--row-lbl"]) .row-aspect-ctrl { display: none; }
               }
             }
           }
         }
       }
 
-      /* インスペクタのアクティブ/非アクティブ表示制御 */
+      /* インスペクタのアクティブ・非アクティブ表示制御 */
       &[data-board-mode="calib"] [data-part="secCluster"] { display: none; }
+      &[data-board-mode="calib"] .row-aspect-ctrl { display: none; }
       &[data-board-mode="clus"] [data-part="secCALB"] { display: none; }
 
       .print-loading {
@@ -1112,7 +1127,7 @@
         transform: translateY(-50%) scale(calc(1 / var(--current-scale, 1)));
         transform-origin: right center;
         z-index: 10;
-        &.form-addon {
+        & .form-addon {
           width: 80px;
           box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
@@ -1129,40 +1144,38 @@
   }
 
   /* =========================================
-     8. @layer print （印刷出力用リセット）
+     8. Print Styles
      ========================================= */
-  @layer print {
-    @media print {
-      @page { size: A4 portrait; margin: 0; }
-      body, html { margin: 0; padding: 0; background-color: #fff; height: 100%; }
+  @media print {
+    @page { size: A4 portrait; margin: 0; }
+    body, html { margin: 0; padding: 0; background-color: #fff; height: 100%; }
 
-      body[data-theme="report"], body.is-print {
+    body[data-theme="report"] {
+      display: block;
+      overflow: visible;
+      background-color: #fff;
+
+      .dash-layout { display: block; }
+      .dash-sidebar { display: none; }
+      .dash-main {
+        margin-left: 0 !important;
+        padding: 0 !important;
         display: block;
+        height: auto;
         overflow: visible;
-        background-color: #fff;
-
-        .dash-layout { display: block; }
-        .dash-sidebar { display: none; }
-        .dash-main {
-          margin-left: 0 !important;
-          padding: 0 !important;
-          display: block;
-          height: auto;
-          overflow: visible;
-          background: none;
-        }
-        .a4-container {
-          width: 210mm !important;
-          height: 297mm !important;
-          transform: none !important;
-          margin: 0 !important;
-          max-height: none !important;
-          box-shadow: none !important;
-        }
-        .grid-panel, .grid-panel.active, .grid-panel[aria-selected="true"] { border: none !important; }
-        .grid-panel::before, .grid-panel::after { display: none; }
-        .row-aspect-ctrl, .print-loading { display: none !important; }
+        background: none;
       }
+      .a4-container {
+        width: 210mm !important;
+        height: 297mm !important;
+        transform: none !important;
+        margin: 0 !important;
+        max-height: none !important;
+        box-shadow: none !important;
+      }
+      .grid-panel, .grid-panel.active, .grid-panel[aria-selected="true"] { border: none !important; }
+      .grid-panel::before, .grid-panel::after { display: none; }
+      .row-aspect-ctrl, .print-loading { display: none !important; }
     }
   }
 </style>

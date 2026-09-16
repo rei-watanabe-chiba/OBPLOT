@@ -1,5 +1,143 @@
-<!-- src/Tracer5i_Action.html -->
+<!-- src/Tracer5i_App.html -->
 <script>
+
+
+  const ENT_SCHEMA = {
+      elements: [
+        { part: "entFieldset", disablePhase: () => State.get("GLB.isLocked") },
+        { part: "secPREF", activePhase: p => p === ENT_PHS.INIT, disablePhase: p => false },
+        
+        { part: "secRAW", activePhase: p => p >= ENT_PHS.READY, disablePhase: p => p < ENT_PHS.READY, openPhase: p => p >= ENT_PHS.READY && p < ENT_PHS.VALID },
+        { part: "btnRAW_load", disablePhase: p => false, text: p => p <= ENT_PHS.READY ? "データを取得" : "再取得" },
+        { part: "btnRAW_genList", activePhase: p => p >= ENT_PHS.READY, className: p => p === ENT_PHS.LOAD ? "" : "outline" },
+        { part: "btnRAW_valdList", activePhase: p => p >= ENT_PHS.INVALID && !State.get("ENTST.RAW.flags").some(Boolean), className: p => p === ENT_PHS.INVALID ? "" : "outline" },
+        { part: "secRAW_area", visiblePhase: p => p >= ENT_PHS.LOAD },
+        { part: "boxRAW_btn", visiblePhase: p => p >= ENT_PHS.LOAD },
+        
+        { part: "secEXTR", activePhase: p => p >= ENT_PHS.VALID, disablePhase: p => p < ENT_PHS.VALID, openPhase: p => p >= ENT_PHS.VALID && p < ENT_PHS.OUTPUT },
+        { part: "btnEXTR_run", activePhase: p => p >= ENT_PHS.VALID && !State.get("ENTST.EXTR.flags").some(Boolean) },
+        { part: "btnEXTR_push", activePhase: p => p >= ENT_PHS.EXTRACT, visiblePhase: p => p >= ENT_PHS.EXTRACT },
+        { part: "secEXTR_area", visiblePhase: p => p >= ENT_PHS.VALID }
+      ]
+};
+const ADP_SCHEMA = {
+      persistPaths: [
+        "ADPST.ASGN.refs.available", "ADPST.ASGN.refs.filter",
+        "ADPST.SYMB.refs.baseKey", "ADPST.SYMB.refs.rls",
+        "ADPST.CALB.refs.modeMap", "ADPST.CALB.refs.calElms", "ADPST.CALB.refs.crct", "ADPST.CALB.refs.useLOD", "ADPST.CALB.refs.useCal",
+        "ADPST.PREV.refs.itemMap", "ADPST.PREV.refs.val", "ADPST.PREV.refs.saveIndexName",
+        "ADPST.STDZ.refs.itemMap", "ADPST.STDZ.refs.modeMap", "ADPST.STDZ.refs.useLOD", "ADPST.STDZ.refs.saveIndexName",
+        "ADPST.ASGN.status", "ADPST.SYMB.status", "ADPST.CALB.status", "ADPST.PREV.status", "ADPST.STDZ.status"
+      ],
+      elements: [
+        { part: "adpFieldset", disablePhase: () => State.get("GLB.isLocked") },
+        { part: "secASGN", activePhase: p => true, disablePhase: p => false, openPhase: p => p < ADP_PHS.FILTERED },
+        { part: "btnASGN_load", disablePhase: p => false },
+        { part: "btnASGN_fltr", activePhase: p => p >= ADP_PHS.LOADED },
+        { part: "secASGN_area", visiblePhase: p => p >= ADP_PHS.LOADED },
+
+        { part: "secSYMB", activePhase: p => p >= ADP_PHS.FILTERED, disablePhase: p => p < ADP_PHS.FILTERED, openPhase: p => p >= ADP_PHS.FILTERED && p < ADP_PHS.MAPPED },
+        { part: "btnSYMB_set", activePhase: p => p >= ADP_PHS.FILTERED },
+        { part: "boxSYMB_axis", activePhase: p => p >= ADP_PHS.FILTERED },
+        { part: "secSYMB_area", visiblePhase: p => p >= ADP_PHS.FILTERED },
+
+        { part: "secPREV", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined },
+        { part: "btnPREV_genPrev", activePhase: p => p >= ADP_PHS.MAPPED },
+
+        { part: "secCALB", activePhase: p => p >= ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED? false : undefined },
+
+        { part: "secSTDZ", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined }
+      ]
+};
+
+
+
+  window.Mtd = window.Mtd || {};
+  
+  Object.assign(window.Mtd, {
+    // --- データ抽出フェーズ (ENT) ---
+    ENT: {
+      valdList(shtDT, outHdr, validMods, exacMode) {
+        if (!shtDT?.length) return [];
+        const [hdr, ...body] = shtDT;
+        const getIdx = k => hdr.findIndex(h => h === k); 
+        const iF = getIdx('file'), iM = getIdx('mode'), iID = getIdx(GLB.idx.key2), iSub = getIdx('sub_id');
+        const getScanID = r => r[iSub] ? `${r[iID]}_${r[iSub]}` : `${r[iID]}`;
+        const stsDT = body.reduce((a, r) => {
+          a.file.set(r[iF], (a.file.get(r[iF]) || 0) + 1);
+          const sId = getScanID(r);
+          const s = a.scan.get(sId) || { modes: new Set(), count: 0 };
+          s.modes.add(r[iM]); s.count++; a.scan.set(sId, s);
+          return a;
+        }, { file: new Map(), scan: new Map() });
+        const rls = [
+          { check: r => !/^\d+$/.test(r[iF] ?? ""), err: " file形式" },
+          { check: r => !validMods.includes(r[iM]), err: " mode形式" },
+          { check: r => !r[iID], err: " id形式" },
+          { check: r => stsDT.file.get(r[iF]) > 1, err: " file重複" },
+          { check: r => {
+              const s = stsDT.scan.get(getScanID(r));
+              return exacMode === "Single" ? s.count > 1 : !(s?.count === 2 && s.modes.size === 2 && s.modes.has('mudrock') && s.modes.has('obsidian'));
+            }, err: exacMode === "Single" ? " id重複" : " 計測id-mode形式" }
+        ];
+        return [[...outHdr, "error"], ...body.map(r => [...r, getScanID(r), rls.filter(rl => rl.check(r)).map(rl => rl.err).join(",")])];
+      },
+      genExtr(fileDT, resDT, extrRefs) {
+        if (!fileDT?.length || !resDT?.length) return [];
+        const resMap = new Map(resDT.slice(1).map(r => [String(r[0]), r]));
+        const scanIDMap = fileDT.slice(1).reduce((map, r) => {
+          const entry = map.get(r[5]) || { id: r[2], files: {} };
+          entry.files[String(r[1]).toLowerCase()] = r[0]; map.set(r[5], entry); return map;
+        }, new Map());
+        const obKeys = CoreMethod.Util.sortKeysByVal(GLB.obsidianIndex), mdKeys = CoreMethod.Util.sortKeysByVal(GLB.mudrockIndex);
+        const fmt = v => (v === "" || v == null) ? "" : (String(v).trim() === "< LOD" ? v : (!isNaN(Number(v)) ? Number(v) * 10000 : v));
+        const extract = (file, keys, idxObj) => {
+          const r = resMap.get(String(file ?? ""));
+          return keys.reduce((acc, k) => {
+            const idx = Object.hasOwn(idxObj, k) ? idxObj[k] : null;
+            acc.vals.push(fmt(idx !== null ? (r?.[idx] ?? "") : ""));
+            acc.errs.push(fmt(idx !== null ? (r?.[idx + 1] ?? "") : ""));
+            return acc;
+          }, { vals: [], errs: [] });
+        };
+        return [CoreMethod.Util.genHeader('tracer5i'), ...Array.from(scanIDMap, ([scanId, { id, files }]) => {
+          const ob = extract(files.obsidian, obKeys, GLB.obsidianIndex), md = extract(files.mudrock, mdKeys, GLB.mudrockIndex);
+          return [scanId, extrRefs[GLB.idx.key1], id, extrRefs[GLB.idx.p1], extrRefs[GLB.idx.p2], ...ob.vals, ...md.vals, ...ob.errs, ...md.errs];
+        })];
+      },
+      valdPxrf(pxrfDT, newDT) {
+        if (!pxrfDT?.length || !newDT?.length) return { isDup: false, data: newDT };
+        const h = pxrfDT[0];
+        const iDB = h.indexOf(GLB.idx.key1), iID = h.indexOf(GLB.idx.key2);
+        const newKeys = new Set(newDT.slice(1).map(r => `${r[iDB]}_${r[iID]}`));
+        const fltrEx = pxrfDT.slice(1).filter(r => !newKeys.has(`${r[iDB]}_${r[iID]}`));
+        return fltrEx.length !== pxrfDT.length - 1 ? { isDup: true, data: [pxrfDT[0], ...fltrEx, ...newDT.slice(1)] } : { isDup: false, data: null };
+      }
+    },
+    // --- グラフ作成・分析フェーズ (ADP) ---
+    ADP: {
+      genNewPxrf(pxrfDT, modeMap) {
+        const hdr = CoreMethod.Util.genHeader('pxrf');
+        const data = pxrfDT.map(r => {
+          const row = [r['計測ID'], r[GLB.idx.key1], r[GLB.idx.key2], r[GLB.idx.p1], r[GLB.idx.p2], r[GLB.idx.wd1], r[GLB.idx.wd2]];
+          GLB.valElms.forEach(elm => row.push(CoreMethod.Util.getElmVal(r, elm, modeMap, GLB.optElms).val ?? ""));
+          GLB.valElms.forEach(elm => row.push(CoreMethod.Util.getElmVal(r, elm, modeMap, GLB.optElms).err ?? ""));
+          return row;
+        });
+        return [hdr, ...data];
+      },
+      genCALB(pxrfDT, wdxrfDT, conf, idxNm) {
+        const filteredPxrf = conf.itemMap?.length ? pxrfDT.filter(p => conf.itemMap.includes(p[GLB.idx.p1])) : pxrfDT;
+        const minMap = conf.useLOD ? Object.fromEntries(GLB.valElms.map(e => [e, Math.min(...CoreMethod.Util.getValidNums(filteredPxrf.map(r => CoreMethod.Util.getElmVal(r, e, conf.modeMap, GLB.optElms).val), true)) || null])) : {};
+        const cfs = CoreMethod.Calc.calcElementCalibrations(filteredPxrf, wdxrfDT, GLB.valElms, { modeMap: conf.modeMap, optElms: GLB.optElms, useLOD: conf.useLOD, minMap, idxKeys: GLB.idx });
+        return [idxNm, ...GLB.valElms.flatMap(e => [cfs[e]?.slp ?? "", cfs[e]?.int ?? ""])];
+      }
+    }
+  });
+  
+
+
+
   // --- ENTAct (旧 T1Action: データ読込・抽出) ---
   class ENTAct {
     static get ssId() { return State.get("GLB.ssId"); }
@@ -311,4 +449,5 @@
   }
   if (typeof Office !== 'undefined') { Office.onReady(() => TrcInit.start()); } 
   else { if (document.readyState === 'loading') { window.addEventListener("DOMContentLoaded", () => TrcInit.start()); } else { TrcInit.start(); } }
+
 </script>
