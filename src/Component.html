@@ -162,7 +162,7 @@
             }
           }))
         ];
-        return Tpl.Table.build({ rows, cols, rowClass: 'symb-table-row' });
+        return html`<div class="v-gap-md">${Tpl.Table.build({ rows, cols, rowClass: 'symb-table-row' })}</div>`;
       }
     };
   }
