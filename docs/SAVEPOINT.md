@@ -5,17 +5,19 @@
 ### 1. ディレクトリ構造とファイル一覧（モジュール責務）
 - **[A:Coreモジュール]** (汎用基盤):
   - `Code.js`: [API] バックエンドAPI (GAS通信, I/O, サイドバー起動)
-  - `PlatformAdapter.html`: [Infra] API/Storageのアダプター・環境DI
-  - `Global.html`: [Config] アプリケーション全体のグローバル設定・定数 (`GLB`)
-  - `Model.html`: [Model] 状態管理 (`State`)
+  - `Adapter.html`: [Infra] API/Storageのアダプター・環境DI
+  - `CoreState.html`: [State] グローバル設定 (`GLB`) および 状態管理 (`State`)
   - `CoreAction.html`: [Controller] システム基盤（ルーター、アクションパイプライン、初期化DIリゾルバ）
   - `CoreUI.html`: [View Engine] スキーマに基づくPatch型差分同期エンジン・汎用パーサー
   - `CoreMethod.html`: [Logic] 汎用ユーティリティ（計算・配列操作）
   - `Component.html`: [Component] 純粋HTML文字列ジェネレーター (`Tpl`)
   - `Chart.html`: [Component] グラフ描画 (`<ui-plot>` / ECharts保護用 Web Component維持)
   - `CSS.html`: [Style] 共通スタイルシート
-- **[B:Tab1/Tab2 特化モジュール]**: `Tracer5i.html`, `Tracer5i_Schema.html`, `Tracer5i_Action.html`, `Tracer5i_Method.html`
-- **[C:Tab3/Report 特化モジュール]**: `Dash.html`, `Dash_Schema.html`, `Dash_Action.html`, `Report.html`, `ReportCSS.html`, `Report_App.html`, `Report_Schema.html`,
+- **[B:Tab1/Tab2 特化モジュール]**: 
+  - `Tracer5i.html` (UI層), `Tracer5i_App.html` (Schema/Method/Action統合ロジック)
+- **[C:Tab3/Report 特化モジュール]**: 
+  - `Dash.html` (UI層), `Dash_App.html` (Schema/Action統合ロジック)
+  - `Report.html` (UI層), `Report_Logic.html` (Schema/Method統合ロジック), `Report_APP.html` (Action/Initコントローラー)
 
 ### 2. フェーズ・ステートマシン（状態遷移定義）
 - **Tab 1 (データ抽出)**: `INIT(1) -> READY(2) -> LOAD(3) -> INVALID(4) -> VALID(5) -> EXTRACT(6) -> OUTPUT(7)`
@@ -57,35 +59,29 @@
 3. **スタイル定義のデフォルト化**: 動的に見た目を変更する場合は `data-opts` などのオプション属性にHTML上で宣言し、JSがそれを解釈して動的に付与する。
 4. **data-属性乱立禁止**: data-属性は以下の分類ルール**絶対のルール**として、パーサー・ルーターの活用による新たな属性の乱立を徹底的に防止する。
 
-### 7. data-属性の分類ルール (The 4 Pillars)
-*   **【1】State操作・イベント発火系**
-    *   `data-action`: 単発イベントの発火（click等）。
-    *   `data-param`, `data-sub-param`: Actionに渡す引数（最大2つまで）。
-*   **【2】UI変更・構築系**
-    *   `data-ui`: HTML構造そのものを動的にマウントするトリガー（`dlg`, `mselect`, `addon` 等）。
-    *   `data-patch`: Stateの値を元に動的な変更を加えるトリガー（`bind: ...; opts: ...`）。
-    *   `data-opts`: 上記の構築・パッチ処理に必要な設定オプション（1属性に集約）。
-*   **【3】DOM参照・識別系**
-    *   `data-part`: 要素特定・クエリ用の純粋なマーカー（JSからの参照用）。
-*   **【4】スタイル・状態反映系**
-    *   `data-state`: UIの見た目の状態（`active`, `open` 等）。
-    *   `data-status`: ビジネスロジックの進行状態（`loading`, `success` 等）。
+### 7. data-属性の分類ルール (The 6 Pillars)
+*   **【1】操作・識別系**
+    *   `data-action`: イベント発火先メソッド（`"NS.method"`）。
+    *   `data-param`: Action引数 兼 要素識別値。複数値は `|` 区切りで吸収。
+*   **【2】UI構築・状態結合系**
+    *   `data-ui`: UI種別。ウィジェットタイプを宣言（`dlg`, `mselect`, `addon`, `form` 等）。
+    *   `data-out`: State→DOM リアクティブ購読宣言（`bind: path; opts: path` 等、旧 `data-patch`）。
+    *   `data-opts`: 汎用オプション。巨大パーサーがカテゴリ分岐（JSON / kv 対応）。
+*   **【3】DOM識別系**
+    *   `data-part`: DOM識別用。JSからの純粋なクエリ用マーカー 兼 スキーマターゲット。
+*   **【CSS内部専用（開発者記述禁止）】**
+    *   `data-view`: 視覚状態トークン。`data-opts="view: ..."` 経由でパーサーが書き込み、CSSがこれを参照する。
 
-### 8. 汎用パーサー・ルーター戦略
-- **routPatch**: 初期化時のみ属性をパースし、更新関数をクロージャとして登録。State変更時は直接実行し高効率な差分同期を実現。
+### 8. 汎用パーサー・ルーター戦略 (CoreUIPatcher)
+- **applyOpts (巨大パーサー)**: `data-opts` を JSON / kv 対応でパースし、「ui-opts（アドオンやフォーム初期化）」「view-state（`data-view`への書き込み）」「free（自由拡張）」へ振り分ける。
+- **routOut (旧 routPatch)**: 初期化時のみ属性をパースし、更新関数をクロージャとして登録。State変更時は直接実行し高効率な差分同期を実現。
 - **routEvent**: イベントの `e.type` と要素タグを評価し、click/change/input等の発火を自動判定・ルーティングする。
-- **routBuilder**: `FormAddon` 等の動的構築を担い、構築完了マーカーを用いて二重初期化の破綻を完全に防ぐ。
+- **routBuilder**: `data-ui` 属性を持つ要素の初期構築（`initDlg`, `applyOpts`呼び出し等）を担い、二重初期化の破綻を完全に防ぐ。
 
 ### 9. 開発状況と次ステップ
-- レガシー属性（`data-arg`, `data-addon-*` 等）の排除と宣言的マークアップ（新4分類）への移行。
-- `CoreUI` に各種汎用パーサーを実装し、`CoreAction` の `routEvent` において双方向バインディング（`data-patch`の`bind`パス抽出）およびイベント自動判定を構築
-<<<<<<< Updated upstream
-- **次のステップ**: レガシーコードと後方互換の安全で段階的な排除
-- **禁止事項**: 既存のリアクティブ処理の発火タイミングの破綻、state結合の破綻を招く破壊的変更の禁止
-- 1. data-filed → param(列選択UIの動的なstate連動とUI更新に注意）
-=======
+- LLM開発の最適化（1ファイル300〜800行のスイートスポット化）を目指し、UIとロジック（App/Logic）の分離アーキテクチャによるファイル統廃合を完了。
 - **次のステップ**:
-  1. Report.htmlで起動時にUnexpected token ';'が出て、原因の特定
->>>>>>> Stashed changes
+- さらなるコードの最適化
+
 
 ---
