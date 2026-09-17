@@ -371,7 +371,7 @@
         cont.style.setProperty('--col-count', layout.gridCols);
         cont.style.setProperty('--row-count', layout.gridRows);
         cont.style.setProperty('--panel-gap', `${(layout.panelGap !== undefined ? Number(layout.panelGap) : 4)}mm`);
-        const grid = cont.querySelector('[data-part="dashGrid"]');
+        const grid = cont.querySelector('.dash-grid');
         if (grid) {
           const rowCount = layout.gridRows || 1;
           const isClus = (st.boardMode || st.config?.boardMode) === 'clus';
@@ -473,7 +473,7 @@
         const executePrint = () => {
           if (printFired) return;
           printFired = true;
-          const loader = document.querySelector('[data-part="print-loading"]');
+          const loader = document.querySelector('[data-part="print-loading"], .print-loading');
           if (loader) loader.style.display = 'none';
           if (window.__EXPORT_CFG__.autoPrint) {
             requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => window.parent.postMessage('PRINT_READY', '*'), waitTime)));
@@ -576,12 +576,25 @@
       const snap = st || RepoSt.getSt();
       const ttl = `OBPLOT_${type.toUpperCase()}_${this.getFormattedDate()}`;
       const esc = s => s.replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      
+      const clone = document.documentElement.cloneNode(true);
+      if (type === 'pdf' || type === 'html') {
+        const b = clone.querySelector('body');
+        if (b) {
+          Array.from(b.childNodes).forEach(n => {
+            // Remove text nodes directly under body to prevent anonymous block boxes (18.5px gap)
+            if (n.nodeType === 3) n.remove();
+          });
+        }
+      }
+
       if (type === 'app') {
         const scrTag = `<title>${ttl}</title><script>window.__INJECTED_DATA__=${esc(JSON.stringify(snap.d))}; window.__INJECTED_FAVORITE__=${esc(JSON.stringify({ "RPTST.refs": this._buildFavObj(snap) }))};<\/script></head>`;
-        return { ttl, hStr: `<!DOCTYPE html>${document.documentElement.outerHTML.replace('</head>', scrTag)}` };
+        return { ttl, hStr: `<!DOCTYPE html>${clone.outerHTML.replace('</head>', scrTag)}` };
       }
+      
       const cfg = JSON.stringify({ autoPrint: type === 'pdf' });
-      return { ttl, hStr: `<!DOCTYPE html>${document.documentElement.outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${esc(JSON.stringify({ RPTST: State.proxy.RPTST }))}; window.__PRECALC_DATA__=${esc(JSON.stringify(pCalcDT))};<\/script>`)}` };
+      return { ttl, hStr: `<!DOCTYPE html>${clone.outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${esc(JSON.stringify({ RPTST: State.proxy.RPTST }))}; window.__PRECALC_DATA__=${esc(JSON.stringify(pCalcDT))};<\/script>`)}` };
     }
     // --- genPDF ---
     static genPDF() {

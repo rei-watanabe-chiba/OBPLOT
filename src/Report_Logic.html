@@ -1,4 +1,4 @@
-﻿<!-- src/Report_Logic.html -->
+<!-- src/Report_Logic.html -->
 <script>
 
 
@@ -150,11 +150,11 @@
       const ttl = `OBPLOT_${type.toUpperCase()}_${dateStr}`;
       let hStr = '';
       if (type === 'app') {
-        const scrTag = `<title>${ttl}</title>window.__INJECTED_DATA__=${CoreMethod.Util.escapeJsonForScript(data.raw)}; window.__INJECTED_FAVORITE__=${CoreMethod.Util.escapeJsonForScript(data.fav)};<\/script></head>`;
+        const scrTag = `<title>${ttl}</title><script>window.__INJECTED_DATA__=${CoreMethod.Util.escapeJsonForScript(data.raw)}; window.__INJECTED_FAVORITE__=${CoreMethod.Util.escapeJsonForScript(data.fav)};<\/script></head>`;
         hStr = '<!DOCTYPE html>' + outerHTML.replace('</head>', scrTag);
       } else {
         const cfg = JSON.stringify({ autoPrint: type === 'pdf' });
-        hStr = '<!DOCTYPE html>' + outerHTML.replace('<head>', `<head><title>${ttl}</title>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${CoreMethod.Util.escapeJsonForScript(data.state)}; window.__PRECALC_DATA__=${CoreMethod.Util.escapeJsonForScript(data.pCalcDT)};<\/script>`);
+        hStr = '<!DOCTYPE html>' + outerHTML.replace('<head>', `<head><title>${ttl}</title><script>window.__EXPORT_CFG__=${cfg}; window.__PRINT_STATE__=${CoreMethod.Util.escapeJsonForScript(data.state)}; window.__PRECALC_DATA__=${CoreMethod.Util.escapeJsonForScript(data.pCalcDT)};<\/script>`);
       }
       return { ttl, hStr };
     }
