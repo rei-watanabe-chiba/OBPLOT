@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-index": "node .agents/scripts/build_symbols_index.js",
+    "sync-docs": "node .agents/scripts/build_symbols_index.js --sync-doc-frontmatter"
   },
   "repository": {
     "type": "git",
@@ -17,5 +19,9 @@
   "bugs": {
     "url": "https://github.com/rei-watanabe-chiba/OBPLOT/issues"
   },
-  "homepage": "https://github.com/rei-watanabe-chiba/OBPLOT#readme"
+  "homepage": "https://github.com/rei-watanabe-chiba/OBPLOT#readme",
+  "devDependencies": {
+    "acorn": "^8.18.0",
+    "acorn-walk": "^8.3.5"
+  }
 }

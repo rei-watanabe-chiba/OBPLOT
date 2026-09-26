@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 setlocal enabledelayedexpansion
 
 :: ----------------------------------------------------
@@ -34,16 +35,17 @@ echo ==================================================
 :: ----------------------------------------------------
 :MENU
 echo.
-echo ==================================================
-echo GAS - GitHub Sync Menu (dev/main)
-echo ==================================================
-echo [1] Push local dev to GAS and GitHub
-echo [2] Pull GAS edits to local dev
-echo [3] Push main to GAS (Rollback)
-echo [4] Merge dev to main
-echo [5] Run repomix (Textise)
-echo [0] Exit
-echo ==================================================
+echo [36m==================================================[0m
+echo [1m       GAS - GitHub Sync Menu (dev/main) [0m
+echo [36m==================================================[0m
+echo   [32m[1][0m UPDATE ^<local^>  to  [GAS][dev]
+echo   [32m[2][0m UPDATE ^<GAS^>    to  [local]
+echo   [32m[3][0m UPDATE ^<main^>   to  [GAS]
+echo   [32m[4][0m UPDATE ^<dev^>    to  [main]
+echo   [33m[5][0m Run repomix (Textise)
+echo.
+echo   [31m[0] Exit[0m
+echo [36m==================================================[0m
 set /p choice="Enter a number (0-5): "
 
 if "%choice%"=="1" goto PUSH_DEV
@@ -60,7 +62,7 @@ goto MENU
 :PUSH_DEV
 echo.
 echo === [1] Push local dev to GAS and GitHub ===
-cd /d "%~dp0"
+cd /d "C:\LLMdict\gemini\OBPLOT_env"
 git checkout dev
 call :CLEAN_GITIGNORE
 git add -A
@@ -81,7 +83,7 @@ goto END_PROMPT
 :PULL_GAS
 echo.
 echo === [2] Pull GAS edits to local dev ===
-cd /d "%~dp0"
+cd /d "C:\LLMdict\gemini\OBPLOT_env"
 git checkout dev
 echo [INFO] Pulling from GAS...
 call clasp pull
@@ -102,7 +104,7 @@ goto END_PROMPT
 :PUSH_MAIN
 echo.
 echo === [3] Push main to GAS ===
-cd /d "%~dp0"
+cd /d "C:\LLMdict\gemini\OBPLOT_env"
 git checkout main
 git push origin main
 echo [INFO] Pushing stable main to GAS...
@@ -117,7 +119,7 @@ goto END_PROMPT
 :MERGE_MAIN
 echo.
 echo === [4] Merge dev to main ===
-cd /d "%~dp0"
+cd /d "C:\LLMdict\gemini\OBPLOT_env"
 git checkout main
 git merge dev
 git push origin main
@@ -141,17 +143,17 @@ set /p pack_choice="Enter a number (1-5): "
 
 set IGNORE_FILES=
 if "%pack_choice%"=="1" set IGNORE_FILES="spec/**"
-if "%pack_choice%"=="2" set IGNORE_FILES="spec/**, .github/**, infra/**, docs/**, image/**"
+if "%pack_choice%"=="2" set IGNORE_FILES="spec/**, .github/**, src/infra/**, docs/**, src/image/**, src/GAStemplate/**"
 if "%pack_choice%"=="3" set IGNORE_FILES="spec/**, docs/**, src/**"
 if "%pack_choice%"=="4" set IGNORE_FILES="spec/**, docs/**"
-if "%pack_choice%"=="5" set IGNORE_FILES="spec/**, infra/**, src/**, .github/**, image/**, GAStemplate/**"
+if "%pack_choice%"=="5" set IGNORE_FILES="spec/**, src/**, .github/**"
 
 if not defined IGNORE_FILES (
     echo Invalid input. Exiting.
     goto END_PROMPT
 )
 
-cd /d "%~dp0"
+cd /d "C:\LLMdict\gemini\OBPLOT_env"
 echo [INFO] Running repomix...
 call npx --yes repomix --remote "https://github.com/rei-watanabe-chiba/OBPLOT" --style markdown --no-file-summary --ignore %IGNORE_FILES%
 echo [INFO] repomix-output.md generation complete.

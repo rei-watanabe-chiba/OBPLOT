@@ -105,14 +105,14 @@
         return [...new Set(units)].sort((a, b) => b - a);
       }
       static genHeader(type) {
-        const { key1, key2, p1, p2, wd1, wd2 } = GLB.idx;
+        const { key1, key2, p1, p2, p3, wd1, wd2 } = GLB.idx;
         const obK = this.sortKeysByVal(GLB.obsidianIndex), mdK = this.sortKeysByVal(GLB.mudrockIndex);
         switch(type) {
-          case 'tracer5i': return ['計測ID', key1, key2, p1, p2, ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
-          case 'pxrf': return ['計測ID', key1, key2, p1, p2, wd1, wd2, ...GLB.valElms, ...GLB.valElms.map(e => `${e}_Err`)];
+          case 'tracer5i': return [p3, key1, key2, p1, p2, ...obK.map(k => `ob_${k}`), ...mdK.map(k => `md_${k}`), ...obK.map(k => `ob_${k}_Err`), ...mdK.map(k => `md_${k}_Err`)];
+          case 'pxrf': return [p3, key1, key2, p1, p2, wd1, wd2, ...GLB.valElms, ...GLB.valElms.map(e => `${e}_Err`)];
           case 'wdxrf': return [key1, key2, wd1, wd2, ...GLB.valElms];
           case 'crct': return ['IndexName', ...GLB.valElms.flatMap(e => [`${e}_slp`, `${e}_int`])];
-          case 'filelist': return ['file', 'mode', key2, 'sub_id', 'info', '計測ID'];
+          case 'filelist': return ['file', 'mode', key2, 'sub_id', 'info', p3];
           case 'rawFile': return ['file', 'mode', key2, 'sub_id', 'info'];
           default: return [];
         }
@@ -153,9 +153,9 @@
       }
       static fltrDB(wrapPXRF, wrapWDXRF, selDBs, isTracer5i = false) {
         const tgtSet = new Set(selDBs);
-        const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
+        const { key1: k1, key2: k2, p1: p1, p2: p2, p3: p3, wd1: w1, wd2: w2 } = GLB.idx;
         const pxrfDT = wrapPXRF.filter(obj => tgtSet.has(obj[k1])).map(r => {
-          const base = { '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: r[p1], [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
+          const base = { [p3]: r[p3], [k1]: r[k1], [k2]: r[k2], [p1]: r[p1], [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
           const vals = isTracer5i 
             ? Object.fromEntries(GLB.valElms.flatMap(e => [[`ob_${e}`, r[`ob_${e}`]], [`md_${e}`, r[`md_${e}`]], [`ob_${e}_Err`, r[`ob_${e}_Err`]], [`md_${e}_Err`, r[`md_${e}_Err`]]]))
             : Object.fromEntries(GLB.valElms.flatMap(e => [[e, r[e]], [`${e}_Err`, r[`${e}_Err`]]]));
@@ -187,7 +187,7 @@
         return isNaN(n) ? null : n;
       }
       static getElmVal(record, elm, modeMap = [], optElms = []) {
-        const prefix = (optElms.includes(elm) && modeMap.includes(elm)) ? 'md' : 'ob';
+        const prefix = (optElms.includes(elm) && modeMap.includes(elm)) ? 'ob' : 'md';
         return { val: record[`${prefix}_${elm}`], err: record[`${prefix}_${elm}_Err`] };
       }
       static makeCompositeKeyMap(list, keyFields, delimiter = "_") {

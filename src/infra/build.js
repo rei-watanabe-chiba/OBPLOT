@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = path.join(__dirname, '../src');
+const srcDir = path.join(__dirname, '../gas');
 const distDir = path.join(__dirname, '../dist');
 const imgDir = path.join(__dirname, '../image');
 const manifestSrc = path.join(__dirname, 'manifest.xml');

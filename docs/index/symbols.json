@@ -1,0 +1,1974 @@
+{
+  "generated_at": "2026-09-24T08:04:38.595Z",
+  "root": "src",
+  "files": {
+    "src/Adapter.html": {
+      "symbols": [
+        {
+          "name": "GasSvc",
+          "kind": "class",
+          "start_line": 5,
+          "end_line": 24
+        },
+        {
+          "name": "srvCall",
+          "kind": "method",
+          "start_line": 6,
+          "end_line": 13
+        },
+        {
+          "name": "pullDT",
+          "kind": "method",
+          "start_line": 14,
+          "end_line": 14
+        },
+        {
+          "name": "pushDT",
+          "kind": "method",
+          "start_line": 15,
+          "end_line": 15
+        },
+        {
+          "name": "pullMult",
+          "kind": "method",
+          "start_line": 16,
+          "end_line": 16
+        },
+        {
+          "name": "pushMult",
+          "kind": "method",
+          "start_line": 17,
+          "end_line": 17
+        },
+        {
+          "name": "getReportTemplate",
+          "kind": "method",
+          "start_line": 18,
+          "end_line": 18
+        },
+        {
+          "name": "getWbState",
+          "kind": "method",
+          "start_line": 19,
+          "end_line": 19
+        },
+        {
+          "name": "genShts",
+          "kind": "method",
+          "start_line": 20,
+          "end_line": 20
+        },
+        {
+          "name": "saveUserProp",
+          "kind": "method",
+          "start_line": 21,
+          "end_line": 21
+        },
+        {
+          "name": "loadUserProp",
+          "kind": "method",
+          "start_line": 22,
+          "end_line": 22
+        },
+        {
+          "name": "deleteUserProp",
+          "kind": "method",
+          "start_line": 23,
+          "end_line": 23
+        },
+        {
+          "name": "GasPropsStrg",
+          "kind": "class",
+          "start_line": 27,
+          "end_line": 31
+        },
+        {
+          "name": "save",
+          "kind": "method",
+          "start_line": 28,
+          "end_line": 28
+        },
+        {
+          "name": "load",
+          "kind": "method",
+          "start_line": 29,
+          "end_line": 29
+        },
+        {
+          "name": "clear",
+          "kind": "method",
+          "start_line": 30,
+          "end_line": 30
+        },
+        {
+          "name": "ExcelAdpt",
+          "kind": "class",
+          "start_line": 34,
+          "end_line": 174
+        },
+        {
+          "name": "run",
+          "kind": "method",
+          "start_line": 35,
+          "end_line": 38
+        },
+        {
+          "name": "pullDT",
+          "kind": "method",
+          "start_line": 41,
+          "end_line": 55
+        },
+        {
+          "name": "pushDT",
+          "kind": "method",
+          "start_line": 58,
+          "end_line": 80
+        },
+        {
+          "name": "pullMult",
+          "kind": "method",
+          "start_line": 82,
+          "end_line": 93
+        },
+        {
+          "name": "pushMult",
+          "kind": "method",
+          "start_line": 95,
+          "end_line": 106
+        },
+        {
+          "name": "getReportTemplate",
+          "kind": "method",
+          "start_line": 109,
+          "end_line": 114
+        },
+        {
+          "name": "getWbState",
+          "kind": "method",
+          "start_line": 117,
+          "end_line": 143
+        },
+        {
+          "name": "genShts",
+          "kind": "method",
+          "start_line": 146,
+          "end_line": 173
+        },
+        {
+          "name": "OfcStrg",
+          "kind": "class",
+          "start_line": 177,
+          "end_line": 205
+        },
+        {
+          "name": "save",
+          "kind": "method",
+          "start_line": 178,
+          "end_line": 189
+        },
+        {
+          "name": "load",
+          "kind": "method",
+          "start_line": 190,
+          "end_line": 192
+        },
+        {
+          "name": "clear",
+          "kind": "method",
+          "start_line": 193,
+          "end_line": 204
+        }
+      ]
+    },
+    "src/CSS.html": {
+      "symbols": []
+    },
+    "src/Chart.html": {
+      "symbols": [
+        {
+          "name": "CSSToken",
+          "kind": "class",
+          "start_line": 4,
+          "end_line": 14
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "start_line": 6,
+          "end_line": 13
+        },
+        {
+          "name": "CHARTDT",
+          "kind": "class",
+          "start_line": 16,
+          "end_line": 72
+        },
+        {
+          "name": "genChartDB",
+          "kind": "method",
+          "start_line": 17,
+          "end_line": 30
+        },
+        {
+          "name": "mapPts",
+          "kind": "function",
+          "start_line": 26,
+          "end_line": 26
+        },
+        {
+          "name": "genBaseDT",
+          "kind": "method",
+          "start_line": 32,
+          "end_line": 71
+        },
+        {
+          "name": "getV",
+          "kind": "function",
+          "start_line": 37,
+          "end_line": 37
+        },
+        {
+          "name": "ChartRenderer",
+          "kind": "class",
+          "start_line": 74,
+          "end_line": 226
+        },
+        {
+          "name": "getGridMargins",
+          "kind": "method",
+          "start_line": 75,
+          "end_line": 92
+        },
+        {
+          "name": "buildOption",
+          "kind": "method",
+          "start_line": 94,
+          "end_line": 225
+        },
+        {
+          "name": "applyFixed",
+          "kind": "function",
+          "start_line": 136,
+          "end_line": 146
+        },
+        {
+          "name": "defFmt",
+          "kind": "function",
+          "start_line": 155,
+          "end_line": 155
+        },
+        {
+          "name": "UIPlot",
+          "kind": "class",
+          "start_line": 228,
+          "end_line": 294
+        },
+        {
+          "name": "constructor",
+          "kind": "method",
+          "start_line": 230,
+          "end_line": 246
+        },
+        {
+          "name": "connectedCallback",
+          "kind": "method",
+          "start_line": 247,
+          "end_line": 254
+        },
+        {
+          "name": "disconnectedCallback",
+          "kind": "method",
+          "start_line": 255,
+          "end_line": 258
+        },
+        {
+          "name": "src",
+          "kind": "method",
+          "start_line": 259,
+          "end_line": 262
+        },
+        {
+          "name": "clear",
+          "kind": "method",
+          "start_line": 263,
+          "end_line": 269
+        },
+        {
+          "name": "render",
+          "kind": "method",
+          "start_line": 270,
+          "end_line": 293
+        }
+      ]
+    },
+    "src/Code.js": {
+      "symbols": [
+        {
+          "name": "ApiRes",
+          "kind": "class",
+          "start_line": 3,
+          "end_line": 6
+        },
+        {
+          "name": "success",
+          "kind": "method",
+          "start_line": 4,
+          "end_line": 4
+        },
+        {
+          "name": "error",
+          "kind": "method",
+          "start_line": 5,
+          "end_line": 5
+        },
+        {
+          "name": "withErr",
+          "kind": "function",
+          "start_line": 7,
+          "end_line": 9
+        },
+        {
+          "name": "onOpen",
+          "kind": "function",
+          "start_line": 11,
+          "end_line": 19
+        },
+        {
+          "name": "openSidebarENT",
+          "kind": "function",
+          "start_line": 21,
+          "end_line": 21
+        },
+        {
+          "name": "openSidebarADP",
+          "kind": "function",
+          "start_line": 22,
+          "end_line": 22
+        },
+        {
+          "name": "openSidebarDash",
+          "kind": "function",
+          "start_line": 23,
+          "end_line": 23
+        },
+        {
+          "name": "openSidebar",
+          "kind": "function",
+          "start_line": 25,
+          "end_line": 30
+        },
+        {
+          "name": "include",
+          "kind": "function",
+          "start_line": 32,
+          "end_line": 32
+        },
+        {
+          "name": "getSht",
+          "kind": "function",
+          "start_line": 34,
+          "end_line": 34
+        },
+        {
+          "name": "_fetchDT",
+          "kind": "function",
+          "start_line": 36,
+          "end_line": 44
+        },
+        {
+          "name": "pullDT",
+          "kind": "function",
+          "start_line": 45,
+          "end_line": 47
+        },
+        {
+          "name": "pullMult",
+          "kind": "function",
+          "start_line": 48,
+          "end_line": 56
+        },
+        {
+          "name": "_writeData",
+          "kind": "function",
+          "start_line": 58,
+          "end_line": 73
+        },
+        {
+          "name": "pushDT",
+          "kind": "function",
+          "start_line": 74,
+          "end_line": 76
+        },
+        {
+          "name": "pushMult",
+          "kind": "function",
+          "start_line": 77,
+          "end_line": 85
+        },
+        {
+          "name": "getReportTemplate",
+          "kind": "function",
+          "start_line": 87,
+          "end_line": 89
+        },
+        {
+          "name": "getWbState",
+          "kind": "function",
+          "start_line": 91,
+          "end_line": 100
+        },
+        {
+          "name": "genShts",
+          "kind": "function",
+          "start_line": 102,
+          "end_line": 119
+        },
+        {
+          "name": "setHdr",
+          "kind": "function",
+          "start_line": 105,
+          "end_line": 110
+        },
+        {
+          "name": "saveUserProp",
+          "kind": "function",
+          "start_line": 121,
+          "end_line": 126
+        },
+        {
+          "name": "loadUserProp",
+          "kind": "function",
+          "start_line": 127,
+          "end_line": 132
+        },
+        {
+          "name": "deleteUserProp",
+          "kind": "function",
+          "start_line": 133,
+          "end_line": 138
+        }
+      ]
+    },
+    "src/Component.html": {
+      "symbols": [
+        {
+          "name": "html",
+          "kind": "function",
+          "start_line": 4,
+          "end_line": 4
+        },
+        {
+          "name": "Tpl",
+          "kind": "class",
+          "start_line": 5,
+          "end_line": 168
+        },
+        {
+          "name": "option",
+          "kind": "method",
+          "start_line": 7,
+          "end_line": 14
+        },
+        {
+          "name": "options",
+          "kind": "method",
+          "start_line": 15,
+          "end_line": 19
+        },
+        {
+          "name": "select",
+          "kind": "method",
+          "start_line": 21,
+          "end_line": 28
+        },
+        {
+          "name": "input",
+          "kind": "method",
+          "start_line": 31,
+          "end_line": 39
+        },
+        {
+          "name": "field",
+          "kind": "method",
+          "start_line": 41,
+          "end_line": 45
+        },
+        {
+          "name": "fields",
+          "kind": "method",
+          "start_line": 47,
+          "end_line": 50
+        },
+        {
+          "name": "popover",
+          "kind": "method",
+          "start_line": 53,
+          "end_line": 57
+        },
+        {
+          "name": "colorBox",
+          "kind": "method",
+          "start_line": 58,
+          "end_line": 58
+        },
+        {
+          "name": "badge",
+          "kind": "method",
+          "start_line": 59,
+          "end_line": 59
+        },
+        {
+          "name": "universal",
+          "kind": "method",
+          "start_line": 62,
+          "end_line": 64
+        },
+        {
+          "name": "genHtml",
+          "kind": "method",
+          "start_line": 65,
+          "end_line": 65
+        },
+        {
+          "name": "row",
+          "kind": "method",
+          "start_line": 68,
+          "end_line": 68
+        },
+        {
+          "name": "row",
+          "kind": "method",
+          "start_line": 71,
+          "end_line": 71
+        },
+        {
+          "name": "cntr",
+          "kind": "method",
+          "start_line": 72,
+          "end_line": 72
+        },
+        {
+          "name": "gen",
+          "kind": "method",
+          "start_line": 73,
+          "end_line": 78
+        },
+        {
+          "name": "item",
+          "kind": "method",
+          "start_line": 81,
+          "end_line": 81
+        },
+        {
+          "name": "selectAll",
+          "kind": "method",
+          "start_line": 82,
+          "end_line": 82
+        },
+        {
+          "name": "btn",
+          "kind": "method",
+          "start_line": 85,
+          "end_line": 87
+        },
+        {
+          "name": "iconBtn",
+          "kind": "method",
+          "start_line": 88,
+          "end_line": 90
+        },
+        {
+          "name": "cell",
+          "kind": "method",
+          "start_line": 91,
+          "end_line": 93
+        },
+        {
+          "name": "row",
+          "kind": "method",
+          "start_line": 94,
+          "end_line": 96
+        },
+        {
+          "name": "build",
+          "kind": "method",
+          "start_line": 99,
+          "end_line": 119
+        },
+        {
+          "name": "sum",
+          "kind": "method",
+          "start_line": 127,
+          "end_line": 127
+        },
+        {
+          "name": "item",
+          "kind": "method",
+          "start_line": 128,
+          "end_line": 128
+        },
+        {
+          "name": "btn",
+          "kind": "method",
+          "start_line": 129,
+          "end_line": 129
+        },
+        {
+          "name": "col",
+          "kind": "method",
+          "start_line": 130,
+          "end_line": 130
+        },
+        {
+          "name": "row",
+          "kind": "method",
+          "start_line": 131,
+          "end_line": 131
+        },
+        {
+          "name": "addRow",
+          "kind": "method",
+          "start_line": 132,
+          "end_line": 132
+        },
+        {
+          "name": "genSel",
+          "kind": "method",
+          "start_line": 133,
+          "end_line": 140
+        },
+        {
+          "name": "tbl",
+          "kind": "method",
+          "start_line": 141,
+          "end_line": 166
+        }
+      ]
+    },
+    "src/CoreAction.html": {
+      "symbols": [
+        {
+          "name": "OBPDebugger",
+          "kind": "class",
+          "start_line": 4,
+          "end_line": 35
+        },
+        {
+          "name": "init",
+          "kind": "method",
+          "start_line": 6,
+          "end_line": 24
+        },
+        {
+          "name": "log",
+          "kind": "method",
+          "start_line": 25,
+          "end_line": 34
+        },
+        {
+          "name": "CoreIdlTm",
+          "kind": "class",
+          "start_line": 37,
+          "end_line": 56
+        },
+        {
+          "name": "init",
+          "kind": "method",
+          "start_line": 40,
+          "end_line": 55
+        },
+        {
+          "name": "rst",
+          "kind": "function",
+          "start_line": 42,
+          "end_line": 52
+        },
+        {
+          "name": "forceReload",
+          "kind": "function",
+          "start_line": 45,
+          "end_line": 49
+        },
+        {
+          "name": "CoreAct",
+          "kind": "class",
+          "start_line": 58,
+          "end_line": 249
+        },
+        {
+          "name": "ssId",
+          "kind": "method",
+          "start_line": 59,
+          "end_line": 59
+        },
+        {
+          "name": "ensureFetch",
+          "kind": "method",
+          "start_line": 62,
+          "end_line": 66
+        },
+        {
+          "name": "confirm",
+          "kind": "method",
+          "start_line": 67,
+          "end_line": 72
+        },
+        {
+          "name": "toast",
+          "kind": "method",
+          "start_line": 73,
+          "end_line": 75
+        },
+        {
+          "name": "closeDlg",
+          "kind": "method",
+          "start_line": 76,
+          "end_line": 83
+        },
+        {
+          "name": "withAsync",
+          "kind": "method",
+          "start_line": 84,
+          "end_line": 115
+        },
+        {
+          "name": "connectApp",
+          "kind": "method",
+          "start_line": 116,
+          "end_line": 146
+        },
+        {
+          "name": "startSession",
+          "kind": "method",
+          "start_line": 147,
+          "end_line": 160
+        },
+        {
+          "name": "actvTab",
+          "kind": "method",
+          "start_line": 161,
+          "end_line": 173
+        },
+        {
+          "name": "switchTab",
+          "kind": "method",
+          "start_line": 175,
+          "end_line": 180
+        },
+        {
+          "name": "rootGLB",
+          "kind": "method",
+          "start_line": 182,
+          "end_line": 230
+        },
+        {
+          "name": "routEvent",
+          "kind": "function",
+          "start_line": 183,
+          "end_line": 225
+        },
+        {
+          "name": "tglMulti",
+          "kind": "method",
+          "start_line": 231,
+          "end_line": 239
+        },
+        {
+          "name": "tglAllMulti",
+          "kind": "method",
+          "start_line": 240,
+          "end_line": 248
+        }
+      ]
+    },
+    "src/CoreMethod.html": {
+      "symbols": [
+        {
+          "name": "toObjArray",
+          "kind": "method",
+          "start_line": 5,
+          "end_line": 9
+        },
+        {
+          "name": "remapArry",
+          "kind": "method",
+          "start_line": 10,
+          "end_line": 14
+        },
+        {
+          "name": "remap",
+          "kind": "function",
+          "start_line": 12,
+          "end_line": 12
+        },
+        {
+          "name": "validateSelect",
+          "kind": "method",
+          "start_line": 15,
+          "end_line": 18
+        },
+        {
+          "name": "buildStats",
+          "kind": "method",
+          "start_line": 21,
+          "end_line": 39
+        },
+        {
+          "name": "fmt",
+          "kind": "function",
+          "start_line": 23,
+          "end_line": 23
+        },
+        {
+          "name": "calcScale",
+          "kind": "method",
+          "start_line": 40,
+          "end_line": 59
+        },
+        {
+          "name": "calcNiceTickUnits",
+          "kind": "method",
+          "start_line": 60,
+          "end_line": 106
+        },
+        {
+          "name": "genHeader",
+          "kind": "method",
+          "start_line": 107,
+          "end_line": 119
+        },
+        {
+          "name": "valdEnv",
+          "kind": "method",
+          "start_line": 120,
+          "end_line": 137
+        },
+        {
+          "name": "createHeaderValidator",
+          "kind": "function",
+          "start_line": 123,
+          "end_line": 124
+        },
+        {
+          "name": "genDB",
+          "kind": "method",
+          "start_line": 138,
+          "end_line": 153
+        },
+        {
+          "name": "fltrDB",
+          "kind": "method",
+          "start_line": 154,
+          "end_line": 169
+        },
+        {
+          "name": "filterDatasets",
+          "kind": "method",
+          "start_line": 170,
+          "end_line": 183
+        },
+        {
+          "name": "parseLodOrNum",
+          "kind": "method",
+          "start_line": 184,
+          "end_line": 188
+        },
+        {
+          "name": "getElmVal",
+          "kind": "method",
+          "start_line": 189,
+          "end_line": 192
+        },
+        {
+          "name": "makeCompositeKeyMap",
+          "kind": "method",
+          "start_line": 193,
+          "end_line": 195
+        },
+        {
+          "name": "createTicks",
+          "kind": "method",
+          "start_line": 196,
+          "end_line": 203
+        },
+        {
+          "name": "escapeJsonForScript",
+          "kind": "method",
+          "start_line": 204,
+          "end_line": 206
+        },
+        {
+          "name": "evaluate",
+          "kind": "method",
+          "start_line": 209,
+          "end_line": 215
+        },
+        {
+          "name": "calcCALB",
+          "kind": "method",
+          "start_line": 216,
+          "end_line": 227
+        },
+        {
+          "name": "calcReg",
+          "kind": "method",
+          "start_line": 228,
+          "end_line": 251
+        },
+        {
+          "name": "calcElementCalibrations",
+          "kind": "method",
+          "start_line": 252,
+          "end_line": 269
+        }
+      ]
+    },
+    "src/CoreState.html": {
+      "symbols": [
+        {
+          "name": "AppSt",
+          "kind": "class",
+          "start_line": 93,
+          "end_line": 228
+        },
+        {
+          "name": "constructor",
+          "kind": "method",
+          "start_line": 96,
+          "end_line": 171
+        },
+        {
+          "name": "createSec",
+          "kind": "function",
+          "start_line": 97,
+          "end_line": 97
+        },
+        {
+          "name": "proxy",
+          "kind": "method",
+          "start_line": 173,
+          "end_line": 173
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "start_line": 175,
+          "end_line": 178
+        },
+        {
+          "name": "res",
+          "kind": "function",
+          "start_line": 176,
+          "end_line": 176
+        },
+        {
+          "name": "set",
+          "kind": "method",
+          "start_line": 180,
+          "end_line": 212
+        },
+        {
+          "name": "subscribe",
+          "kind": "method",
+          "start_line": 214,
+          "end_line": 218
+        },
+        {
+          "name": "reset",
+          "kind": "method",
+          "start_line": 220,
+          "end_line": 227
+        }
+      ]
+    },
+    "src/CoreUI.html": {
+      "symbols": [
+        {
+          "name": "CoreUIPatcher",
+          "kind": "class",
+          "start_line": 3,
+          "end_line": 412
+        },
+        {
+          "name": "initDlg",
+          "kind": "method",
+          "start_line": 7,
+          "end_line": 29
+        },
+        {
+          "name": "applyDlg",
+          "kind": "function",
+          "start_line": 13,
+          "end_line": 26
+        },
+        {
+          "name": "promptDialog",
+          "kind": "method",
+          "start_line": 31,
+          "end_line": 61
+        },
+        {
+          "name": "onClose",
+          "kind": "function",
+          "start_line": 37,
+          "end_line": 52
+        },
+        {
+          "name": "resolveBindCtx",
+          "kind": "method",
+          "start_line": 63,
+          "end_line": 69
+        },
+        {
+          "name": "syncFormCtx",
+          "kind": "method",
+          "start_line": 71,
+          "end_line": 86
+        },
+        {
+          "name": "bindFormCtx",
+          "kind": "method",
+          "start_line": 88,
+          "end_line": 121
+        },
+        {
+          "name": "onActiveChange",
+          "kind": "function",
+          "start_line": 101,
+          "end_line": 101
+        },
+        {
+          "name": "ensureMSelectInit",
+          "kind": "method",
+          "start_line": 123,
+          "end_line": 127
+        },
+        {
+          "name": "patchMSelectRefs",
+          "kind": "method",
+          "start_line": 130,
+          "end_line": 142
+        },
+        {
+          "name": "patchMSelectOpts",
+          "kind": "method",
+          "start_line": 145,
+          "end_line": 163
+        },
+        {
+          "name": "patchElementVal",
+          "kind": "method",
+          "start_line": 166,
+          "end_line": 185
+        },
+        {
+          "name": "patchStatus",
+          "kind": "method",
+          "start_line": 187,
+          "end_line": 195
+        },
+        {
+          "name": "patchOpts",
+          "kind": "method",
+          "start_line": 197,
+          "end_line": 207
+        },
+        {
+          "name": "patchSrc",
+          "kind": "method",
+          "start_line": 209,
+          "end_line": 213
+        },
+        {
+          "name": "patchErrs",
+          "kind": "method",
+          "start_line": 215,
+          "end_line": 220
+        },
+        {
+          "name": "evalPhase",
+          "kind": "method",
+          "start_line": 222,
+          "end_line": 225
+        },
+        {
+          "name": "updateVisible",
+          "kind": "method",
+          "start_line": 227,
+          "end_line": 231
+        },
+        {
+          "name": "updateOpen",
+          "kind": "method",
+          "start_line": 233,
+          "end_line": 243
+        },
+        {
+          "name": "updateActiveDis",
+          "kind": "method",
+          "start_line": 245,
+          "end_line": 270
+        },
+        {
+          "name": "updateClass",
+          "kind": "method",
+          "start_line": 272,
+          "end_line": 276
+        },
+        {
+          "name": "updateText",
+          "kind": "method",
+          "start_line": 278,
+          "end_line": 282
+        },
+        {
+          "name": "updateDataset",
+          "kind": "method",
+          "start_line": 284,
+          "end_line": 292
+        },
+        {
+          "name": "routOptions",
+          "kind": "method",
+          "start_line": 294,
+          "end_line": 301
+        },
+        {
+          "name": "applyOpts",
+          "kind": "method",
+          "start_line": 304,
+          "end_line": 339
+        },
+        {
+          "name": "routBuilder",
+          "kind": "method",
+          "start_line": 342,
+          "end_line": 353
+        },
+        {
+          "name": "routOut",
+          "kind": "method",
+          "start_line": 356,
+          "end_line": 383
+        },
+        {
+          "name": "applyFn",
+          "kind": "function",
+          "start_line": 367,
+          "end_line": 379
+        },
+        {
+          "name": "buildAddon",
+          "kind": "method",
+          "start_line": 386,
+          "end_line": 411
+        },
+        {
+          "name": "CoreUI",
+          "kind": "class",
+          "start_line": 414,
+          "end_line": 452
+        },
+        {
+          "name": "constructor",
+          "kind": "method",
+          "start_line": 415,
+          "end_line": 418
+        },
+        {
+          "name": "getVal",
+          "kind": "method",
+          "start_line": 420,
+          "end_line": 422
+        },
+        {
+          "name": "build",
+          "kind": "method",
+          "start_line": 424,
+          "end_line": 436
+        },
+        {
+          "name": "getVal",
+          "kind": "function",
+          "start_line": 434,
+          "end_line": 434
+        },
+        {
+          "name": "update",
+          "kind": "method",
+          "start_line": 438,
+          "end_line": 451
+        }
+      ]
+    },
+    "src/Dash.html": {
+      "symbols": []
+    },
+    "src/Dash_App.html": {
+      "symbols": [
+        {
+          "name": "DashAct",
+          "kind": "class",
+          "start_line": 15,
+          "end_line": 257
+        },
+        {
+          "name": "ssId",
+          "kind": "method",
+          "start_line": 16,
+          "end_line": 16
+        },
+        {
+          "name": "requestLoadDB",
+          "kind": "method",
+          "start_line": 18,
+          "end_line": 37
+        },
+        {
+          "name": "requestOpenRepo",
+          "kind": "method",
+          "start_line": 39,
+          "end_line": 68
+        },
+        {
+          "name": "updFavTableSrc",
+          "kind": "method",
+          "start_line": 70,
+          "end_line": 92
+        },
+        {
+          "name": "selectFavItem",
+          "kind": "method",
+          "start_line": 94,
+          "end_line": 115
+        },
+        {
+          "name": "onFavNameChange",
+          "kind": "method",
+          "start_line": 117,
+          "end_line": 132
+        },
+        {
+          "name": "promptPasteDialog",
+          "kind": "method",
+          "start_line": 134,
+          "end_line": 137
+        },
+        {
+          "name": "addFavFromClipboard",
+          "kind": "method",
+          "start_line": 139,
+          "end_line": 217
+        },
+        {
+          "name": "delFavItem",
+          "kind": "method",
+          "start_line": 219,
+          "end_line": 247
+        },
+        {
+          "name": "initFavList",
+          "kind": "method",
+          "start_line": 249,
+          "end_line": 256
+        },
+        {
+          "name": "DashInit",
+          "kind": "class",
+          "start_line": 261,
+          "end_line": 285
+        },
+        {
+          "name": "start",
+          "kind": "method",
+          "start_line": 262,
+          "end_line": 284
+        }
+      ]
+    },
+    "src/Report.html": {
+      "symbols": []
+    },
+    "src/Report_APP.html": {
+      "symbols": [
+        {
+          "name": "SIDEFIX",
+          "kind": "class",
+          "start_line": 4,
+          "end_line": 19
+        },
+        {
+          "name": "lock",
+          "kind": "method",
+          "start_line": 6,
+          "end_line": 13
+        },
+        {
+          "name": "init",
+          "kind": "method",
+          "start_line": 14,
+          "end_line": 18
+        },
+        {
+          "name": "RptTpl",
+          "kind": "class",
+          "start_line": 23,
+          "end_line": 24
+        },
+        {
+          "name": "RepoSt",
+          "kind": "class",
+          "start_line": 27,
+          "end_line": 179
+        },
+        {
+          "name": "getSt",
+          "kind": "method",
+          "start_line": 29,
+          "end_line": 38
+        },
+        {
+          "name": "update",
+          "kind": "method",
+          "start_line": 40,
+          "end_line": 40
+        },
+        {
+          "name": "finalizePanel",
+          "kind": "method",
+          "start_line": 42,
+          "end_line": 44
+        },
+        {
+          "name": "initSt",
+          "kind": "method",
+          "start_line": 46,
+          "end_line": 108
+        },
+        {
+          "name": "exVals",
+          "kind": "function",
+          "start_line": 48,
+          "end_line": 51
+        },
+        {
+          "name": "initFltr",
+          "kind": "function",
+          "start_line": 53,
+          "end_line": 53
+        },
+        {
+          "name": "updateBaseScales",
+          "kind": "method",
+          "start_line": 110,
+          "end_line": 134
+        },
+        {
+          "name": "renewSymbState",
+          "kind": "method",
+          "start_line": 136,
+          "end_line": 145
+        },
+        {
+          "name": "renewPanel",
+          "kind": "method",
+          "start_line": 147,
+          "end_line": 178
+        },
+        {
+          "name": "ensureOpt",
+          "kind": "function",
+          "start_line": 163,
+          "end_line": 167
+        },
+        {
+          "name": "RepoAct",
+          "kind": "class",
+          "start_line": 182,
+          "end_line": 327
+        },
+        {
+          "name": "setBoardMode",
+          "kind": "method",
+          "start_line": 186,
+          "end_line": 201
+        },
+        {
+          "name": "changePanelRef",
+          "kind": "method",
+          "start_line": 203,
+          "end_line": 222
+        },
+        {
+          "name": "valdSymbAxis",
+          "kind": "method",
+          "start_line": 224,
+          "end_line": 239
+        },
+        {
+          "name": "resetSymb",
+          "kind": "method",
+          "start_line": 241,
+          "end_line": 243
+        },
+        {
+          "name": "addSymb",
+          "kind": "method",
+          "start_line": 245,
+          "end_line": 248
+        },
+        {
+          "name": "removeSymb",
+          "kind": "method",
+          "start_line": 250,
+          "end_line": 254
+        },
+        {
+          "name": "updSymb",
+          "kind": "method",
+          "start_line": 256,
+          "end_line": 266
+        },
+        {
+          "name": "setActiveScaleMode",
+          "kind": "method",
+          "start_line": 268,
+          "end_line": 278
+        },
+        {
+          "name": "changeRowAspect",
+          "kind": "method",
+          "start_line": 280,
+          "end_line": 289
+        },
+        {
+          "name": "actvTab",
+          "kind": "method",
+          "start_line": 291,
+          "end_line": 291
+        },
+        {
+          "name": "actvSub",
+          "kind": "method",
+          "start_line": 293,
+          "end_line": 293
+        },
+        {
+          "name": "actvPanel",
+          "kind": "method",
+          "start_line": 295,
+          "end_line": 295
+        },
+        {
+          "name": "updExportDesc",
+          "kind": "method",
+          "start_line": 297,
+          "end_line": 297
+        },
+        {
+          "name": "requestExport",
+          "kind": "method",
+          "start_line": 299,
+          "end_line": 299
+        },
+        {
+          "name": "requestCopyConfig",
+          "kind": "method",
+          "start_line": 301,
+          "end_line": 301
+        },
+        {
+          "name": "syncPanelDom",
+          "kind": "method",
+          "start_line": 303,
+          "end_line": 303
+        },
+        {
+          "name": "toggleMarginLink",
+          "kind": "method",
+          "start_line": 305,
+          "end_line": 315
+        },
+        {
+          "name": "syncMargin",
+          "kind": "method",
+          "start_line": 317,
+          "end_line": 326
+        },
+        {
+          "name": "RepoRend",
+          "kind": "class",
+          "start_line": 330,
+          "end_line": 495
+        },
+        {
+          "name": "_applyPanelLabels",
+          "kind": "method",
+          "start_line": 334,
+          "end_line": 356
+        },
+        {
+          "name": "syncPanelDom",
+          "kind": "method",
+          "start_line": 358,
+          "end_line": 422
+        },
+        {
+          "name": "genGph",
+          "kind": "method",
+          "start_line": 424,
+          "end_line": 435
+        },
+        {
+          "name": "genCharts",
+          "kind": "method",
+          "start_line": 437,
+          "end_line": 488
+        },
+        {
+          "name": "draw",
+          "kind": "function",
+          "start_line": 444,
+          "end_line": 468
+        },
+        {
+          "name": "executePrint",
+          "kind": "function",
+          "start_line": 473,
+          "end_line": 481
+        },
+        {
+          "name": "qRend",
+          "kind": "method",
+          "start_line": 490,
+          "end_line": 494
+        },
+        {
+          "name": "RepoExport",
+          "kind": "class",
+          "start_line": 498,
+          "end_line": 682
+        },
+        {
+          "name": "_buildFavObj",
+          "kind": "method",
+          "start_line": 501,
+          "end_line": 519
+        },
+        {
+          "name": "getFormattedDate",
+          "kind": "method",
+          "start_line": 521,
+          "end_line": 524
+        },
+        {
+          "name": "downloadFile",
+          "kind": "method",
+          "start_line": 526,
+          "end_line": 531
+        },
+        {
+          "name": "updExportDesc",
+          "kind": "method",
+          "start_line": 533,
+          "end_line": 539
+        },
+        {
+          "name": "setupPrintListener",
+          "kind": "method",
+          "start_line": 541,
+          "end_line": 553
+        },
+        {
+          "name": "_prepData",
+          "kind": "method",
+          "start_line": 555,
+          "end_line": 573
+        },
+        {
+          "name": "_buildHTML",
+          "kind": "method",
+          "start_line": 575,
+          "end_line": 598
+        },
+        {
+          "name": "esc",
+          "kind": "function",
+          "start_line": 578,
+          "end_line": 578
+        },
+        {
+          "name": "genPDF",
+          "kind": "method",
+          "start_line": 600,
+          "end_line": 613
+        },
+        {
+          "name": "genStaticHTML",
+          "kind": "method",
+          "start_line": 615,
+          "end_line": 621
+        },
+        {
+          "name": "genApp",
+          "kind": "method",
+          "start_line": 623,
+          "end_line": 628
+        },
+        {
+          "name": "requestExport",
+          "kind": "method",
+          "start_line": 630,
+          "end_line": 649
+        },
+        {
+          "name": "restoreUI",
+          "kind": "function",
+          "start_line": 636,
+          "end_line": 640
+        },
+        {
+          "name": "requestCopyConfig",
+          "kind": "method",
+          "start_line": 651,
+          "end_line": 681
+        },
+        {
+          "name": "RepoReact",
+          "kind": "class",
+          "start_line": 685,
+          "end_line": 726
+        },
+        {
+          "name": "debounce",
+          "kind": "method",
+          "start_line": 688,
+          "end_line": 691
+        },
+        {
+          "name": "setup",
+          "kind": "method",
+          "start_line": 693,
+          "end_line": 725
+        },
+        {
+          "name": "syncAria",
+          "kind": "function",
+          "start_line": 694,
+          "end_line": 694
+        },
+        {
+          "name": "setupMarginSync",
+          "kind": "function",
+          "start_line": 707,
+          "end_line": 722
+        },
+        {
+          "name": "syncAll",
+          "kind": "function",
+          "start_line": 710,
+          "end_line": 715
+        },
+        {
+          "name": "RepoInit",
+          "kind": "class",
+          "start_line": 729,
+          "end_line": 826
+        },
+        {
+          "name": "init",
+          "kind": "method",
+          "start_line": 731,
+          "end_line": 823
+        },
+        {
+          "name": "start",
+          "kind": "method",
+          "start_line": 825,
+          "end_line": 825
+        }
+      ]
+    },
+    "src/Report_Logic.html": {
+      "symbols": [
+        {
+          "name": "ReportMethod",
+          "kind": "class",
+          "start_line": 85,
+          "end_line": 262
+        },
+        {
+          "name": "buildGraphStyle",
+          "kind": "method",
+          "start_line": 87,
+          "end_line": 110
+        },
+        {
+          "name": "pt2px",
+          "kind": "function",
+          "start_line": 88,
+          "end_line": 88
+        },
+        {
+          "name": "mm2px",
+          "kind": "function",
+          "start_line": 89,
+          "end_line": 89
+        },
+        {
+          "name": "getPanelOffsets",
+          "kind": "method",
+          "start_line": 113,
+          "end_line": 121
+        },
+        {
+          "name": "calculatePanelMetrics",
+          "kind": "method",
+          "start_line": 124,
+          "end_line": 130
+        },
+        {
+          "name": "calculatePanelMetricsAspect",
+          "kind": "method",
+          "start_line": 133,
+          "end_line": 146
+        },
+        {
+          "name": "generateExportHTML",
+          "kind": "method",
+          "start_line": 149,
+          "end_line": 160
+        },
+        {
+          "name": "calculateBaseScales",
+          "kind": "method",
+          "start_line": 163,
+          "end_line": 185
+        },
+        {
+          "name": "calcForMetrics",
+          "kind": "function",
+          "start_line": 166,
+          "end_line": 181
+        },
+        {
+          "name": "_makeCustomScale",
+          "kind": "method",
+          "start_line": 189,
+          "end_line": 198
+        },
+        {
+          "name": "buildChartConfig",
+          "kind": "method",
+          "start_line": 201,
+          "end_line": 261
+        },
+        {
+          "name": "resolveUnit",
+          "kind": "function",
+          "start_line": 227,
+          "end_line": 227
+        }
+      ]
+    },
+    "src/Tracer5i.html": {
+      "symbols": []
+    },
+    "src/Tracer5i_App.html": {
+      "symbols": [
+        {
+          "name": "getIdx",
+          "kind": "function",
+          "start_line": 63,
+          "end_line": 63
+        },
+        {
+          "name": "getScanID",
+          "kind": "function",
+          "start_line": 65,
+          "end_line": 65
+        },
+        {
+          "name": "fmt",
+          "kind": "function",
+          "start_line": 93,
+          "end_line": 93
+        },
+        {
+          "name": "extract",
+          "kind": "function",
+          "start_line": 94,
+          "end_line": 102
+        },
+        {
+          "name": "ENTAct",
+          "kind": "class",
+          "start_line": 142,
+          "end_line": 267
+        },
+        {
+          "name": "ssId",
+          "kind": "method",
+          "start_line": 143,
+          "end_line": 143
+        },
+        {
+          "name": "valdPref",
+          "kind": "method",
+          "start_line": 144,
+          "end_line": 154
+        },
+        {
+          "name": "updRawRefs",
+          "kind": "method",
+          "start_line": 156,
+          "end_line": 159
+        },
+        {
+          "name": "valdRawRefs",
+          "kind": "method",
+          "start_line": 160,
+          "end_line": 164
+        },
+        {
+          "name": "valdExtrRefs",
+          "kind": "method",
+          "start_line": 165,
+          "end_line": 171
+        },
+        {
+          "name": "loadRaw",
+          "kind": "method",
+          "start_line": 172,
+          "end_line": 189
+        },
+        {
+          "name": "stateDI",
+          "kind": "method",
+          "start_line": 190,
+          "end_line": 205
+        },
+        {
+          "name": "genList",
+          "kind": "method",
+          "start_line": 206,
+          "end_line": 215
+        },
+        {
+          "name": "valdList",
+          "kind": "method",
+          "start_line": 216,
+          "end_line": 223
+        },
+        {
+          "name": "runExtr",
+          "kind": "method",
+          "start_line": 224,
+          "end_line": 243
+        },
+        {
+          "name": "pushExtr",
+          "kind": "method",
+          "start_line": 244,
+          "end_line": 266
+        },
+        {
+          "name": "ADPAct",
+          "kind": "class",
+          "start_line": 270,
+          "end_line": 406
+        },
+        {
+          "name": "ssId",
+          "kind": "method",
+          "start_line": 271,
+          "end_line": 271
+        },
+        {
+          "name": "loadDB",
+          "kind": "method",
+          "start_line": 272,
+          "end_line": 289
+        },
+        {
+          "name": "fltrDB",
+          "kind": "method",
+          "start_line": 290,
+          "end_line": 304
+        },
+        {
+          "name": "setSymb",
+          "kind": "method",
+          "start_line": 305,
+          "end_line": 314
+        },
+        {
+          "name": "resetSymb",
+          "kind": "method",
+          "start_line": 315,
+          "end_line": 315
+        },
+        {
+          "name": "valdAxis",
+          "kind": "method",
+          "start_line": 316,
+          "end_line": 328
+        },
+        {
+          "name": "addSymb",
+          "kind": "method",
+          "start_line": 329,
+          "end_line": 329
+        },
+        {
+          "name": "removeSymb",
+          "kind": "method",
+          "start_line": 330,
+          "end_line": 333
+        },
+        {
+          "name": "updSymb",
+          "kind": "method",
+          "start_line": 334,
+          "end_line": 339
+        },
+        {
+          "name": "genPrev",
+          "kind": "method",
+          "start_line": 340,
+          "end_line": 362
+        },
+        {
+          "name": "pushCrct",
+          "kind": "method",
+          "start_line": 363,
+          "end_line": 381
+        },
+        {
+          "name": "pushStdz",
+          "kind": "method",
+          "start_line": 382,
+          "end_line": 389
+        },
+        {
+          "name": "renewADPState",
+          "kind": "method",
+          "start_line": 390,
+          "end_line": 405
+        },
+        {
+          "name": "TrcInit",
+          "kind": "class",
+          "start_line": 408,
+          "end_line": 449
+        },
+        {
+          "name": "start",
+          "kind": "method",
+          "start_line": 409,
+          "end_line": 448
+        }
+      ]
+    }
+  }
+}

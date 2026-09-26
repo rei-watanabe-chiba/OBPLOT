@@ -1,7 +1,5 @@
 <!-- src/Tracer5i_App.html -->
 <script>
-
-
   const ENT_SCHEMA = {
       elements: [
         { part: "entFieldset", disablePhase: () => State.get("GLB.isLocked") },
@@ -108,9 +106,9 @@ const ADP_SCHEMA = {
       valdPxrf(pxrfDT, newDT) {
         if (!pxrfDT?.length || !newDT?.length) return { isDup: false, data: newDT };
         const h = pxrfDT[0];
-        const iDB = h.indexOf(GLB.idx.key1), iID = h.indexOf(GLB.idx.key2);
-        const newKeys = new Set(newDT.slice(1).map(r => `${r[iDB]}_${r[iID]}`));
-        const fltrEx = pxrfDT.slice(1).filter(r => !newKeys.has(`${r[iDB]}_${r[iID]}`));
+        const iDB = h.indexOf(GLB.idx.key1), iP3 = h.indexOf(GLB.idx.p3);
+        const newKeys = new Set(newDT.slice(1).map(r => `${r[iDB]}_${r[iP3]}`));
+        const fltrEx = pxrfDT.slice(1).filter(r => !newKeys.has(`${r[iDB]}_${r[iP3]}`));
         return fltrEx.length !== pxrfDT.length - 1 ? { isDup: true, data: [pxrfDT[0], ...fltrEx, ...newDT.slice(1)] } : { isDup: false, data: null };
       }
     },
@@ -119,7 +117,7 @@ const ADP_SCHEMA = {
       genNewPxrf(pxrfDT, modeMap) {
         const hdr = CoreMethod.Util.genHeader('pxrf');
         const data = pxrfDT.map(r => {
-          const row = [r['計測ID'], r[GLB.idx.key1], r[GLB.idx.key2], r[GLB.idx.p1], r[GLB.idx.p2], r[GLB.idx.wd1], r[GLB.idx.wd2]];
+          const row = [r[GLB.idx.p3], r[GLB.idx.key1], r[GLB.idx.key2], r[GLB.idx.p1], r[GLB.idx.p2], r[GLB.idx.wd1], r[GLB.idx.wd2]];
           GLB.valElms.forEach(elm => row.push(CoreMethod.Util.getElmVal(r, elm, modeMap, GLB.optElms).val ?? ""));
           GLB.valElms.forEach(elm => row.push(CoreMethod.Util.getElmVal(r, elm, modeMap, GLB.optElms).err ?? ""));
           return row;
@@ -135,8 +133,6 @@ const ADP_SCHEMA = {
     }
   });
   
-
-
 
   // --- ENTAct (旧 T1Action: データ読込・抽出) ---
   class ENTAct {

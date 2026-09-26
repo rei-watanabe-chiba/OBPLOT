@@ -31,7 +31,7 @@
 
     static genBaseDT(pxrfDT, wdxrfDT, conf) {
       if (!pxrfDT?.length || !wdxrfDT?.length) return [];
-      const { key1: k1, key2: k2, p1: p1, p2: p2, wd1: w1, wd2: w2 } = GLB.idx;
+      const { key1: k1, key2: k2, p1: p1, p2: p2, p3: p3, wd1: w1, wd2: w2 } = GLB.idx;
       const wMap = CoreMethod.Util.makeCompositeKeyMap(wdxrfDT, [k1, k2]);
       
       const getV = (r, e) => r[e] !== undefined ? { val: r[e], err: r[`${e}_Err`] } : CoreMethod.Util.getElmVal(r, e, conf.modeMap, GLB.optElms);
@@ -57,7 +57,7 @@
         if (conf.itemMap?.length && !conf.itemMap.includes(itemVal)) return a;
         const w = wMap.get(`${String(r[k1])}_${String(r[k2])}`);
         if (!w) return a;
-        const pDT = { '計測ID': r['計測ID'], [k1]: r[k1], [k2]: r[k2], [p1]: itemVal, [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
+        const pDT = { [p3]: r[p3], [k1]: r[k1], [k2]: r[k2], [p1]: itemVal, [p2]: r[p2], [w1]: r[w1], [w2]: r[w2] };
         GLB.valElms.forEach(e => {
           const { val: rawV, err } = getV(r, e);
           let v = CoreMethod.Util.parseLodOrNum(rawV, minMap[e], conf.useLOD);
@@ -167,7 +167,7 @@
         const shp = rawShp === 'emptyCircle' ? 'circle' : rawShp; 
         const bClr = CSSToken.get(d._forceClr || rl?.clr);
         return {
-          value: [d.x, d.y], '計測ID': d['計測ID'], [GLB.idx.key1]: d[GLB.idx.key1], [GLB.idx.key2]: d[GLB.idx.key2], [GLB.idx.p1]: d[GLB.idx.p1], [GLB.idx.p2]: d[GLB.idx.p2], [GLB.idx.wd1]: d[GLB.idx.wd1], [GLB.idx.wd2]: d[GLB.idx.wd2],
+          value: [d.x, d.y], [GLB.idx.p3]: d[GLB.idx.p3], [GLB.idx.key1]: d[GLB.idx.key1], [GLB.idx.key2]: d[GLB.idx.key2], [GLB.idx.p1]: d[GLB.idx.p1], [GLB.idx.p2]: d[GLB.idx.p2], [GLB.idx.wd1]: d[GLB.idx.wd1], [GLB.idx.wd2]: d[GLB.idx.wd2],
           symbol: shp, symbolSize: shp.startsWith('path://') ? STYLE.symbol.pathSize : STYLE.symbol.baseSize,
           itemStyle: { color: isEmpty ? 'transparent' : bClr, borderColor: bClr, borderWidth: STYLE.symbol.borderW },
           _isDef: rl === defRl
