@@ -74,7 +74,7 @@ if %errorlevel% neq 0 (
 )
 git push origin dev
 echo [INFO] Pushing to GAS...
-call clasp push
+cmd /c clasp push
 goto END_PROMPT
 
 :: ----------------------------------------------------
@@ -86,7 +86,7 @@ echo === [2] Pull GAS edits to local dev ===
 cd /d "C:\LLMdict\gemini\OBPLOT_env"
 git checkout dev
 echo [INFO] Pulling from GAS...
-call clasp pull
+cmd /c clasp pull
 call :CLEAN_GITIGNORE
 git add -A
 git diff --cached --quiet
@@ -108,7 +108,7 @@ cd /d "C:\LLMdict\gemini\OBPLOT_env"
 git checkout main
 git push origin main
 echo [INFO] Pushing stable main to GAS...
-call clasp push
+cmd /c clasp push
 echo [INFO] Returning to dev branch...
 git checkout dev
 goto END_PROMPT
