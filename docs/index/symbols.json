@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-21T07:07:42.697Z",
+  "generated_at": "2026-10-21T07:30:54.962Z",
   "root": "src/gas",
   "files": {
     "src/gas/Adapter.html": {
@@ -847,7 +847,7 @@
           "kind": "method",
           "start_line": 116,
           "end_line": 146,
-          "docstring": "スプレッドシートIDと設定オブジェクトを受け取り、CoreMethod.Util.valdEnvでシート構成を検証し、不足シートがあればユーザー確認後にAPI.genShtsで一括生成してGLB.ssIdを確定する。"
+          "docstring": "スプレッドシートIDとスキーマを受け取り、高速化された環境確認（API.getWbState）でシート構成を検証し、不足シート生成（API.genShts）を経てGLB.ssIdを確定・アプリを接続する非同期メソッド。"
         },
         {
           "name": "startSession",
@@ -2087,7 +2087,7 @@
           "name": "ENTAct",
           "kind": "class",
           "start_line": 128,
-          "end_line": 421,
+          "end_line": 409,
           "docstring": "Tracer5iデータの抽出・格納から検量線プレビュー・標準化（PXRF出力）までの一連のワークフローを統合管理する静的アクションクラス。"
         },
         {
@@ -2154,109 +2154,102 @@
           "docstring": "Filelistシートを`API.pullDT`で再取得してバリデーションを実行し、エラー列付きで`API.pushDT`によりシートを上書き更新する非同期メソッド。"
         },
         {
-          "name": "initDB",
-          "kind": "method",
-          "start_line": 232,
-          "end_line": 247,
-          "docstring": "アプリ起動時にバックグラウンドで呼び出され、tracer5i・WDXRF・検量線シートのデータを一括フェッチ（API.pullDT）してStateのデータベース（ENTST.DB）を初期構築する非同期初期化メソッド。"
-        },
-        {
           "name": "syncTrcDB",
           "kind": "method",
-          "start_line": 248,
-          "end_line": 262,
-          "docstring": "データ抽出・格納（runExtr）完了時に呼び出され、更新されたtracer5iシートのデータを再フェッチ（API.pullDT）してState内のデータベース（ENTST.DB.tracer5i）を即時同期する非同期メソッド。"
+          "start_line": 232,
+          "end_line": 249,
+          "docstring": "抽出完了時に呼び出され、State内のtracer5i・WDXRF・検量線データを同期してデータベース（ENTST.DB）を更新し、データセット選択肢（database一覧）を即時構築するメソッド。"
         },
         {
           "name": "runExtr",
           "kind": "method",
-          "start_line": 263,
-          "end_line": 310,
-          "docstring": "ファイルリストの再検証、Resultsシートからのデータ抽出(Mtd.ENT.genExtr)、およびtracer5iシートとの重複判定(Mtd.ENT.valdPxrf)を経て、ファイルリストとtracer5iシートへ直接一括書き出し(API.pushMult)を行うアクションメソッド"
+          "start_line": 250,
+          "end_line": 298,
+          "docstring": "ファイルリスト検証・データ抽出・重複判定を行い、シート書き出しと同時にWDXRF・検量線データを遅延一括取得（API.pullMult、キャッシュ時はスキップ）してtracer5iと同期するアクションメソッド。"
         },
         {
           "name": "fltrDB",
           "kind": "method",
-          "start_line": 311,
-          "end_line": 329,
+          "start_line": 299,
+          "end_line": 317,
           "docstring": "選択されたデータベースフィルタ（ASGN.refs.filter）に基づいてpXRF・WDXRFデータを絞り込み、フェーズをFILTEREDへ進めてプレビューおよび標準化セクションをアンロックする非同期メソッド。"
         },
         {
           "name": "resetSymb",
           "kind": "method",
-          "start_line": 330,
-          "end_line": 330,
+          "start_line": 318,
+          "end_line": 318,
           "docstring": "State内のシンボルルール一覧（ENTST.SYMB.refs.rls）を初期状態にリセットするメソッド。"
         },
         {
           "name": "valdAxis",
           "kind": "method",
-          "start_line": 331,
-          "end_line": 343,
+          "start_line": 319,
+          "end_line": 331,
           "docstring": "シンボルのベース軸キー（baseKey）の変更を検知し、ユーザー確認後にbaseKeyを更新してシンボルルールをリセットするバリデーション（軸設定検証）メソッド。"
         },
         {
           "name": "addSymb",
           "kind": "method",
-          "start_line": 344,
-          "end_line": 344,
+          "start_line": 332,
+          "end_line": 332,
           "docstring": "シンボルルール一覧に新しいルール行（デフォルト形状・色付き）を追加してStateを更新するメソッド。"
         },
         {
           "name": "removeSymb",
           "kind": "method",
-          "start_line": 345,
-          "end_line": 348,
+          "start_line": 333,
+          "end_line": 336,
           "docstring": "指定キーのシンボルルールをリストから削除してStateを更新するメソッド。"
         },
         {
           "name": "updSymb",
           "kind": "method",
-          "start_line": 349,
-          "end_line": 354,
+          "start_line": 337,
+          "end_line": 342,
           "docstring": "指定インデックスのシンボルルールの指定プロパティ（形状・色など）を更新してStateに反映するメソッド。"
         },
         {
           "name": "genPrev",
           "kind": "method",
-          "start_line": 355,
-          "end_line": 377,
+          "start_line": 343,
+          "end_line": 365,
           "docstring": "CHARTDT.genChartDBでキャリブレーション用プロットデータ・回帰統計を生成し、EChartsチャート設定を組み立ててStateに格納することで検量線プレビューを更新する非同期メソッド。"
         },
         {
           "name": "pushCrct",
           "kind": "method",
-          "start_line": 378,
-          "end_line": 396,
+          "start_line": 366,
+          "end_line": 384,
           "docstring": "全対象元素の検量線係数（傾き・切片）を計算して検量線（crct）シートに出力（または上書き）し、State内の検量線データを更新する非同期メソッド。"
         },
         {
           "name": "pushStdz",
           "kind": "method",
-          "start_line": 397,
-          "end_line": 404,
+          "start_line": 385,
+          "end_line": 392,
           "docstring": "pXRFデータをモードマップに従って標準化（genNewPxrf）し、PXRFシートに出力する非同期メソッド。"
         },
         {
           "name": "renewENTState",
           "kind": "method",
-          "start_line": 405,
-          "end_line": 420,
+          "start_line": 393,
+          "end_line": 408,
           "docstring": "pXRFデータやシンボル設定の変更をトリガーに呼ばれ、アイテム一覧・軸値一覧・シンボル操作設定を再計算してStateへ反映する状態更新メソッド。"
         },
         {
           "name": "TrcInit",
           "kind": "class",
-          "start_line": 423,
-          "end_line": 452,
-          "docstring": "Tracer5iアプリ（単一画面直列ワークフロー）の起動シーケンスを管理する静的クラス。UIオートメーターの構築・State購読の設定・初期DB読込・セッション開始を担当する。"
+          "start_line": 411,
+          "end_line": 440,
+          "docstring": "Tracer5iアプリ（単一画面直列ワークフロー）の起動シーケンスを管理する静的クラス。UIオートメーターの構築・State購読の設定・セッション開始を担当する。"
         },
         {
           "name": "start",
           "kind": "method",
-          "start_line": 424,
-          "end_line": 451,
-          "docstring": "CoreUI・ENTオートメーターを構築し、State購読の登録と初期DB読込（ENTAct.initDB）を経てセッションを開始するアプリ起動エントリーポイントメソッド。"
+          "start_line": 412,
+          "end_line": 439,
+          "docstring": "CoreUI・ENTオートメーターを構築し、State購読の登録を経てセッションを開始するアプリ起動エントリーポイントメソッド。"
         }
       ]
     }

@@ -229,47 +229,38 @@
         return statArr;
       });
     }
-    static async initDB() {
-      State.set("ENTST.PREF.status", ["loading", "初期データ読込中..."]);
-      try {
-        const [pData, wData, cData] = await CoreAct.ensureFetch(ENTAct.ssId, [GLB.rawShts.tracer5i, GLB.rawShts.wdxrf, GLB.appShts.crct]);
-        State.set({
-          "ENTST.ASGN.data.rawTrcDT": pData || null,
-          "ENTST.ASGN.data.rawWdxrfDT": wData || null,
-          "ENTST.ASGN.data.crctDT": cData || []
-        });
-        if (pData?.length > 1 && wData?.length > 1) {
-          ENTAct.syncTrcDB(pData, wData, false);
-        }
-      } finally {
-        State.set("ENTST.PREF.status", ["hidden", ""]);
-      }
-    }
-    static syncTrcDB(pData, wData = State.get("ENTST.ASGN.data.rawWdxrfDT"), showStatus = true) {
+    static syncTrcDB(pData, wData = State.get("ENTST.ASGN.data.rawWdxrfDT"), cData = null) {
+      const { ASGN, CALB, STDZ } = State.proxy.ENTST;
+      const nextCrct = cData !== null ? cData : (ASGN.data.crctDT || []);
       if (!pData || pData.length <= 1 || !wData || wData.length <= 1) {
-        State.set("ENTST.ASGN.data.rawTrcDT", pData || null);
+        State.set({
+          "ENTST.ASGN.data": { ...ASGN.data, rawTrcDT: pData || null, rawWdxrfDT: wData || null, crctDT: nextCrct }
+        });
         return;
       }
       const { pxrfDT: wrapPXRF, wdxrfDT: wrapWDXRF, dbs } = CoreMethod.Util.genDB(pData, wData, { mixWD: true });
-      const { ASGN, CALB, STDZ } = State.proxy.ENTST;
       State.set({
-        "ENTST.ASGN.data": { ...ASGN.data, rawTrcDT: pData, rawWdxrfDT: wData, wrapPXRF, wrapWDXRF },
+        "ENTST.ASGN.data": { ...ASGN.data, rawTrcDT: pData, rawWdxrfDT: wData, crctDT: nextCrct, wrapPXRF, wrapWDXRF },
         "ENTST.ASGN.refs": { ...ASGN.refs, available: dbs, filter: dbs },
         "ENTST.CALB.refs": { ...CALB.refs, modeMap: [...GLB.optElms], calElms: [...GLB.valElms] },
         "ENTST.STDZ.refs": { ...STDZ.refs, modeMap: [...GLB.optElms] },
-        ...(showStatus && { "ENTST.ASGN.status": ["message", `対象database: ${dbs.length}件`] })
+        "ENTST.ASGN.status": ["message", `対象database: ${dbs.length}件`]
       });
     }
     static async runExtr() {
       State.set("GLB.isLocked", true);
       State.set("ENTST.EXTR.status", ["loading", "データ確認・抽出中..."]);
-      let chkRes, extrDT, vFileDT, trcDT;
+      let chkRes, extrDT, vFileDT, trcDT, wData, cData;
       try {
-        const [fRes, rRes, tRes] = await API.pullMult(ENTAct.ssId, [
+        const cachedW = State.get("ENTST.ASGN.data.rawWdxrfDT");
+        const needInitDB = !cachedW || cachedW.length <= 1;
+        const reqs = [
           { sht: GLB.appShts.filelist, qCol: 5, lCol: 5 },
           { sht: GLB.rawShts.results },
-          { sht: GLB.rawShts.tracer5i }
-        ]);
+          { sht: GLB.rawShts.tracer5i },
+          ...(needInitDB ? [{ sht: GLB.rawShts.wdxrf }, { sht: GLB.appShts.crct }] : [])
+        ];
+        const [fRes, rRes, tRes, wRes, cRes] = await API.pullMult(ENTAct.ssId, reqs);
         if (!fRes.success) throw new Error(fRes.msg);
         if (!rRes.success) throw new Error(rRes.msg);
         const diRes = await ENTAct.stateDI(fRes.pld.data, "extract");
@@ -282,6 +273,8 @@
         extrDT = Mtd.ENT.genExtr(vFileDT, rRes.pld.data, State.get("ENTST.EXTR.refs"));
         if (!extrDT || extrDT.length <= 1) throw new Error("対象データなし");
         trcDT = (tRes?.success && tRes.pld?.data) ? tRes.pld.data : [CoreMethod.Util.genHeader('tracer5i')];
+        wData = needInitDB ? ((wRes?.success && wRes.pld?.data) ? wRes.pld.data : null) : cachedW;
+        cData = needInitDB ? ((cRes?.success && cRes.pld?.data) ? cRes.pld.data : []) : null;
         chkRes = Mtd.ENT.valdPxrf(trcDT, extrDT);
       } catch (e) {
         State.set("ENTST.EXTR.status", ["error", e.message]);
@@ -298,12 +291,7 @@
         const errRes = pRes?.find(r => !r.success);
         if (errRes) throw new Error(errRes.msg);
         const finalTrcDT = chkRes.isDup ? chkRes.data : [...trcDT, ...extrDT.slice(1)];
-        let wData = State.get("ENTST.ASGN.data.rawWdxrfDT");
-        if (!wData || wData.length <= 1) {
-          const [fetchedW] = await CoreAct.ensureFetch(ENTAct.ssId, [GLB.rawShts.wdxrf]);
-          wData = fetchedW || null;
-        }
-        ENTAct.syncTrcDB(finalTrcDT, wData, true);
+        ENTAct.syncTrcDB(finalTrcDT, wData, cData);
         State.set("ENTST.phase", ENT_PHS.OUTPUT);
         return `格納完了: ${extrDT.length - 1} 件`;
       });
@@ -443,7 +431,7 @@
       State.subscribe("ENTST.ASGN.data.pxrfDT", () => ENTAct.renewENTState());
       State.subscribe("ENTST.SYMB.refs.baseKey", () => ENTAct.renewENTState());
       State.subscribe("ENTST.SYMB.refs.rls", () => ENTAct.renewENTState());
-      const hooks = { onBeforeInit: () => ENTAct.initDB() };
+      const hooks = {};
       const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";
       CoreAct.actvTab('entry');
       const initCfg = CoreAct.cfgRslv('entry');

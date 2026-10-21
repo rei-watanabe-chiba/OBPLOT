@@ -118,7 +118,7 @@
       const statPath = cfg.statPath;
       try {
         State.set(statPath, ["loading", "環境確認中..."]);
-        const targetShts = GLB.schema[cfg.schemaKey].map(s => s.name);
+        const targetShts = GLB.schema[cfg.schemaKey].filter(s => s.validRule).map(s => s.name);
         const curShts = await API.getWbState(ssId, targetShts);
         const { errs, buildPlan, missingNames } = CoreMethod.Util.valdEnv(curShts, cfg.schemaKey);
         if (errs.length) throw new Error(`【検証エラー】\n${errs.join('\n')}\n\nGitHub仕様をご確認ください。`);
