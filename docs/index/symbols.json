@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28T08:53:54.055Z",
+  "generated_at": "2026-10-21T05:55:23.242Z",
   "root": "src/gas",
   "files": {
     "src/gas/Adapter.html": {
@@ -1077,64 +1077,64 @@
         {
           "name": "AppSt",
           "kind": "class",
-          "start_line": 93,
-          "end_line": 228,
+          "start_line": 92,
+          "end_line": 227,
           "docstring": "アプリケーション全体のリアクティブな状態（State）を一元管理するクラス。ドット区切りのパスによるネストされた状態の取得・設定・購読・リセットをサポートし、循環更新ガードも備える。"
         },
         {
           "name": "constructor",
           "kind": "method",
-          "start_line": 96,
-          "end_line": 171,
+          "start_line": 95,
+          "end_line": 170,
           "docstring": "GLB定数を参照してENTST（データ入力）・ADPST（アダプター）・DashST（ダッシュボード）・RPTST（レポート）の各セクション初期状態を構築し、状態ツリーとリスナーマップを初期化する。"
         },
         {
           "name": "createSec",
           "kind": "function",
-          "start_line": 97,
-          "end_line": 97,
+          "start_line": 96,
+          "end_line": 96,
           "docstring": "セクション単位のStateオブジェクト（status, data, refs, flags）をデフォルト値でファクトリ生成するローカル関数。各UIセクション初期化に使用される。"
         },
         {
           "name": "proxy",
           "kind": "method",
-          "start_line": 173,
-          "end_line": 173,
+          "start_line": 172,
+          "end_line": 172,
           "docstring": "内部状態オブジェクト（#state）を直接参照として返すゲッター。読み取り専用参照として使用される。"
         },
         {
           "name": "get",
           "kind": "method",
-          "start_line": 175,
-          "end_line": 178,
+          "start_line": 174,
+          "end_line": 177,
           "docstring": "ドット区切りのパス文字列または配列を受け取り、内部状態ツリーから対応する値を取得して返す。パス配列を渡した場合は値の配列を返す。"
         },
         {
           "name": "res",
           "kind": "function",
-          "start_line": 176,
-          "end_line": 176,
+          "start_line": 175,
+          "end_line": 175,
           "docstring": "単一パス（文字列または配列）に対してネストされた状態値をreduceで取り出すローカル関数。get メソッド内部で使用される。"
         },
         {
           "name": "set",
           "kind": "method",
-          "start_line": 180,
-          "end_line": 212,
+          "start_line": 179,
+          "end_line": 211,
           "docstring": "ドット区切りのパスまたはオブジェクト形式で状態値を更新し、変更があった場合に対応するリスナー（親・子パス含む）と全リスナー（'*'）を通知する。循環更新を防ぐSetベースのガードを持つ。"
         },
         {
           "name": "subscribe",
           "kind": "method",
-          "start_line": 214,
-          "end_line": 218,
+          "start_line": 213,
+          "end_line": 217,
           "docstring": "指定パス（または複数パスの配列）に対してコールバック関数を購読登録し、当該パスのStateが変更されたときに通知を受け取れるようにする。"
         },
         {
           "name": "reset",
           "kind": "method",
-          "start_line": 220,
-          "end_line": 227,
+          "start_line": 219,
+          "end_line": 226,
           "docstring": "指定パス（または複数パスの配列）のStateを初期値のディープコピーに戻す。initialState から対応する値を復元してsetを呼び出す。"
         }
       ]
@@ -2065,225 +2065,218 @@
         {
           "name": "getIdx",
           "kind": "function",
-          "start_line": 61,
-          "end_line": 61,
+          "start_line": 60,
+          "end_line": 60,
           "docstring": "ヘッダー行（`hdr`）から指定キーの列インデックスを検索して返すインライン関数。`Mtd.ENT.valdList`内で列位置特定に使用する。"
         },
         {
           "name": "getScanID",
           "kind": "function",
-          "start_line": 63,
-          "end_line": 63,
+          "start_line": 62,
+          "end_line": 62,
           "docstring": "行データから`sub_id`が存在する場合は`id_sub_id`、存在しない場合は`id`のみのスキャンIDを生成して返すインライン関数。"
         },
         {
           "name": "fmt",
           "kind": "function",
-          "start_line": 91,
-          "end_line": 91,
+          "start_line": 90,
+          "end_line": 90,
           "docstring": "抽出値を数値変換してppm→wt.%換算（×10000）し、`<LOD`文字列や空値は変換せずそのまま返すフォーマット関数。`Mtd.ENT.genExtr`内で元素値の整形に使用する。"
         },
         {
           "name": "extract",
           "kind": "function",
-          "start_line": 92,
-          "end_line": 100,
+          "start_line": 91,
+          "end_line": 99,
           "docstring": "ファイルIDと元素キーリスト・インデックスオブジェクトを受け取り、結果マップ（`resMap`）から値（`vals`）と誤差（`errs`）を抽出して返すインライン関数。"
         },
         {
           "name": "ENTAct",
           "kind": "class",
-          "start_line": 138,
-          "end_line": 263,
+          "start_line": 137,
+          "end_line": 264,
           "docstring": "Tracer5iデータの入力・検証・抽出フェーズ（Entry Phase）のアクションを管理する静的クラス。rawデータ取得・ファイルリスト生成・バリデーション・PXRF格納の各ステップを担当する。"
         },
         {
           "name": "ssId",
           "kind": "method",
-          "start_line": 139,
-          "end_line": 139,
+          "start_line": 138,
+          "end_line": 138,
           "docstring": "`State`からスプレッドシートID（`GLB.ssId`）を取得するゲッターメソッド。"
         },
         {
           "name": "valdPref",
           "kind": "method",
-          "start_line": 140,
-          "end_line": 150,
+          "start_line": 139,
+          "end_line": 149,
           "docstring": "抽出モード（`Dual`/`Single`）の選択変更を受け取り、ステータスを更新するとともにフェーズが変化した場合は関連セクションのエラーステータスをリセットするバリデーション（設定検証）メソッド。"
         },
         {
           "name": "updRawRefs",
           "kind": "method",
-          "start_line": 152,
-          "end_line": 155,
+          "start_line": 151,
+          "end_line": 154,
           "docstring": "rawデータ参照（`ENTST.RAW.refs`）のフィールド値を`State`に更新し、続けて`valdRawRefs`を呼び出して列選択バリデーションを実行するメソッド。"
         },
         {
           "name": "valdRawRefs",
           "kind": "method",
-          "start_line": 156,
-          "end_line": 160,
+          "start_line": 155,
+          "end_line": 159,
           "docstring": "現在のRAW参照設定を読み取って列選択の重複・空欄チェック（`CoreMethod.Util.validateSelect`）を実行し、エラーフラグとステータスを`State`に反映するバリデーションメソッド。"
         },
         {
           "name": "valdExtrRefs",
           "kind": "method",
-          "start_line": 161,
-          "end_line": 167,
-          "docstring": "抽出参照設定（`ENTST.EXTR.refs`）のキー1フィールドが未入力かを検証し、エラーフラグとステータスを`State`に反映するバリデーションメソッド。"
+          "start_line": 160,
+          "end_line": 170,
+          "docstring": "抽出メタデータ（database）の必須入力を検証し、OUTPUTフェーズ到達後の再編集時にはフェーズをVALIDへ復帰させてアコーディオンを開いた状態に維持するアクションメソッド"
         },
         {
           "name": "loadRaw",
           "kind": "method",
-          "start_line": 168,
-          "end_line": 185,
+          "start_line": 171,
+          "end_line": 188,
           "docstring": "Fileシートのrawデータを`API.pullDT`で取得し、`State`の`ENTST.RAW.data`を更新してフェーズをLOADに進め、続けて列選択バリデーションを実行する非同期メソッド。"
         },
         {
           "name": "stateDI",
           "kind": "method",
-          "start_line": 186,
-          "end_line": 201,
+          "start_line": 189,
+          "end_line": 204,
           "docstring": "rawデータに対してリスト検証（`Mtd.ENT.valdList`）を実行し、エラー有無に応じてフェーズ・ステータス・ステータスキャッシュを`State`へ反映するデータ検証・状態遷移（State Data Inspection）メソッド。"
         },
         {
           "name": "genList",
           "kind": "method",
-          "start_line": 202,
-          "end_line": 211,
+          "start_line": 205,
+          "end_line": 214,
           "docstring": "現在のRAW参照でrawデータを再マッピングしてファイルリストを生成し、`API.pushDT`でFilelist（ファイルリスト）シートに書き込む非同期メソッド。"
         },
         {
           "name": "valdList",
           "kind": "method",
-          "start_line": 212,
-          "end_line": 219,
+          "start_line": 215,
+          "end_line": 222,
           "docstring": "Filelistシートを`API.pullDT`で再取得してバリデーションを実行し、エラー列付きで`API.pushDT`によりシートを上書き更新する非同期メソッド。"
         },
         {
           "name": "runExtr",
           "kind": "method",
-          "start_line": 220,
-          "end_line": 239,
-          "docstring": "Filelistシートとresultsシートを取得して抽出処理（`Mtd.ENT.genExtr`）を実行し、抽出データをextractシートに書き込んでフェーズをEXTRACTに進める非同期メソッド。"
-        },
-        {
-          "name": "pushExtr",
-          "kind": "method",
-          "start_line": 240,
-          "end_line": 262,
-          "docstring": "抽出データをtracer5iシートに格納する非同期メソッド。既存データとの重複IDを検証（`Mtd.ENT.valdPxrf`）し、重複がある場合はユーザー確認後に上書き、なければ追記する。"
+          "start_line": 223,
+          "end_line": 263,
+          "docstring": "ファイルリストの再検証、Resultsシートからのデータ抽出(Mtd.ENT.genExtr)、およびtracer5iシートとの重複判定(Mtd.ENT.valdPxrf)を経て、ファイルリストとtracer5iシートへ直接一括書き出し(API.pushMult)を行うアクションメソッド"
         },
         {
           "name": "ADPAct",
           "kind": "class",
-          "start_line": 266,
-          "end_line": 402,
+          "start_line": 267,
+          "end_line": 403,
           "docstring": "Tracer5iデータのグラフ作成・分析フェーズ（Adapter Phase）のアクションを管理する静的クラス。データベース読込・フィルタリング・シンボル設定・検量線プレビュー・補正値出力・PXRFシート標準化を担当する。"
         },
         {
           "name": "ssId",
           "kind": "method",
-          "start_line": 267,
-          "end_line": 267,
+          "start_line": 268,
+          "end_line": 268,
           "docstring": "`State`からスプレッドシートID（`GLB.ssId`）を取得するゲッターメソッド。"
         },
         {
           "name": "loadDB",
           "kind": "method",
-          "start_line": 268,
-          "end_line": 285,
+          "start_line": 269,
+          "end_line": 286,
           "docstring": "tracer5i・WDXRF・補正シートデータを取得してデータベース（`genDB`）を構築し、ADPフェーズを初期化してLOADEDに進める非同期メソッド。"
         },
         {
           "name": "fltrDB",
           "kind": "method",
-          "start_line": 286,
-          "end_line": 300,
+          "start_line": 287,
+          "end_line": 301,
           "docstring": "選択されたデータベースフィルタ（`ASGN.refs.filter`）を使ってpXRF・WDXRFデータをフィルタリングし、関連サブ状態をリセットしてFILTEREDフェーズに進める非同期メソッド。"
         },
         {
           "name": "setSymb",
           "kind": "method",
-          "start_line": 301,
-          "end_line": 310,
+          "start_line": 302,
+          "end_line": 311,
           "docstring": "シンボル設定を確定してフェーズをMAPPEDに進め、PREV・STDZセクションのステータスメッセージを初期化する非同期メソッド。"
         },
         {
           "name": "resetSymb",
           "kind": "method",
-          "start_line": 311,
-          "end_line": 311,
+          "start_line": 312,
+          "end_line": 312,
           "docstring": "`State`のシンボルルール一覧（`ADPST.SYMB.refs.rls`）をリセットする非同期メソッド。"
         },
         {
           "name": "valdAxis",
           "kind": "method",
-          "start_line": 312,
-          "end_line": 324,
+          "start_line": 313,
+          "end_line": 325,
           "docstring": "シンボルのベース軸キー（`baseKey`）の変更を検知し、ユーザー確認後に`baseKey`を更新してシンボルルールをリセットするバリデーション（軸設定検証）メソッド。"
         },
         {
           "name": "addSymb",
           "kind": "method",
-          "start_line": 325,
-          "end_line": 325,
+          "start_line": 326,
+          "end_line": 326,
           "docstring": "シンボルルール一覧に新しいルール行（デフォルト形状・色付き）を追加して`State`を更新するメソッド。"
         },
         {
           "name": "removeSymb",
           "kind": "method",
-          "start_line": 326,
-          "end_line": 329,
+          "start_line": 327,
+          "end_line": 330,
           "docstring": "指定キーのシンボルルールをリストから削除して`State`を更新するメソッド。"
         },
         {
           "name": "updSymb",
           "kind": "method",
-          "start_line": 330,
-          "end_line": 335,
+          "start_line": 331,
+          "end_line": 336,
           "docstring": "指定インデックスのシンボルルールの指定プロパティ（形状・色など）を更新して`State`に反映するメソッド。"
         },
         {
           "name": "genPrev",
           "kind": "method",
-          "start_line": 336,
-          "end_line": 358,
+          "start_line": 337,
+          "end_line": 359,
           "docstring": "`CHARTDT.genChartDB`でキャリブレーション用プロットデータ・回帰統計を生成し、EChartsチャート設定を組み立てて`State`に格納することで検量線プレビューを更新する非同期メソッド。"
         },
         {
           "name": "pushCrct",
           "kind": "method",
-          "start_line": 359,
-          "end_line": 377,
+          "start_line": 360,
+          "end_line": 378,
           "docstring": "全対象元素の検量線係数（傾き・切片）を計算して補正（crct）シートに出力（または上書き）し、`State`の補正データを更新する非同期メソッド。"
         },
         {
           "name": "pushStdz",
           "kind": "method",
-          "start_line": 378,
-          "end_line": 385,
+          "start_line": 379,
+          "end_line": 386,
           "docstring": "pXRFデータをモードマップに従って標準化（`genNewPxrf`）し、PXRFシートに出力する非同期メソッド。"
         },
         {
           "name": "renewADPState",
           "kind": "method",
-          "start_line": 386,
-          "end_line": 401,
+          "start_line": 387,
+          "end_line": 402,
           "docstring": "pXRFデータ・シンボル設定の変更をトリガーに呼ばれ、アイテム一覧・軸値一覧・シンボル操作設定を再計算して`State`へ反映するADP状態更新メソッド。"
         },
         {
           "name": "TrcInit",
           "kind": "class",
-          "start_line": 404,
-          "end_line": 445,
+          "start_line": 405,
+          "end_line": 446,
           "docstring": "Tracer5iアプリ（ENT・ADPの両フェーズ）の起動シーケンスを管理する静的クラス。UIオートメーターの構築・State購読の設定・セッション開始を担当する。"
         },
         {
           "name": "start",
           "kind": "method",
-          "start_line": 405,
-          "end_line": 444,
+          "start_line": 406,
+          "end_line": 445,
           "docstring": "起動モード（`entry`/`adp`）を判定してCoreUI・ENT/ADPオートメーターを構築し、State購読を登録してセッションを開始するアプリ起動エントリーポイントメソッド。"
         }
       ]

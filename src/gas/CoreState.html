@@ -1,4 +1,4 @@
-﻿<!-- src/CoreState.html -->
+<!-- src/CoreState.html -->
 <script>
 
 
@@ -47,7 +47,7 @@
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
     mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
     rawShts: { file: "File", results: "Results", tracer5i: "tracer5i", wdxrf: "WDXRF" },
-    appShts: { filelist: "ファイルリスト", extract: "抽出データ", crct: "Correction", pxrf: "PXRF" },
+    appShts: { filelist: "ファイルリスト", crct: "Correction", pxrf: "PXRF" },
     initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
     extrFields: [
       { key: GLBidx.key1, label: `${GLBidx.key1} *必須`, placeholder: "データセット名", bind: `ENTST.EXTR.refs.${GLBidx.key1}` },
@@ -64,7 +64,6 @@
       ent: [
         { name: 'ファイルリスト', hdrType: 'filelist', clr: true },
         { name: 'File' }, { name: 'Results' },
-        { name: '抽出データ', hdrType: 'tracer5i', clr: true },
         { name: 'tracer5i', hdrType: 'tracer5i', lock: true, validRule: 'tracer5i' }
       ],
       adp: [
@@ -86,7 +85,7 @@
 
 
   // --- フェーズ定義 ---
-  const ENT_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, EXTRACT: 6, OUTPUT: 7 };
+  const ENT_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, OUTPUT: 6 };
   const ADP_PHS = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
   const DASH_PHS = { INIT: 1, LOADED: 2 };
   // --- AppSt ---

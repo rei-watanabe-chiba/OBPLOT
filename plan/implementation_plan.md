@@ -1,56 +1,158 @@
-# Implementation Plan
+# 実装計画書：ユーザー対話時における `ask_question` ツール（選択肢モーダル）の原則化
 
-## Target File: `src/gas/CSS.html`
+**対象ファイル**:
+1. `c:/LLMdict/gemini/OBPLOT_env/AGENTS.md`
+2. `c:/LLMdict/gemini/OBPLOT_env/.agents/rules/thinker_rules.md`
 
-### Target Symbol / Lines
-- Selector: `.link-toggle`
-- Lines: 306 - 326
+**改修目的**:
+Router & Thinker がユーザーへ質問・要件確認・設計選択を行う際、通常のチャットテキストへ逃げる挙動を防ぎ、原則として `ask_question` ツール（選択肢モーダル）を使用するようツール定義表および各フェーズ・ゲートに明記する。
 
-### Diff Snippet
-```css
-<<<<
-    /* --- 固有部品:双方向連動インラインボタン (.link-toggle) --- */
-    .link-toggle {
-      flex: none;
-      display: inline-flex;
-      align-items: center;
-      height: fit-content;
-      padding: 2px 8px;
-      background: var(--grey50);
-      border: 1px solid var(--grey300);
-      border-radius: 20px;
-      color: var(--grey400);
-      cursor: pointer;
-      transition: 0.2s;
-      &:hover { border-color: var(--grey400); color: var(--text-main); }
-      &[aria-selected="true"] {
-        color: #fff;
-        background: color-mix(in srgb, var(--theme-color) 70%, transparent);
-        border-color: transparent;
-      }
-      .material-symbols-outlined { font-size: 8px; }
-    }
-====
-    /* --- 固有部品:双方向連動インラインボタン (.link-toggle) --- */
-    .link-toggle {
-      flex: none;
-      display: inline-flex;
-      align-items: center;
-      height: fit-content;
-      padding: 2px 8px;
-      background: var(--grey50);
-      border: 1px solid var(--grey300);
-      border-radius: 20px;
-      color: var(--grey400);
-      cursor: pointer;
-      transition: 0.2s;
-      &:hover { border-color: var(--grey400); color: var(--text-main); }
-      &[aria-selected="true"] {
-        color: #fff;
-        background: color-mix(in srgb, var(--theme-color) 70%, transparent);
-        border-color: transparent;
-      }
-      .material-symbols-outlined { font-size: 8px !important; }
-    }
->>>>
+---
+
+## ファイル1：`c:/LLMdict/gemini/OBPLOT_env/AGENTS.md`
+
+### 改修1：Explorerを召喚する前提条件（L19-21）
+
+#### 対象行（L19-21）
+```markdown
+### Explorerを召喚する前提条件
+Explorerの召喚は「要件が特定済みの状態」でのみ行う。
+ユーザーのリクエストが短い（1〜2行程度）または曖昧な場合、RouterはまずUserへ質問（チャットまたは `ask_question` ツール）を行い、要件の解像度を十分に上げる。→ 要件が特定されたら Explorer を召喚する。
 ```
+
+#### 置換後
+```markdown
+### Explorerを召喚する前提条件
+Explorerの召喚は「要件が特定済みの状態」でのみ行う。
+ユーザーのリクエストが短い（1〜2行程度）または曖昧な場合、Routerはまず想定される選択肢（推奨案を含む）を整理し、**原則として `ask_question` ツール（選択肢モーダル）**を使用してUserへ質問を行い、要件の解像度を十分に上げる（単一のYes/No確認のみ通常テキストを使用）。→ 要件が特定されたら Explorer を召喚する。
+```
+
+---
+
+### 改修2：ツール運用方針テーブルへの `ask_question` の追加（L37-41）
+
+#### 対象行（L37-41）
+```markdown
+| ツール | Routerの用途 | この用途はExplorerに委譲する |
+|--------|------------|--------------------------|
+| `view_file` | **禁止（デフォルト）**。Explorerが特定した行番号を読む場合のみ、StartLine/EndLine指定で1回限り使用する | ディレクトリ走査・複数ファイルの連続読み取り・広範囲の探索 |
+| `grep_search` | Explorerが返却した**同一ファイル内**での追加調査のみ（1ファイル・1回限り） | 複数ファイルをまたぐ横断検索 |
+| `search_relevant_*` (JEV) | 使用しない（Explorer専用ツール） | 意味的ランキング・シンボル特定 |
+```
+
+#### 置換後
+```markdown
+| ツール | Routerの用途 | この用途はExplorerに委譲する |
+|--------|------------|--------------------------|
+| `ask_question` | **対話の第一選択**。要件の明確化・設計方針の選択・リスク対応方針の確認時に、選択肢（推奨案付き）をモーダルで提示する（※計画承認等の単純なYes/No確認のみ通常テキスト） | —（Router専用ツール） |
+| `view_file` | **禁止（デフォルト）**。Explorerが特定した行番号を読む場合のみ、StartLine/EndLine指定で1回限り使用する | ディレクトリ走査・複数ファイルの連続読み取り・広範囲の探索 |
+| `grep_search` | Explorerが返却した**同一ファイル内**での追加調査のみ（1ファイル・1回限り） | 複数ファイルをまたぐ横断検索 |
+| `search_relevant_*` (JEV) | 使用しない（Explorer専用ツール） | 意味的ランキング・シンボル特定 |
+```
+
+---
+
+### 改修3：Phase 1 手順3（ユーザーとの対話）の `ask_question` 明記（L55）
+
+#### 対象行（L55）
+```markdown
+3. **ユーザーとの対話（要件の明確化）**: 読み込んだ仕様とユーザーの要望を照らし合わせ、不明点や曖昧な点があれば必ずユーザーに質問し、実装すべき要件の解像度を十分に上げる。
+```
+
+#### 置換後
+```markdown
+3. **ユーザーとの対話（要件の明確化）**: 読み込んだ仕様とユーザーの要望を照らし合わせ、不明点や曖昧な点、複数の実装アプローチがある場合は、**原則として `ask_question` ツール**を用いて選択肢（推奨案を含む）を提示し、実装すべき要件の解像度を十分に上げる。
+```
+
+---
+
+### 改修4：Phase 4（Coderからのバグ報告の処理）の `ask_question` 明記（L76）
+
+#### 対象行（L76）
+```markdown
+Coderからタスク完了と共に「対象周辺に別のバグやタイポを発見した」というJSONペイロード報告を受け取った場合、Routerは指定されたファイルと行番号の範囲を `view_file` で読み込み、問題の内容をユーザーに共有してください。その後、対話を通じてその問題を修正するかどうかの対応方針を決定します。
+```
+
+#### 置換後
+```markdown
+Coderからタスク完了と共に「対象周辺に別のバグやタイポを発見した」というJSONペイロード報告を受け取った場合、Routerは指定されたファイルと行番号の範囲を `view_file` で読み込み、問題の内容をユーザーに共有した上で、`ask_question` ツールを用いて対応方針（今すぐ修正する／別タスクとする／対応しない等）を決定します。
+```
+
+---
+
+### 改修5：Section 5 Gate 1 および Gate 3 の `ask_question` 原則化（L107-123）
+
+#### 対象行（L107-123）
+```markdown
+### Gate 1：要件ゲート（Explorer召喚の前提条件）
+**通過条件**: 「何を・どのファイルのどの機能を・どう変えるか」が明示的に特定できていること。
+
+- 条件を満たす → Explorer（Mode A/B）を召喚する
+- 条件を満たさない → `ask_question` またはチャットでユーザーに確認する。**「おそらくこういう意図だろう」という推定で補完して進むことは、Geminiが特に陥りやすいパターンであり、明示的に禁止する。**
+
+### Gate 2：候補評価ゲート（実装計画策定の前提条件）
+**通過条件**: Explorerが返却した全候補の `docstring`（日本語機能説明）および `probability`（意味的関連度スコア）を比較検討し、「なぜこのファイル・この行か」を論理的に説明できる状態であること。
+
+- 条件を満たす → 絞り込んだ対象箇所のみを `view_file`（StartLine/EndLine指定）で読み、Phase 2（実装計画書の策定）に進む
+- 条件を満たさない → 最初の候補を見て「わかった」と感じても一時停止し、残りの候補の `docstring` とスコアを評価する。情報が不足する場合 → クエリ（`task` 説明文）を精緻化してExplorer (`Model: flash`) を再召喚する（自身で `view_file` を追加呼び出しして補完しない）。
+
+### Gate 3：リスク検証ゲート（ユーザー提示の前提条件）
+**通過条件**: 実装計画に対して「この変更が他のコンポーネントに副作用を及ぼす可能性」を内部で自問自答し、リスクを特定または否定できていること。
+
+- 条件を満たす → 計画書をユーザーに提示する
+- 条件を満たさない → 計画提示前にユーザーと対話し、リスクへの対応方針を合意形成してから提示する
+```
+
+#### 置換後
+```markdown
+### Gate 1：要件ゲート（Explorer召喚の前提条件）
+**通過条件**: 「何を・どのファイルのどの機能を・どう変えるか」が明示的に特定できていること。
+
+- 条件を満たす → Explorer（Mode A/B）を召喚する
+- 条件を満たさない → **原則として `ask_question` ツール（選択肢モーダル）**でユーザーに確認する（通常チャットでの曖昧な質問投げかけに逃げないこと）。**「おそらくこういう意図だろう」という推定で補完して進むことは、Geminiが特に陥りやすいパターンであり、明示的に禁止する。**
+
+### Gate 2：候補評価ゲート（実装計画策定の前提条件）
+**通過条件**: Explorerが返却した全候補の `docstring`（日本語機能説明）および `probability`（意味的関連度スコア）を比較検討し、「なぜこのファイル・この行か」を論理的に説明できる状態であること。
+
+- 条件を満たす → 絞り込んだ対象箇所のみを `view_file`（StartLine/EndLine指定）で読み、Phase 2（実装計画書の策定）に進む
+- 条件を満たさない → 最初の候補を見て「わかった」と感じても一時停止し、残りの候補の `docstring` とスコアを評価する。情報が不足する場合 → クエリ（`task` 説明文）を精緻化してExplorer (`Model: flash`) を再召喚する（自身で `view_file` を追加呼び出しして補完しない）。
+
+### Gate 3：リスク検証ゲート（ユーザー提示の前提条件）
+**通過条件**: 実装計画に対して「この変更が他のコンポーネントに副作用を及ぼす可能性」を内部で自問自答し、リスクを特定または否定できていること。
+
+- 条件を満たす → 計画書をユーザーに提示する
+- 条件を満たさない → 計画提示前に **`ask_question` ツール**でリスクへの対応方針の選択肢をユーザーに提示し、合意形成してから提示する
+```
+
+---
+
+## ファイル2：`c:/LLMdict/gemini/OBPLOT_env/.agents/rules/thinker_rules.md`
+
+### 改修6：Role & Responsibilities への `ask_question` 原則化の追加（L3-7）
+
+#### 対象行（L3-7）
+```markdown
+## 1. Role & Responsibilities
+- 役割: プロジェクトマネージャー兼アーキテクト。
+- 責務: ユーザーの要望と設計資料（`docs/` 内のmdファイル）を読み解き、アーキテクチャ設計と実装計画 (`implementation_plan.md`) を策定する。
+- **[Zero-Touch Policy]**: Thinkerは、タイポ修正や軽微なCSSのズレ修正といった極めて単純なタスクであっても、ユーザーの承認なしに自ら `replace_file_content` や `write_to_file` ツールを使用してソースコード（`.gs`, `.html` 等）を直接書き換えることを**絶対に禁止する**。
+```
+
+#### 置換後
+```markdown
+## 1. Role & Responsibilities
+- 役割: プロジェクトマネージャー兼アーキテクト。
+- 責務: ユーザーの要望と設計資料（`docs/` 内のmdファイル）を読み解き、アーキテクチャ設計と実装計画 (`implementation_plan.md`) を策定する。
+- **[Dialogue Policy (`ask_question` 原則化)]**: 要件の明確化、仕様の曖昧さの解消、および複数の設計案からの選択を行う際は、通常のテキスト質問ではなく**原則として `ask_question` ツール（選択肢モーダル）**を使用し、推奨案（`(Recommended)`）を含む具体的な選択肢を提示してユーザーの意思決定を支援する（計画承認等の単純なYes/No確認のみ通常テキストを使用する）。
+- **[Zero-Touch Policy]**: Thinkerは、タイポ修正や軽微なCSSのズレ修正といった極めて単純なタスクであっても、ユーザーの承認なしに自ら `replace_file_content` や `write_to_file` ツールを使用してソースコード（`.gs`, `.html` 等）を直接書き換えることを**絶対に禁止する**。
+```
+
+---
+
+## Coderへの実施指示
+
+対象ファイル:
+1. `c:/LLMdict/gemini/OBPLOT_env/AGENTS.md`（改修1〜5）
+2. `c:/LLMdict/gemini/OBPLOT_env/.agents/rules/thinker_rules.md`（改修6）
+
+上記「改修1〜6」を `edit_file` ツールで順番に適用すること。指定範囲外のテキストは一切変更しないこと。

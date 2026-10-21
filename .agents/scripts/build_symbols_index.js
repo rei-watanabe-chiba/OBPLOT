@@ -200,13 +200,32 @@ function buildIndex() {
     const extracted = extractSymbols(filePath);
     const existingSymbols = (existingFiles[rel] && existingFiles[rel].symbols) || [];
 
-    // Merge: preserve existing non-null docstring if start_line matches
+    // Merge: preserve existing non-null docstring
+    const usedExistingIndices = new Set();
     extracted.symbols = extracted.symbols.map(sym => {
       if (sym.docstring != null) return sym;
-      const existing = existingSymbols.find(
-        e => e.name === sym.name && e.start_line === sym.start_line
+      // 1. Exact match on name and start_line
+      let idx = existingSymbols.findIndex(
+        (e, i) => !usedExistingIndices.has(i) && e.name === sym.name && e.start_line === sym.start_line
       );
-      return { ...sym, docstring: (existing && existing.docstring) || null };
+      // 2. Fallback: match by name and kind with closest start_line
+      if (idx === -1) {
+        let bestDiff = Infinity;
+        existingSymbols.forEach((e, i) => {
+          if (!usedExistingIndices.has(i) && e.name === sym.name && e.kind === sym.kind) {
+            const diff = Math.abs(e.start_line - sym.start_line);
+            if (diff < bestDiff) {
+              bestDiff = diff;
+              idx = i;
+            }
+          }
+        });
+      }
+      if (idx !== -1) {
+        usedExistingIndices.add(idx);
+        return { ...sym, docstring: existingSymbols[idx].docstring || null };
+      }
+      return sym;
     });
 
     filesOut[rel] = extracted;

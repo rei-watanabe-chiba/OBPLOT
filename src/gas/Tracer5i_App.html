@@ -14,7 +14,6 @@
         
         { part: "secEXTR", activePhase: p => p >= ENT_PHS.VALID, disablePhase: p => p < ENT_PHS.VALID, openPhase: p => p >= ENT_PHS.VALID && p < ENT_PHS.OUTPUT },
         { part: "btnEXTR_run", activePhase: p => p >= ENT_PHS.VALID && !State.get("ENTST.EXTR.flags").some(Boolean) },
-        { part: "btnEXTR_push", activePhase: p => p >= ENT_PHS.EXTRACT, visiblePhase: p => p >= ENT_PHS.EXTRACT },
         { part: "secEXTR_area", visiblePhase: p => p >= ENT_PHS.VALID }
       ]
 };
@@ -160,10 +159,14 @@ const ADP_SCHEMA = {
     }
     static valdExtrRefs() {
       const isErr = !(State.get(`ENTST.EXTR.refs.${GLB.idx.key1}`)?.trim());
-      State.set("ENTST.EXTR.flags", [isErr, false, false]);
-      if (State.get("ENTST.phase") >= ENT_PHS.VALID) {
-        State.set("ENTST.EXTR.status", isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""]); 
-      }
+      const phs = State.get("ENTST.phase");
+      State.set({
+        "ENTST.EXTR.flags": [isErr, false, false],
+        ...(phs >= ENT_PHS.VALID && {
+          "ENTST.phase": ENT_PHS.VALID,
+          "ENTST.EXTR.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""]
+        })
+      });
     }
     static async loadRaw() {
       const hasData = State.get("ENTST.RAW.data.hdrOpts")?.length > 0;
@@ -218,46 +221,44 @@ const ADP_SCHEMA = {
       });
     }
     static async runExtr() {
-      await CoreAct.withAsync("ENTST.EXTR.status", "「抽出データ」を上書きしますか？", async () => {
-        const [fRes, rRes] = await API.pullMult(ENTAct.ssId, [{ sht: GLB.appShts.filelist, qCol: 5, lCol: 5 }, { sht: GLB.rawShts.results }]);
+      State.set("GLB.isLocked", true);
+      State.set("ENTST.EXTR.status", ["loading", "データ確認・抽出中..."]);
+      let chkRes, extrDT, vFileDT;
+      try {
+        const [fRes, rRes, tRes] = await API.pullMult(ENTAct.ssId, [
+          { sht: GLB.appShts.filelist, qCol: 5, lCol: 5 },
+          { sht: GLB.rawShts.results },
+          { sht: GLB.rawShts.tracer5i }
+        ]);
         if (!fRes.success) throw new Error(fRes.msg);
         if (!rRes.success) throw new Error(rRes.msg);
-        const { isErr, outDT: vFileDT } = await ENTAct.stateDI(fRes.pld.data, "extract");
-        if (isErr) {
+        const diRes = await ENTAct.stateDI(fRes.pld.data, "extract");
+        vFileDT = diRes.outDT;
+        if (diRes.isErr) {
           await API.pushDT(ENTAct.ssId, GLB.appShts.filelist, vFileDT, "rule");
-          return State.get("ENTST.EXTR.status");
+          State.set("GLB.isLocked", false);
+          return;
         }
-        const extrDT = Mtd.ENT.genExtr(vFileDT, rRes.pld.data, State.get("ENTST.EXTR.refs"));
+        extrDT = Mtd.ENT.genExtr(vFileDT, rRes.pld.data, State.get("ENTST.EXTR.refs"));
         if (!extrDT || extrDT.length <= 1) throw new Error("対象データなし");
-        await API.pushMult(ENTAct.ssId, [
-          { sht: GLB.appShts.filelist, data: vFileDT, opts: "rule" },
-          { sht: GLB.appShts.extract, data: extrDT, opts: "clear" }
-        ]);
-        State.set("ENTST.phase", ENT_PHS.EXTRACT); 
-        return `抽出: ${extrDT.length - 1} 件`;
-      });
-    }
-    static async pushExtr() {
-      State.set("GLB.isLocked", true);
-      State.set("ENTST.EXTR.status", ["loading", "データ確認中..."]);
-      let chkRes, extDT;
-      try {
-        const [eData, tData] = await CoreAct.ensureFetch(ENTAct.ssId, [GLB.appShts.extract, GLB.rawShts.tracer5i]);
-        if (!eData || eData.length <= 1) throw new Error("抽出データ不在");
-        extDT = eData;
-        const trcDT = tData || [CoreMethod.Util.genHeader('tracer5i')];
-        chkRes = Mtd.ENT.valdPxrf(trcDT, extDT);
+        const trcDT = (tRes?.success && tRes.pld?.data) ? tRes.pld.data : [CoreMethod.Util.genHeader('tracer5i')];
+        chkRes = Mtd.ENT.valdPxrf(trcDT, extrDT);
       } catch (e) {
         State.set("ENTST.EXTR.status", ["error", e.message]);
         State.set("GLB.isLocked", false);
         return;
       }
-      State.set("GLB.isLocked", false);
+      State.set({ "ENTST.EXTR.status": ["hidden", ""], "GLB.isLocked": false });
       const msg = chkRes.isDup ? "重複IDがあります。上書き格納しますか？" : "tracer5iシートに格納しますか？";
       await CoreAct.withAsync("ENTST.EXTR.status", msg, async () => {
-        await API.pushDT(ENTAct.ssId, GLB.rawShts.tracer5i, chkRes.isDup ? chkRes.data : extDT.slice(1), chkRes.isDup ? "clear" : ["append"]);
-        State.set("ENTST.phase", ENT_PHS.OUTPUT); 
-        return `格納完了: ${extDT.length - 1} 件`;
+        const pRes = await API.pushMult(ENTAct.ssId, [
+          { sht: GLB.appShts.filelist, data: vFileDT, opts: "rule" },
+          { sht: GLB.rawShts.tracer5i, data: chkRes.isDup ? chkRes.data : extrDT.slice(1), opts: chkRes.isDup ? "clear" : ["append"] }
+        ]);
+        const errRes = pRes?.find(r => !r.success);
+        if (errRes) throw new Error(errRes.msg);
+        State.set("ENTST.phase", ENT_PHS.OUTPUT);
+        return `格納完了: ${extrDT.length - 1} 件`;
       });
     }
   }
