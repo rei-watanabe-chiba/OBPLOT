@@ -47,17 +47,17 @@ Routerからの指示はA・Bいずれか一方のモードで処理します。
 ### モードA: 仕様書探索 (Doc-Triage)
 対象: `docs/features/` 内の仕様書
 
-1. `search_relevant_files_jev`（`dir`: docs/features の絶対パス）でファイルをランキング
+1. Routerから受け取った日本語のタスク説明文を `task` に指定し、`search_relevant_files_jev`（`dir`: docs/features の絶対パス）でファイルをランキング
 2. `search_relevant_lines_jev` で関連ヘッダー・行位置を絞り込む
-3. `{ "file": "...", "start_line": N, "end_line": N }` 形式のJSON配列を返却する
+3. `{ "file": "...", "start_line": N, "end_line": N, "probability": N }` 形式のJSON配列を返却する
 
 ### モードB: コード探索 (Code-Triage)
-対象: ソースコード内のシンボル・行
+対象: ソースコード内のシンボル・行（`docs/index/symbols.json` の日本語 `docstring` を活用）
 
-1. `search_relevant_symbols_jev` に複数キーワードを渡し、シンボル（クラス/関数）をランキング
+1. Routerから受け取った日本語の機能・処理説明文（＋英語API/クラス名）を `search_relevant_symbols_jev` の `task` 引数に渡し、シンボル（クラス/関数）をランキング
    - 必要に応じて `search_relevant_files_jev` を先行させてファイルを絞り込む
 2. シンボルの行範囲が80行超の場合のみ、`search_relevant_lines_jev` でさらに絞り込む
-3. `{ "file": "...", "name": "...", "kind": "...", "start_line": N, "end_line": N }` 形式のJSON配列を返却する
+3. `{ "file": "...", "name": "...", "kind": "...", "start_line": N, "end_line": N, "docstring": "...", "probability": N }` 形式のJSON配列を返却する
 
 ## 4. 出力規約
 

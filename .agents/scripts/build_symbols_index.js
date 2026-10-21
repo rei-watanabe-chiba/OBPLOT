@@ -40,23 +40,49 @@ function collectFiles(dir) {
 }
 
 /**
+ * Find the first meaningful line of a JSDoc block comment immediately
+ * preceding the given symbol start line (within 3 lines tolerance).
+ * Returns null if no applicable comment is found.
+ */
+function findLeadingJsDoc(comments, symbolStartLine) {
+  const candidates = comments.filter(
+    c => c.loc.line < symbolStartLine && symbolStartLine - c.loc.line <= 3
+  );
+  if (candidates.length === 0) return null;
+  const nearest = candidates[candidates.length - 1];
+  const firstMeaningLine = nearest.text
+    .split('\n')
+    .map(l => l.replace(/^\s*\*\s?/, '').trim())
+    .find(l => l && !l.startsWith('@'));
+  return firstMeaningLine || null;
+}
+
+/**
  * Parse symbols from JavaScript code using acorn and acorn-walk
  */
 function parseSymbolsFromCode(code, lineOffset = 0) {
   const symbols = [];
+  const comments = [];
+  const onComment = (isBlock, text, _s, _e, locStart) => {
+    if (isBlock && text.startsWith('*')) {
+      comments.push({ loc: locStart, text: text.trim() });
+    }
+  };
   let ast;
   try {
     ast = acorn.parse(code, {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      locations: true
+      locations: true,
+      onComment
     });
   } catch (errModule) {
     try {
       ast = acorn.parse(code, {
         ecmaVersion: 'latest',
         sourceType: 'script',
-        locations: true
+        locations: true,
+        onComment
       });
     } catch (errScript) {
       return symbols;
@@ -70,7 +96,8 @@ function parseSymbolsFromCode(code, lineOffset = 0) {
           name: node.id.name,
           kind: 'function',
           start_line: node.loc.start.line + lineOffset,
-          end_line: node.loc.end.line + lineOffset
+          end_line: node.loc.end.line + lineOffset,
+          docstring: findLeadingJsDoc(comments, node.loc.start.line)
         });
       }
     },
@@ -85,7 +112,8 @@ function parseSymbolsFromCode(code, lineOffset = 0) {
           name: node.id.name,
           kind: 'function',
           start_line: node.loc.start.line + lineOffset,
-          end_line: node.loc.end.line + lineOffset
+          end_line: node.loc.end.line + lineOffset,
+          docstring: findLeadingJsDoc(comments, node.loc.start.line)
         });
       }
     },
@@ -95,7 +123,8 @@ function parseSymbolsFromCode(code, lineOffset = 0) {
           name: node.id.name,
           kind: 'class',
           start_line: node.loc.start.line + lineOffset,
-          end_line: node.loc.end.line + lineOffset
+          end_line: node.loc.end.line + lineOffset,
+          docstring: findLeadingJsDoc(comments, node.loc.start.line)
         });
       }
     },
@@ -113,7 +142,8 @@ function parseSymbolsFromCode(code, lineOffset = 0) {
           name: name,
           kind: 'method',
           start_line: node.loc.start.line + lineOffset,
-          end_line: node.loc.end.line + lineOffset
+          end_line: node.loc.end.line + lineOffset,
+          docstring: findLeadingJsDoc(comments, node.loc.start.line)
         });
       }
     }
@@ -153,13 +183,33 @@ function extractSymbols(filePath) {
  * Build index for all files under TARGET_ROOT
  */
 function buildIndex() {
+  // Load existing index to preserve manually-written docstrings
+  let existingFiles = {};
+  if (fs.existsSync(OUTPUT_PATH)) {
+    try {
+      existingFiles = JSON.parse(fs.readFileSync(OUTPUT_PATH, 'utf8')).files || {};
+    } catch (_) {}
+  }
+
   const absTarget = path.join(REPO_ROOT, TARGET_ROOT);
   const files = collectFiles(absTarget);
   const filesOut = {};
 
   for (const filePath of files) {
     const rel = path.relative(REPO_ROOT, filePath).replace(/\\/g, '/');
-    filesOut[rel] = extractSymbols(filePath);
+    const extracted = extractSymbols(filePath);
+    const existingSymbols = (existingFiles[rel] && existingFiles[rel].symbols) || [];
+
+    // Merge: preserve existing non-null docstring if start_line matches
+    extracted.symbols = extracted.symbols.map(sym => {
+      if (sym.docstring != null) return sym;
+      const existing = existingSymbols.find(
+        e => e.name === sym.name && e.start_line === sym.start_line
+      );
+      return { ...sym, docstring: (existing && existing.docstring) || null };
+    });
+
+    filesOut[rel] = extracted;
   }
 
   return {

@@ -10,21 +10,21 @@
 
 1.  **探索の委譲 (Explorerの召喚)**: 
     *   対象コードの特定が必要な場合、自ら広範囲を走査せず、`invoke_subagent` ツールを使用して Explorer を召喚する。
-    *   **引数指定**: `TypeName: Explorer`, `Model: flash_lite` (または `flash`) を必ず指定すること。
-    *   **プロンプト指示**: 「対象ファイルの絶対パスと、該当する行範囲（例: `#L10-L30`）を特定して報告せよ」と厳命すること。
-2.  **実装の委譲 (Coderの召喚)**: 
-    *   実装計画策定後、`invoke_subagent` を使用して Coder を召喚する。
-    *   **引数指定**: `TypeName: Coder`, `Model: flash` を必ず指定すること。
-    *   **プロンプト指示**: Coderに対してはファイル全体を読ませるのではなく、Explorerが特定した「具体的なファイルパスと行範囲」のみを渡してピンポイントで修正させること。
+    *   **引数指定**: `TypeName: Explorer`, `Model: flash` を必ず指定すること（`inherit` による Pro/Argon クォータ消費を避ける）。
+    *   **プロンプト指示**: `docs/index/symbols.json` の日本語 `docstring` にヒットするよう「日本語での具体的な機能・処理の説明文（＋英語API/クラス名）」と探索対象ディレクトリを渡し、ファイルパス・行範囲・`docstring`・`probability` を特定して報告させること。
+2.  **実装・ドキュメント更新の委譲 (Coder / Updaterの召喚)**: 
+    *   実装計画策定・承認後、`invoke_subagent` を使用して Coder（または設計書・インデックス更新時は Updater / DocstringWriter）を召喚する。
+    *   **引数指定**: `Model: flash` を必ず明示指定すること。
+    *   **プロンプト指示**: Coderに対してはファイル全体を読ませるのではなく、Explorerが特定した「具体的なファイルパスと行範囲」および置換スニペットのみを渡してピンポイントで修正させること。
 
-## 3. Artifact Output Rule
-- 出力先: 実装計画書は、必ず **`artifacts/implementation_plan.md`** に出力・保存すること。
-- 記載フォーマット: Coder向けの修正指示は、必ずGitHub Flavorの行数指定リンク（例: `#### [MODIFY] [Code.js](file:///c:/.../Code.js#L150-L180)`）を用いて、スコープを極小化すること。
+## 3. Implementation Plan Output Rule
+- 出力先: 実装計画書は、必ず **`c:/LLMdict/gemini/OBPLOT_env/plan/implementation_plan.md`** に出力・保存すること。
+- 記載フォーマット: Coder向けの修正指示は、対象ファイル・行番号・置換前後の差分スニペットのみを記述し、スコープを極小化すること。
 
 ## 4. Decision Making & Planning Rule (System Override)
 - **[Planning Modeの例外無効化]**: AIの基本システムルールに存在する「軽微な修正（Trivial fix）の場合は計画作成を省略して即時実行してよい」という規定は、本プロジェクトにおいては**完全に無効（Void）**とする。
-- ユーザーからの指示がどれほど軽微・自明なものであっても、必ず事前に `artifacts/implementation_plan.md` を作成・更新すること。
-- 計画提示後、ユーザーから「明示的な承認（Proceed等）」を得るまでは、絶対に次のステップ（Coderの召喚やコード修正）に進んではならない。
+- ユーザーからの指示がどれほど軽微・自明なものであっても、必ず事前に `c:/LLMdict/gemini/OBPLOT_env/plan/implementation_plan.md` を作成・更新すること。
+- 計画提示後、ユーザーから「明示的な承認（Proceed等）」を得るまでは、次のステップ（Coderの召喚やコード修正）に進まないこと。
 
 ## 5. Rules for Updating Design Docs
 - `docs/` 内の設計情報を更新する必要が生じた場合は、必ず事前にユーザーへ変更内容を一括で提案し、「承認」を得た場合にのみファイルの更新・書き換えを実行すること。

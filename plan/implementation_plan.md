@@ -1,27 +1,56 @@
-# 実装計画書 (改訂版): GAS_to_GitHub.bat 改行コード修正
+# Implementation Plan
 
-## 根本原因
-ファイルの改行コードが LF (Unix形式, 0x0A) になっている。
-Windows の cmd.exe はラベルスキャン時に CRLF (0x0D 0x0A) のみを改行として認識するため、
-LF のみの行末では `:END_PROMPT` が「行頭」として認識されずラベル検索が失敗する。
+## Target File: `src/gas/CSS.html`
 
-## 対象ファイル
-`C:\LLMdict\gemini\OBPLOT_env\onlyUser\GAS_to_GitHub.bat`
+### Target Symbol / Lines
+- Selector: `.link-toggle`
+- Lines: 306 - 326
 
-## 修正内容
-ファイル全体の改行コードを LF → CRLF に変換して上書き保存する。
-
-## 実装手順（PowerShell で実行）
-
-```powershell
-$path = 'C:\LLMdict\gemini\OBPLOT_env\onlyUser\GAS_to_GitHub.bat'
-$content = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
-$crlf = $content -replace '(?<!\r)\n', "`r`n"
-[System.IO.File]::WriteAllText($path, $crlf, [System.Text.Encoding]::UTF8)
-Write-Host "Done. CRLF conversion complete."
+### Diff Snippet
+```css
+<<<<
+    /* --- 固有部品:双方向連動インラインボタン (.link-toggle) --- */
+    .link-toggle {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      height: fit-content;
+      padding: 2px 8px;
+      background: var(--grey50);
+      border: 1px solid var(--grey300);
+      border-radius: 20px;
+      color: var(--grey400);
+      cursor: pointer;
+      transition: 0.2s;
+      &:hover { border-color: var(--grey400); color: var(--text-main); }
+      &[aria-selected="true"] {
+        color: #fff;
+        background: color-mix(in srgb, var(--theme-color) 70%, transparent);
+        border-color: transparent;
+      }
+      .material-symbols-outlined { font-size: 14px; }
+    }
+====
+    /* --- 固有部品:双方向連動インラインボタン (.link-toggle) --- */
+    .link-toggle {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      height: fit-content;
+      padding: 1px 5px;
+      background: var(--grey50);
+      border: 1px solid var(--grey300);
+      border-radius: 20px;
+      color: var(--grey400);
+      cursor: pointer;
+      transition: 0.2s;
+      &:hover { border-color: var(--grey400); color: var(--text-main); }
+      &[aria-selected="true"] {
+        color: #fff;
+        background: color-mix(in srgb, var(--theme-color) 70%, transparent);
+        border-color: transparent;
+      }
+      .material-symbols-outlined { font-size: 12px; }
+    }
+>>>>
 ```
-
-## スコープ
-- 対象: GAS_to_GitHub.bat のみ
-- ソースコードロジックの変更: なし（改行コード変換のみ）
-- ソースコードの行数・内容は変わらない

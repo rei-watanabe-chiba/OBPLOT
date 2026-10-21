@@ -1,1972 +1,2290 @@
 {
-  "generated_at": "2026-09-24T08:04:38.595Z",
-  "root": "src",
+  "generated_at": "2026-09-28T08:53:54.055Z",
+  "root": "src/gas",
   "files": {
-    "src/Adapter.html": {
+    "src/gas/Adapter.html": {
       "symbols": [
         {
           "name": "GasSvc",
           "kind": "class",
           "start_line": 5,
-          "end_line": 24
+          "end_line": 24,
+          "docstring": "GASサーバーサイドとクライアントHTML間のgoogle.script.run通信を一元管理するアダプタークラス。各スタティックメソッドがサーバー関数への非同期呼び出しエントリーポイントとなる。"
         },
         {
           "name": "srvCall",
           "kind": "method",
           "start_line": 6,
-          "end_line": 13
+          "end_line": 13,
+          "docstring": "google.script.runを使いサーバー関数（funcName）を非同期呼び出しし、成功時はペイロードをresolve、エラー時はrejectするPromiseを返す内部ヘルパーメソッド。"
         },
         {
           "name": "pullDT",
           "kind": "method",
           "start_line": 14,
-          "end_line": 14
+          "end_line": 14,
+          "docstring": "スプレッドシート（ssId）の指定シート（sht）からデータをプル（取得）してPromiseで返す。qColで列数チェック、lColで取得列数を制限できる。"
         },
         {
           "name": "pushDT",
           "kind": "method",
           "start_line": 15,
-          "end_line": 15
+          "end_line": 15,
+          "docstring": "スプレッドシート（ssId）の指定シート（sht）にデータをプッシュ（書き込む）してPromiseで返す。optsでclear/appendなどの書き込みモードを指定する。"
         },
         {
           "name": "pullMult",
           "kind": "method",
           "start_line": 16,
-          "end_line": 16
+          "end_line": 16,
+          "docstring": "複数シートのデータを一括でプル（取得）するリクエスト配列（reqs）をサーバーに送信し、結果配列をPromiseで返す。"
         },
         {
           "name": "pushMult",
           "kind": "method",
           "start_line": 17,
-          "end_line": 17
+          "end_line": 17,
+          "docstring": "複数シートへのデータを一括でプッシュ（書き込む）するリクエスト配列（reqs）をサーバーに送信し、結果配列をPromiseで返す。"
         },
         {
           "name": "getReportTemplate",
           "kind": "method",
           "start_line": 18,
-          "end_line": 18
+          "end_line": 18,
+          "docstring": "サーバーからレポート用HTMLテンプレート文字列を取得してPromiseで返す。"
         },
         {
           "name": "getWbState",
           "kind": "method",
           "start_line": 19,
-          "end_line": 19
+          "end_line": 19,
+          "docstring": "スプレッドシート（ssId）のワークブック状態（シート名・ヘッダー情報）を取得してPromiseで返す。targetShtsで対象シートを絞り込める。"
         },
         {
           "name": "genShts",
           "kind": "method",
           "start_line": 20,
-          "end_line": 20
+          "end_line": 20,
+          "docstring": "ビルドプラン（buildPlan）に基づきスプレッドシート（ssId）のシート群を動的に生成・更新するようサーバーへ要求し、結果をPromiseで返す。"
         },
         {
           "name": "saveUserProp",
           "kind": "method",
           "start_line": 21,
-          "end_line": 21
+          "end_line": 21,
+          "docstring": "PropertiesServiceのユーザープロパティにキーと値を保存するようサーバーへ要求し、Promiseで返す。"
         },
         {
           "name": "loadUserProp",
           "kind": "method",
           "start_line": 22,
-          "end_line": 22
+          "end_line": 22,
+          "docstring": "PropertiesServiceのユーザープロパティから指定キーの値をロード（読み込み）してPromiseで返す。"
         },
         {
           "name": "deleteUserProp",
           "kind": "method",
           "start_line": 23,
-          "end_line": 23
+          "end_line": 23,
+          "docstring": "PropertiesServiceのユーザープロパティから指定キーのエントリーを削除してPromiseで返す。"
         },
         {
           "name": "GasPropsStrg",
           "kind": "class",
           "start_line": 27,
-          "end_line": 31
+          "end_line": 31,
+          "docstring": "GasSvcを通じてGAS PropertiesServiceへのsave/load/clear操作を提供するGAS環境用ストレージアダプタークラス。"
         },
         {
           "name": "save",
           "kind": "method",
           "start_line": 28,
-          "end_line": 28
+          "end_line": 28,
+          "docstring": "GasSvc.saveUserPropを呼び出して指定キーに値を保存する。"
         },
         {
           "name": "load",
           "kind": "method",
           "start_line": 29,
-          "end_line": 29
+          "end_line": 29,
+          "docstring": "GasSvc.loadUserPropを呼び出して指定キーの値を読み込んで返す。"
         },
         {
           "name": "clear",
           "kind": "method",
           "start_line": 30,
-          "end_line": 30
+          "end_line": 30,
+          "docstring": "GasSvc.deleteUserPropを呼び出して指定キーのプロパティを削除する。"
         },
         {
           "name": "ExcelAdpt",
           "kind": "class",
           "start_line": 34,
-          "end_line": 174
+          "end_line": 174,
+          "docstring": "Office.js（Excel API）を用いてExcelワークブックのデータ取得・書き込み・シート管理を行うExcel環境用アダプタークラス。GasSvcと同一インターフェースを提供することで環境差を吸収する。"
         },
         {
           "name": "run",
           "kind": "method",
           "start_line": 35,
-          "end_line": 38
+          "end_line": 38,
+          "docstring": "Excel.runをラップしてExcel API呼び出しを実行し、エラー発生時はERROL_ERRプレフィックス付きエラーに変換して再スローする内部ヘルパーメソッド。"
         },
         {
           "name": "pullDT",
           "kind": "method",
           "start_line": 41,
-          "end_line": 55
+          "end_line": 55,
+          "docstring": "Excelワークブックの指定シート（shtName）からデータをプル（取得）し、値の2次元配列と取得行数メッセージを返す。qColで列数チェック、lColで列数制限を適用する。"
         },
         {
           "name": "pushDT",
           "kind": "method",
           "start_line": 58,
-          "end_line": 80
+          "end_line": 80,
+          "docstring": "Excelワークブックの指定シート（shtName）にデータをプッシュ（書き込む）する。opts=\"clear\"で既存データを消去後書き込み、opts=\"append\"で末尾追記モードで動作する。"
         },
         {
           "name": "pullMult",
           "kind": "method",
           "start_line": 82,
-          "end_line": 93
+          "end_line": 93,
+          "docstring": "リクエスト配列（reqs）の各シートに対してpullDTを順次呼び出し、複数シートのデータを一括取得して結果配列を返す。"
         },
         {
           "name": "pushMult",
           "kind": "method",
           "start_line": 95,
-          "end_line": 106
+          "end_line": 106,
+          "docstring": "リクエスト配列（reqs）の各シートに対してpushDTを順次呼び出し、複数シートへのデータを一括書き込みして結果配列を返す。"
         },
         {
           "name": "getReportTemplate",
           "kind": "method",
           "start_line": 109,
-          "end_line": 114
+          "end_line": 114,
+          "docstring": "window.__REPORT_TEMPLATE__キャッシュを優先してレポートHTMLテンプレートを返し、未キャッシュ時はfetchでReport.htmlを取得して返す。"
         },
         {
           "name": "getWbState",
           "kind": "method",
           "start_line": 117,
-          "end_line": 143
+          "end_line": 143,
+          "docstring": "Excelワークブック内の全シート（またはtargetShtsで絞り込んだシート）のシート名とヘッダー行（1行目）の値一覧を取得して返す。"
         },
         {
           "name": "genShts",
           "kind": "method",
           "start_line": 146,
-          "end_line": 173
+          "end_line": 173,
+          "docstring": "ビルドプラン（buildPlan）に従いExcelワークブックのシートを動的に生成・クリア・ヘッダー設定・入力制限設定・位置移動し、シート構成を更新する。"
         },
         {
           "name": "OfcStrg",
           "kind": "class",
           "start_line": 177,
-          "end_line": 205
+          "end_line": 205,
+          "docstring": "Office.js（Office context document settings）を用いてExcel環境でキーと値のsave/load/clearを行うストレージアダプタークラス。"
         },
         {
           "name": "save",
           "kind": "method",
           "start_line": 178,
-          "end_line": 189
+          "end_line": 189,
+          "docstring": "Office.context.document.settingsを通じてキーと値を非同期で保存し、成功可否をbooleanで返す。"
         },
         {
           "name": "load",
           "kind": "method",
           "start_line": 190,
-          "end_line": 192
+          "end_line": 192,
+          "docstring": "Office.context.document.settingsから指定キーの値を読み込んで返し、失敗時はnullを返す。"
         },
         {
           "name": "clear",
           "kind": "method",
           "start_line": 193,
-          "end_line": 204
+          "end_line": 204,
+          "docstring": "Office.context.document.settingsから指定キーのエントリーを非同期で削除し、成功可否をbooleanで返す。"
         }
       ]
     },
-    "src/CSS.html": {
+    "src/gas/CSS.html": {
       "symbols": []
     },
-    "src/Chart.html": {
+    "src/gas/Chart.html": {
       "symbols": [
         {
           "name": "CSSToken",
           "kind": "class",
           "start_line": 4,
-          "end_line": 14
+          "end_line": 14,
+          "docstring": "CSS変数文字列（`var(--...)`形式）を実際のカラー値に変換してキャッシュするユーティリティクラス。EChartsオプション構築時のCSS変数解決を担当する。"
         },
         {
           "name": "get",
           "kind": "method",
           "start_line": 6,
-          "end_line": 13
+          "end_line": 13,
+          "docstring": "`var(--...)`形式の文字列を受け取り、`getComputedStyle`でCSS変数の実値を取得してキャッシュに保存・返却する。通常文字列の場合はそのまま返す。"
         },
         {
           "name": "CHARTDT",
           "kind": "class",
           "start_line": 16,
-          "end_line": 72
+          "end_line": 72,
+          "docstring": "pXRFデータとWDXRFデータからECharts用のプロットデータセット（散布図・クラスター図）を生成する静的ユーティリティクラス。"
         },
         {
           "name": "genChartDB",
           "kind": "method",
           "start_line": 17,
-          "end_line": 30
+          "end_line": 30,
+          "docstring": "グラフタイプ（`calib`・`clus`）と設定に応じてフィルタリング・キャリブレーション処理を行い、プロット用データ配列（`prevDT`）と回帰統計（`statsDT`）を生成して返す。"
         },
         {
           "name": "mapPts",
           "kind": "function",
           "start_line": 26,
-          "end_line": 26
+          "end_line": 26,
+          "docstring": "クラスター図（`clus`）用に、WDXRFリストとpXRFリストの各行から`clusXVal`・`clusYVal`式を評価してXY座標を付与し、有効なポイントのみを結合した配列を生成するインライン関数。"
         },
         {
           "name": "genBaseDT",
           "kind": "method",
           "start_line": 32,
-          "end_line": 71
+          "end_line": 71,
+          "docstring": "pXRFデータとWDXRFデータを複合キーで照合し、校正係数（`cfs`）・LOD処理・アイテムフィルタを適用したうえでXY座標付きのプロットポイント配列を生成する。"
         },
         {
           "name": "getV",
           "kind": "function",
           "start_line": 37,
-          "end_line": 37
+          "end_line": 37,
+          "docstring": "行オブジェクトから指定元素の値（`val`）と誤差（`err`）を取得するインライン関数。直接プロパティが存在しない場合は`CoreMethod.Util.getElmVal`へフォールバックする。"
         },
         {
           "name": "ChartRenderer",
           "kind": "class",
           "start_line": 74,
-          "end_line": 226
+          "end_line": 226,
+          "docstring": "EChartsのオプションオブジェクト（軸・グリッド・シリーズ・グラフィクス）を構築する静的レンダラークラス。コンテナサイズ・スタイル設定・スケール計算を統合して散布図オプションを返す。"
         },
         {
           "name": "getGridMargins",
           "kind": "method",
           "start_line": 75,
-          "end_line": 92
+          "end_line": 92,
+          "docstring": "グラフスタイル設定とタイトル有無から、EChartsのグリッド余白（`gridTop`/`gridBottom`/`gridLeft`/`gridRight`）のピクセル値を計算して返す。"
         },
         {
           "name": "buildOption",
           "kind": "method",
           "start_line": 94,
-          "end_line": 225
+          "end_line": 225,
+          "docstring": "コンテナ幅・高さと設定オブジェクト（データ・シンボル・パネル・スケール・レイアウト）を受け取り、プロットサイズ・スケール・シリーズ・ツールチップ・軸を組み立てたEChartsオプションを返す。データが空の場合はnullを返す。"
         },
         {
           "name": "applyFixed",
           "kind": "function",
           "start_line": 136,
-          "end_line": 146
+          "end_line": 146,
+          "docstring": "スケール固定設定オブジェクト（`min`/`max`/`ticks`/`fmtTick`）を正規化し、ECharts軸で使用できる形式（`min`/`max`/`interval`/`fmtTick`）に変換するインライン関数。"
         },
         {
           "name": "defFmt",
           "kind": "function",
           "start_line": 155,
-          "end_line": 155
+          "end_line": 155,
+          "docstring": "自動スケール計算結果の`niceTicks`を参照し、軸ラベルの値を対応するティック文字列にフォーマットするデフォルトフォーマッタ関数。"
         },
         {
           "name": "UIPlot",
           "kind": "class",
           "start_line": 228,
-          "end_line": 294
+          "end_line": 294,
+          "docstring": "EChartsを内包するカスタムHTML要素（`<ui-plot>`）クラス。`ResizeObserver`によるリサイズ対応・`src`セッターによるデータ受信・グラフの描画・破棄を管理する。"
         },
         {
           "name": "constructor",
           "kind": "method",
           "start_line": 230,
-          "end_line": 246
+          "end_line": 246,
+          "docstring": "内部描画用`div`と`ResizeObserver`を初期化し、サイズ変化時に自動再描画をトリガーするコンストラクタ。エクスポートモード（`window.__EXPORT_CFG__`）時はリサイズを無効化する。"
         },
         {
           "name": "connectedCallback",
           "kind": "method",
           "start_line": 247,
-          "end_line": 254
+          "end_line": 254,
+          "docstring": "要素がDOMに接続された際に呼ばれるWebコンポーネントライフサイクルメソッド。内部`div`を追加し`ResizeObserver`の監視を開始する。"
         },
         {
           "name": "disconnectedCallback",
           "kind": "method",
           "start_line": 255,
-          "end_line": 258
+          "end_line": 258,
+          "docstring": "要素がDOMから切り離された際に`ResizeObserver`の監視を停止し、EChartsインスタンスを破棄してリソースを解放する。"
         },
         {
           "name": "src",
           "kind": "method",
           "start_line": 259,
-          "end_line": 262
+          "end_line": 262,
+          "docstring": "チャート設定データを受け取るセッターメソッド。内部設定を更新し、`#render`を呼び出して描画を開始する。"
         },
         {
           "name": "clear",
           "kind": "method",
           "start_line": 263,
-          "end_line": 269
+          "end_line": 269,
+          "docstring": "チャート設定をリセットしてEChartsをクリアし、内部`div`を非表示にしたうえで`render-finished`カスタムイベントを発火する。"
         },
         {
           "name": "render",
           "kind": "method",
           "start_line": 270,
-          "end_line": 293
+          "end_line": 293,
+          "docstring": "設定データとコンテナサイズをもとにEChartsを初期化または更新し、`ChartRenderer.buildOption`で生成したオプションを適用してグラフを描画するプライベートメソッド。"
         }
       ]
     },
-    "src/Code.js": {
+    "src/gas/Code.js": {
       "symbols": [
         {
           "name": "ApiRes",
           "kind": "class",
           "start_line": 3,
-          "end_line": 6
+          "end_line": 6,
+          "docstring": "GASサーバー関数の戻り値（DTOデータ転送オブジェクト）を統一フォーマットで生成するユーティリティクラス。成功・エラー両パターンのレスポンスオブジェクトを提供する。"
         },
         {
           "name": "success",
           "kind": "method",
           "start_line": 4,
-          "end_line": 4
+          "end_line": 4,
+          "docstring": "ペイロード（pld）をディープコピーしてsuccess:trueの成功レスポンスオブジェクトを生成して返す。"
         },
         {
           "name": "error",
           "kind": "method",
           "start_line": 5,
-          "end_line": 5
+          "end_line": 5,
+          "docstring": "エラータイプ（type）とメッセージ（msg）を含むsuccess:falseのエラーレスポンスオブジェクトを生成して返す。"
         },
         {
           "name": "withErr",
           "kind": "function",
           "start_line": 7,
-          "end_line": 9
+          "end_line": 9,
+          "docstring": "関数fn実行時の例外をキャッチしてApiRes.error(\"SYSTEM_ERR\", ...)形式で返すエラーハンドリングラッパー関数。"
         },
         {
           "name": "onOpen",
           "kind": "function",
           "start_line": 11,
-          "end_line": 19
+          "end_line": 19,
+          "docstring": "スプレッドシートを開いた際にSpreadsheetApp UIへ「OBPLOT1.0」メニューを追加するGASトリガー関数。"
         },
         {
           "name": "openSidebarENT",
           "kind": "function",
           "start_line": 21,
-          "end_line": 21
+          "end_line": 21,
+          "docstring": "tracer5iデータ抽出（entry）モードのサイドバーを開くショートカット関数。openSidebarに「entry」モードを渡して呼び出す。"
         },
         {
           "name": "openSidebarADP",
           "kind": "function",
           "start_line": 22,
-          "end_line": 22
+          "end_line": 22,
+          "docstring": "データのプレビューと補正（adapter）モードのサイドバーを開くショートカット関数。openSidebarに「adapter」モードを渡して呼び出す。"
         },
         {
           "name": "openSidebarDash",
           "kind": "function",
           "start_line": 23,
-          "end_line": 23
+          "end_line": 23,
+          "docstring": "検量線・判別図解析ボード（dash）モードのサイドバーを開くショートカット関数。openSidebarに「dash」モードを渡して呼び出す。"
         },
         {
           "name": "openSidebar",
           "kind": "function",
           "start_line": 25,
-          "end_line": 30
+          "end_line": 30,
+          "docstring": "HtmlServiceで指定HTMLファイル（filename）からテンプレートを生成し、appModeとinitialSsIdを埋め込んでサイドバーとして表示する。"
         },
         {
           "name": "include",
           "kind": "function",
           "start_line": 32,
-          "end_line": 32
+          "end_line": 32,
+          "docstring": "HtmlServiceで指定ファイルのHTMLコンテンツ文字列を返すHTMLバインドユーティリティ関数。テンプレート内の<?= include('filename') ?>で使用される。"
         },
         {
           "name": "getSht",
           "kind": "function",
           "start_line": 34,
-          "end_line": 34
+          "end_line": 34,
+          "docstring": "SpreadsheetApp.openByIdとgetSheetByNameを組み合わせてスプレッドシートIDとシート名からSheetオブジェクトを取得するユーティリティ関数。"
         },
         {
           "name": "_fetchDT",
           "kind": "function",
           "start_line": 36,
-          "end_line": 44
+          "end_line": 44,
+          "docstring": "SpreadsheetAppの指定シートからデータ範囲を取得し、列数チェック・列制限（lCol）を適用して2次元配列データと行数メッセージを返す内部ヘルパー関数。"
         },
         {
           "name": "pullDT",
           "kind": "function",
           "start_line": 45,
-          "end_line": 47
+          "end_line": 47,
+          "docstring": "GASサーバー公開関数として、指定スプレッドシートの1シートのデータをプル（取得）しApiResでラップして返す。クライアントからgoogle.script.run経由で呼び出される。"
         },
         {
           "name": "pullMult",
           "kind": "function",
           "start_line": 48,
-          "end_line": 56
+          "end_line": 56,
+          "docstring": "GASサーバー公開関数として、リクエスト配列（reqs）の複数シートのデータを一括でプル（取得）しApiResでラップした結果配列を返す。"
         },
         {
           "name": "_writeData",
           "kind": "function",
           "start_line": 58,
-          "end_line": 73
+          "end_line": 73,
+          "docstring": "SpreadsheetAppの指定シートにデータを書き込む内部ヘルパー関数。opts=\"clear\"で既存データ消去、opts=\"append\"で末尾追記、opts=\"rule\"で条件付き書式の範囲を再設定する。"
         },
         {
           "name": "pushDT",
           "kind": "function",
           "start_line": 74,
-          "end_line": 76
+          "end_line": 76,
+          "docstring": "GASサーバー公開関数として、指定スプレッドシートの1シートにデータをプッシュ（書き込む）しApiResでラップして返す。クライアントからgoogle.script.run経由で呼び出される。"
         },
         {
           "name": "pushMult",
           "kind": "function",
           "start_line": 77,
-          "end_line": 85
+          "end_line": 85,
+          "docstring": "GASサーバー公開関数として、リクエスト配列（reqs）の複数シートにデータを一括でプッシュ（書き込む）しApiResでラップした結果配列を返す。"
         },
         {
           "name": "getReportTemplate",
           "kind": "function",
           "start_line": 87,
-          "end_line": 89
+          "end_line": 89,
+          "docstring": "GASサーバー公開関数として、HtmlServiceでReport.htmlテンプレートを評価してHTMLコンテンツ文字列をApiResでラップして返す。"
         },
         {
           "name": "getWbState",
           "kind": "function",
           "start_line": 91,
-          "end_line": 100
+          "end_line": 100,
+          "docstring": "GASサーバー公開関数として、指定スプレッドシートの全シートのシート名とヘッダー行（1行目）の値一覧をワークブック状態としてApiResでラップして返す。"
         },
         {
           "name": "genShts",
           "kind": "function",
           "start_line": 102,
-          "end_line": 119
+          "end_line": 119,
+          "docstring": "GASサーバー公開関数として、ビルドプラン（buildPlan）に従いスプレッドシートのシートを動的に生成・ヘッダー設定・バリデーション設定・位置変更し、シート構成を更新する。"
         },
         {
           "name": "setHdr",
           "kind": "function",
           "start_line": 105,
-          "end_line": 110
+          "end_line": 110,
+          "docstring": "genShts内部のヘルパー関数として、シートをクリアしてヘッダー行（hdr）を書き込み、lock=trueの場合はヘッダーセルに値リストバリデーションを設定して編集禁止にする。"
         },
         {
           "name": "saveUserProp",
           "kind": "function",
           "start_line": 121,
-          "end_line": 126
+          "end_line": 126,
+          "docstring": "GASサーバー公開関数として、PropertiesService.getUserPropertiesに指定キーと値を永続化保存しApiRes.success(true)を返す。"
         },
         {
           "name": "loadUserProp",
           "kind": "function",
           "start_line": 127,
-          "end_line": 132
+          "end_line": 132,
+          "docstring": "GASサーバー公開関数として、PropertiesService.getUserPropertiesから指定キーの永続化値をロード（読み込み）してApiResでラップして返す。"
         },
         {
           "name": "deleteUserProp",
           "kind": "function",
           "start_line": 133,
-          "end_line": 138
+          "end_line": 138,
+          "docstring": "GASサーバー公開関数として、PropertiesService.getUserPropertiesから指定キーのプロパティエントリーを削除してApiRes.success(true)を返す。"
         }
       ]
     },
-    "src/Component.html": {
+    "src/gas/Component.html": {
       "symbols": [
         {
           "name": "html",
           "kind": "function",
           "start_line": 4,
-          "end_line": 4
+          "end_line": 4,
+          "docstring": "テンプレートリテラルタグ関数として文字列と補間値を結合し、HTMLフラグメントを生成するユーティリティ関数。"
         },
         {
           "name": "Tpl",
           "kind": "class",
           "start_line": 5,
-          "end_line": 168
+          "end_line": 168,
+          "docstring": "アプリケーション全体で使用するHTMLテンプレート群をForm・Common・Dialog・Toggle・Stats・MultiSelect・Elements・Table・Symbolの各内部クラスとして集約するテンプレートファクトリークラス。"
         },
         {
           "name": "option",
           "kind": "method",
           "start_line": 7,
-          "end_line": 14
+          "end_line": 14,
+          "docstring": "optオブジェクト（label/val/disabled/hidden/selected）から単一の&lt;option&gt;HTML文字列を生成するForm.Tplのファクトリメソッド。"
         },
         {
           "name": "options",
           "kind": "method",
           "start_line": 15,
-          "end_line": 19
+          "end_line": 19,
+          "docstring": "optオブジェクト配列とhasEmptyフラグを受け取り、空選択肢（---未選択---）付きの&lt;option&gt;要素群HTML文字列を生成する。"
         },
         {
           "name": "select",
           "kind": "method",
           "start_line": 21,
-          "end_line": 28
+          "end_line": 28,
+          "docstring": "設定オブジェクト（bind/change/param/opts/hasEmptyなど）を受け取り、data-out・data-actionを付与した&lt;select&gt;要素HTML文字列を生成するフォームコントロールファクトリ。"
         },
         {
           "name": "input",
           "kind": "method",
           "start_line": 31,
-          "end_line": 39
+          "end_line": 39,
+          "docstring": "設定オブジェクト（bind/change/placeholder/inputTypeなど）を受け取り、data-out・data-actionを付与した&lt;input&gt;要素HTML文字列を生成するフォームコントロールファクトリ。"
         },
         {
           "name": "field",
           "kind": "method",
           "start_line": 41,
-          "end_line": 45
+          "end_line": 45,
+          "docstring": "typeがselectならTpl.Form.selectを、それ以外はTpl.Form.inputを呼び出し、labelが指定されていれば&lt;label&gt;でラップしたフィールドHTMLを返す。"
         },
         {
           "name": "fields",
           "kind": "method",
           "start_line": 47,
-          "end_line": 50
+          "end_line": 50,
+          "docstring": "設定オブジェクト配列を受け取り、各要素をTpl.Form.fieldに通してHTML文字列を連結したフォームフィールド群を生成する。"
         },
         {
           "name": "popover",
           "kind": "method",
           "start_line": 53,
-          "end_line": 57
+          "end_line": 57,
+          "docstring": "サマリーHTMLとコンテンツHTML、CSSクラス、カスタムIDを受け取り、CSSアンカーポジショニングを活用したpopover属性付きUI-POPコンポーネントのHTML文字列を生成する。"
         },
         {
           "name": "colorBox",
           "kind": "method",
           "start_line": 58,
-          "end_line": 58
+          "end_line": 58,
+          "docstring": "色文字列を受け取り、背景色インラインスタイルを持つcolor-boxスパン要素を生成する。色が無効な場合は空文字を返す。"
         },
         {
           "name": "badge",
           "kind": "method",
           "start_line": 59,
-          "end_line": 59
+          "end_line": 59,
+          "docstring": "テキスト値を受け取り、badgeクラスの&lt;span&gt;要素HTML文字列として包んで返す。"
         },
         {
           "name": "universal",
           "kind": "method",
           "start_line": 62,
-          "end_line": 64
+          "end_line": 64,
+          "docstring": "タイトル・メッセージ・キャンセル/OKボタンを含む汎用モーダルダイアログ（universal-dialog）のHTML文字列を生成する。各ボタンはdata-action=\"CoreAct.closeDlg\"で閉じる。"
         },
         {
           "name": "genHtml",
           "kind": "method",
           "start_line": 65,
-          "end_line": 65
+          "end_line": 65,
+          "docstring": "Tpl.Dialog.universalの別名メソッドとして同一のダイアログHTMLを返す。"
         },
         {
           "name": "row",
           "kind": "method",
           "start_line": 68,
-          "end_line": 68
+          "end_line": 68,
+          "docstring": "Tpl.Toggleのトグルスイッチ行を生成し、ラベル・bindPath・changePath・初期チェック状態を反映したHTMLを返す。"
         },
         {
           "name": "row",
           "kind": "method",
           "start_line": 71,
-          "end_line": 71
+          "end_line": 71,
+          "docstring": "Tpl.Statsのラベルと値を横並びに並べたstats行のHTML（stats-label・stats-val div）を返す。"
         },
         {
           "name": "cntr",
           "kind": "method",
           "start_line": 72,
-          "end_line": 72
+          "end_line": 72,
+          "docstring": "stats-containerとstats-gridでラップした統計表示コンテナHTMLを生成する。"
         },
         {
           "name": "gen",
           "kind": "method",
           "start_line": 73,
-          "end_line": 78
+          "end_line": 78,
+          "docstring": "statsDTデータを受け取りCoreMethod.Util.buildStatsで行データを構築し、stats-containerとして統計情報HTMLを生成する。データ不足の場合は「計算不能」メッセージを返す。"
         },
         {
           "name": "item",
           "kind": "method",
           "start_line": 81,
-          "end_line": 81
+          "end_line": 81,
+          "docstring": "Tpl.MultiSelectの個別チェックボックス項目HTMLを生成し、dataset-cbクラスとdata-actionを付与して返す。"
         },
         {
           "name": "selectAll",
           "kind": "method",
           "start_line": 82,
-          "end_line": 82
+          "end_line": 82,
+          "docstring": "マルチセレクト（MultiSelect）の「すべて選択」チェックボックス行のHTMLを生成し、select-all-cbクラスとdata-actionを付与して返す。"
         },
         {
           "name": "btn",
           "kind": "method",
           "start_line": 85,
-          "end_line": 87
+          "end_line": 87,
+          "docstring": "テキスト・アクション・CSSクラス・追加属性を受け取り、data-action付きの汎用&lt;button&gt;要素HTMLを生成するTpl.Elementsのファクトリメソッド。"
         },
         {
           "name": "iconBtn",
           "kind": "method",
           "start_line": 88,
-          "end_line": 90
+          "end_line": 90,
+          "docstring": "テキスト・アクション・パラメータキー・disabled状態・CSSクラスを受け取り、data-param付きのアイコンボタン（icon-btn）HTML文字列を生成する。"
         },
         {
           "name": "cell",
           "kind": "method",
           "start_line": 91,
-          "end_line": 93
+          "end_line": 93,
+          "docstring": "コンテンツHTML・CSSクラス・追加属性を受け取り、汎用コンテナdiv要素のHTMLを生成するテーブルセルファクトリ。"
         },
         {
           "name": "row",
           "kind": "method",
           "start_line": 94,
-          "end_line": 96
+          "end_line": 96,
+          "docstring": "複数セルのHTMLを受け取り、table-rowクラスのdivで包んだテーブル行HTMLを生成するTpl.Elementsのファクトリメソッド。"
         },
         {
           "name": "build",
           "kind": "method",
           "start_line": 99,
-          "end_line": 119
+          "end_line": 119,
+          "docstring": "rows・cols定義とrowClassFn/rowAttrsFn/emptyTextを含む設定オブジェクトを受け取り、col.render関数でセルを構築してTpl.Elements.row/cellで組み立てたテーブルHTMLを返す。"
         },
         {
           "name": "sum",
           "kind": "method",
           "start_line": 127,
-          "end_line": 127
+          "end_line": 127,
+          "docstring": "Tpl.Symbolのポップオーバーサマリー部分を生成し、hasClrかつhasVal条件を満たす場合にcolorBoxを付加したラベルHTMLを返す。"
         },
         {
           "name": "item",
           "kind": "method",
           "start_line": 128,
-          "end_line": 128
+          "end_line": 128,
+          "docstring": "Tpl.Symbolの単一選択ポップオーバーアイテム（single-select-item）ボタンHTMLを生成し、data-param=\"idx|type\"とpopovertargetaction=\"hide\"を付与する。"
         },
         {
           "name": "btn",
           "kind": "method",
           "start_line": 129,
-          "end_line": 129
+          "end_line": 129,
+          "docstring": "Tpl.Symbol行のアイコンボタン（追加/削除用）をTpl.Elements.iconBtnに委譲して生成する薄いラッパーメソッド。"
         },
         {
           "name": "col",
           "kind": "method",
           "start_line": 130,
-          "end_line": 130
+          "end_line": 130,
+          "docstring": "Tpl.Symbolのカラム（列）セルをTpl.Elements.cellに委譲してCSSクラス付きdivとして生成する。"
         },
         {
           "name": "row",
           "kind": "method",
           "start_line": 131,
-          "end_line": 131
+          "end_line": 131,
+          "docstring": "Tpl.Symbolのシンボルテーブル行を削除ボタンセルとカラムセル群を組み合わせてTpl.Elements.rowで構築する。"
         },
         {
           "name": "addRow",
           "kind": "method",
           "start_line": 132,
-          "end_line": 132
+          "end_line": 132,
+          "docstring": "シンボルテーブルへの追加行（+ボタン付き）をrowとbtnを使って生成し、全カラムに空セルを配置したHTML文字列を返す。"
         },
         {
           "name": "genSel",
           "kind": "method",
           "start_line": 133,
-          "end_line": 140
+          "end_line": 140,
+          "docstring": "指定オプション配列から現在選択値に合致するラベル・カラーを特定し、Tpl.Symbol.itemで選択肢リストを構築したうえでTpl.Common.popoverに包んだ単一選択ポップオーバーHTMLを生成する。"
         },
         {
           "name": "tbl",
           "kind": "method",
           "start_line": 141,
-          "end_line": 166
+          "end_line": 166,
+          "docstring": "シンボルテーブル全体を構築するメソッドで、rls（ルールリスト）・optsConf・actsConfを受け取り、追加行を末尾に加えたうえでTpl.Table.buildと各Symbol.col/genSelを用いてシンボル設定テーブルHTMLを返す。"
         }
       ]
     },
-    "src/CoreAction.html": {
+    "src/gas/CoreAction.html": {
       "symbols": [
         {
           "name": "OBPDebugger",
           "kind": "class",
           "start_line": 4,
-          "end_line": 35
+          "end_line": 35,
+          "docstring": "開発・デバッグ用のオーバーレイコンソールを画面下部に表示するクラス。グローバルエラーおよびUnhandledPromise拒否を捕捉してログ表示する責務を担う。"
         },
         {
           "name": "init",
           "kind": "method",
           "start_line": 6,
-          "end_line": 24
+          "end_line": 24,
+          "docstring": "デバッグコンソール用のDOM要素を生成し、window の error / unhandledrejection イベントリスナーを登録して初期化する。二重初期化を防ぐガードを持つ。"
         },
         {
           "name": "log",
           "kind": "method",
           "start_line": 25,
-          "end_line": 34
+          "end_line": 34,
+          "docstring": "タイムスタンプ付きのメッセージをデバッグコンソールに追記表示する。未初期化の場合は自動的に init を呼び出す。"
         },
         {
           "name": "CoreIdlTm",
           "kind": "class",
           "start_line": 37,
-          "end_line": 56
+          "end_line": 56,
+          "docstring": "一定時間（5分）ユーザー操作が行われなかった場合にサイドバー再起動を促すアイドルタイマー管理クラス。Excelローカル実行環境では無効化される。"
         },
         {
           "name": "init",
           "kind": "method",
           "start_line": 40,
-          "end_line": 55
+          "end_line": 55,
+          "docstring": "マウス移動・キー入力等のユーザーイベントを監視し、操作がない場合にタイムアウト後 google.script.run 経由でサイドバーを強制リロードするタイマーをセットする。"
         },
         {
           "name": "rst",
           "kind": "function",
           "start_line": 42,
-          "end_line": 52
+          "end_line": 52,
+          "docstring": "アイドルタイマーをリセットして再スタートするローカル関数。ユーザーアクション発生時に呼び出される。"
         },
         {
           "name": "forceReload",
           "kind": "function",
           "start_line": 45,
-          "end_line": 49
+          "end_line": 49,
+          "docstring": "タイムアウト時にサイドバーを強制再起動するローカル関数。google.script.run が利用可能な場合はGAS経由でリロードし、それ以外は window.location.reload を実行する。"
         },
         {
           "name": "CoreAct",
           "kind": "class",
           "start_line": 58,
-          "end_line": 249
+          "end_line": 249,
+          "docstring": "アプリケーション全体のUI操作・非同期処理制御・セッション管理・イベントルーティングを一元管理するコアアクションクラス。State管理およびAPI呼び出しと連携する。"
         },
         {
           "name": "ssId",
           "kind": "method",
           "start_line": 59,
-          "end_line": 59
+          "end_line": 59,
+          "docstring": "現在接続中のスプレッドシートIDをState（GLB.ssId）から取得するプライベート静的ゲッター。"
         },
         {
           "name": "ensureFetch",
           "kind": "method",
           "start_line": 62,
-          "end_line": 66
+          "end_line": 66,
+          "docstring": "指定したスプレッドシートIDとシート名リストに対してAPI.pullMultを呼び出し、複数シートのデータを一括取得して配列で返す。"
         },
         {
           "name": "confirm",
           "kind": "method",
           "start_line": 67,
-          "end_line": 72
+          "end_line": 72,
+          "docstring": "モーダル確認ダイアログを表示し、ユーザーの応答（true/false）をPromiseで返す。State（GLB.dialog）を更新してUIへ通知する。"
         },
         {
           "name": "toast",
           "kind": "method",
           "start_line": 73,
-          "end_line": 75
+          "end_line": 75,
+          "docstring": "トーストタイプの通知ダイアログを表示し、OKボタン押下時に任意のコールバック関数を実行する。"
         },
         {
           "name": "closeDlg",
           "kind": "method",
           "start_line": 76,
-          "end_line": 83
+          "end_line": 83,
+          "docstring": "ダイアログを閉じてPromise解決コールバックにユーザーの選択結果（data-param属性値）を渡す。State（GLB.dialog.isOpen）を false に更新する。"
         },
         {
           "name": "withAsync",
           "kind": "method",
           "start_line": 84,
-          "end_line": 115
+          "end_line": 115,
+          "docstring": "非同期処理を安全に実行するラッパーメソッド。実行中はGLB.isLockedを設定してUI操作をブロックし、オプションで確認ダイアログ表示・ステータスパス更新・finally処理を行う。"
         },
         {
           "name": "connectApp",
           "kind": "method",
           "start_line": 116,
-          "end_line": 146
+          "end_line": 146,
+          "docstring": "スプレッドシートIDと設定オブジェクトを受け取り、CoreMethod.Util.valdEnvでシート構成を検証し、不足シートがあればユーザー確認後にAPI.genShtsで一括生成してGLB.ssIdを確定する。"
         },
         {
           "name": "startSession",
           "kind": "method",
           "start_line": 147,
-          "end_line": 160
+          "end_line": 160,
+          "docstring": "アプリケーションセッションを開始する。初回はconnectAppを実行してGASとの接続を確立し、CoreIdlTmを起動する。タブ切り替え時は再接続をスキップしてフックを呼び出す。"
         },
         {
           "name": "actvTab",
           "kind": "method",
           "start_line": 161,
-          "end_line": 173
+          "end_line": 173,
+          "docstring": "指定タブIDに対応するDOM要素のaria属性・data-view属性・data-themeを切り替えてアクティブタブを視覚的に反映し、State（GLB.activeTab）を更新する。"
         },
         {
           "name": "switchTab",
           "kind": "method",
           "start_line": 175,
-          "end_line": 180
+          "end_line": 180,
+          "docstring": "タブボタン要素またはタブIDを受け取り、actvTabでタブを切り替えたうえでcfgRslvから設定を解決してstartSessionを呼び出す。"
         },
         {
           "name": "rootGLB",
           "kind": "method",
           "start_line": 182,
-          "end_line": 230
+          "end_line": 230,
+          "docstring": "document全体のclick・change・inputイベントを一元的に捕捉し、data-action属性に基づいてアクションクラスのメソッドを呼び出すとともに、data-out属性のbindパスによってStateの双方向バインドを処理するイベントルーターを設定する。"
         },
         {
           "name": "routEvent",
           "kind": "function",
           "start_line": 183,
-          "end_line": 225
+          "end_line": 225,
+          "docstring": "イベントターゲットを解析してdata-actionの名前空間とメソッドに分解しディスパッチし、data-out/form context経由のStateバインドも処理するイベントハンドラ関数。"
         },
         {
           "name": "tglMulti",
           "kind": "method",
           "start_line": 231,
-          "end_line": 239
+          "end_line": 239,
+          "docstring": "複数選択（mselect）コンポーネント内の個別チェックボックス変更時に「すべて選択」チェックボックスの状態を同期し、選択済み値リストをState（bind先パス）に書き込む。"
         },
         {
           "name": "tglAllMulti",
           "kind": "method",
           "start_line": 240,
-          "end_line": 248
+          "end_line": 248,
+          "docstring": "複数選択（mselect）コンポーネントの「すべて選択」チェックボックス変更時に全子チェックボックスの checked を一括更新し、選択値リストをState（bind先パス）に書き込む。"
         }
       ]
     },
-    "src/CoreMethod.html": {
+    "src/gas/CoreMethod.html": {
       "symbols": [
         {
           "name": "toObjArray",
           "kind": "method",
           "start_line": 5,
-          "end_line": 9
+          "end_line": 9,
+          "docstring": "スプレッドシートから取得した二次元配列データ（先頭行がヘッダ）をオブジェクト配列に変換して返す。"
         },
         {
           "name": "remapArry",
           "kind": "method",
           "start_line": 10,
-          "end_line": 14
+          "end_line": 14,
+          "docstring": "列インデックス配列（idxArr）に従って二次元配列の列順を並べ替え・抽出した新しい二次元配列を返す。インデックスが -1 の列は空文字を補填する。"
         },
         {
           "name": "remap",
           "kind": "function",
           "start_line": 12,
-          "end_line": 12
+          "end_line": 12,
+          "docstring": "1行分のデータ配列をインデックス配列に基づいて並べ替えるローカル関数。remapArry 内部で使用される。"
         },
         {
           "name": "validateSelect",
           "kind": "method",
           "start_line": 15,
-          "end_line": 18
+          "end_line": 18,
+          "docstring": "指定配列の先頭quota件が空値または重複値を持つかを検証し、問題がある要素をtrue、正常な要素をfalseとするboolean配列を返す。"
         },
         {
           "name": "buildStats",
           "kind": "method",
           "start_line": 21,
-          "end_line": 39
+          "end_line": 39,
+          "docstring": "回帰統計オブジェクト（statsDT）を受け取り、データ個数・相関係数・回帰直線・残差標準偏差等をフォーマットして表示用ラベルペア配列に変換して返す。"
         },
         {
           "name": "fmt",
           "kind": "function",
           "start_line": 23,
-          "end_line": 23
+          "end_line": 23,
+          "docstring": "数値を指定桁数で小数点表示にフォーマットするローカル関数。nullやNaNの場合はハイフンを返す。"
         },
         {
           "name": "calcScale",
           "kind": "method",
           "start_line": 40,
-          "end_line": 59
+          "end_line": 59,
+          "docstring": "X・Y軸の値配列とdesiredTicks数からグラフ軸のNiceスケール（niceMin, niceMax, niceTicks）を算出して返す。"
         },
         {
           "name": "calcNiceTickUnits",
           "kind": "method",
           "start_line": 60,
-          "end_line": 106
+          "end_line": 106,
+          "docstring": "データの値範囲または最小・最大値から、グラフ軸の目盛り単位候補リストをNiceNumber法で算出して降順で返す。"
         },
         {
           "name": "genHeader",
           "kind": "method",
           "start_line": 107,
-          "end_line": 119
+          "end_line": 119,
+          "docstring": "ヘッダタイプ文字列（tracer5i / pxrf / wdxrf / crct / filelist / rawFile）に応じてGLBインデックス定義から列ヘッダー配列を生成して返す。"
         },
         {
           "name": "valdEnv",
           "kind": "method",
           "start_line": 120,
-          "end_line": 137
+          "end_line": 137,
+          "docstring": "環境検証（Validate Environment）として、現在のスプレッドシートシート構成とGLBスキーマを比較し、ヘッダー不正エラー一覧・不足シートのビルドプラン・不足シート名一覧を返す。"
         },
         {
           "name": "createHeaderValidator",
           "kind": "function",
           "start_line": 123,
-          "end_line": 124
+          "end_line": 124,
+          "docstring": "シートラベル名を受け取り、実際のヘッダ配列と期待するヘッダ配列を比較してエラーメッセージまたはnullを返すバリデーター関数を生成する。"
         },
         {
           "name": "genDB",
           "kind": "method",
           "start_line": 138,
-          "end_line": 153
+          "end_line": 153,
+          "docstring": "PXRFデータとWDXRFデータの二次元配列をオブジェクト配列に変換・結合してデータベースオブジェクトを生成する。mixWDオプション指定時にWDXRF産地情報をPXRFレコードにマージする。"
         },
         {
           "name": "fltrDB",
           "kind": "method",
           "start_line": 154,
-          "end_line": 169
+          "end_line": 169,
+          "docstring": "フィルターデータベース（Filter DB）として、ラップされたPXRF・WDXRFデータから選択データセット名に一致するレコードを抽出し、必要な列のみを保持した配列を返す。"
         },
         {
           "name": "filterDatasets",
           "kind": "method",
           "start_line": 170,
-          "end_line": 183
+          "end_line": 183,
+          "docstring": "PXRF・WDXRFデータ配列にデータベース名・計測情報・グループのフィルターを適用し、フィルター済みデータセットペアを返す。"
         },
         {
           "name": "parseLodOrNum",
           "kind": "method",
           "start_line": 184,
-          "end_line": 188
+          "end_line": 188,
+          "docstring": "LOD（検出限界）文字列を含む値を解析し、useLODフラグに応じて最小値またはnullを返す。数値文字列はNumberに変換して返す。"
         },
         {
           "name": "getElmVal",
           "kind": "method",
           "start_line": 189,
-          "end_line": 192
+          "end_line": 192,
+          "docstring": "PXRFレコードから指定元素の測定値とエラー値を取得する。modeMap・optElmsに基づいてobsidian（ob_）またはmudrock（md_）プレフィックスを自動判定する。"
         },
         {
           "name": "makeCompositeKeyMap",
           "kind": "method",
           "start_line": 193,
-          "end_line": 195
+          "end_line": 195,
+          "docstring": "データリストと複合キーフィールドリストから、デリミタ結合した複合キーをキーとするMapを生成して返す。"
         },
         {
           "name": "createTicks",
           "kind": "method",
           "start_line": 196,
-          "end_line": 203
+          "end_line": 203,
+          "docstring": "最小値・最大値・ステップから目盛り値オブジェクト配列を生成し、ラベルフォーマット関数（fmtTick）とともに返す。1000以上の値はk単位でフォーマットする。"
         },
         {
           "name": "escapeJsonForScript",
           "kind": "method",
           "start_line": 204,
-          "end_line": 206
+          "end_line": 206,
+          "docstring": "データオブジェクトをJSON文字列化し、HTMLスクリプトブロックへの埋め込みに安全なように '<' '>' をUnicodeエスケープして返す。"
         },
         {
           "name": "evaluate",
           "kind": "method",
           "start_line": 209,
-          "end_line": 215
+          "end_line": 215,
+          "docstring": "math.jsのmath.evaluate関数を使って数式文字列（fml）をレコードデータ（rData）の変数コンテキストで評価し、NaNや無限大の場合はnullを返す。"
         },
         {
           "name": "calcCALB",
           "kind": "method",
           "start_line": 216,
-          "end_line": 227
+          "end_line": 227,
+          "docstring": "較正計算（Calculate Calibration）として、WDXRFとPXRFの対応値配列から単純線形回帰を行い、傾き（slp）と切片（int）を返す。データが不足またはslope=0の場合はnullを返す。"
         },
         {
           "name": "calcReg",
           "kind": "method",
           "start_line": 228,
-          "end_line": 251
+          "end_line": 251,
+          "docstring": "X・Y・誤差値配列から線形回帰を実施し、データ個数・傾き・切片・相関係数・R²・残差標準偏差・器械誤差3σを含む回帰統計オブジェクトを返す。"
         },
         {
           "name": "calcElementCalibrations",
           "kind": "method",
           "start_line": 252,
-          "end_line": 269
+          "end_line": 269,
+          "docstring": "PXRFとWDXRFのレコード配列から全較正対象元素について複合キーマップを用いてペアリングし、元素ごとにcalcCALBを呼び出して較正結果（slp/int）マップを返す。"
         }
       ]
     },
-    "src/CoreState.html": {
+    "src/gas/CoreState.html": {
       "symbols": [
         {
           "name": "AppSt",
           "kind": "class",
           "start_line": 93,
-          "end_line": 228
+          "end_line": 228,
+          "docstring": "アプリケーション全体のリアクティブな状態（State）を一元管理するクラス。ドット区切りのパスによるネストされた状態の取得・設定・購読・リセットをサポートし、循環更新ガードも備える。"
         },
         {
           "name": "constructor",
           "kind": "method",
           "start_line": 96,
-          "end_line": 171
+          "end_line": 171,
+          "docstring": "GLB定数を参照してENTST（データ入力）・ADPST（アダプター）・DashST（ダッシュボード）・RPTST（レポート）の各セクション初期状態を構築し、状態ツリーとリスナーマップを初期化する。"
         },
         {
           "name": "createSec",
           "kind": "function",
           "start_line": 97,
-          "end_line": 97
+          "end_line": 97,
+          "docstring": "セクション単位のStateオブジェクト（status, data, refs, flags）をデフォルト値でファクトリ生成するローカル関数。各UIセクション初期化に使用される。"
         },
         {
           "name": "proxy",
           "kind": "method",
           "start_line": 173,
-          "end_line": 173
+          "end_line": 173,
+          "docstring": "内部状態オブジェクト（#state）を直接参照として返すゲッター。読み取り専用参照として使用される。"
         },
         {
           "name": "get",
           "kind": "method",
           "start_line": 175,
-          "end_line": 178
+          "end_line": 178,
+          "docstring": "ドット区切りのパス文字列または配列を受け取り、内部状態ツリーから対応する値を取得して返す。パス配列を渡した場合は値の配列を返す。"
         },
         {
           "name": "res",
           "kind": "function",
           "start_line": 176,
-          "end_line": 176
+          "end_line": 176,
+          "docstring": "単一パス（文字列または配列）に対してネストされた状態値をreduceで取り出すローカル関数。get メソッド内部で使用される。"
         },
         {
           "name": "set",
           "kind": "method",
           "start_line": 180,
-          "end_line": 212
+          "end_line": 212,
+          "docstring": "ドット区切りのパスまたはオブジェクト形式で状態値を更新し、変更があった場合に対応するリスナー（親・子パス含む）と全リスナー（'*'）を通知する。循環更新を防ぐSetベースのガードを持つ。"
         },
         {
           "name": "subscribe",
           "kind": "method",
           "start_line": 214,
-          "end_line": 218
+          "end_line": 218,
+          "docstring": "指定パス（または複数パスの配列）に対してコールバック関数を購読登録し、当該パスのStateが変更されたときに通知を受け取れるようにする。"
         },
         {
           "name": "reset",
           "kind": "method",
           "start_line": 220,
-          "end_line": 227
+          "end_line": 227,
+          "docstring": "指定パス（または複数パスの配列）のStateを初期値のディープコピーに戻す。initialState から対応する値を復元してsetを呼び出す。"
         }
       ]
     },
-    "src/CoreUI.html": {
+    "src/gas/CoreUI.html": {
       "symbols": [
         {
           "name": "CoreUIPatcher",
           "kind": "class",
           "start_line": 3,
-          "end_line": 412
+          "end_line": 412,
+          "docstring": "UIコンポーネントへのDOMパッチ処理・フォームバインディング・フェーズ制御を一元管理する静的ユーティリティクラス。CoreUIから呼び出されるUI更新ロジックのハブ的役割を担う。"
         },
         {
           "name": "initDlg",
           "kind": "method",
           "start_line": 7,
-          "end_line": 29
+          "end_line": 29,
+          "docstring": "コンテナ要素にTpl.Dialog.universalのダイアログHTMLを初期構築し、State.subscribeを通じてGLB.dialogの変化を監視してダイアログの開閉・タイトル・メッセージを自動反映する。"
         },
         {
           "name": "applyDlg",
           "kind": "function",
           "start_line": 13,
-          "end_line": 26
+          "end_line": 26,
+          "docstring": "GLB.dialogオブジェクトを受け取り、dialogElementの開閉・タイトル・メッセージ・キャンセルボタン表示をDOMへ反映するローカルコールバック関数。"
         },
         {
           "name": "promptDialog",
           "kind": "method",
           "start_line": 31,
-          "end_line": 61
+          "end_line": 61,
+          "docstring": "dialog要素またはセレクタを受け取り、closeイベント後にフォーム入力値またはreturnValueをresolveするPromiseを返す汎用ダイアログプロンプトメソッド。"
         },
         {
           "name": "onClose",
           "kind": "function",
           "start_line": 37,
-          "end_line": 52
+          "end_line": 52,
+          "docstring": "dialog要素のcloseイベントハンドラとして登録され、キャンセル判定後にフォームのFormDataをパースしてPromiseをresolveするコールバック関数。"
         },
         {
           "name": "resolveBindCtx",
           "kind": "method",
           "start_line": 63,
-          "end_line": 69
+          "end_line": 69,
+          "docstring": "コンテキスト文字列に$activeが含まれる場合はctxResolverを呼び出してアクティブアイテムのコンテキストパスに解決し、それ以外はそのまま返す。"
         },
         {
           "name": "syncFormCtx",
           "kind": "method",
           "start_line": 71,
-          "end_line": 86
+          "end_line": 86,
+          "docstring": "formのdata-opts.ctxまたは引数のdirectCtxからStateパスを解決し、form内の全入力コントロール（input/select/textarea）の値をStateから同期する。"
         },
         {
           "name": "bindFormCtx",
           "kind": "method",
           "start_line": 88,
-          "end_line": 121
+          "end_line": 121,
+          "docstring": "formに対してState購読によるリアルタイム双方向バインドを初期設定し、$activeコンテキスト変更時の再同期コールバックもactiveCtxSubscriberへ登録する。"
         },
         {
           "name": "onActiveChange",
           "kind": "function",
           "start_line": 101,
-          "end_line": 101
+          "end_line": 101,
+          "docstring": "アクティブコンテキスト変更時にsyncFormCtxを呼び出してフォームを再同期するインラインコールバック関数。"
         },
         {
           "name": "ensureMSelectInit",
           "kind": "method",
           "start_line": 123,
-          "end_line": 127
+          "end_line": 127,
+          "docstring": "マルチセレクト要素のpopover-contentがまだ生成されていない場合にTpl.Common.popoverで初期HTMLを注入し、初期化を保証する。"
         },
         {
           "name": "patchMSelectRefs",
           "kind": "method",
           "start_line": 130,
-          "end_line": 142
+          "end_line": 142,
+          "docstring": "マルチセレクト（Multi-Select）要素の選択済みチェックボックス状態とpopover-summaryのバッジ表示を渡されたvals配列に合わせてDOMへ反映する。"
         },
         {
           "name": "patchMSelectOpts",
           "kind": "method",
           "start_line": 145,
-          "end_line": 163
+          "end_line": 163,
+          "docstring": "マルチセレクト要素のpopover-content領域にTpl.MultiSelect.item/selectAllで生成した選択肢HTMLを再構築し、既存の選択状態（bindパス）も復元する。"
         },
         {
           "name": "patchElementVal",
           "kind": "method",
           "start_line": 166,
-          "end_line": 185
+          "end_line": 185,
+          "docstring": "要素の種別（checkbox/mselect/segment/SELECT/INPUT/BUTTON）を判定し、渡されたvalをそれぞれ適切な方法でDOMに反映する汎用値パッチメソッド。"
         },
         {
           "name": "patchStatus",
           "kind": "method",
           "start_line": 187,
-          "end_line": 195
+          "end_line": 195,
+          "docstring": "ステータス表示要素に対し[viewState, テキスト]の2要素配列を受け取りdata-viewとinnerTextを更新する。配列が無効な場合はhidden状態にする。"
         },
         {
           "name": "patchOpts",
           "kind": "method",
           "start_line": 197,
-          "end_line": 207
+          "end_line": 207,
+          "docstring": "SELECT要素またはmselect要素に選択肢データを適用し、種別に応じてTpl.Form.optionsまたはpatchMSelectOptsへ振り分ける。"
         },
         {
           "name": "patchSrc",
           "kind": "method",
           "start_line": 209,
-          "end_line": 213
+          "end_line": 213,
+          "docstring": "data-ui属性またはタグ名に応じてsymbtbl/table/UI-PLOTへのデータソース適用方法を切り替え、Tpl.Symbol.tbl・Tpl.Table.build・el.srcにそれぞれ反映する。"
         },
         {
           "name": "patchErrs",
           "kind": "method",
           "start_line": 215,
-          "end_line": 220
+          "end_line": 220,
+          "docstring": "バリデーションエラー配列を受け取り、コンテナ内のselect・input要素にインデックス対応でaria-invalid属性を付与・除去してエラー表示を制御する。"
         },
         {
           "name": "evalPhase",
           "kind": "method",
           "start_line": 222,
-          "end_line": 225
+          "end_line": 225,
+          "docstring": "phaseプロパティが数値・関数・undefinedのいずれかを判定し、現在フェーズに対してtrue/falseを返す汎用フェーズ評価ヘルパー。"
         },
         {
           "name": "updateVisible",
           "kind": "method",
           "start_line": 227,
-          "end_line": 231
+          "end_line": 231,
+          "docstring": "スキーマ定義のvisiblePhaseを現在フェーズとevalPhaseで評価し、要素のstyle.displayをshow/noneに切り替える。"
         },
         {
           "name": "updateOpen",
           "kind": "method",
           "start_line": 233,
-          "end_line": 243
+          "end_line": 243,
+          "docstring": "DETAILS要素のopenPhaseを評価して、フェーズ条件に基づきdetails.openをtrue/falseに設定する（open時は200msの遅延付き）。"
         },
         {
           "name": "updateActiveDis",
           "kind": "method",
           "start_line": 245,
-          "end_line": 270
+          "end_line": 270,
+          "docstring": "activePhase・disablePhazeをevalPhaseで評価し、DETAILS要素および子コントロールのdisabled属性・data-viewを有効/無効状態に応じて更新する。"
         },
         {
           "name": "updateClass",
           "kind": "method",
           "start_line": 272,
-          "end_line": 276
+          "end_line": 276,
+          "docstring": "スキーマ定義のclassNameプロパティ（文字列または関数）を現在フェーズで評価し、要素のclassNameを更新する。"
         },
         {
           "name": "updateText",
           "kind": "method",
           "start_line": 278,
-          "end_line": 282
+          "end_line": 282,
+          "docstring": "スキーマ定義のtextプロパティ（文字列または関数）を現在フェーズで評価し、要素のinnerTextを更新する。"
         },
         {
           "name": "updateDataset",
           "kind": "method",
           "start_line": 284,
-          "end_line": 292
+          "end_line": 292,
+          "docstring": "スキーマ定義のdatasetプロパティ（オブジェクトまたは関数）を現在フェーズで評価し、要素のdata属性群を一括更新する。"
         },
         {
           "name": "routOptions",
           "kind": "method",
           "start_line": 294,
-          "end_line": 301
+          "end_line": 301,
+          "docstring": "セミコロン区切り・コロン結合のオプション文字列（例：\"bind:path;view:primary\"）をパースしてkey-valueオブジェクトに変換するユーティリティメソッド。"
         },
         {
           "name": "applyOpts",
           "kind": "method",
           "start_line": 304,
-          "end_line": 339
+          "end_line": 339,
+          "docstring": "data-opts属性のJSON文字列またはセミコロン区切り文字列を解析し、view/icon/prefix/suffix/form/mselectなどUI種別に応じてDOMおよびインスタンスプロパティへ適用する大型パーサー。"
         },
         {
           "name": "routBuilder",
           "kind": "method",
           "start_line": 342,
-          "end_line": 353
+          "end_line": 353,
+          "docstring": "data-ui属性の種別（dlg/mselect/addon/form）に応じてinitDlg・ensureMSelectInit・buildAddonなど各UI初期化処理へルーティングし、__uiBoundフラグで重複実行を防ぐ。"
         },
         {
           "name": "routOut",
           "kind": "method",
           "start_line": 356,
-          "end_line": 383
+          "end_line": 383,
+          "docstring": "data-out属性文字列を解析し、status/opts/src/stats/errs/invalid/bindの各パッチ種別に対してState.subscribeを登録して動的パッチをバインドする（旧routPatch相当）。"
         },
         {
           "name": "applyFn",
           "kind": "function",
           "start_line": 367,
-          "end_line": 379
+          "end_line": 379,
+          "docstring": "routOutの各エントリに対して生成されるパッチ適用コールバックで、type別にpatchStatus・patchOpts・patchSrc等を呼び分けてStateの変化をDOMへ伝播する。"
         },
         {
           "name": "buildAddon",
           "kind": "method",
           "start_line": 386,
-          "end_line": 411
+          "end_line": 411,
+          "docstring": "iconオプションにもとづきmaterial-symbols-outlinedスパン、prefixスパン、suffixスパンをラッパー要素のDOMへ直接挿入し、color/sizeのインラインスタイルも付与する装飾DOM構築メソッド。"
         },
         {
           "name": "CoreUI",
           "kind": "class",
           "start_line": 414,
-          "end_line": 452
+          "end_line": 452,
+          "docstring": "スキーマと状態ターゲット（stateTarget）を受け取り、CoreUIMatcherによる初回ビルドとフェーズ変化に応じたUI更新を担当するUIオーケストレータークラス。"
         },
         {
           "name": "constructor",
           "kind": "method",
           "start_line": 415,
-          "end_line": 418
+          "end_line": 418,
+          "docstring": "schemaとstateTargetをインスタンスフィールドに格納してCoreUIインスタンスを初期化する。"
         },
         {
           "name": "getVal",
           "kind": "method",
           "start_line": 420,
-          "end_line": 422
+          "end_line": 422,
+          "docstring": "パスにドットが含まれる場合はそのままState.getを呼び出し、含まれない場合はstateTargetをプレフィックスとして付加した上でState値を取得する。"
         },
         {
           "name": "build",
           "kind": "method",
           "start_line": 424,
-          "end_line": 436
+          "end_line": 436,
+          "docstring": "update呼び出し後に、data-ui要素へのroutBuilder・data-opts単体要素へのapplyOpts・data-out要素へのroutOutを順次実行して全UI初期構築を行う。"
         },
         {
           "name": "getVal",
           "kind": "function",
           "start_line": 434,
-          "end_line": 434
+          "end_line": 434,
+          "docstring": "build内でroutOutへ渡すためにthis.getValをクロージャとしてキャプチャしたローカル関数。"
         },
         {
           "name": "update",
           "kind": "method",
           "start_line": 438,
-          "end_line": 451
+          "end_line": 451,
+          "docstring": "StateからstateTarget.phaseを取得し、スキーマ定義のelements配列に基づいて各DOM要素の表示・開閉・有効/無効・クラス・テキスト・データセットをフェーズ値に合わせて更新する。"
         }
       ]
     },
-    "src/Dash.html": {
+    "src/gas/Dash.html": {
       "symbols": []
     },
-    "src/Dash_App.html": {
+    "src/gas/Dash_App.html": {
       "symbols": [
         {
           "name": "DashAct",
           "kind": "class",
           "start_line": 15,
-          "end_line": 257
+          "end_line": 257,
+          "docstring": "ダッシュボード（Dash）サイドバーのユーザー操作アクションを一元管理する静的クラス。データベース読込・レポート展開・お気に入り（Favorite）設定の登録・選択・削除を担当する。"
         },
         {
           "name": "ssId",
           "kind": "method",
           "start_line": 16,
-          "end_line": 16
+          "end_line": 16,
+          "docstring": "`State`からスプレッドシートID（`GLB.ssId`）を取得するゲッターメソッド。"
         },
         {
           "name": "requestLoadDB",
           "kind": "method",
           "start_line": 18,
-          "end_line": 37
+          "end_line": 37,
+          "docstring": "pXRF・WDXRF・補正シートデータを`CoreAct.ensureFetch`で取得してデータベースを構築し、`State`にpXRFデータ・WDXRFデータ・補正データを格納してフェーズをLOADEDに進める非同期メソッド。"
         },
         {
           "name": "requestOpenRepo",
           "kind": "method",
           "start_line": 39,
-          "end_line": 68
+          "end_line": 68,
+          "docstring": "レポートHTMLテンプレートを取得し、注入データおよびお気に入り設定を埋め込んでBlobURLを生成し、別タブ（またはOffice環境ではダウンロード）で解析用HTMLレポートを展開する非同期メソッド。"
         },
         {
           "name": "updFavTableSrc",
           "kind": "method",
           "start_line": 70,
-          "end_line": 92
+          "end_line": 92,
+          "docstring": "お気に入りリスト（`favList`）・選択中お気に入り・上書き対象・成功対象の現在の`State`を読み取り、UIテーブルのデータソース（`favTableSrc`）を組み立てて`State`に格納するメソッド。"
         },
         {
           "name": "selectFavItem",
           "kind": "method",
           "start_line": 94,
-          "end_line": 115
+          "end_line": 115,
+          "docstring": "お気に入りリストの行クリック時に呼ばれ、対象名を選択または選択解除して`State`を更新し、UIオートメーターの再描画をトリガーするメソッド。"
         },
         {
           "name": "onFavNameChange",
           "kind": "method",
           "start_line": 117,
-          "end_line": 132
+          "end_line": 132,
+          "docstring": "お気に入り名入力欄の変更イベントを受け取り、`State`の`favInputName`を更新し、入力値が変化した場合に上書き確認状態をリセットするメソッド。"
         },
         {
           "name": "promptPasteDialog",
           "kind": "method",
           "start_line": 134,
-          "end_line": 137
+          "end_line": 137,
+          "docstring": "`CoreUIPatcher.promptDialog`を使って貼り付け用ダイアログ（`dlgFavPaste`）を表示し、ユーザーが入力したテキストを非同期で返すメソッド。"
         },
         {
           "name": "addFavFromClipboard",
           "kind": "method",
           "start_line": 139,
-          "end_line": 217
+          "end_line": 217,
+          "docstring": "クリップボード（またはダイアログ入力）からJSON設定テキストを読み取り、解析したお気に入り設定をStorageAPIに保存してお気に入りリストへ追加（または上書き）する非同期メソッド。"
         },
         {
           "name": "delFavItem",
           "kind": "method",
           "start_line": 219,
-          "end_line": 247
+          "end_line": 247,
+          "docstring": "指定名のお気に入り設定をStorageAPIから削除し、`State`のお気に入りリストを更新したうえでテーブルUIを再描画する非同期メソッド。"
         },
         {
           "name": "initFavList",
           "kind": "method",
           "start_line": 249,
-          "end_line": 256
+          "end_line": 256,
+          "docstring": "StorageAPIから`OBP_FAV_INDEX`を読み込んでお気に入りリストを初期化し、テーブルUIのデータソースを更新する非同期メソッド。"
         },
         {
           "name": "DashInit",
           "kind": "class",
           "start_line": 261,
-          "end_line": 285
+          "end_line": 285,
+          "docstring": "ダッシュボードアプリの起動シーケンスを管理する静的クラス。CoreUI・State購読・セッション開始・お気に入りリスト初期化を順次実行する。"
         },
         {
           "name": "start",
           "kind": "method",
           "start_line": 262,
-          "end_line": 284
+          "end_line": 284,
+          "docstring": "ダッシュボードのUIオートメーター（`CoreUI`）を構築し、`State`購読を設定してセッションを開始し、お気に入りリストの初期化を行うアプリ起動エントリーポイントメソッド。"
         }
       ]
     },
-    "src/Report.html": {
+    "src/gas/Report.html": {
       "symbols": []
     },
-    "src/Report_APP.html": {
+    "src/gas/Report_APP.html": {
       "symbols": [
         {
           "name": "SIDEFIX",
           "kind": "class",
           "start_line": 4,
-          "end_line": 19
+          "end_line": 19,
+          "docstring": "サイドバーのズーム・スケール固定を担うユーティリティクラス。デバイスピクセル比の変化に追従してCSS変数（--current-scale, --main-margin, --sidebar-height）を動的に更新する。"
         },
         {
           "name": "lock",
           "kind": "method",
           "start_line": 6,
-          "end_line": 13
+          "end_line": 13,
+          "docstring": "現在のdevicePixelRatioとウィンドウサイズからCSSカスタムプロパティを計算してサイドバーレイアウトをロックする。"
         },
         {
           "name": "init",
           "kind": "method",
           "start_line": 14,
-          "end_line": 18
+          "end_line": 18,
+          "docstring": "resizeイベントおよびDOMContentLoadedイベントにSIDEFIX.lockを登録し、初回ロックを実行して初期化を完了する。"
         },
         {
           "name": "RptTpl",
           "kind": "class",
           "start_line": 23,
-          "end_line": 24
+          "end_line": 24,
+          "docstring": "レポートUI用HTMLテンプレートを保持するクラス（現在は空のプレースホルダー）。"
         },
         {
           "name": "RepoSt",
           "kind": "class",
           "start_line": 27,
-          "end_line": 179
+          "end_line": 179,
+          "docstring": "レポートボードのState管理を一元化するクラス。RPTST名前空間以下のUI・設定・データセット・パネル状態の読み書きおよび初期化ロジックを担当する。"
         },
         {
           "name": "getSt",
           "kind": "method",
           "start_line": 29,
-          "end_line": 38
+          "end_line": 38,
+          "docstring": "RPTST.ui / RPTST.config / RPTST.dataset / RPTST.panels をStateから読み出し、アクティブパネル・レイアウト・テーマ等を含む統合スナップショットオブジェクトを返す。"
         },
         {
           "name": "update",
           "kind": "method",
           "start_line": 40,
-          "end_line": 40
+          "end_line": 40,
+          "docstring": "RepoAct.automatorのupdate()を呼び出してUIを最新State値で再描画する。"
         },
         {
           "name": "finalizePanel",
           "kind": "method",
           "start_line": 42,
-          "end_line": 44
+          "end_line": 44,
+          "docstring": "パネル設定変更後の後処理としてupdateを呼び出し、UIを確定状態に同期する。"
         },
         {
           "name": "initSt",
           "kind": "method",
           "start_line": 46,
-          "end_line": 108
+          "end_line": 108,
+          "docstring": "お気に入りオブジェクト（favObj）と生データ（d）をもとにRPTST全域のState（dataset・config・panels・optFields）を初期化する非同期メソッド。フィルター選択肢の生成やシンボル状態の更新も行う。"
         },
         {
           "name": "exVals",
           "kind": "function",
           "start_line": 48,
-          "end_line": 51
+          "end_line": 51,
+          "docstring": "pXRFデータ（pxrfDT）の指定キーからユニーク値リストを抽出して返すクロージャ関数。値が空の場合はnullを返す。"
         },
         {
           "name": "initFltr",
           "kind": "function",
           "start_line": 53,
-          "end_line": 53
+          "end_line": 53,
+          "docstring": "お気に入り値（buVal）が配列であればそのまま文字列化、なければデフォルト選択肢（opts）を返すフィルター初期化クロージャ関数。"
         },
         {
           "name": "updateBaseScales",
           "kind": "method",
           "start_line": 110,
-          "end_line": 134
+          "end_line": 134,
+          "docstring": "ボードモードとパネル設定に基づいて対象メトリクスのauto/fixedベーススケールを計算し、RPTST.dataset.baseScalesをStateに書き込む。ReportMethod.calculateBaseScalesに実計算を委譲する。"
         },
         {
           "name": "renewSymbState",
           "kind": "method",
           "start_line": 136,
-          "end_line": 145
+          "end_line": 145,
+          "docstring": "現在のシンボロジー設定（symbology.baseKey）に基づいてpxrfDTから属性値リストを取得し、RPTST.ui.optFields.symbSrcをStateに更新する。"
         },
         {
           "name": "renewPanel",
           "kind": "method",
           "start_line": 147,
-          "end_line": 178
+          "end_line": 178,
+          "docstring": "アクティブパネルのスケールモードと選択メトリクスに応じてtickUnit選択肢を再生成し、Stateを更新した後finalizePanel()を呼ぶ。"
         },
         {
           "name": "ensureOpt",
           "kind": "function",
           "start_line": 163,
-          "end_line": 167
+          "end_line": 167,
+          "docstring": "選択肢リスト（opts）に現在値（curVal）が存在しない場合に動的にオプションを追加するクロージャ関数。"
         },
         {
           "name": "RepoAct",
           "kind": "class",
           "start_line": 182,
-          "end_line": 327
+          "end_line": 327,
+          "docstring": "レポートボードのユーザー操作アクション（ボードモード切替・パネル設定変更・シンボル管理・エクスポート委譲等）を一元管理する静的アクションクラス。"
         },
         {
           "name": "setBoardMode",
           "kind": "method",
           "start_line": 186,
-          "end_line": 201
+          "end_line": 201,
+          "docstring": "ボードモード（calib / clus）を切り替え、パネル構成をリセットしてStateを更新する。"
         },
         {
           "name": "changePanelRef",
           "kind": "method",
           "start_line": 203,
-          "end_line": 222
+          "end_line": 222,
+          "docstring": "フォームコントロールの変更イベントを受けてアクティブパネルの参照値（calbVal・tickUnit等）をStateに反映し、必要に応じてベーススケールとパネル表示を更新する。"
         },
         {
           "name": "valdSymbAxis",
           "kind": "method",
           "start_line": 224,
-          "end_line": 239
+          "end_line": 239,
+          "docstring": "シンボル軸（baseKey）の変更を確認ダイアログ付きで検証し、承認時はシンボロジー設定をリセットしてStateを更新し、拒否時は元の値に戻す非同期メソッド。"
         },
         {
           "name": "resetSymb",
           "kind": "method",
           "start_line": 241,
-          "end_line": 243
+          "end_line": 243,
+          "docstring": "シンボロジーのルールリストをデフォルト1件（defShp・defClr）にリセットしてStateを更新する。"
         },
         {
           "name": "addSymb",
           "kind": "method",
           "start_line": 245,
-          "end_line": 248
+          "end_line": 248,
+          "docstring": "シンボロジーのルールリストに新規ルールを追加してStateを更新する。"
         },
         {
           "name": "removeSymb",
           "kind": "method",
           "start_line": 250,
-          "end_line": 254
+          "end_line": 254,
+          "docstring": "指定キー（param）に一致するシンボルルールをルールリストから除去してStateを更新する。"
         },
         {
           "name": "updSymb",
           "kind": "method",
           "start_line": 256,
-          "end_line": 266
+          "end_line": 266,
+          "docstring": "シンボルルールリストの指定インデックス・フィールドの値を更新してStateに書き込む。"
         },
         {
           "name": "setActiveScaleMode",
           "kind": "method",
           "start_line": 268,
-          "end_line": 278
+          "end_line": 278,
+          "docstring": "アクティブパネルのスケールモード（auto / manual）を設定し、tickUnitをリセットしてStateを更新する。"
         },
         {
           "name": "changeRowAspect",
           "kind": "method",
           "start_line": 280,
-          "end_line": 289
+          "end_line": 289,
+          "docstring": "行アスペクト比入力値を0.1〜2.0の範囲にクランプし、指定行インデックスのrowAspectをStateに反映する。"
         },
         {
           "name": "actvTab",
           "kind": "method",
           "start_line": 291,
-          "end_line": 291
+          "end_line": 291,
+          "docstring": "RPTST.ui.activeTabを指定タブIDに更新してタブ切替を行う。"
         },
         {
           "name": "actvSub",
           "kind": "method",
           "start_line": 293,
-          "end_line": 293
+          "end_line": 293,
+          "docstring": "RPTST.ui.activeSubを指定サブタブIDに更新してサブパネル切替を行う。"
         },
         {
           "name": "actvPanel",
           "kind": "method",
           "start_line": 295,
-          "end_line": 295
+          "end_line": 295,
+          "docstring": "RPTST.ui.activePanelIdを指定パネルIDに更新してアクティブグリッドパネルを切り替える。"
         },
         {
           "name": "updExportDesc",
           "kind": "method",
           "start_line": 297,
-          "end_line": 297
+          "end_line": 297,
+          "docstring": "RepoExport.updExportDescに処理を委譲してエクスポート種別の説明文をUIに反映する。"
         },
         {
           "name": "requestExport",
           "kind": "method",
           "start_line": 299,
-          "end_line": 299
+          "end_line": 299,
+          "docstring": "RepoExport.requestExportに処理を委譲してエクスポート処理を開始する。"
         },
         {
           "name": "requestCopyConfig",
           "kind": "method",
           "start_line": 301,
-          "end_line": 301
+          "end_line": 301,
+          "docstring": "RepoExport.requestCopyConfigに処理を委譲して設定JSONのクリップボードコピーを開始する。"
         },
         {
           "name": "syncPanelDom",
           "kind": "method",
           "start_line": 303,
-          "end_line": 303
+          "end_line": 303,
+          "docstring": "RepoRend.syncPanelDomに処理を委譲してパネルDOM構造をGridレイアウトと同期する。"
         },
         {
           "name": "toggleMarginLink",
           "kind": "method",
           "start_line": 305,
-          "end_line": 315
+          "end_line": 315,
+          "docstring": "canvas/panel余白の4方向連動フラグを切り替え、リンクボタンのaria属性とアイコンを更新する。"
         },
         {
           "name": "syncMargin",
           "kind": "method",
           "start_line": 317,
-          "end_line": 326
+          "end_line": 326,
+          "docstring": "余白連動フラグがONの場合、指定グループ（canvas / panel）の全4辺マージン値を入力値で一括更新し、フォームUIを同期する。"
         },
         {
           "name": "RepoRend",
           "kind": "class",
           "start_line": 330,
-          "end_line": 495
+          "end_line": 495,
+          "docstring": "レポートボードのDOM同期・グリッドレイアウト計算・チャート描画を担当するレンダリング管理クラス。"
         },
         {
           "name": "_applyPanelLabels",
           "kind": "method",
           "start_line": 334,
-          "end_line": 356
+          "end_line": 356,
+          "docstring": "グリッド内の指定インデックスパネル要素に行列ラベル（r1, c1等）のCSS変数とrowAspect入力値を適用する内部メソッド。"
         },
         {
           "name": "syncPanelDom",
           "kind": "method",
           "start_line": 358,
-          "end_line": 422
+          "end_line": 422,
+          "docstring": "GridRowsとGridColsに基づいてパネルDOM要素数を同期し、A4コンテナのCSS変数（col/row count・panel-w/h）を再計算してチャートを再描画する。"
         },
         {
           "name": "genGph",
           "kind": "method",
           "start_line": 424,
-          "end_line": 435
+          "end_line": 435,
+          "docstring": "現在のテーマ設定からグラフスタイルプロパティオブジェクト（gph）を生成し、A4コンテナのマージンCSS変数にも反映する。"
         },
         {
           "name": "genCharts",
           "kind": "method",
           "start_line": 437,
-          "end_line": 488
+          "end_line": 488,
+          "docstring": "全パネルのui-plot要素にチャート設定（データ・シンボル・スケール等）を割り当てて描画をトリガーする。エクスポートモード時はPRINT_READYメッセージ送信まで待機する。"
         },
         {
           "name": "draw",
           "kind": "function",
           "start_line": 444,
-          "end_line": 468
+          "end_line": 468,
+          "docstring": "各パネルのui-plot要素へチャート設定オブジェクト（ReportMethod.buildChartConfig結果またはpCalcDT）をセットしてグラフを描画するクロージャ関数。"
         },
         {
           "name": "executePrint",
           "kind": "function",
           "start_line": 473,
-          "end_line": 481
+          "end_line": 481,
+          "docstring": "全パネルのrender-finishedイベント受信後にローディング表示を非表示にし、PRINT_READYメッセージをwindow.parentへ送信するクロージャ関数。"
         },
         {
           "name": "qRend",
           "kind": "method",
           "start_line": 490,
-          "end_line": 494
+          "end_line": 494,
+          "docstring": "デバウンス付きでgenChartsを呼び出すクイックレンダリングメソッド。エクスポートモード時は何もしない。"
         },
         {
           "name": "RepoExport",
           "kind": "class",
           "start_line": 498,
-          "end_line": 682
+          "end_line": 682,
+          "docstring": "PDF・静的HTML・アプリHTMLの各エクスポート処理および設定JSONのクリップボードコピーを担当するエクスポート管理クラス。"
         },
         {
           "name": "_buildFavObj",
           "kind": "method",
           "start_line": 501,
-          "end_line": 519
+          "end_line": 519,
+          "docstring": "現在のState（boardMode・layout・theme・symbology・dataset・panels）をお気に入り保存用JSONオブジェクトに変換して返す内部メソッド。"
         },
         {
           "name": "getFormattedDate",
           "kind": "method",
           "start_line": 521,
-          "end_line": 524
+          "end_line": 524,
+          "docstring": "現在日付をYYYYMMDD形式の文字列として返すユーティリティメソッド。"
         },
         {
           "name": "downloadFile",
           "kind": "method",
           "start_line": 526,
-          "end_line": 531
+          "end_line": 531,
+          "docstring": "指定ファイル名とHTMLコンテンツのBlobを生成し、aタグ経由でブラウザダウンロードを実行する。"
         },
         {
           "name": "updExportDesc",
           "kind": "method",
           "start_line": 533,
-          "end_line": 539
+          "end_line": 539,
+          "docstring": "エクスポート種別（pdf / html / app）に応じた説明文をRPTST.ui.exportDescに書き込んでUIを更新する。"
         },
         {
           "name": "setupPrintListener",
           "kind": "method",
           "start_line": 541,
-          "end_line": 553
+          "end_line": 553,
+          "docstring": "PRINT_READYメッセージを受信するwindowリスナーを一度だけ登録し、受信時にiframeの印刷ダイアログを起動する。"
         },
         {
           "name": "_prepData",
           "kind": "method",
           "start_line": 555,
-          "end_line": 573
+          "end_line": 573,
+          "docstring": "エクスポート前処理として全パネルのチャートデータ（prevDT・statsDT）をReportMethod.buildChartConfigで事前計算して配列で返す内部メソッド。有効グラフが0件の場合はトーストを表示してnullを返す。"
         },
         {
           "name": "_buildHTML",
           "kind": "method",
           "start_line": 575,
-          "end_line": 598
+          "end_line": 598,
+          "docstring": "指定タイプ（pdf / html / app）のエクスポートHTML文字列をdocument.documentElementのクローンから生成して返す内部メソッド。appタイプは注入データとお気に入りをscriptタグとして埋め込む。"
         },
         {
           "name": "esc",
           "kind": "function",
           "start_line": 578,
-          "end_line": 578
+          "end_line": 578,
+          "docstring": "HTMLの &lt; &gt; をUnicodeエスケープシーケンスに変換してscriptタグ内への安全な埋め込みを実現するクロージャ関数。"
         },
         {
           "name": "genPDF",
           "kind": "method",
           "start_line": 600,
-          "end_line": 613
+          "end_line": 613,
+          "docstring": "チャートデータを事前計算してPDF用HTMLをiframeに書き込み、PRINT_READYイベントによる印刷ダイアログ起動を待機する。"
         },
         {
           "name": "genStaticHTML",
           "kind": "method",
           "start_line": 615,
-          "end_line": 621
+          "end_line": 621,
+          "docstring": "チャートデータを事前計算して静的HTML文字列を生成し、ファイルとしてダウンロードする。"
         },
         {
           "name": "genApp",
           "kind": "method",
           "start_line": 623,
-          "end_line": 628
+          "end_line": 628,
+          "docstring": "現在のState・データを埋め込んだスタンドアロン解析ボードHTMLを生成してダウンロードする。"
         },
         {
           "name": "requestExport",
           "kind": "method",
           "start_line": 630,
-          "end_line": 649
+          "end_line": 649,
+          "docstring": "エクスポートボタンを無効化してローディング状態に切り替え、選択された種別（pdf / html / app）に応じたgen*メソッドを呼び出した後UIを復元する非同期メソッド。"
         },
         {
           "name": "restoreUI",
           "kind": "function",
           "start_line": 636,
-          "end_line": 640
+          "end_line": 640,
+          "docstring": "エクスポートボタンの無効状態を解除しUIをmessageステータスに戻すクロージャ関数。"
         },
         {
           "name": "requestCopyConfig",
           "kind": "method",
           "start_line": 651,
-          "end_line": 681
+          "end_line": 681,
+          "docstring": "現在のボード設定をJSON文字列にシリアライズしてClipboard APIでコピーし、成功・失敗に応じたフィードバックをUIに表示する非同期メソッド。"
         },
         {
           "name": "RepoReact",
           "kind": "class",
           "start_line": 685,
-          "end_line": 726
+          "end_line": 726,
+          "docstring": "Stateの変更を購読してUI・レイアウト・チャートを自動更新するリアクティブ購読管理クラス。デバウンス機構を内包する。"
         },
         {
           "name": "debounce",
           "kind": "method",
           "start_line": 688,
-          "end_line": 691
+          "end_line": 691,
+          "docstring": "指定キーで前回のタイマーをキャンセルし、遅延後にfn(getSt())を呼び出すデバウンス実行メソッド。"
         },
         {
           "name": "setup",
           "kind": "method",
           "start_line": 693,
-          "end_line": 725
+          "end_line": 725,
+          "docstring": "タブ・サブパネル・パネル・レイアウト・データセット・シンボル等の各State変化に対してリアクティブ購読を設定し、対応する更新処理をデバウンスで登録する。"
         },
         {
           "name": "syncAria",
           "kind": "function",
           "start_line": 694,
-          "end_line": 694
+          "end_line": 694,
+          "docstring": "指定CSSセレクターにマッチする要素にaria-selected属性を設定して、アクティブ状態をDOMに反映するクロージャ関数。"
         },
         {
           "name": "setupMarginSync",
           "kind": "function",
           "start_line": 707,
-          "end_line": 722
+          "end_line": 722,
+          "docstring": "canvas/panelグループの余白連動ロジックをState購読として登録し、連動ONの場合に指定4辺キーの値を一括同期するクロージャ関数。"
         },
         {
           "name": "syncAll",
           "kind": "function",
           "start_line": 710,
-          "end_line": 715
+          "end_line": 715,
+          "docstring": "指定グループの全マージンキーを同一値でStateに一括書き込みし、フォームUIを同期するクロージャ関数。"
         },
         {
           "name": "RepoInit",
           "kind": "class",
           "start_line": 729,
-          "end_line": 826
+          "end_line": 826,
+          "docstring": "レポートボードの起動シーケンスを制御する初期化クラス。通常モードとエクスポートモードの分岐処理、State初期化、ResizeObserverの登録、RepoReactのセットアップを担当する。"
         },
         {
           "name": "init",
           "kind": "method",
           "start_line": 731,
-          "end_line": 823
+          "end_line": 823,
+          "docstring": "エクスポートモード（window.__EXPORT_CFG__）と通常モードで処理を分岐し、State注入・automatorビルド・パネルDOM同期・チャート描画・ResizeObserver登録・リアクティブ購読設定を順次実行する非同期初期化メソッド。"
         },
         {
           "name": "start",
           "kind": "method",
           "start_line": 825,
-          "end_line": 825
+          "end_line": 825,
+          "docstring": "init()の公開エントリーポイントとして機能し、初期化シーケンスを開始する。"
         }
       ]
     },
-    "src/Report_Logic.html": {
+    "src/gas/Report_Logic.html": {
       "symbols": [
         {
           "name": "ReportMethod",
           "kind": "class",
           "start_line": 85,
-          "end_line": 262
+          "end_line": 262,
+          "docstring": "レポートボード用の純粋計算関数群を提供するユーティリティクラス。グラフスタイル構築・パネルメトリクス計算・チャート設定生成・ベーススケール算出など副作用を持たない計算ロジックを集約する。"
         },
         {
           "name": "buildGraphStyle",
           "kind": "method",
           "start_line": 87,
-          "end_line": 110
+          "end_line": 110,
+          "docstring": "rawテーマ値（RPT_CFG.defTheme形式）とrng単位定義をもとにmm/pt値をpxに変換し、ChartRendererへ渡すグラフスタイルオブジェクト（style・gap）を生成して返す。"
         },
         {
           "name": "pt2px",
           "kind": "function",
           "start_line": 88,
-          "end_line": 88
+          "end_line": 88,
+          "docstring": "ポイント値をピクセル値に変換するインライン変換関数（1pt = 1.33px）。"
         },
         {
           "name": "mm2px",
           "kind": "function",
           "start_line": 89,
-          "end_line": 89
+          "end_line": 89,
+          "docstring": "ミリメートル値をピクセル値に変換するインライン変換関数（1mm = 3.78px）。"
         },
         {
           "name": "getPanelOffsets",
           "kind": "method",
           "start_line": 113,
-          "end_line": 121
+          "end_line": 121,
+          "docstring": "ChartRenderer.getGridMarginsを呼び出してパネルの固定余白（gridTop/Bottom/Left/Right・fixedW・fixedH）を取得し、パネルサイズ計算のDRYユーティリティとして提供する。"
         },
         {
           "name": "calculatePanelMetrics",
           "kind": "method",
           "start_line": 124,
-          "end_line": 130
+          "end_line": 130,
+          "docstring": "グリッド全体サイズ・列数・行数・ギャップからパネルの幅（panelW）と高さ（panelH）を計算して返す。calibモードの正方形プロット前提のメトリクス計算メソッド。"
         },
         {
           "name": "calculatePanelMetricsAspect",
           "kind": "method",
           "start_line": 133,
-          "end_line": 146
+          "end_line": 146,
+          "docstring": "行ごとのアスペクト比（rowAspects）に基づいて各行の高さ（panelH配列）とプロット幅（panelW）を計算して返す。clusモードの非均等行レイアウト用メトリクス計算メソッド。"
         },
         {
           "name": "generateExportHTML",
           "kind": "method",
           "start_line": 149,
-          "end_line": 160
+          "end_line": 160,
+          "docstring": "エクスポートタイプ（app / pdf / html）に応じてデータ・お気に入り・State・事前計算データをscriptタグとして埋め込んだエクスポート用HTML文字列を生成して返す。"
         },
         {
           "name": "calculateBaseScales",
           "kind": "method",
           "start_line": 163,
-          "end_line": 185
+          "end_line": 185,
+          "docstring": "対象メトリクス群のauto（フィルター適用）とfixed（db固定フィルター）のベーススケール（niceMin・niceMax・ticks・units）をpXRF/WDXRFデータから計算してオブジェクトで返す。"
         },
         {
           "name": "calcForMetrics",
           "kind": "function",
           "start_line": 166,
-          "end_line": 181
+          "end_line": 181,
+          "docstring": "指定モード（auto / fixed）とフィルター条件でpXRF・WDXRFデータをフィルタリングし、各メトリクスのスケールをbaseScalesオブジェクトに書き込むクロージャ関数。"
         },
         {
           "name": "_makeCustomScale",
           "kind": "method",
           "start_line": 189,
-          "end_line": 198
+          "end_line": 198,
+          "docstring": "指定された目盛り単位（specifiedUnit）に基づいてmin/maxと目盛り配列を含むカスタムスケールオブジェクトを生成して返す内部メソッド。単位が不正な場合はnullを返す。"
         },
         {
           "name": "buildChartConfig",
           "kind": "method",
           "start_line": 201,
-          "end_line": 261
+          "end_line": 261,
+          "docstring": "データ・データセット設定・パネル設定・ボードモード・グラフスタイル・シンボル・スケール等を受け取り、ui-plotのsrcプロパティに直接渡せるチャート設定オブジェクトを構築して返す純粋関数。"
         },
         {
           "name": "resolveUnit",
           "kind": "function",
           "start_line": 227,
-          "end_line": 227
+          "end_line": 227,
+          "docstring": "目盛り単位値（u）が有効な正数値であればNumberに変換して返し、無効な場合はnullを返すクロージャ関数。"
         }
       ]
     },
-    "src/Tracer5i.html": {
+    "src/gas/Tracer5i.html": {
       "symbols": []
     },
-    "src/Tracer5i_App.html": {
+    "src/gas/Tracer5i_App.html": {
       "symbols": [
         {
           "name": "getIdx",
           "kind": "function",
-          "start_line": 63,
-          "end_line": 63
+          "start_line": 61,
+          "end_line": 61,
+          "docstring": "ヘッダー行（`hdr`）から指定キーの列インデックスを検索して返すインライン関数。`Mtd.ENT.valdList`内で列位置特定に使用する。"
         },
         {
           "name": "getScanID",
           "kind": "function",
-          "start_line": 65,
-          "end_line": 65
+          "start_line": 63,
+          "end_line": 63,
+          "docstring": "行データから`sub_id`が存在する場合は`id_sub_id`、存在しない場合は`id`のみのスキャンIDを生成して返すインライン関数。"
         },
         {
           "name": "fmt",
           "kind": "function",
-          "start_line": 93,
-          "end_line": 93
+          "start_line": 91,
+          "end_line": 91,
+          "docstring": "抽出値を数値変換してppm→wt.%換算（×10000）し、`<LOD`文字列や空値は変換せずそのまま返すフォーマット関数。`Mtd.ENT.genExtr`内で元素値の整形に使用する。"
         },
         {
           "name": "extract",
           "kind": "function",
-          "start_line": 94,
-          "end_line": 102
+          "start_line": 92,
+          "end_line": 100,
+          "docstring": "ファイルIDと元素キーリスト・インデックスオブジェクトを受け取り、結果マップ（`resMap`）から値（`vals`）と誤差（`errs`）を抽出して返すインライン関数。"
         },
         {
           "name": "ENTAct",
           "kind": "class",
-          "start_line": 142,
-          "end_line": 267
+          "start_line": 138,
+          "end_line": 263,
+          "docstring": "Tracer5iデータの入力・検証・抽出フェーズ（Entry Phase）のアクションを管理する静的クラス。rawデータ取得・ファイルリスト生成・バリデーション・PXRF格納の各ステップを担当する。"
         },
         {
           "name": "ssId",
           "kind": "method",
-          "start_line": 143,
-          "end_line": 143
+          "start_line": 139,
+          "end_line": 139,
+          "docstring": "`State`からスプレッドシートID（`GLB.ssId`）を取得するゲッターメソッド。"
         },
         {
           "name": "valdPref",
           "kind": "method",
-          "start_line": 144,
-          "end_line": 154
+          "start_line": 140,
+          "end_line": 150,
+          "docstring": "抽出モード（`Dual`/`Single`）の選択変更を受け取り、ステータスを更新するとともにフェーズが変化した場合は関連セクションのエラーステータスをリセットするバリデーション（設定検証）メソッド。"
         },
         {
           "name": "updRawRefs",
           "kind": "method",
-          "start_line": 156,
-          "end_line": 159
+          "start_line": 152,
+          "end_line": 155,
+          "docstring": "rawデータ参照（`ENTST.RAW.refs`）のフィールド値を`State`に更新し、続けて`valdRawRefs`を呼び出して列選択バリデーションを実行するメソッド。"
         },
         {
           "name": "valdRawRefs",
           "kind": "method",
-          "start_line": 160,
-          "end_line": 164
+          "start_line": 156,
+          "end_line": 160,
+          "docstring": "現在のRAW参照設定を読み取って列選択の重複・空欄チェック（`CoreMethod.Util.validateSelect`）を実行し、エラーフラグとステータスを`State`に反映するバリデーションメソッド。"
         },
         {
           "name": "valdExtrRefs",
           "kind": "method",
-          "start_line": 165,
-          "end_line": 171
+          "start_line": 161,
+          "end_line": 167,
+          "docstring": "抽出参照設定（`ENTST.EXTR.refs`）のキー1フィールドが未入力かを検証し、エラーフラグとステータスを`State`に反映するバリデーションメソッド。"
         },
         {
           "name": "loadRaw",
           "kind": "method",
-          "start_line": 172,
-          "end_line": 189
+          "start_line": 168,
+          "end_line": 185,
+          "docstring": "Fileシートのrawデータを`API.pullDT`で取得し、`State`の`ENTST.RAW.data`を更新してフェーズをLOADに進め、続けて列選択バリデーションを実行する非同期メソッド。"
         },
         {
           "name": "stateDI",
           "kind": "method",
-          "start_line": 190,
-          "end_line": 205
+          "start_line": 186,
+          "end_line": 201,
+          "docstring": "rawデータに対してリスト検証（`Mtd.ENT.valdList`）を実行し、エラー有無に応じてフェーズ・ステータス・ステータスキャッシュを`State`へ反映するデータ検証・状態遷移（State Data Inspection）メソッド。"
         },
         {
           "name": "genList",
           "kind": "method",
-          "start_line": 206,
-          "end_line": 215
+          "start_line": 202,
+          "end_line": 211,
+          "docstring": "現在のRAW参照でrawデータを再マッピングしてファイルリストを生成し、`API.pushDT`でFilelist（ファイルリスト）シートに書き込む非同期メソッド。"
         },
         {
           "name": "valdList",
           "kind": "method",
-          "start_line": 216,
-          "end_line": 223
+          "start_line": 212,
+          "end_line": 219,
+          "docstring": "Filelistシートを`API.pullDT`で再取得してバリデーションを実行し、エラー列付きで`API.pushDT`によりシートを上書き更新する非同期メソッド。"
         },
         {
           "name": "runExtr",
           "kind": "method",
-          "start_line": 224,
-          "end_line": 243
+          "start_line": 220,
+          "end_line": 239,
+          "docstring": "Filelistシートとresultsシートを取得して抽出処理（`Mtd.ENT.genExtr`）を実行し、抽出データをextractシートに書き込んでフェーズをEXTRACTに進める非同期メソッド。"
         },
         {
           "name": "pushExtr",
           "kind": "method",
-          "start_line": 244,
-          "end_line": 266
+          "start_line": 240,
+          "end_line": 262,
+          "docstring": "抽出データをtracer5iシートに格納する非同期メソッド。既存データとの重複IDを検証（`Mtd.ENT.valdPxrf`）し、重複がある場合はユーザー確認後に上書き、なければ追記する。"
         },
         {
           "name": "ADPAct",
           "kind": "class",
-          "start_line": 270,
-          "end_line": 406
+          "start_line": 266,
+          "end_line": 402,
+          "docstring": "Tracer5iデータのグラフ作成・分析フェーズ（Adapter Phase）のアクションを管理する静的クラス。データベース読込・フィルタリング・シンボル設定・検量線プレビュー・補正値出力・PXRFシート標準化を担当する。"
         },
         {
           "name": "ssId",
           "kind": "method",
-          "start_line": 271,
-          "end_line": 271
+          "start_line": 267,
+          "end_line": 267,
+          "docstring": "`State`からスプレッドシートID（`GLB.ssId`）を取得するゲッターメソッド。"
         },
         {
           "name": "loadDB",
           "kind": "method",
-          "start_line": 272,
-          "end_line": 289
+          "start_line": 268,
+          "end_line": 285,
+          "docstring": "tracer5i・WDXRF・補正シートデータを取得してデータベース（`genDB`）を構築し、ADPフェーズを初期化してLOADEDに進める非同期メソッド。"
         },
         {
           "name": "fltrDB",
           "kind": "method",
-          "start_line": 290,
-          "end_line": 304
+          "start_line": 286,
+          "end_line": 300,
+          "docstring": "選択されたデータベースフィルタ（`ASGN.refs.filter`）を使ってpXRF・WDXRFデータをフィルタリングし、関連サブ状態をリセットしてFILTEREDフェーズに進める非同期メソッド。"
         },
         {
           "name": "setSymb",
           "kind": "method",
-          "start_line": 305,
-          "end_line": 314
+          "start_line": 301,
+          "end_line": 310,
+          "docstring": "シンボル設定を確定してフェーズをMAPPEDに進め、PREV・STDZセクションのステータスメッセージを初期化する非同期メソッド。"
         },
         {
           "name": "resetSymb",
           "kind": "method",
-          "start_line": 315,
-          "end_line": 315
+          "start_line": 311,
+          "end_line": 311,
+          "docstring": "`State`のシンボルルール一覧（`ADPST.SYMB.refs.rls`）をリセットする非同期メソッド。"
         },
         {
           "name": "valdAxis",
           "kind": "method",
-          "start_line": 316,
-          "end_line": 328
+          "start_line": 312,
+          "end_line": 324,
+          "docstring": "シンボルのベース軸キー（`baseKey`）の変更を検知し、ユーザー確認後に`baseKey`を更新してシンボルルールをリセットするバリデーション（軸設定検証）メソッド。"
         },
         {
           "name": "addSymb",
           "kind": "method",
-          "start_line": 329,
-          "end_line": 329
+          "start_line": 325,
+          "end_line": 325,
+          "docstring": "シンボルルール一覧に新しいルール行（デフォルト形状・色付き）を追加して`State`を更新するメソッド。"
         },
         {
           "name": "removeSymb",
           "kind": "method",
-          "start_line": 330,
-          "end_line": 333
+          "start_line": 326,
+          "end_line": 329,
+          "docstring": "指定キーのシンボルルールをリストから削除して`State`を更新するメソッド。"
         },
         {
           "name": "updSymb",
           "kind": "method",
-          "start_line": 334,
-          "end_line": 339
+          "start_line": 330,
+          "end_line": 335,
+          "docstring": "指定インデックスのシンボルルールの指定プロパティ（形状・色など）を更新して`State`に反映するメソッド。"
         },
         {
           "name": "genPrev",
           "kind": "method",
-          "start_line": 340,
-          "end_line": 362
+          "start_line": 336,
+          "end_line": 358,
+          "docstring": "`CHARTDT.genChartDB`でキャリブレーション用プロットデータ・回帰統計を生成し、EChartsチャート設定を組み立てて`State`に格納することで検量線プレビューを更新する非同期メソッド。"
         },
         {
           "name": "pushCrct",
           "kind": "method",
-          "start_line": 363,
-          "end_line": 381
+          "start_line": 359,
+          "end_line": 377,
+          "docstring": "全対象元素の検量線係数（傾き・切片）を計算して補正（crct）シートに出力（または上書き）し、`State`の補正データを更新する非同期メソッド。"
         },
         {
           "name": "pushStdz",
           "kind": "method",
-          "start_line": 382,
-          "end_line": 389
+          "start_line": 378,
+          "end_line": 385,
+          "docstring": "pXRFデータをモードマップに従って標準化（`genNewPxrf`）し、PXRFシートに出力する非同期メソッド。"
         },
         {
           "name": "renewADPState",
           "kind": "method",
-          "start_line": 390,
-          "end_line": 405
+          "start_line": 386,
+          "end_line": 401,
+          "docstring": "pXRFデータ・シンボル設定の変更をトリガーに呼ばれ、アイテム一覧・軸値一覧・シンボル操作設定を再計算して`State`へ反映するADP状態更新メソッド。"
         },
         {
           "name": "TrcInit",
           "kind": "class",
-          "start_line": 408,
-          "end_line": 449
+          "start_line": 404,
+          "end_line": 445,
+          "docstring": "Tracer5iアプリ（ENT・ADPの両フェーズ）の起動シーケンスを管理する静的クラス。UIオートメーターの構築・State購読の設定・セッション開始を担当する。"
         },
         {
           "name": "start",
           "kind": "method",
-          "start_line": 409,
-          "end_line": 448
+          "start_line": 405,
+          "end_line": 444,
+          "docstring": "起動モード（`entry`/`adp`）を判定してCoreUI・ENT/ADPオートメーターを構築し、State購読を登録してセッションを開始するアプリ起動エントリーポイントメソッド。"
         }
       ]
     }
