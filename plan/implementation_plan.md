@@ -15,7 +15,7 @@
       display: inline-flex;
       align-items: center;
       height: fit-content;
-      padding: 1px 5px;
+      padding: 2px 8px;
       background: var(--grey50);
       border: 1px solid var(--grey300);
       border-radius: 20px;
@@ -28,7 +28,7 @@
         background: color-mix(in srgb, var(--theme-color) 70%, transparent);
         border-color: transparent;
       }
-      .material-symbols-outlined { font-size: 12px; }
+      .material-symbols-outlined { font-size: 8px; }
     }
 ====
     /* --- 固有部品:双方向連動インラインボタン (.link-toggle) --- */
@@ -50,7 +50,7 @@
         background: color-mix(in srgb, var(--theme-color) 70%, transparent);
         border-color: transparent;
       }
-      .material-symbols-outlined { font-size: 8px; }
+      .material-symbols-outlined { font-size: 8px !important; }
     }
 >>>>
 ```
