@@ -47,7 +47,7 @@
     obsidianIndex: { "Mn":16, "Fe":18, "Rb":24, "Sr":26,"Y":28, "Zr":30, "Nb":32 },
     mudrockIndex: { "Al":18, "Si":20, "P":22, "K":28, "Ca":30, "Ti":32, "Mn":38, "Fe":40, "Rb":56, "Sr":58, "Y":60, "Zr":62, "Nb":64, "Ba":68 },
     rawShts: { file: "File", results: "Results", tracer5i: "tracer5i", wdxrf: "WDXRF" },
-    appShts: { filelist: "ファイルリスト", crct: "Correction", pxrf: "PXRF" },
+    appShts: { filelist: "ファイルリスト", crct: "検量線", pxrf: "PXRF" },
     initFlags: { raw: [true, true, true, false, false], extr: [true, false, false] },
     extrFields: [
       { key: GLBidx.key1, label: `${GLBidx.key1} *必須`, placeholder: "データセット名", bind: `ENTST.EXTR.refs.${GLBidx.key1}` },
@@ -64,29 +64,24 @@
       ent: [
         { name: 'ファイルリスト', hdrType: 'filelist', clr: true },
         { name: 'File' }, { name: 'Results' },
-        { name: 'tracer5i', hdrType: 'tracer5i', lock: true, validRule: 'tracer5i' }
-      ],
-      adp: [
         { name: 'tracer5i', hdrType: 'tracer5i', lock: true, validRule: 'tracer5i' },
         { name: 'WDXRF', hdrType: 'wdxrf', lock: true, validRule: 'wdxrf' },
-        { name: 'Correction', hdrType: 'crct', lock: true, validRule: 'crct' },
+        { name: '検量線', hdrType: 'crct', lock: true, validRule: 'crct' },
         { name: 'PXRF', hdrType: 'pxrf', lock: true, validRule: 'pxrf' }
       ],
       dash: [
         { name: 'PXRF', hdrType: 'pxrf', lock: true, validRule: 'pxrf' },
         { name: 'WDXRF', hdrType: 'wdxrf', lock: true, validRule: 'wdxrf' },
-        { name: 'Correction', hdrType: 'crct', lock: true, validRule: 'crct' }
+        { name: '検量線', hdrType: 'crct', lock: true, validRule: 'crct' }
       ]
     }
   };
   GLB.schema.entry = GLB.schema.ent;
-  GLB.schema.adapter = GLB.schema.adp;
 
 
 
   // --- フェーズ定義 ---
-  const ENT_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, OUTPUT: 6 };
-  const ADP_PHS = { INIT: 1, LOADED: 2, FILTERED: 3, MAPPED: 4, PREVIEWED: 5 };
+  const ENT_PHS = { INIT: 1, READY: 2, LOAD: 3, INVALID: 4, VALID: 5, OUTPUT: 6, FILTERED: 7, PREVIEWED: 8 };
   const DASH_PHS = { INIT: 1, LOADED: 2 };
   // --- AppSt ---
   class AppSt {
@@ -103,12 +98,9 @@
           phase: ENT_PHS.INIT,
           PREF: createSec({ refs: { mode: "" }, data: { modeOpts: GLB.confMods } }),
           RAW:  createSec({ flags: GLB.initFlags.raw, data: { hdrOpts: [] } }),
-          EXTR: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr })
-        },
-        ADPST: {
-          phase: ADP_PHS.INIT,
-          ASGN: createSec({ data: { crctDT: [], wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], filter: [] } }),
-          SYMB: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] }, data: { axisOpts: GLB.symbAxes } }),
+          EXTR: createSec({ refs: { [GLB.idx.key1]: "", [GLB.idx.p1]: "", [GLB.idx.p2]: "" }, flags: GLB.initFlags.extr }),
+          ASGN: createSec({ data: { crctDT: [], rawTrcDT: null, rawWdxrfDT: null, wrapPXRF: null, wrapWDXRF: null, pxrfDT: null, wdxrfDT: null }, refs: { available: [], availableItems: [], filter: [] } }),
+          SYMB: createSec({ refs: { baseKey: GLB.symbBaseKey, rls: [{ key: "default", target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }] }, data: { axisOpts: GLB.symbAxes, src: null } }),
           CALB: createSec({ refs: { modeMap: [...GLB.optElms], calElms: [...GLB.valElms], crct: "new", useLOD: false, useCal: false }, data: { modeOpts: GLB.optElms, calElmOpts: GLB.valElms, crctOpts: [] } }),
           PREV: createSec({ refs: { itemMap: [], val: GLB.valLgc.length ? GLB.valLgc[0] : GLB.valElms[0], saveIndexName: "" }, data: { crctLogic: {}, prevDT: null, statsDT: null, chartSrc: null, valOpts: [...GLB.valElms, ...GLB.valLgc].map(v => ({ label: v, val: v })) } }),
           STDZ: createSec({ refs: { itemMap: [], modeMap: [...GLB.optElms], useLOD: false, saveIndexName: "" }, data: { modeOpts: GLB.optElms } })

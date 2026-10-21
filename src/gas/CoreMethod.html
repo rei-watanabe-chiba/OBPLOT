@@ -125,7 +125,7 @@
         const vls = {
           tracer5i: createHeaderValidator("tracer5i"),
           pxrf: createHeaderValidator("PXRF"),
-          crct: createHeaderValidator("Correction"),
+          crct: createHeaderValidator("検量線"),
           wdxrf: (h, req) => { const ms = req.filter(e => !h.includes(e)); return ms.length ? `・WDXRF必須項目不足: ${ms.join(', ')}` : null; }
         }; 
         const errs = schema.map(s => exMap.has(s.name) && s.validRule ? vls[s.validRule]?.(exMap.get(s.name), s.hdr) : null).filter(Boolean);

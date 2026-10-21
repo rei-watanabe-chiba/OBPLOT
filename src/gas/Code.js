@@ -12,14 +12,12 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("OBPLOT1.0")
     .addItem("tracer5i抽出", "openSidebarENT")
-    .addItem("データ補正", "openSidebarADP")
     .addSeparator()
     .addItem("解析ボード", "openSidebarDash")
     .addToUi();
 }
 // --- サイドバーの呼び出し分岐 ---
 function openSidebarENT() { openSidebar("entry", "tracer5iデータの抽出", "Tracer5i"); }
-function openSidebarADP() { openSidebar("adapter", "データのプレビューと補正", "Tracer5i"); }
 function openSidebarDash() { openSidebar("dash", "検量線・判別図解析ボード", "Dash"); }
 
 function openSidebar(mode, title, filename) {

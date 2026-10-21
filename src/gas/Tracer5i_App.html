@@ -1,6 +1,14 @@
 <!-- src/Tracer5i_App.html -->
 <script>
   const ENT_SCHEMA = {
+      persistPaths: [
+        "ENTST.ASGN.refs.available", "ENTST.ASGN.refs.filter",
+        "ENTST.SYMB.refs.baseKey", "ENTST.SYMB.refs.rls",
+        "ENTST.CALB.refs.modeMap", "ENTST.CALB.refs.calElms", "ENTST.CALB.refs.crct", "ENTST.CALB.refs.useLOD", "ENTST.CALB.refs.useCal",
+        "ENTST.PREV.refs.itemMap", "ENTST.PREV.refs.val", "ENTST.PREV.refs.saveIndexName",
+        "ENTST.STDZ.refs.itemMap", "ENTST.STDZ.refs.modeMap", "ENTST.STDZ.refs.useLOD", "ENTST.STDZ.refs.saveIndexName",
+        "ENTST.ASGN.status", "ENTST.SYMB.status", "ENTST.CALB.status", "ENTST.PREV.status", "ENTST.STDZ.status"
+      ],
       elements: [
         { part: "entFieldset", disablePhase: () => State.get("GLB.isLocked") },
         { part: "secPREF", activePhase: p => p === ENT_PHS.INIT, disablePhase: p => false },
@@ -14,36 +22,19 @@
         
         { part: "secEXTR", activePhase: p => p >= ENT_PHS.VALID, disablePhase: p => p < ENT_PHS.VALID, openPhase: p => p >= ENT_PHS.VALID && p < ENT_PHS.OUTPUT },
         { part: "btnEXTR_run", activePhase: p => p >= ENT_PHS.VALID && !State.get("ENTST.EXTR.flags").some(Boolean) },
-        { part: "secEXTR_area", visiblePhase: p => p >= ENT_PHS.VALID }
-      ]
-};
-const ADP_SCHEMA = {
-      persistPaths: [
-        "ADPST.ASGN.refs.available", "ADPST.ASGN.refs.filter",
-        "ADPST.SYMB.refs.baseKey", "ADPST.SYMB.refs.rls",
-        "ADPST.CALB.refs.modeMap", "ADPST.CALB.refs.calElms", "ADPST.CALB.refs.crct", "ADPST.CALB.refs.useLOD", "ADPST.CALB.refs.useCal",
-        "ADPST.PREV.refs.itemMap", "ADPST.PREV.refs.val", "ADPST.PREV.refs.saveIndexName",
-        "ADPST.STDZ.refs.itemMap", "ADPST.STDZ.refs.modeMap", "ADPST.STDZ.refs.useLOD", "ADPST.STDZ.refs.saveIndexName",
-        "ADPST.ASGN.status", "ADPST.SYMB.status", "ADPST.CALB.status", "ADPST.PREV.status", "ADPST.STDZ.status"
-      ],
-      elements: [
-        { part: "adpFieldset", disablePhase: () => State.get("GLB.isLocked") },
-        { part: "secASGN", activePhase: p => true, disablePhase: p => false, openPhase: p => p < ADP_PHS.FILTERED },
-        { part: "btnASGN_load", disablePhase: p => false },
-        { part: "btnASGN_fltr", activePhase: p => p >= ADP_PHS.LOADED },
-        { part: "secASGN_area", visiblePhase: p => p >= ADP_PHS.LOADED },
+        { part: "secEXTR_area", visiblePhase: p => p >= ENT_PHS.VALID },
 
-        { part: "secSYMB", activePhase: p => p >= ADP_PHS.FILTERED, disablePhase: p => p < ADP_PHS.FILTERED, openPhase: p => p >= ADP_PHS.FILTERED && p < ADP_PHS.MAPPED },
-        { part: "btnSYMB_set", activePhase: p => p >= ADP_PHS.FILTERED },
-        { part: "boxSYMB_axis", activePhase: p => p >= ADP_PHS.FILTERED },
-        { part: "secSYMB_area", visiblePhase: p => p >= ADP_PHS.FILTERED },
+        { part: "secASGN", activePhase: p => p >= ENT_PHS.OUTPUT, disablePhase: p => p < ENT_PHS.OUTPUT, openPhase: p => p === ENT_PHS.OUTPUT },
+        { part: "btnASGN_fltr", activePhase: p => p >= ENT_PHS.OUTPUT },
+        { part: "secASGN_area", visiblePhase: p => p >= ENT_PHS.OUTPUT },
 
-        { part: "secPREV", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined },
-        { part: "btnPREV_genPrev", activePhase: p => p >= ADP_PHS.MAPPED },
+        { part: "secPREV", activePhase: p => p >= ENT_PHS.FILTERED, disablePhase: p => p < ENT_PHS.FILTERED, openPhase: p => p < ENT_PHS.FILTERED ? false : undefined },
+        { part: "btnPREV_genPrev", activePhase: p => p >= ENT_PHS.FILTERED },
+        { part: "secPREV_area", visiblePhase: p => p >= ENT_PHS.FILTERED },
+        { part: "secCALB", activePhase: p => p >= ENT_PHS.FILTERED, openPhase: p => p < ENT_PHS.FILTERED ? false : undefined },
+        { part: "secSYMB", activePhase: p => p >= ENT_PHS.FILTERED, openPhase: p => p < ENT_PHS.FILTERED ? false : undefined },
 
-        { part: "secCALB", activePhase: p => p >= ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED? false : undefined },
-
-        { part: "secSTDZ", activePhase: p => p >= ADP_PHS.MAPPED, disablePhase: p => p < ADP_PHS.MAPPED, openPhase: p => p < ADP_PHS.MAPPED ? false : undefined }
+        { part: "secSTDZ", activePhase: p => p >= ENT_PHS.FILTERED, disablePhase: p => p < ENT_PHS.FILTERED, openPhase: p => p < ENT_PHS.FILTERED ? false : undefined }
       ]
 };
 
@@ -143,7 +134,14 @@ const ADP_SCHEMA = {
       const phs = State.get("ENTST.phase"), isInit = phs === ENT_PHS.INIT, isInvalid = phs >= ENT_PHS.INVALID;
       if (isInvalid) { 
         const errSts = ["error", "設定変更検知: リストの再生成・検証が必要です"];
-        State.set({ "ENTST.RAW.status": errSts, "ENTST.RAW.cachedStatus": errSts, "ENTST.EXTR.status": ["hidden", ""] });
+        State.set({
+          "ENTST.RAW.status": errSts,
+          "ENTST.RAW.cachedStatus": errSts,
+          "ENTST.EXTR.status": ["hidden", ""],
+          "ENTST.ASGN.status": ["hidden", ""],
+          "ENTST.PREV.status": ["hidden", ""],
+          "ENTST.STDZ.status": ["hidden", ""]
+        });
       }
       State.set({ "ENTST.PREF.status": passSts, ...(isInit || isInvalid ? { "ENTST.phase": isInit ? ENT_PHS.READY : ENT_PHS.INVALID } : {}) });
     }
@@ -164,7 +162,10 @@ const ADP_SCHEMA = {
         "ENTST.EXTR.flags": [isErr, false, false],
         ...(phs >= ENT_PHS.VALID && {
           "ENTST.phase": ENT_PHS.VALID,
-          "ENTST.EXTR.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""]
+          "ENTST.EXTR.status": isErr ? ["error", `エラー: ${GLB.idx.key1}未入力`] : ["hidden", ""],
+          "ENTST.ASGN.status": ["hidden", ""],
+          "ENTST.PREV.status": ["hidden", ""],
+          "ENTST.STDZ.status": ["hidden", ""]
         })
       });
     }
@@ -180,7 +181,10 @@ const ADP_SCHEMA = {
           "ENTST.RAW.cachedStatus": ["success", msg], 
           "ENTST.phase": ENT_PHS.LOAD,
           "ENTST.EXTR.status": ["hidden", ""],
-          "ENTST.EXTR.flags": [true, false, false]
+          "ENTST.EXTR.flags": [true, false, false],
+          "ENTST.ASGN.status": ["hidden", ""],
+          "ENTST.PREV.status": ["hidden", ""],
+          "ENTST.STDZ.status": ["hidden", ""]
         });
         ENTAct.valdRawRefs(); 
         return State.get("ENTST.RAW.status"); 
@@ -197,7 +201,12 @@ const ADP_SCHEMA = {
         "ENTST.RAW.cachedStatus": statArr, 
         "ENTST.RAW.status": statArr, 
         "ENTST.phase": newPhase, 
-        ...((isErr || act !== "extract") && { "ENTST.EXTR.status": ["hidden", ""] }) 
+        ...((isErr || act !== "extract") && {
+          "ENTST.EXTR.status": ["hidden", ""],
+          "ENTST.ASGN.status": ["hidden", ""],
+          "ENTST.PREV.status": ["hidden", ""],
+          "ENTST.STDZ.status": ["hidden", ""]
+        }) 
       });
       if (!isErr && act !== "extract") ENTAct.valdExtrRefs();
       return { isErr, outDT, statArr };
@@ -220,10 +229,41 @@ const ADP_SCHEMA = {
         return statArr;
       });
     }
+    static async initDB() {
+      State.set("ENTST.PREF.status", ["loading", "初期データ読込中..."]);
+      try {
+        const [pData, wData, cData] = await CoreAct.ensureFetch(ENTAct.ssId, [GLB.rawShts.tracer5i, GLB.rawShts.wdxrf, GLB.appShts.crct]);
+        State.set({
+          "ENTST.ASGN.data.rawTrcDT": pData || null,
+          "ENTST.ASGN.data.rawWdxrfDT": wData || null,
+          "ENTST.ASGN.data.crctDT": cData || []
+        });
+        if (pData?.length > 1 && wData?.length > 1) {
+          ENTAct.syncTrcDB(pData, wData, false);
+        }
+      } finally {
+        State.set("ENTST.PREF.status", ["hidden", ""]);
+      }
+    }
+    static syncTrcDB(pData, wData = State.get("ENTST.ASGN.data.rawWdxrfDT"), showStatus = true) {
+      if (!pData || pData.length <= 1 || !wData || wData.length <= 1) {
+        State.set("ENTST.ASGN.data.rawTrcDT", pData || null);
+        return;
+      }
+      const { pxrfDT: wrapPXRF, wdxrfDT: wrapWDXRF, dbs } = CoreMethod.Util.genDB(pData, wData, { mixWD: true });
+      const { ASGN, CALB, STDZ } = State.proxy.ENTST;
+      State.set({
+        "ENTST.ASGN.data": { ...ASGN.data, rawTrcDT: pData, rawWdxrfDT: wData, wrapPXRF, wrapWDXRF },
+        "ENTST.ASGN.refs": { ...ASGN.refs, available: dbs, filter: dbs },
+        "ENTST.CALB.refs": { ...CALB.refs, modeMap: [...GLB.optElms], calElms: [...GLB.valElms] },
+        "ENTST.STDZ.refs": { ...STDZ.refs, modeMap: [...GLB.optElms] },
+        ...(showStatus && { "ENTST.ASGN.status": ["message", `対象database: ${dbs.length}件`] })
+      });
+    }
     static async runExtr() {
       State.set("GLB.isLocked", true);
       State.set("ENTST.EXTR.status", ["loading", "データ確認・抽出中..."]);
-      let chkRes, extrDT, vFileDT;
+      let chkRes, extrDT, vFileDT, trcDT;
       try {
         const [fRes, rRes, tRes] = await API.pullMult(ENTAct.ssId, [
           { sht: GLB.appShts.filelist, qCol: 5, lCol: 5 },
@@ -241,7 +281,7 @@ const ADP_SCHEMA = {
         }
         extrDT = Mtd.ENT.genExtr(vFileDT, rRes.pld.data, State.get("ENTST.EXTR.refs"));
         if (!extrDT || extrDT.length <= 1) throw new Error("対象データなし");
-        const trcDT = (tRes?.success && tRes.pld?.data) ? tRes.pld.data : [CoreMethod.Util.genHeader('tracer5i')];
+        trcDT = (tRes?.success && tRes.pld?.data) ? tRes.pld.data : [CoreMethod.Util.genHeader('tracer5i')];
         chkRes = Mtd.ENT.valdPxrf(trcDT, extrDT);
       } catch (e) {
         State.set("ENTST.EXTR.status", ["error", e.message]);
@@ -257,87 +297,65 @@ const ADP_SCHEMA = {
         ]);
         const errRes = pRes?.find(r => !r.success);
         if (errRes) throw new Error(errRes.msg);
+        const finalTrcDT = chkRes.isDup ? chkRes.data : [...trcDT, ...extrDT.slice(1)];
+        let wData = State.get("ENTST.ASGN.data.rawWdxrfDT");
+        if (!wData || wData.length <= 1) {
+          const [fetchedW] = await CoreAct.ensureFetch(ENTAct.ssId, [GLB.rawShts.wdxrf]);
+          wData = fetchedW || null;
+        }
+        ENTAct.syncTrcDB(finalTrcDT, wData, true);
         State.set("ENTST.phase", ENT_PHS.OUTPUT);
         return `格納完了: ${extrDT.length - 1} 件`;
       });
     }
-  }
-
-  // --- ADPAct (旧 T2Action: グラフ作成・分析) ---
-  class ADPAct {
-    static get ssId() { return State.get("GLB.ssId"); }
-    static async loadDB() {
-      await CoreAct.withAsync("ADPST.ASGN.status", async () => {
-        const [pData, wData, cData] = await CoreAct.ensureFetch(ADPAct.ssId, [GLB.rawShts.tracer5i, GLB.rawShts.wdxrf, GLB.appShts.crct]);
-        if (!pData || pData.length <= 1) throw new Error("tracer5i不足");
-        if (!wData || wData.length <= 1) throw new Error("WDXRF不足");
-        State.reset(['ADPST.ASGN', 'ADPST.SYMB', 'ADPST.CALB', 'ADPST.PREV', 'ADPST.STDZ']);
-        const { pxrfDT: wrapPXRF, wdxrfDT: wrapWDXRF, dbs } = CoreMethod.Util.genDB(pData, wData, { mixWD: true });
-        const { ASGN, CALB, STDZ } = State.proxy.ADPST;
-        State.set({
-          "ADPST.ASGN.data": { ...ASGN.data, wrapPXRF, wrapWDXRF, crctDT: cData || [] },
-          "ADPST.ASGN.refs": { ...ASGN.refs, available: dbs, filter: dbs },
-          "ADPST.CALB.refs": { ...CALB.refs, modeMap: [...GLB.optElms], calElms: [...GLB.valElms] },
-          "ADPST.STDZ.refs": { ...STDZ.refs, modeMap: [...GLB.optElms] },
-          "ADPST.phase": ADP_PHS.LOADED
-        });
-        return `読込完了: database ${dbs.length}件`;
-      });
-    }
     static async fltrDB() {
-      await CoreAct.withAsync("ADPST.ASGN.status", async () => {
-        const { ASGN } = State.proxy.ADPST;
+      await CoreAct.withAsync("ENTST.ASGN.status", async () => {
+        const { ASGN } = State.proxy.ENTST;
+        if (!ASGN.data.rawTrcDT || ASGN.data.rawTrcDT.length <= 1) throw new Error("tracer5i不足");
+        if (!ASGN.data.rawWdxrfDT || ASGN.data.rawWdxrfDT.length <= 1) throw new Error("WDXRF不足");
         if (!ASGN.refs.filter?.length) throw new Error("DB未選択");
-        State.reset(['ADPST.SYMB', 'ADPST.CALB', 'ADPST.PREV', 'ADPST.STDZ']);
+        State.reset(['ENTST.SYMB', 'ENTST.CALB', 'ENTST.PREV', 'ENTST.STDZ']);
         const { pxrfDT, wdxrfDT } = CoreMethod.Util.fltrDB(ASGN.data.wrapPXRF, ASGN.data.wrapWDXRF, ASGN.refs.filter, true);
-        State.set({ 
-          "ADPST.ASGN.data.pxrfDT": pxrfDT, 
-          "ADPST.ASGN.data.wdxrfDT": wdxrfDT, 
-          "ADPST.ASGN.data.crctDT": [...ASGN.data.crctDT],
-          "ADPST.phase": ADP_PHS.FILTERED 
-        }); 
+        State.set({
+          "ENTST.ASGN.data.pxrfDT": pxrfDT,
+          "ENTST.ASGN.data.wdxrfDT": wdxrfDT,
+          "ENTST.ASGN.data.crctDT": [...ASGN.data.crctDT],
+          "ENTST.PREV.status": ["message", "検量線プレビュー"],
+          "ENTST.STDZ.status": ["message", "検量線とPXRFデータの出力"],
+          "ENTST.phase": ENT_PHS.FILTERED
+        });
         return "データ更新";
       });
     }
-    static async setSymb() { 
-      await CoreAct.withAsync("ADPST.SYMB.status", async () => { 
-        State.set({
-          "ADPST.phase": ADP_PHS.MAPPED,
-          "ADPST.PREV.status": ["message", "検量線プレビュー"],
-          "ADPST.STDZ.status": ["message", "検量線とPXRFデータの出力"]
-        }); 
-        return "シンボル確定"; 
-      }); 
-    }
-    static async resetSymb() { State.reset("ADPST.SYMB.refs.rls"); }
+    static async resetSymb() { State.reset("ENTST.SYMB.refs.rls"); }
     static async valdAxis(tgtSelect) {
-      const newVal = tgtSelect.value, oldVal = State.get("ADPST.SYMB.refs.baseKey");
+      const newVal = tgtSelect.value, oldVal = State.get("ENTST.SYMB.refs.baseKey");
       if (newVal === oldVal) return;
-      const isConfirmed = await CoreAct.withAsync("ADPST.SYMB.status", { title: "警告", msg: "属性を変更してシンボル設定をリセットします。" }, async () => {
-        State.set({ "ADPST.SYMB.refs.baseKey": newVal }); 
-        State.reset("ADPST.SYMB.refs.rls");
+      const isConfirmed = await CoreAct.withAsync("ENTST.PREV.status", { title: "警告", msg: "属性を変更してシンボル設定をリセットします。" }, async () => {
+        State.set({ "ENTST.SYMB.refs.baseKey": newVal });
+        State.reset("ENTST.SYMB.refs.rls");
         return ["hidden", ""];
       });
       if (!isConfirmed) {
         tgtSelect.value = oldVal;
-        State.set("ADPST.SYMB.refs.baseKey", oldVal);
+        State.set("ENTST.SYMB.refs.baseKey", oldVal);
       }
     }
-    static addSymb() { State.set("ADPST.SYMB.refs.rls", [...(State.get("ADPST.SYMB.refs.rls") ?? []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
+    static addSymb() { State.set("ENTST.SYMB.refs.rls", [...(State.get("ENTST.SYMB.refs.rls") ?? []), { key: `rule_${Date.now()}`, target: "", shp: GLB.symbDefShp, clr: GLB.symbDefClr }]); }
     static removeSymb(tgtBtn, param) {
       const key = param || tgtBtn.dataset.param;
-      if (key) State.set("ADPST.SYMB.refs.rls", (State.get("ADPST.SYMB.refs.rls") ?? []).filter(r => r.key !== key));
+      if (key) State.set("ENTST.SYMB.refs.rls", (State.get("ENTST.SYMB.refs.rls") ?? []).filter(r => r.key !== key));
     }
     static updSymb(tgtBtn, param, subParam) {
       const idx = param || tgtBtn.dataset.param, type = subParam || tgtBtn.dataset.subParam;
       if (idx == null || !type) return;
-      const rls = [...(State.get("ADPST.SYMB.refs.rls") ?? [])];
-      if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("ADPST.SYMB.refs.rls", rls); }
+      const rls = [...(State.get("ENTST.SYMB.refs.rls") ?? [])];
+      if (rls[idx]) { rls[idx][type] = tgtBtn.value; State.set("ENTST.SYMB.refs.rls", rls); }
     }
     static async genPrev() {
-      await CoreAct.withAsync("ADPST.PREV.status", async () => {
-        const { PREV, CALB, ASGN, SYMB } = State.proxy.ADPST;
-        const conf = { ...PREV.refs, ...CALB.refs, crctDT: ASGN.data.crctDT, graphType: 'calib', calbVal: PREV.refs.val }; 
+      await CoreAct.withAsync("ENTST.PREV.status", async () => {
+        const { PREV, CALB, ASGN, SYMB } = State.proxy.ENTST;
+        const conf = { ...PREV.refs, ...CALB.refs, crctDT: ASGN.data.crctDT, graphType: 'calib', calbVal: PREV.refs.val };
         const { prevDT, statsDT } = CHARTDT.genChartDB(ASGN.data.pxrfDT, ASGN.data.wdxrfDT, conf);
         if (!prevDT.length) throw new Error("対象データなし");
         const chartConfig = {
@@ -347,100 +365,88 @@ const ADP_SCHEMA = {
           gph: { style: GLB.defGraphStyle, gap: GLB.defGraphGap },
           layout: { aspectMode: 'square' }
         };
-        State.set({ 
-          "ADPST.PREV.data.crctLogic": statsDT, 
-          "ADPST.PREV.data.statsDT": statsDT, 
-          "ADPST.PREV.data.prevDT": prevDT,
-          "ADPST.PREV.data.chartSrc": chartConfig,
-          "ADPST.phase": ADP_PHS.PREVIEWED 
-        }); 
+        State.set({
+          "ENTST.PREV.data.crctLogic": statsDT,
+          "ENTST.PREV.data.statsDT": statsDT,
+          "ENTST.PREV.data.prevDT": prevDT,
+          "ENTST.PREV.data.chartSrc": chartConfig,
+          "ENTST.phase": ENT_PHS.PREVIEWED
+        });
         return ["message", "データと検量線のプレビュー"];
       });
     }
     static async pushCrct() {
-      const idxNm = State.get("ADPST.STDZ.refs.saveIndexName")?.trim();
-      if (!idxNm) { State.set("ADPST.STDZ.status", ["error", "名前が未入力です"]); return; }
-      const { ASGN, STDZ } = State.proxy.ADPST;
+      const idxNm = State.get("ENTST.STDZ.refs.saveIndexName")?.trim();
+      if (!idxNm) { State.set("ENTST.STDZ.status", ["error", "名前が未入力です"]); return; }
+      const { ASGN, STDZ } = State.proxy.ENTST;
       const hasOriginal = ASGN.data.crctDT?.length > 0;
       const updDT = hasOriginal ? [...ASGN.data.crctDT] : [CoreMethod.Util.genHeader('crct')];
       const dupIdx = updDT.findIndex((r, i) => i > 0 && r[0] === idxNm);
       const isDup = dupIdx > 0;
       const msg = isDup ? `全対象元素の検量線を上書きしますか？\n名前：${idxNm}` : `全対象元素の検量線を出力しますか？\n名前：${idxNm}`;
-      await CoreAct.withAsync("ADPST.STDZ.status", msg, async () => {
+      await CoreAct.withAsync("ENTST.STDZ.status", msg, async () => {
         const newRow = Mtd.ADP.genCALB(ASGN.data.pxrfDT, ASGN.data.wdxrfDT, STDZ.refs, idxNm);
         let pushData, pushOpts;
         if (isDup) { updDT[dupIdx] = newRow; pushData = updDT; pushOpts = "clear";
         } else { updDT.push(newRow); pushData = hasOriginal ? [newRow] : updDT; pushOpts = hasOriginal ? ["append"] : "clear"; }
-        await API.pushDT(ADPAct.ssId, GLB.appShts.crct, pushData, pushOpts);
-        State.set({ "ADPST.ASGN.data.crctDT": updDT, "ADPST.STDZ.refs.saveIndexName": "" }); 
+        await API.pushDT(ENTAct.ssId, GLB.appShts.crct, pushData, pushOpts);
+        State.set({ "ENTST.ASGN.data.crctDT": updDT, "ENTST.STDZ.refs.saveIndexName": "" });
         return `補正値を${isDup ? '上書き' : '保存'}しました`;
       });
     }
     static async pushStdz() {
-      await CoreAct.withAsync("ADPST.STDZ.status", "PXRFシートに出力しますか？", async () => {
-        const { ASGN, STDZ } = State.proxy.ADPST;
+      await CoreAct.withAsync("ENTST.STDZ.status", "PXRFシートに出力しますか？", async () => {
+        const { ASGN, STDZ } = State.proxy.ENTST;
         const outDT = Mtd.ADP.genNewPxrf(ASGN.data.pxrfDT, STDZ.refs.modeMap);
-        await API.pushDT(ADPAct.ssId, GLB.appShts.pxrf, outDT, "clear");
+        await API.pushDT(ENTAct.ssId, GLB.appShts.pxrf, outDT, "clear");
         return "PXRFシートの出力を完了しました";
       });
     }
-    static renewADPState() {
-      const { ASGN, SYMB, PREV, STDZ } = State.proxy.ADPST;
+    static renewENTState() {
+      const { ASGN, SYMB, PREV, STDZ } = State.proxy.ENTST;
       const baseDT = ASGN.data.pxrfDT;
-      if (!baseDT?.length) { State.set({ "ADPST.ASGN.refs.availableItems": [], "ADPST.SYMB.data.src": null }); return; }
+      if (!baseDT?.length) { State.set({ "ENTST.ASGN.refs.availableItems": [], "ENTST.SYMB.data.src": null }); return; }
       const items = [...new Set(baseDT.map(d => d[GLB.idx.p1]).filter(Boolean))];
       const vals = [...new Set(baseDT.map(d => d[SYMB.refs.baseKey]).filter(Boolean))];
       const targetOpts = [{ val: "", label: "未選択" }, ...vals.map(v => ({ val: v, label: v }))];
       const optsConf = { target: targetOpts, shp: GLB.symbShapes, clr: GLB.symbColors };
-      const actsConf = { add: "ADPAct.addSymb", remove: "ADPAct.removeSymb", update: "ADPAct.updSymb" };
+      const actsConf = { add: "ENTAct.addSymb", remove: "ENTAct.removeSymb", update: "ENTAct.updSymb" };
       State.set({
-        "ADPST.ASGN.refs.availableItems": items,
-        "ADPST.PREV.refs.itemMap": PREV.refs.itemMap?.length ? PREV.refs.itemMap : items,
-        "ADPST.STDZ.refs.itemMap": STDZ.refs.itemMap?.length ? STDZ.refs.itemMap : items,
-        "ADPST.SYMB.data.src": { rls: SYMB.refs.rls, optsConf, actsConf } 
+        "ENTST.ASGN.refs.availableItems": items,
+        "ENTST.PREV.refs.itemMap": PREV.refs.itemMap?.length ? PREV.refs.itemMap : items,
+        "ENTST.STDZ.refs.itemMap": STDZ.refs.itemMap?.length ? STDZ.refs.itemMap : items,
+        "ENTST.SYMB.data.src": { rls: SYMB.refs.rls, optsConf, actsConf }
       });
     }
   }
   // --- TrcInit ---
   class TrcInit {
     static async start() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const actMode = window.__APP_MODE__ || urlParams.get('mode') || 'entry';
-      CoreAct.rootGLB({ CoreAct, ENTAct, ADPAct, });
-      CoreAct.cfgRslv = (tabPRM) => {
-        return (tabPRM === 'ent' || tabPRM === 'entry')
-          ? { schemaKey: 'ent', statPath: 'ENTST.PREF.status', schema: ENT_SCHEMA }
-          : { schemaKey: 'adp', statPath: 'ADPST.ASGN.status', schema: ADP_SCHEMA, persistPaths: ADP_SCHEMA.persistPaths };
-      };
+      CoreAct.rootGLB({ CoreAct, ENTAct });
+      CoreAct.cfgRslv = () => ({ schemaKey: 'ent', statPath: 'ENTST.PREF.status', schema: ENT_SCHEMA, persistPaths: ENT_SCHEMA.persistPaths });
       const automatorENT = new CoreUI(ENT_SCHEMA, 'ENTST');
-      const automatorADP = new CoreUI(ADP_SCHEMA, 'ADPST');
       automatorENT.build();
-      automatorADP.build();
       State.subscribe("ENTST.phase", () => automatorENT.update());
-      State.subscribe("ADPST.phase", () => automatorADP.update());
       State.subscribe("ENTST.RAW.flags", () => automatorENT.update());
       State.subscribe("ENTST.EXTR.flags", () => automatorENT.update());
-      State.subscribe("GLB.isLocked", () => {
-        automatorENT.update();
-        automatorADP.update();
-      });
+      State.subscribe("GLB.isLocked", () => automatorENT.update());
       State.subscribe(`ENTST.EXTR.refs.${GLB.idx.key1}`, () => ENTAct.valdExtrRefs());
       State.subscribe("ENTST.RAW.data", data => {
         if (data?.[0]) State.set("ENTST.RAW.data.hdrOpts", data[0].map(h => ({ label: h, val: h })));
         else State.set("ENTST.RAW.data.hdrOpts", []);
       });
-      State.subscribe("ADPST.ASGN.data.crctDT", data => {
+      State.subscribe("ENTST.ASGN.data.crctDT", data => {
         if (!data) return;
         const opts = [{ label: "新規検量線", val: "new" }, ...data.slice(1).filter(r => r[0]).map(r => ({ label: r[0], val: r[0] }))];
-        State.set("ADPST.CALB.data.crctOpts", opts);
+        State.set("ENTST.CALB.data.crctOpts", opts);
       });
-      State.subscribe("ADPST.ASGN.data.pxrfDT", () => ADPAct.renewADPState());
-      State.subscribe("ADPST.SYMB.refs.baseKey", () => ADPAct.renewADPState());
-      State.subscribe("ADPST.SYMB.refs.rls", () => ADPAct.renewADPState());
-      const hooks = {};
+      State.subscribe("ENTST.ASGN.data.pxrfDT", () => ENTAct.renewENTState());
+      State.subscribe("ENTST.SYMB.refs.baseKey", () => ENTAct.renewENTState());
+      State.subscribe("ENTST.SYMB.refs.rls", () => ENTAct.renewENTState());
+      const hooks = { onBeforeInit: () => ENTAct.initDB() };
       const ssId = window.__INITIAL_SSID__ || "EXCEL_LOCAL_RUN";
-      CoreAct.actvTab(actMode);
-      const initCfg = CoreAct.cfgRslv(actMode);
+      CoreAct.actvTab('entry');
+      const initCfg = CoreAct.cfgRslv('entry');
       await CoreAct.startSession(ssId, false, hooks, initCfg);
     }
   }

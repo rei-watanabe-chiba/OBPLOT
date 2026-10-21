@@ -7,8 +7,10 @@
 
 ## 2. アプリ別ステートツリー（名前空間）の分離
 アプリのフェーズや責務ごとに、明確に名前空間（ステートツリー）が分割管理されています。
-* **`ENTST` (Tracer層: データ抽出フェーズ)**: `PREF`, `RAW`, `EXTR` のサブツリーを持ち、フェーズ (`phase`) の進行に応じてUIの活性/非活性を制御します。
-* **`ADPST` (Tracer層: 分析・補正フェーズ)**: `ASGN`, `SYMB`, `CALB`, `PREV`, `STDZ` のサブツリーを持ちます。
+* **`ENTST` (Tracer層: データ抽出・検量線・標準化統合ステート)**:
+  * 従来の `ADPST` は廃止され `ENTST` へ一本化されました。
+  * `PREF`, `RAW`, `EXTR`, `ASGN`, `SYMB`, `CALB`, `PREV`, `STDZ` の全サブツリーを持ちます。
+  * `INIT -> READY -> LOAD -> INVALID -> VALID -> OUTPUT -> FILTERED -> PREVIEWED` の直列フェーズ（`phase`）でUIの活性/非活性およびセクション開閉を制御する構造となっています。
 * **`RPTST` (Report層: 描画・出力フェーズ)**: `dataset`（データ・フィルタ）、`config`（レイアウト・テーマ）、`panels`（最大9枚の個別パネル設定配列）を持ちます。
 
 ## 3. データ流入（ハイドレーション）アーキテクチャの違い
